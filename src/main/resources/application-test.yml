@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5445/workshop_db
+    username: workshop_admin
+    password: pass
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 50
+      idle-timeout: 600000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
+  jpa:
+    show-sql: true
+    generate-ddl: false
+    hibernate:
+      default_schema: public
+      ddl-auto: validate
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.temp.use_jdbc_metadata_defaults: false
+
+server:
+  port: 8081
+
+message: Integration Test

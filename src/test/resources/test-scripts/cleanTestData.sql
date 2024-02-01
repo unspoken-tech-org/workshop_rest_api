@@ -1,0 +1,24 @@
+truncate aparelhos_cores RESTART IDENTITY cascade;
+truncate cores RESTART IDENTITY cascade;
+truncate aparelhos RESTART IDENTITY cascade;
+truncate clientes RESTART IDENTITY cascade;
+truncate estados RESTART IDENTITY cascade;
+truncate marcas RESTART IDENTITY cascade;
+truncate modelos RESTART IDENTITY cascade;
+truncate tecnicos RESTART IDENTITY cascade;
+truncate telefones RESTART IDENTITY cascade;
+truncate contatos RESTART IDENTITY cascade;
+truncate itens RESTART IDENTITY cascade;
+truncate pagamentos_aparelhos RESTART IDENTITY cascade;
+truncate compras_produtos RESTART IDENTITY cascade;
+truncate produtos RESTART IDENTITY cascade;
+truncate fornecedores RESTART IDENTITY cascade;
+truncate compras RESTART IDENTITY cascade;
+truncate categorias RESTART IDENTITY cascade;
+truncate vendedores RESTART IDENTITY cascade;
+truncate produtos_vendas RESTART IDENTITY cascade;
+truncate pagamentos RESTART IDENTITY cascade;
+truncate vendas_pagamentos RESTART IDENTITY cascade;
+truncate marcas_modelos RESTART IDENTITY cascade;
+truncate marcas_modelos_tipos RESTART IDENTITY cascade;
+
