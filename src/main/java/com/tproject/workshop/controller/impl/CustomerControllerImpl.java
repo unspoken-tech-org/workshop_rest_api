@@ -5,12 +5,14 @@ import com.tproject.workshop.dto.customer.InputCustomerDto;
 import com.tproject.workshop.model.Customer;
 import com.tproject.workshop.service.CustomerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("Customer")
 public class CustomerControllerImpl implements CustomerController {
 
     private final CustomerService customerService;
@@ -23,6 +25,11 @@ public class CustomerControllerImpl implements CustomerController {
     @Override
     public Customer findById(int id) {
         return customerService.findById(id);
+    }
+
+    @Override
+    public List<Customer> findByName(String name) {
+        return customerService.findByName(name);
     }
 
     @Override

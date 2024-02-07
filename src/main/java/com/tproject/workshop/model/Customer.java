@@ -12,8 +12,8 @@ import java.sql.Timestamp;
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", updatable = false)
-    int id;
+    @Column(name = "idCustomer", updatable = false)
+    int idCustomer;
     @Column(name = "nome", nullable = false)
     String name;
     @CreationTimestamp(source = SourceType.DB)

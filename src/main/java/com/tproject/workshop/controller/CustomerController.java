@@ -15,7 +15,10 @@ public interface CustomerController {
     List<Customer> list();
 
     @GetMapping("/{id}")
-    Customer findById(@PathVariable("id") int id);
+    Customer findById(@PathVariable("id") int idCostumer);
+
+    @GetMapping(path = "/find")
+    List<Customer> findByName(@PathVariable("name") String name);
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     Customer create(@RequestBody @NotNull InputCustomerDto inputCustomerDto);
