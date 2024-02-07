@@ -14,7 +14,7 @@ import java.util.List;
 public class CellphoneService {
     private final CellphoneRepository cellphoneRepository;
 
-    public List<Cellphone> findAllCustomers(){
+    public List<Cellphone> findAllCellphones(){
         return cellphoneRepository.findAll();
     }
     public Cellphone findById(int idCellphone){
