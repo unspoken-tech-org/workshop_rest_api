@@ -12,9 +12,7 @@ cor varchar(50) not null
 create table if not exists aparelhos(
 id integer primary key generated always as identity not null,
 idCliente int not null,
-idTipo int not null,
-idMarca int not null,
-idModelo int not null,
+idMarcaModeloTipo int not null,
 idEstado int not null,
 idTecnico int not null,
 entrada timestamp not null,
@@ -26,6 +24,7 @@ maoDeObra money not null,
 urgencia bit not null,
 dataModificacao timestamp
 );
+
 
 create table if not exists clientes (
 id integer primary key generated always as identity not null,
@@ -209,19 +208,24 @@ idTipo int not null
 --------- Foreign keys
 --aparelhos_cores
 alter table aparelhos_cores add constraint fk_aparelhos_cores_aparelhos foreign key (idAparelho) references aparelhos(id);
+alter table aparelhos_cores add constraint fk_aparelhos_cores_cores foreign key (idCor) references cores(id);
 
 -- aparelhos
 alter table aparelhos add constraint fk_aparelhos_clientes foreign key (idCliente) references clientes(id);
 
-alter table aparelhos add constraint fk_aparelhos_tipos foreign key (idTipo) references tipos(id);
-
-alter table aparelhos add constraint fk_aparelhos_marca foreign key (idMarca) references marcas(id);
-
-alter table aparelhos add constraint fk_aparelhos_modelos foreign key (idModelo) references modelos(id);
+alter table aparelhos add constraint fk_aparelhos_MarcaModeloTipo foreign key (idMarcaModeloTipo) references marcas_modelos_tipos(id);
 
 alter table aparelhos add constraint fk_aparelhos_estados foreign key (idEstado) references estados(id);
 
 alter table aparelhos add constraint fk_aparelhos_tecnico foreign key (idTecnico) references tecnicos(id);
+
+-- marcas_modelos
+alter table marcas_modelos  add constraint fk_marcas_modelos_marca foreign key (idMarca) references marcas(id);
+alter table marcas_modelos  add constraint fk_marcas_modelos_modelo foreign key (idModelo) references modelos(id);
+
+-- marcas_modelos_tipos
+alter table marcas_modelos_tipos add constraint fk_marcas_modelos_tipos_tipos foreign key (idTipo) references tipos(id);
+alter table marcas_modelos_tipos add constraint fk_marcas_modelos_tipos_marcaModelo foreign key (idMarcaModelo) references marcas_modelos(id);
 
 
 -- contatos
@@ -248,7 +252,7 @@ alter table compras_produtos add constraint fk_compras_produtos_compra foreign k
 
 alter table compras_produtos add constraint fk_compras_produtos_produtos foreign key (idProduto) references produtos(id);
 
--- produtos 
+-- produtos
 alter table produtos add constraint fk_produtos_categoria foreign key (idCategoria) references categorias(id);
 
 alter table produtos add constraint fk_produtos_marcaModeloTipo foreign key (idMarcaModeloTipo) references marcas_modelos_tipos(id);
@@ -262,10 +266,15 @@ alter table vendas add constraint fk_vendas_clientes foreign key (idCliente) ref
 
 alter table vendas add constraint fk_vendas_vendedores foreign key (idVendedor) references vendedores(id);
 
--- produtos_vendas 
+-- produtos_vendas
 alter table produtos_vendas add constraint fk_produtos_vendas_vendas foreign key (idVenda) references vendas(id);
 
 alter table produtos_vendas add constraint fk_produtos_vendas_produtos foreign key (idProduto) references produtos(id);
 
+-- pagamentos_aparelhos
+alter table pagamentos_aparelhos add constraint fk_pagamentos_aparelhos_aparelhos foreign key (idAparelho) references aparelhos(id);
+alter table pagamentos_aparelhos add constraint fk_pagamentos_aparelhos_pagamentos foreign key (idPagamento) references pagamentos(id);
 
-
+-- vendas_pagamentos
+alter table vendas_pagamentos add constraint fk_vendas_pagamentos_venda foreign key (idVenda) references vendas(id);
+alter table vendas_pagamentos add constraint fk_vendas_pagamentos_pagamentos foreign key (idPagamento) references pagamentos(id);
