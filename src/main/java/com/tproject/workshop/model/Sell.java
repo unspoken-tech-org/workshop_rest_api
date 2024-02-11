@@ -8,16 +8,14 @@ import org.hibernate.annotations.SourceType;
 import java.sql.Timestamp;
 
 @Data
-@Entity(name = "Vendas")
+@Entity(name = "vendas")
 public class Sell {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
     int idSell;
-    @Column(name = "nome", nullable = false)
-    String name;
     @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "datacadastro", nullable = false)
+    @Column(name = "datavenda", nullable = false)
     Timestamp insertDate;
     @Column(name = "tipocomprovante")
     String receipt;
@@ -29,8 +27,8 @@ public class Sell {
     float totalPay;
     @Column(name = "tipovenda")
     String sellType;
-//    @ManyToOne
-    @JoinColumn(name = "idCliente", referencedColumnName = "idCustomer")
-    int idCustomer;
+    @ManyToOne
+    @JoinColumn(name = "idcliente")
+    Customer customer;
 
 }

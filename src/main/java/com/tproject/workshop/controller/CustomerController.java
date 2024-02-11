@@ -17,7 +17,7 @@ public interface CustomerController {
     @GetMapping("/{id}")
     Customer findById(@PathVariable("id") int idCostumer);
 
-    @GetMapping(path = "/find")
+    @GetMapping(path = "/find/{name}")
     List<Customer> findByName(@PathVariable("name") String name);
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

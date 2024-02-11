@@ -29,7 +29,6 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void listCustomers(int index, Integer statusCode, Map<String, Object> params, String reason) {
         Response response = given().spec(SPEC)
-                .queryParams(params)
                 .when()
                 .get(BASE_PATH)
                 .then()
@@ -42,26 +41,27 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
 
     private static Stream<Arguments> listCustomersArguments() {
         return Stream.of(
-                Arguments.of(0, HttpStatus.SC_OK, Map.of(), "get all Customers")
+                Arguments.of(1, HttpStatus.SC_OK, Map.of(), "get all Customers")
         );
     }
     @Order(2)
-    @DisplayName("findByName")
+    @DisplayName("find by name")
     @MethodSource("findCustomersArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
-    public void findCustomersByName(int index, Integer statusCode, Map<String, Object> params, String reason){
+    public void findCustomersByName(int index, Integer statusCode, String name, String reason){
         Response response = given().spec(SPEC)
-                .queryParams(params)
                 .when()
-                .get(BASE_PATH)
+                .get(BASE_PATH + "/find/" + name)
                 .then()
                 .statusCode(statusCode)
                 .extract()
                 .response();
+
+        super.validateResponse(index, response);
     }
     public static Stream<Arguments> findCustomersArguments(){
         return Stream.of(
-                Arguments.of(Map.of("name","Alfonso"))
+                Arguments.of(1, HttpStatus.SC_OK, "Alfonso", "")
         );
     }
 }

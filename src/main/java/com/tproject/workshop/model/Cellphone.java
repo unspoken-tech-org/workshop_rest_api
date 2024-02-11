@@ -11,11 +11,12 @@ public class Cellphone {
     @Column(name = "id", updatable = false)
     int idCellphone;
     @Column(name = "numero")
-    int number;
+    String number;
     @Column(name = "whats")
-    int whatsapp;
+    boolean whatsapp;
     @Column(name = "tipo")
-    char type;
-    @JoinColumn(name = "idCliente", referencedColumnName = "idCustomer")
-    int idCustomer;
+    String type;
+    @ManyToOne()
+    @JoinColumn(name = "idcliente")
+    Customer customer;
 }

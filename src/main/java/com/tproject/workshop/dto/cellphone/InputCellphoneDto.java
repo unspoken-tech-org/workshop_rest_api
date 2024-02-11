@@ -1,13 +1,13 @@
-package com.tproject.workshop.dto.customer;
+package com.tproject.workshop.dto.cellphone;
 
 import com.tproject.workshop.model.Cellphone;
 import lombok.Data;
 
 @Data
 public class InputCellphoneDto {
-    private int number;
-    private int whatsapp;
-    private char type;
+    private String number;
+    private boolean whatsapp;
+    private String type;
 
     public Cellphone toCellphoneModel(){
         Cellphone inputCellphone = new Cellphone();

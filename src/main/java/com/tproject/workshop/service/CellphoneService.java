@@ -1,6 +1,6 @@
 package com.tproject.workshop.service;
 
-import com.tproject.workshop.dto.customer.InputCellphoneDto;
+import com.tproject.workshop.dto.cellphone.InputCellphoneDto;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Cellphone;
 import com.tproject.workshop.repository.CellphoneRepository;

@@ -24,7 +24,7 @@ public class CustomerService {
     }
 
     public List<Customer> findByName(String name) {
-        return customerRepository.findByName(name);
+        return customerRepository.findByNameContaining(name);
     }
     public Customer addCustomer(InputCustomerDto inputCustomerDto){
         return customerRepository.save(inputCustomerDto.toCustomerModel());
