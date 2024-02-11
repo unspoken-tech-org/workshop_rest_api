@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("Customer")
+@RequestMapping("/v1/customer")
 public class CustomerControllerImpl implements CustomerController {
 
     private final CustomerService customerService;

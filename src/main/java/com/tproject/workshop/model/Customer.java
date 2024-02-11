@@ -12,7 +12,7 @@ import java.sql.Timestamp;
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idCustomer", updatable = false)
+    @Column(name = "id", updatable = false)
     int idCustomer;
     @Column(name = "nome", nullable = false)
     String name;

@@ -13,7 +13,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -27,7 +26,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     @Order(1)
     @DisplayName("List customers")
     @MethodSource("listCustomersArguments")
-    @ParameterizedTest(name = "{displayName} {0}: role {1} status {2} body {3} reason {4}")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void listCustomers(int index, Integer statusCode, Map<String, Object> params, String reason) {
         Response response = given().spec(SPEC)
                 .queryParams(params)
@@ -44,6 +43,25 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     private static Stream<Arguments> listCustomersArguments() {
         return Stream.of(
                 Arguments.of(0, HttpStatus.SC_OK, Map.of(), "get all Customers")
+        );
+    }
+    @Order(2)
+    @DisplayName("findByName")
+    @MethodSource("findCustomersArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void findCustomersByName(int index, Integer statusCode, Map<String, Object> params, String reason){
+        Response response = given().spec(SPEC)
+                .queryParams(params)
+                .when()
+                .get(BASE_PATH)
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+    }
+    public static Stream<Arguments> findCustomersArguments(){
+        return Stream.of(
+                Arguments.of(Map.of("name","Alfonso"))
         );
     }
 }

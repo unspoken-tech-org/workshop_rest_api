@@ -12,7 +12,7 @@ import java.sql.Timestamp;
 public class Sell {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idvenda", updatable = false)
+    @Column(name = "id", updatable = false)
     int idSell;
     @Column(name = "nome", nullable = false)
     String name;
@@ -29,8 +29,8 @@ public class Sell {
     float totalPay;
     @Column(name = "tipovenda")
     String sellType;
-    @ManyToOne
-    @JoinColumn(name = "idCustomer", referencedColumnName = "idCustomer")
-    private Customer idCustomer;
+//    @ManyToOne
+    @JoinColumn(name = "idCliente", referencedColumnName = "idCustomer")
+    int idCustomer;
 
 }
