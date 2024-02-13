@@ -61,7 +61,29 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     }
     public static Stream<Arguments> findCustomersArguments(){
         return Stream.of(
-                Arguments.of(1, HttpStatus.SC_OK, "Alfonso", "")
+                Arguments.of(1, HttpStatus.SC_OK, "Alfonso", ""),
+                Arguments.of(2,HttpStatus.SC_OK,"XXX","")
+        );
+    }
+    @Order(3)
+    @DisplayName("find by Id")
+    @MethodSource("findCustomersByIdArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void findCustomersById(int index, Integer statusCode, int id, String reason){
+        Response response = given().spec(SPEC)
+                .when()
+                .get(BASE_PATH + "/" + id)
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+
+        super.validateResponse(index, response);
+    }
+    public static Stream<Arguments> findCustomersByIdArguments(){
+        return Stream.of(
+                Arguments.of(1, HttpStatus.SC_OK, 1, ""),
+                Arguments.of(2,HttpStatus.SC_NOT_FOUND,250,"")
         );
     }
 }
