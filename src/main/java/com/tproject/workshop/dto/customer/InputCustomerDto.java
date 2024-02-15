@@ -1,13 +1,17 @@
 package com.tproject.workshop.dto.customer;
 
 import com.tproject.workshop.model.Customer;
+import jakarta.validation.constraints.Email;
 import lombok.Data;
+import org.hibernate.validator.constraints.br.CPF;
 
 @Data
 public class InputCustomerDto {
     private String name;
+    @CPF
     private String  cpf;
     private char gender;
+    @Email
     private String mail;
     private String phone;
     private String cellPhone;

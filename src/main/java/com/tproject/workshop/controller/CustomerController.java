@@ -2,6 +2,7 @@ package com.tproject.workshop.controller;
 
 import com.tproject.workshop.dto.customer.InputCustomerDto;
 import com.tproject.workshop.model.Customer;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -20,5 +21,5 @@ public interface CustomerController {
     List<Customer> findByName(@PathVariable("name") String name);
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    Customer create(@RequestBody @NotNull InputCustomerDto inputCustomerDto);
+    Customer create(@RequestBody @NotNull @Valid InputCustomerDto inputCustomerDto);
 }

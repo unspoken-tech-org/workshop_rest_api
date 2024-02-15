@@ -4,6 +4,7 @@ import com.tproject.workshop.controller.CustomerController;
 import com.tproject.workshop.dto.customer.InputCustomerDto;
 import com.tproject.workshop.model.Customer;
 import com.tproject.workshop.service.CustomerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,7 +34,7 @@ public class CustomerControllerImpl implements CustomerController {
     }
 
     @Override
-    public Customer create(InputCustomerDto inputCustomerDto) {
+    public Customer create(@Valid InputCustomerDto inputCustomerDto) {
         return customerService.addCustomer(inputCustomerDto);
     }
 }

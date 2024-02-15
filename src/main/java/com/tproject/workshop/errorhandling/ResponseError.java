@@ -1,4 +1,4 @@
-package com.tproject.workshop.erorhandling;
+package com.tproject.workshop.errorhandling;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
