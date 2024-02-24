@@ -11,7 +11,6 @@ public class InputCustomerDto {
     @CPF
     private String  cpf;
     private char gender;
-    @Email
     private String mail;
     private String phone;
     private String cellPhone;

@@ -1,9 +1,11 @@
 package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
+import org.hibernate.validator.constraints.br.CPF;
 
 import java.sql.Timestamp;
 
@@ -19,6 +21,7 @@ public class Customer {
     @CreationTimestamp(source = SourceType.DB)
     @Column(name = "datacadastro", nullable = false)
     Timestamp insertDate;
+    @CPF
     @Column(name = "cpf", nullable = false)
     String  cpf;
     @Column(name = "sexo", nullable = false)

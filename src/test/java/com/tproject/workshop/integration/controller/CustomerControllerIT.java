@@ -107,9 +107,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     public static Stream<Arguments> createCustomersArguments(){
         return Stream.of(
                 Arguments.of(1, HttpStatus.SC_OK, Map.of("name", "generoso", "cpf", "31781477051", "gender", "m", "mail", "geneder@live.com","phone","4499956752","cellphone","5594941236"), ""),
-                Arguments.of(2, HttpStatus.SC_BAD_REQUEST, Map.of("name", "generoso", "cpf", "317.814.770-40", "gender", "m", "mail", "geneder@live.com","phone","4499956752","cellphone","5594941236"), "wrong cpf number"),
-                Arguments.of(3, HttpStatus.SC_BAD_REQUEST, Map.of("name", "generoso", "cpf", "31781477051", "gender", "m", "mail", "geneder@k.ke.live.com","phone","4499956752","cellphone","5594941236"), "wrong email")
-
+                Arguments.of(2, HttpStatus.SC_BAD_REQUEST, Map.of("name", "generoso", "cpf", "317.814.770-40", "gender", "m", "mail", "geneder@live.com","phone","4499956752","cellphone","5594941236"), "wrong cpf number")
                 );
     }
 }

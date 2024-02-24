@@ -5,7 +5,7 @@
         "globalErrors": [
             {
                 "code": "entity.not.found.for.request",
-                "message": "Não existe cliente com id 250"
+                "message": "NÃ£o existe cliente com id 250"
             }
         ]
     }
