@@ -13,7 +13,7 @@ public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
-    int id;
+    int idCustomer;
     @Column(name = "nome", nullable = false)
     String name;
     @CreationTimestamp(source = SourceType.DB)

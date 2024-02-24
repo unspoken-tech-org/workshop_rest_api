@@ -11,8 +11,10 @@ import io.restassured.specification.RequestSpecification;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONException;
 import org.junit.jupiter.api.Tag;
+import org.skyscreamer.jsonassert.Customization;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
+import org.skyscreamer.jsonassert.comparator.CustomComparator;
 import org.skyscreamer.jsonassert.comparator.DefaultComparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.platform.commons.function.Try.success;
@@ -59,6 +62,13 @@ public class AbstractIntegrationLiveTest {
 
     public void validateResponse(Object index, Object response) {
         validateResponse(index, response, new DefaultComparator(JSONCompareMode.STRICT));
+    }
+
+    public void validateResponseIgnoreAttributes(Object index, Object response, List<String> ignoredAttributes) {
+
+        validateResponse(index, response, new CustomComparator(JSONCompareMode.STRICT,
+                ignoredAttributes.stream().map(attr -> new Customization(attr, (o1, o2) -> true))
+                        .toArray(Customization[]::new)));
     }
 
     public void validateResponse(Object index, Object response, DefaultComparator comparator) {

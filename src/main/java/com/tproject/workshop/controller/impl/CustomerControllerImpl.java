@@ -4,13 +4,16 @@ import com.tproject.workshop.controller.CustomerController;
 import com.tproject.workshop.dto.customer.InputCustomerDto;
 import com.tproject.workshop.model.Customer;
 import com.tproject.workshop.service.CustomerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/v1/customer")
 public class CustomerControllerImpl implements CustomerController {
 
     private final CustomerService customerService;
@@ -26,7 +29,12 @@ public class CustomerControllerImpl implements CustomerController {
     }
 
     @Override
-    public Customer create(InputCustomerDto inputCustomerDto) {
+    public List<Customer> findByName(String name) {
+        return customerService.findByName(name);
+    }
+
+    @Override
+    public Customer create(@Valid InputCustomerDto inputCustomerDto) {
         return customerService.addCustomer(inputCustomerDto);
     }
 }

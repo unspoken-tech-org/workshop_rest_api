@@ -23,6 +23,9 @@ public class CustomerService {
         return customerRepository.findById(id).orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
     }
 
+    public List<Customer> findByName(String name) {
+        return customerRepository.findByNameContaining(name);
+    }
     public Customer addCustomer(InputCustomerDto inputCustomerDto){
         return customerRepository.save(inputCustomerDto.toCustomerModel());
 

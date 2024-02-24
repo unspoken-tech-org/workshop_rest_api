@@ -1,4 +1,4 @@
-package com.tproject.workshop.erorhandling;
+package com.tproject.workshop.errorhandling;
 
 import com.tproject.workshop.exception.NotFoundException;
 import org.slf4j.Logger;
