@@ -10,25 +10,25 @@ import org.hibernate.validator.constraints.br.CPF;
 import java.sql.Timestamp;
 
 @Data
-@Entity(name = "clientes")
+@Entity(name = "customers")
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
     int idCustomer;
-    @Column(name = "nome", nullable = false)
+    @Column(name = "name", nullable = false)
     String name;
     @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "datacadastro", nullable = false)
+    @Column(name = "insertDate", nullable = false)
     Timestamp insertDate;
     @CPF
     @Column(name = "cpf", nullable = false)
     String  cpf;
-    @Column(name = "sexo", nullable = false)
+    @Column(name = "gender", nullable = false)
     char gender;
     @Column(name = "email")
     String mail;
-    @Column(name = "telefone", nullable = false)
+    @Column(name = "phone", nullable = false)
     String phone;
     @Column(name = "whatsapp")
     String cellPhone;

@@ -1,4 +1,4 @@
-INSERT INTO clientes (nome, dataCadastro, cpf, sexo, email, telefone, whatsapp)
+INSERT INTO customers (name, insertDate, cpf, gender, email, phone, whatsapp)
 VALUES
     (
     'Alfonso Zimmer',

@@ -1,280 +1,280 @@
-CREATE table if not exists aparelhos_cores(
+CREATE table if not exists devices_colors(
 id integer primary key generated always as identity not null,
-idAparelho int NOT NULL,
-idCor int NOT NULL 
+idDevice int NOT NULL,
+idColor int NOT NULL 
 );
 
-create table if not exists cores(
+create table if not exists colors(
 id integer primary key generated always as identity not null,
-cor varchar(50) not null
+color varchar(50) not null
 );
 
-create table if not exists aparelhos(
+create table if not exists devices(
 id integer primary key generated always as identity not null,
-idCliente int not null,
-idMarcaModeloTipo int not null,
-idEstado int not null,
-idTecnico int not null,
-entrada timestamp not null,
-saida timestamp not null,
-problema varchar not null,
-observacao varchar not null,
-orcamento varchar not null,
-maoDeObra money not null,
-urgencia bit not null,
-dataModificacao timestamp
+idCustomer int not null,
+idBrandModelType int not null,
+idDeviceStatus int not null,
+idTechnician int not null,
+entryDate timestamp not null,
+departureDate timestamp not null,
+problem varchar not null,
+observation varchar not null,
+budget varchar not null,
+laborValue money not null,
+hasUrgency bit not null,
+lastUpdate timestamp
 );
 
 
-create table if not exists clientes (
+create table if not exists customers(
 id integer primary key generated always as identity not null,
-nome varchar not null,
-dataCadastro timestamp not null,
+name varchar not null,
+insertDate timestamp not null,
 cpf varchar not null,
-sexo char not null,
+gender char not null,
 email varchar,
-telefone varchar not null,
+phone varchar not null,
 whatsapp varchar
 );
 
 
-create table if not exists estados(
+create table if not exists device_status(
 id integer primary key generated always as identity not null,
-estado varchar not null
+status varchar not null
 );
 
-create table if not exists marcas(
+create table if not exists brands(
 id integer primary key generated always as identity not null,
-marca varchar not null
+brand varchar not null
 );
 
-create table if not exists modelos (
+create table if not exists models (
 id integer primary key generated always as identity not null,
-modelo varchar not null
+model varchar not null
 );
 
-create table if not exists tecnicos(
+create table if not exists technicians(
 id integer primary key generated always as identity not null,
-tecnico varchar not null,
-numero varchar not null
+technician varchar not null,
+number varchar not null
 );
 
-create table if not exists tipos(
+create table if not exists types(
 id integer primary key generated always as identity not null,
-tipo varchar not null
+type varchar not null
 );
 
-create table if not exists contatos(
+create table if not exists customer_contact(
 id integer primary key generated always as identity not null,
-idAparelho int not null,
-idTecnico int not null,
-idTelefone int,
-idEstado int not null,
-tipo varchar not null,
-statusLigacao varchar,
-dataContato timestamp not null,
-dialogo varchar
+idDevice int not null,
+idTechnician int not null,
+idPhone int,
+idDeviceStatus int not null,
+type varchar not null,
+callStatus varchar,
+lastContact timestamp not null,
+conversation varchar
 );
 
-create table if not exists telefones(
+create table if not exists phones(
 id integer primary key generated always as identity not null,
-idCliente int,
-numero varchar not null,
+idCustomer int,
+number varchar not null,
 whats bit not null,
-tipo varchar not null
+type varchar not null
 );
 
-create table if not exists itens(
+create table if not exists items(
 id integer primary key generated always as identity not null,
-idAparelho int not null,
-idProduto int not null,
+idDevice int not null,
+idProduct int not null,
 item varchar not null,
-valor money not null,
-quantidade int not null
+itemValue money not null,
+quantity int not null
 );
 
-create table if not exists pagamentos_aparelhos(
+create table if not exists payments_devices(
 id integer primary key generated always as identity not null,
-idAparelho int not null,
-idPagamento int not null
+idDevice int not null,
+idPayment int not null
 );
 
------------ Vendas
-create table if not exists compras_produtos(
+----------- Sells
+create table if not exists purchases_products(
 id integer primary key generated always as identity not null,
-idCompra int,
-idProduto int,
-valorUnidade int,
-quantidade int,
+idBuying int,
+idProduct int,
+unitValue int,
+quantity int,
 subTotal money
 );
 
 
-create table if not exists produtos(
+create table if not exists products(
 id integer primary key generated always as identity not null,
-idCategoria int,
-idMarcaModeloTipo int,
-produto varchar,
-descricao varchar,
-valorCompra money,
-valorVenda money,
-estoque int,
-estado bit,
-estoqueMin int
+idCategory int,
+idBrandModelType int,
+product varchar,
+description varchar,
+valueBuying money,
+sellingValue money,
+supply int,
+status bit,
+minSupply int
 );
 
 
-create table if not exists fornecedores(
+create table if not exists suppliers(
 id integer primary key generated always as identity not null,
-fornecedor varchar,
-telefone varchar,
+supplier varchar,
+phone varchar,
 whatsapp varchar,
 email varchar
 );
 
-create table if not exists compras(
+create table if not exists purchases(
 id integer primary key generated always as identity not null,
-idFornecedor int,
-dataCompra timestamp,
-compra varchar,
-valorTotal money,
-valorFrete money,
-notaFiscal varchar
+idSupplier int,
+dataBuying timestamp,
+purchase varchar,
+totalValue money,
+shippingValue money,
+invoice varchar
 );
 
 
-create table if not exists categorias(
+create table if not exists categories(
 id integer primary key generated always as identity not null,
-categoria varchar
+category varchar
 );
 
-create table if not exists vendas(
+create table if not exists sales(
 id integer primary key generated always as identity not null,
-idCliente int,
-idVendedor int,
-dataVenda timestamp,
-tipoComprovante varchar,
-numeroComprovante varchar,
+idCustomer int,
+idSeller int,
+saleDate timestamp,
+invoiceType varchar,
+invoiceNumber varchar,
 total money,
-totalPago money,
-tipoVenda varchar
+paidTotal money,
+sellType varchar
 );
 
-create table if not exists vendedores(
+create table if not exists sellers(
 id integer primary key generated always as identity not null,
-nome varchar,
+name varchar,
 email varchar,
-telefone varchar,
+phone varchar,
 whatsapp varchar,
-sexo char
+gender char
 );
 
-create table if not exists produtos_vendas(
+create table if not exists products_sales(
 id integer primary key generated always as identity not null,
-idVenda int,
-idProduto int,
-valorVenda money,
-quantidade int,
+idSell int,
+idProduct int,
+sellValue money,
+quantity int,
 subTotal money
 );
 
-create table if not exists pagamentos(
+create table if not exists payments(
 id integer primary key generated always as identity not null,
-dataPagamento timestamp not null,
-tipoPagamento varchar not null,
-valor money not null,
-categoria varchar not null
+paymentDate timestamp not null,
+paymentType varchar not null,
+paymentValue money not null,
+category varchar not null
 );
 
-create table if not exists vendas_pagamentos(
+create table if not exists sales_payments(
 id integer primary key generated always as identity not null,
-idVenda int,
-idPagamento int
+idSell int,
+idPayment int
 );
 
-create table if not exists marcas_modelos(
+create table if not exists brands_models(
 id integer primary key generated always as identity not null,
-idMarca int not null,
-idModelo int not null
+idBrand int not null,
+idModel int not null
 );
 
-create table if not exists marcas_modelos_tipos(
+create table if not exists brands_models_types(
 id integer primary key generated always as identity not null,
-idMarcaModelo int not null,
-idTipo int not null
+idBrandModel int not null,
+idType int not null
 );
 
 
 --------- Foreign keys
---aparelhos_cores
-alter table aparelhos_cores add constraint fk_aparelhos_cores_aparelhos foreign key (idAparelho) references aparelhos(id);
-alter table aparelhos_cores add constraint fk_aparelhos_cores_cores foreign key (idCor) references cores(id);
+--devices_colors
+alter table devices_colors add constraint fk_devices_colors_devices foreign key (idDevice) references devices(id);
+alter table devices_colors add constraint fk_devices_colors_colors foreign key (idColor) references colors(id);
 
--- aparelhos
-alter table aparelhos add constraint fk_aparelhos_clientes foreign key (idCliente) references clientes(id);
+-- devices
+alter table devices add constraint fk_devices_customers foreign key (idCustomer) references customers(id);
 
-alter table aparelhos add constraint fk_aparelhos_MarcaModeloTipo foreign key (idMarcaModeloTipo) references marcas_modelos_tipos(id);
+alter table devices add constraint fk_devices_BrandModelType foreign key (idBrandModelType) references brands_models_types(id);
 
-alter table aparelhos add constraint fk_aparelhos_estados foreign key (idEstado) references estados(id);
+alter table devices add constraint fk_devices_device_status foreign key (idDeviceStatus) references device_status(id);
 
-alter table aparelhos add constraint fk_aparelhos_tecnico foreign key (idTecnico) references tecnicos(id);
+alter table devices add constraint fk_devices_technician foreign key (idTechnician) references technicians(id);
 
--- marcas_modelos
-alter table marcas_modelos  add constraint fk_marcas_modelos_marca foreign key (idMarca) references marcas(id);
-alter table marcas_modelos  add constraint fk_marcas_modelos_modelo foreign key (idModelo) references modelos(id);
+-- brands_models
+alter table brands_models  add constraint fk_brands_models_brand foreign key (idBrand) references brands(id);
+alter table brands_models  add constraint fk_brands_models_model foreign key (idModel) references models(id);
 
--- marcas_modelos_tipos
-alter table marcas_modelos_tipos add constraint fk_marcas_modelos_tipos_tipos foreign key (idTipo) references tipos(id);
-alter table marcas_modelos_tipos add constraint fk_marcas_modelos_tipos_marcaModelo foreign key (idMarcaModelo) references marcas_modelos(id);
-
-
--- contatos
-alter table contatos add constraint fk_contatos_aparelhos foreign key (idAparelho) references aparelhos(id);
-
-alter table contatos add constraint fk_contatos_tecnicos foreign key (idTecnico) references tecnicos(id);
-
-alter table contatos add constraint fk_contatos_telefones foreign key (idTelefone) references telefones(id);
-
-alter table contatos add constraint fk_contatos_estados foreign key (idEstado) references estados(id);
-
--- telefones
-alter table telefones add constraint fk_telefones_clientes foreign key (idCliente) references clientes(id);
-
--- itens
-alter table itens add constraint fk_itens_aparelhos foreign key (idAparelho) references aparelhos(id);
-
-alter table itens add constraint fk_itens_proutos foreign key (idProduto) references produtos(id);
+-- brands_models_types
+alter table brands_models_types add constraint fk_brands_models_types_types foreign key (idType) references types(id);
+alter table brands_models_types add constraint fk_brands_models_types_brandModel foreign key (idBrandModel) references brands_models(id);
 
 
+-- customer_contact
+alter table customer_contact add constraint fk_customer_contact_devices foreign key (idDevice) references devices(id);
 
--- compras_produtos
-alter table compras_produtos add constraint fk_compras_produtos_compra foreign key (idCompra) references compras(id);
+alter table customer_contact add constraint fk_customer_contact_technicians foreign key (idTechnician) references technicians(id);
 
-alter table compras_produtos add constraint fk_compras_produtos_produtos foreign key (idProduto) references produtos(id);
+alter table customer_contact add constraint fk_customer_contact_phones foreign key (idPhone) references phones(id);
 
--- produtos
-alter table produtos add constraint fk_produtos_categoria foreign key (idCategoria) references categorias(id);
+alter table customer_contact add constraint fk_customer_contact_device_status foreign key (idDeviceStatus) references device_status(id);
 
-alter table produtos add constraint fk_produtos_marcaModeloTipo foreign key (idMarcaModeloTipo) references marcas_modelos_tipos(id);
+-- phones
+alter table phones add constraint fk_phones_customers foreign key (idCustomer) references customers(id);
 
--- compras
-alter table compras add constraint fk_compras_fornecedores foreign key (idFornecedor) references fornecedores(id);
+-- items
+alter table items add constraint fk_items_devices foreign key (idDevice) references devices(id);
+
+alter table items add constraint fk_items_products foreign key (idProduct) references products(id);
 
 
--- vendas
-alter table vendas add constraint fk_vendas_clientes foreign key (idCliente) references clientes(id);
 
-alter table vendas add constraint fk_vendas_vendedores foreign key (idVendedor) references vendedores(id);
+-- purchases_products
+alter table purchases_products add constraint fk_purchases_products_purchase foreign key (idBuying) references purchases(id);
 
--- produtos_vendas
-alter table produtos_vendas add constraint fk_produtos_vendas_vendas foreign key (idVenda) references vendas(id);
+alter table purchases_products add constraint fk_purchases_products_products foreign key (idProduct) references products(id);
 
-alter table produtos_vendas add constraint fk_produtos_vendas_produtos foreign key (idProduto) references produtos(id);
+-- products
+alter table products add constraint fk_products_category foreign key (idCategory) references categories(id);
 
--- pagamentos_aparelhos
-alter table pagamentos_aparelhos add constraint fk_pagamentos_aparelhos_aparelhos foreign key (idAparelho) references aparelhos(id);
-alter table pagamentos_aparelhos add constraint fk_pagamentos_aparelhos_pagamentos foreign key (idPagamento) references pagamentos(id);
+alter table products add constraint fk_products_brandModelType foreign key (idBrandModelType) references brands_models_types(id);
 
--- vendas_pagamentos
-alter table vendas_pagamentos add constraint fk_vendas_pagamentos_venda foreign key (idVenda) references vendas(id);
-alter table vendas_pagamentos add constraint fk_vendas_pagamentos_pagamentos foreign key (idPagamento) references pagamentos(id);
+-- purchases
+alter table purchases add constraint fk_purchases_suppliers foreign key (idSupplier) references suppliers(id);
+
+
+-- sales
+alter table sales add constraint fk_sales_customers foreign key (idCustomer) references customers(id);
+
+alter table sales add constraint fk_sales_sellers foreign key (idSeller) references sellers(id);
+
+-- products_sales
+alter table products_sales add constraint fk_products_sales_sales foreign key (idSell) references sales(id);
+
+alter table products_sales add constraint fk_products_sales_products foreign key (idProduct) references products(id);
+
+-- payments_devices
+alter table payments_devices add constraint fk_payments_devices_devices foreign key (idDevice) references devices(id);
+alter table payments_devices add constraint fk_payments_devices_payments foreign key (idPayment) references payments(id);
+
+-- sales_payments
+alter table sales_payments add constraint fk_sales_payments_sale foreign key (idSell) references sales(id);
+alter table sales_payments add constraint fk_sales_payments_payments foreign key (idPayment) references payments(id);

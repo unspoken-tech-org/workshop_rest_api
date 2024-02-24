@@ -2,7 +2,7 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.cellphone.InputCellphoneDto;
 import com.tproject.workshop.exception.NotFoundException;
-import com.tproject.workshop.model.Cellphone;
+import com.tproject.workshop.model.Phone;
 import com.tproject.workshop.repository.CellphoneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,14 +14,14 @@ import java.util.List;
 public class CellphoneService {
     private final CellphoneRepository cellphoneRepository;
 
-    public List<Cellphone> findAllCellphones(){
+    public List<Phone> findAllCellphones(){
         return cellphoneRepository.findAll();
     }
-    public Cellphone findById(int idCellphone){
+    public Phone findById(int idCellphone){
         return cellphoneRepository.findById(idCellphone)
                 .orElseThrow(() -> new NotFoundException("Nao existe telefone com esse id" + idCellphone));
     }
-    public Cellphone addCellphone(InputCellphoneDto inputCellphoneDto){
+    public Phone addCellphone(InputCellphoneDto inputCellphoneDto){
         return cellphoneRepository.save(inputCellphoneDto.toCellphoneModel());
     }
 }

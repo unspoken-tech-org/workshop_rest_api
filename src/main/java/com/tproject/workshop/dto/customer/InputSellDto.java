@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class InputSellDto {
     private float total;
-    private float totalPay;
+    private float paidTotal;
     private String sellType;
     private String cellPhone;
     private int idCustomer;
@@ -15,7 +15,7 @@ public class InputSellDto {
         Sell inputSell = new Sell();
         inputSell.setSellType(sellType);
         inputSell.setTotal(total);
-        inputSell.setTotalPay(totalPay);
+        inputSell.setPaidTotal(paidTotal);
 
 
         return inputSell;

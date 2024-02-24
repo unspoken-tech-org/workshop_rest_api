@@ -4,19 +4,19 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
-@Entity(name = "telefones")
-public class Cellphone {
+@Entity(name = "phones")
+public class Phone {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
     int idCellphone;
-    @Column(name = "numero")
+    @Column(name = "number")
     String number;
     @Column(name = "whats")
     boolean whatsapp;
-    @Column(name = "tipo")
+    @Column(name = "type")
     String type;
     @ManyToOne()
-    @JoinColumn(name = "idcliente")
+    @JoinColumn(name = "idCustomer")
     Customer customer;
 }
