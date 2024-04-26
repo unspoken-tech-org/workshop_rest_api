@@ -17,6 +17,6 @@ public class Phone {
     @Column(name = "type")
     String type;
     @ManyToOne()
-    @JoinColumn(name = "idCustomer")
+    @JoinColumn(name = "id_customer")
     Customer customer;
 }

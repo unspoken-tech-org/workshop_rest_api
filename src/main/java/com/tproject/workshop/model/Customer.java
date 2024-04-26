@@ -19,7 +19,7 @@ public class Customer {
     @Column(name = "name", nullable = false)
     String name;
     @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "insertDate", nullable = false)
+    @Column(name = "insert_date", nullable = false)
     Timestamp insertDate;
     @CPF
     @Column(name = "cpf", nullable = false)

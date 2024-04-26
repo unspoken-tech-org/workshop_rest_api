@@ -2,7 +2,7 @@ package com.tproject.workshop.controller.impl;
 
 import com.tproject.workshop.controller.SellController;
 import com.tproject.workshop.dto.customer.InputSellDto;
-import com.tproject.workshop.model.Sell;
+import com.tproject.workshop.model.Sale;
 import com.tproject.workshop.service.SellService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,15 +15,15 @@ public class SellControllerImpl implements SellController {
     private final SellService sellService;
 
     @Override
-    public List<Sell> list(){
+    public List<Sale> list(){
         return sellService.findAllSell();
     }
     @Override
-    public Sell findById(int idSell){
+    public Sale findById(int idSell){
         return sellService.findById(idSell);
     }
     @Override
-    public Sell create(InputSellDto inputSellDto){
+    public Sale create(InputSellDto inputSellDto){
         return sellService.addSell(inputSellDto);
     }
 }

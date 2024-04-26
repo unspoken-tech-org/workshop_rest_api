@@ -5,30 +5,31 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 @Data
 @Entity(name = "sales")
-public class Sell {
+public class Sale {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
     int idSell;
     @CreationTimestamp(source = SourceType.DB)
-    @Column(name = "saleDate", nullable = false)
+    @Column(name = "sale_date", nullable = false)
     Timestamp insertDate;
-    @Column(name = "invoiceType")
+    @Column(name = "invoice_type")
     String invoiceType;
-    @Column(name = "invoiceNumber")
+    @Column(name = "invoice_number")
     String invoiceNumber;
     @Column(name = "total")
-    float total;
-    @Column(name = "paidTotal")
-    float paidTotal;
-    @Column(name = "sellType")
+    BigDecimal total;
+    @Column(name = "paid_total")
+    BigDecimal paidTotal;
+    @Column(name = "sell_type")
     String sellType;
     @ManyToOne
-    @JoinColumn(name = "idCustomer")
+    @JoinColumn(name = "id_customer")
     Customer customer;
 
 }

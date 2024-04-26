@@ -1,0 +1,12 @@
+{
+    "id": 3,
+    "customerId": 1,
+    "deviceStatusId": 1,
+    "brandId": 1,
+    "modelId": 1,
+    "typeId": 1,
+    "technicianId": 1,
+    "problem": "problem",
+    "observation": "observation",
+    "hasUrgency": false
+}

@@ -1,7 +1,7 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.dto.customer.InputSellDto;
-import com.tproject.workshop.model.Sell;
+import com.tproject.workshop.model.Sale;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,12 +14,12 @@ import java.util.List;
 public interface SellController {
 
     @GetMapping
-    List<Sell> list();
+    List<Sale> list();
 
     @GetMapping("/{id}")
-    Sell findById(@PathVariable("id") int idSell);
+    Sale findById(@PathVariable("id") int idSell);
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    Sell create(@RequestBody @NotNull InputSellDto inputSellDto);
+    Sale create(@RequestBody @NotNull InputSellDto inputSellDto);
 
 }
