@@ -12,8 +12,12 @@ public class BrandsModelsTypes {
     private int id;
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_brand_model")
-    private BrandsModels idBrandModel;
+    @JoinColumn(name = "id_brand")
+    private Brand idBrand;
+
+    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_model")
+    private Model idModel;
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_type")

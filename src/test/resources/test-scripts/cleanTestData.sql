@@ -21,6 +21,5 @@ truncate sellers RESTART IDENTITY cascade;
 truncate products_sales RESTART IDENTITY cascade;
 truncate payments RESTART IDENTITY cascade;
 truncate sales_payments RESTART IDENTITY cascade;
-truncate brands_models RESTART IDENTITY cascade;
 truncate brands_models_types RESTART IDENTITY cascade;
 

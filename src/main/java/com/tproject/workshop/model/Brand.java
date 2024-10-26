@@ -17,5 +17,5 @@ public class Brand {
     private String brand;
 
     @OneToMany(mappedBy = "idBrand", cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
-    private List<BrandsModels> brandsModels;
+    private List<BrandsModelsTypes> brandsModelsTypes;
 }

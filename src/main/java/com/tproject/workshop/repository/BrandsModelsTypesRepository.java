@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface BrandsModelsTypesRepository extends JpaRepository<BrandsModelsTypes, Integer> {
 
-    @Query(value = "SELECT id, id_brand_model, id_type FROM brands_models_types WHERE id_brand_model = :idBrandModel AND id_type = :idType"
+    @Query(value = "SELECT id, id_brand, id_model, id_type FROM brands_models_types WHERE id_brand = :idBrand AND id_model = :idModel  AND id_type = :idType"
             , nativeQuery = true)
-    BrandsModelsTypes findByIdBrandModelAndIdType(@Param("idBrandModel") int idBrandModel, @Param("idType") int idType);
+    BrandsModelsTypes findByIdBrandAndIdModelAndIdType(@Param("idBrand") int idBrand, @Param("idModel") int idModel, @Param("idType") int idType);
 }
