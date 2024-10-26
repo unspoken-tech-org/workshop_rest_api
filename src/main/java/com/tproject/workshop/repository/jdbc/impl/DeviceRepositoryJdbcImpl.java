@@ -37,16 +37,16 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
 
     @Override
     public Device saveDevice(Device device) {
-//        MapSqlParameterSource params = new MapSqlParameterSource()
-//                .addValue(DeviceInputDto.Fields.customerId.name(), device.getCustomer().getId(), Types.INTEGER)
-//                .addValue(DeviceInputDto.Fields.deviceStatusId.name(), device.getDeviceStatus().getId(), Types.INTEGER)
-//                .addValue(DeviceInputDto.Fields.brandId.name(), device.getBrandsModelsTypes().getBrandsModels().getBrand().getId(), Types.INTEGER)
-//                .addValue(DeviceInputDto.Fields.modelId.name(), device.getBrandsModelsTypes().getBrandsModels().getModel().getId(), Types.INTEGER)
-//                .addValue(DeviceInputDto.Fields.typeId.name(), device.getBrandsModelsTypes().getType().getId(), Types.INTEGER)
-//                .addValue(DeviceInputDto.Fields.technicianId.name(), device.getTechnician().getId(), Types.INTEGER)
-//                .addValue(DeviceInputDto.Fields.problem.name(), device.getProblem(), Types.VARCHAR)
-//                .addValue(DeviceInputDto.Fields.observation.name(), device.getObservation(), Types.VARCHAR)
-//                .addValue(DeviceInputDto.Fields.hasUrgency.name(), device.isHasUrgency(), Types.BOOLEAN)
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue(DeviceInputDto.Fields.customerId.name(), device.getCustomer().getIdCustomer(), Types.INTEGER)
+                .addValue(DeviceInputDto.Fields.deviceStatusId.name(), device.getDeviceStatus().getId(), Types.INTEGER)
+                .addValue(DeviceInputDto.Fields.brandId.name(), device.getBrandsModelsTypes().getIdBrand().getIdBrand(), Types.INTEGER)
+                .addValue(DeviceInputDto.Fields.modelId.name(), device.getBrandsModelsTypes().getIdModel().getModel(), Types.INTEGER)
+                .addValue(DeviceInputDto.Fields.typeId.name(), device.getBrandsModelsTypes().getIdType().getIdType(), Types.INTEGER)
+                .addValue(DeviceInputDto.Fields.technicianId.name(), device.getTechnician().getId(), Types.INTEGER)
+                .addValue(DeviceInputDto.Fields.problem.name(), device.getProblem(), Types.VARCHAR)
+                .addValue(DeviceInputDto.Fields.observation.name(), device.getObservation(), Types.VARCHAR)
+                .addValue(DeviceInputDto.Fields.hasUrgency.name(), device.isHasUrgency(), Types.BOOLEAN)
                 ;
         return null;
     }
