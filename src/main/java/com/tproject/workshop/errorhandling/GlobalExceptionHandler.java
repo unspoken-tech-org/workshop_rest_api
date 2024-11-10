@@ -21,7 +21,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler({NotFoundException.class, EmptyResultDataAccessException.class})
     public ResponseEntity<ResponseError> handleNotFoundException(final Exception ex, WebRequest request) {
         if (EXCEPTION_LOGGER.isWarnEnabled()) {
-            EXCEPTION_LOGGER.warn("Entity not found for request: " + request.getDescription(false), ex);
+            EXCEPTION_LOGGER.warn("Entity not found for request: {}", request.getDescription(false), ex);
         }
 
         return new ResponseEntity<>(new ResponseError(HttpStatus.NOT_FOUND.value(), "Entity not found for request",
