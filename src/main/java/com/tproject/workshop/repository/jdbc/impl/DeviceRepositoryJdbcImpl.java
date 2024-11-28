@@ -22,8 +22,9 @@ import java.util.Optional;
 public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
 
 
-    public static final String DEVICE_IDS = "DEVICE_IDS";
-    public static final String CUSTOMER_ID = "CUSTOMER_ID";
+    public static final String DEVICE_ID = "DEVICE_ID";
+    public static final String CUSTOMER_PHONE = "CUSTOMER_PHONE";
+    public static final String CUSTOMER_CPF = "CUSTOMER_CPF";
     public static final String BRAND_ID = "BRAND_ID";
     public static final String MODEL_ID = "MODEL_ID";
     public static final String TYPE_ID = "TYPE_ID";
@@ -54,17 +55,16 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     @Override
     public List<DeviceTableDto> listTable(DeviceQueryParam deviceParams) {
         MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue(DEVICE_IDS,
-                        ArraySqlValue.create(Optional.ofNullable(deviceParams.getDeviceIds())
-                                .map(ids -> ids.toArray(new Integer[0])).orElse(new Integer[]{})), Types.ARRAY)
+                .addValue(DEVICE_ID, deviceParams.getDeviceId(), Types.INTEGER)
+                .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
+                .addValue(CUSTOMER_PHONE, deviceParams.getCustomerPhone(), Types.VARCHAR)
+                .addValue(CUSTOMER_CPF, deviceParams.getCustomerCpf(), Types.VARCHAR)
                 .addValue(BRAND_ID, deviceParams.getBrandId(), Types.INTEGER)
                 .addValue(MODEL_ID, deviceParams.getModelId(), Types.INTEGER)
                 .addValue(TYPE_ID, deviceParams.getTypeId(), Types.INTEGER)
                 .addValue(STATUS_ID, deviceParams.getStatusId(), Types.INTEGER)
                 .addValue(ENTRY_DATE, deviceParams.getEntryDate(), Types.TIMESTAMP_WITH_TIMEZONE)
                 .addValue(DEPARTURE_DATE, deviceParams.getDepartureDate(),  Types.TIMESTAMP_WITH_TIMEZONE)
-                .addValue(CUSTOMER_ID, deviceParams.getCustomerId(), Types.INTEGER)
-                .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
                 ;
 
        return jdbcTemplate

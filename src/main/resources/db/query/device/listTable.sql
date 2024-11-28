@@ -7,10 +7,13 @@ left join models m on m.id = bmt.id_model
 left join "types" t on t.id  = bmt.id_type
 left join device_status ds on ds.id = d.id_device_status
 where
-    (COALESCE(array_length(:DEVICE_IDS::integer[], 1), 0) = 0 OR d.id = any(:DEVICE_IDS))
-    AND (:CUSTOMER_ID IS NULL OR c.id = :CUSTOMER_ID)
-    AND (:BRAND_ID IS NULL OR b.id = :BRAND_ID)
-    AND (:MODEL_ID IS NULL OR m.id = :MODEL_ID)
-    AND (:TYPE_ID IS NULL OR t.id = :TYPE_ID)
-    AND (:STATUS_ID IS NULL OR ds.id = :STATUS_ID)
+--    (COALESCE(array_length(:DEVICE_IDS::integer[], 1), 0) = 0 OR d.id = any(:DEVICE_IDS))
+    (:DEVICE_ID IS NULL OR d.id = :DEVICE_ID)
     AND (:CUSTOMER_NAME IS NULL OR c.name ilike CONCAT('%', :CUSTOMER_NAME, '%'))
+    AND (:CUSTOMER_PHONE IS NULL OR c.phone ilike CONCAT('%', :CUSTOMER_PHONE, '%') OR c.whatsapp ilike CONCAT('%', :CUSTOMER_PHONE, '%'))
+    AND (:CUSTOMER_CPF IS NULL OR c.cpf ilike CONCAT('%', :CUSTOMER_CPF, '%'))
+
+--    AND (:BRAND_ID IS NULL OR b.id = :BRAND_ID)
+--    AND (:MODEL_ID IS NULL OR m.id = :MODEL_ID)
+--    AND (:TYPE_ID IS NULL OR t.id = :TYPE_ID)
+--    AND (:STATUS_ID IS NULL OR ds.id = :STATUS_ID)

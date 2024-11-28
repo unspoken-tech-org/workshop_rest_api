@@ -4,17 +4,18 @@ import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 
 import java.sql.Timestamp;
-import java.util.List;
 
 @Data
 @FieldNameConstants(asEnum = true)
 public class DeviceQueryParam {
 
-    List<Integer> deviceIds;
+    Integer deviceId;
 
     String customerName;
 
-    Integer customerId;
+    String customerPhone;
+
+    String customerCpf;
 
     Integer typeId;
 
