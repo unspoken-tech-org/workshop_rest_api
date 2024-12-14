@@ -2,7 +2,6 @@ package com.tproject.workshop.controller;
 
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;

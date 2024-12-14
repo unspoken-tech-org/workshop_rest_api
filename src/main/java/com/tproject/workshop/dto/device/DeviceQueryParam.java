@@ -1,5 +1,6 @@
 package com.tproject.workshop.dto.device;
 
+import java.util.List;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 
@@ -23,7 +24,7 @@ public class DeviceQueryParam {
 
     Integer modelId;
 
-    Integer statusId;
+    List<String> status = List.of();
 
     Timestamp entryDate;
 

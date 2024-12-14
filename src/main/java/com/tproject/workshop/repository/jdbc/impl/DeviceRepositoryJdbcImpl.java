@@ -1,6 +1,5 @@
 package com.tproject.workshop.repository.jdbc.impl;
 
-import com.tproject.workshop.config.ArraySqlValue;
 import com.tproject.workshop.dto.device.DeviceInputDto;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Types;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -28,7 +26,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     public static final String BRAND_ID = "BRAND_ID";
     public static final String MODEL_ID = "MODEL_ID";
     public static final String TYPE_ID = "TYPE_ID";
-    public static final String STATUS_ID = "STATUS_ID";
+    public static final String STATUS = "STATUS";
     public static final String ENTRY_DATE = "ENTRY_DATE";
     public static final String DEPARTURE_DATE = "DEPARTURE_DATE";
     public static final String CUSTOMER_NAME = "CUSTOMER_NAME";
@@ -62,7 +60,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(BRAND_ID, deviceParams.getBrandId(), Types.INTEGER)
                 .addValue(MODEL_ID, deviceParams.getModelId(), Types.INTEGER)
                 .addValue(TYPE_ID, deviceParams.getTypeId(), Types.INTEGER)
-                .addValue(STATUS_ID, deviceParams.getStatusId(), Types.INTEGER)
+                .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))
                 .addValue(ENTRY_DATE, deviceParams.getEntryDate(), Types.TIMESTAMP_WITH_TIMEZONE)
                 .addValue(DEPARTURE_DATE, deviceParams.getDepartureDate(),  Types.TIMESTAMP_WITH_TIMEZONE)
                 ;

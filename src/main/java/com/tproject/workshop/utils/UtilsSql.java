@@ -4,6 +4,7 @@ import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.MustacheFactory;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
+import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
@@ -75,5 +76,18 @@ public class UtilsSql {
         }
 
         return contextBuilder.build();
+    }
+
+    public static String toLiteralArray(List<?> list){
+        if (list == null || list.isEmpty()) {
+            return "{}";
+        }
+        StringBuilder arrList = new StringBuilder("{");
+        for (Object element : list) {
+            arrList.append(element).append(",");
+        }
+        arrList.deleteCharAt(arrList.length() - 1);
+        arrList.append("}");
+        return arrList.toString();
     }
 }
