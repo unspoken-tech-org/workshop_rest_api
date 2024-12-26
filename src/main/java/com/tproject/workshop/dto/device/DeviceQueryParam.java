@@ -18,13 +18,15 @@ public class DeviceQueryParam {
 
     String customerCpf;
 
-    Integer typeId;
+    List<Integer> typeIds = List.of();
 
-    Integer brandId;
+    List<String> status = List.of();
+
+    List<Integer> deviceTypes = List.of();
 
     Integer modelId;
 
-    List<String> status = List.of();
+    Integer brandId;
 
     Timestamp entryDate;
 

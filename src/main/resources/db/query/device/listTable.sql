@@ -12,3 +12,4 @@ where
     AND (:CUSTOMER_PHONE IS NULL OR c.phone ilike CONCAT('%', :CUSTOMER_PHONE, '%') OR c.whatsapp ilike CONCAT('%', :CUSTOMER_PHONE, '%'))
     AND (:CUSTOMER_CPF IS NULL OR c.cpf ilike CONCAT('%', :CUSTOMER_CPF, '%'))
     AND (COALESCE(array_length(:STATUS::text[], 1), 0) = 0 OR ds.status = ANY(:STATUS::text[]))
+    AND (COALESCE(array_length(:DEVICE_TYPES::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_TYPES::int[]))
