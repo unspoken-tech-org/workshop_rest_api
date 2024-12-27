@@ -24,9 +24,7 @@ public class DeviceQueryParam {
 
     List<Integer> deviceTypes = List.of();
 
-    Integer modelId;
-
-    Integer brandId;
+    List<Integer> deviceBrands = List.of();
 
     Timestamp entryDate;
 

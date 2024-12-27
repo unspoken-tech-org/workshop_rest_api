@@ -13,3 +13,4 @@ where
     AND (:CUSTOMER_CPF IS NULL OR c.cpf ilike CONCAT('%', :CUSTOMER_CPF, '%'))
     AND (COALESCE(array_length(:STATUS::text[], 1), 0) = 0 OR ds.status = ANY(:STATUS::text[]))
     AND (COALESCE(array_length(:DEVICE_TYPES::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_TYPES::int[]))
+    AND (COALESCE(array_length(:DEVICE_BRANDS::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_BRANDS::int[]))

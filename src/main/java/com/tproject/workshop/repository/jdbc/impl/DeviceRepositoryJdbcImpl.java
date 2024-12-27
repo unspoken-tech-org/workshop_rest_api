@@ -23,9 +23,8 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     public static final String DEVICE_ID = "DEVICE_ID";
     public static final String CUSTOMER_PHONE = "CUSTOMER_PHONE";
     public static final String CUSTOMER_CPF = "CUSTOMER_CPF";
-    public static final String BRAND_ID = "BRAND_ID";
-    public static final String MODEL_ID = "MODEL_ID";
     public static final String DEVICE_TYPES = "DEVICE_TYPES";
+    public static final String DEVICE_BRANDS = "DEVICE_BRANDS";
     public static final String STATUS = "STATUS";
     public static final String ENTRY_DATE = "ENTRY_DATE";
     public static final String DEPARTURE_DATE = "DEPARTURE_DATE";
@@ -57,9 +56,8 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
                 .addValue(CUSTOMER_PHONE, deviceParams.getCustomerPhone(), Types.VARCHAR)
                 .addValue(CUSTOMER_CPF, deviceParams.getCustomerCpf(), Types.VARCHAR)
-                .addValue(BRAND_ID, deviceParams.getBrandId(), Types.INTEGER)
-                .addValue(MODEL_ID, deviceParams.getModelId(), Types.INTEGER)
                 .addValue(DEVICE_TYPES,UtilsSql.toLiteralArray(deviceParams.getDeviceTypes()))
+                .addValue(DEVICE_BRANDS,UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
                 .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))
                 .addValue(ENTRY_DATE, deviceParams.getEntryDate(), Types.TIMESTAMP_WITH_TIMEZONE)
                 .addValue(DEPARTURE_DATE, deviceParams.getDepartureDate(),  Types.TIMESTAMP_WITH_TIMEZONE)

@@ -2,6 +2,7 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Brand;
+import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.BrandRepository;
 import com.tproject.workshop.utils.UtilsString;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,14 @@ public class BrandService {
     }
 
     private Brand findByName(String name){
+        return brandRepository.findByBrandIgnoreCase(name).getFirst();
+    }
+
+    public List<Brand> findAll(String name){
+        if(name == null || name.trim().isEmpty()){
+            return brandRepository.findAll();
+        }
+
         return brandRepository.findByBrandIgnoreCase(name);
     }
 
