@@ -14,3 +14,4 @@ where
     AND (COALESCE(array_length(:STATUS::text[], 1), 0) = 0 OR ds.status = ANY(:STATUS::text[]))
     AND (COALESCE(array_length(:DEVICE_TYPES::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_TYPES::int[]))
     AND (COALESCE(array_length(:DEVICE_BRANDS::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_BRANDS::int[]))
+    AND (:INITIAL_ENTRY_DATE IS NULL OR :FINAL_ENTRY_DATE IS NULL OR d.entry_date BETWEEN :INITIAL_ENTRY_DATE::timestamp  AND :FINAL_ENTRY_DATE::timestamp )

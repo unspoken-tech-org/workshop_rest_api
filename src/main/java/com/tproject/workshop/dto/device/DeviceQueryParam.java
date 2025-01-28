@@ -4,8 +4,6 @@ import java.util.List;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 
-import java.sql.Timestamp;
-
 @Data
 @FieldNameConstants(asEnum = true)
 public class DeviceQueryParam {
@@ -26,7 +24,7 @@ public class DeviceQueryParam {
 
     List<Integer> deviceBrands = List.of();
 
-    Timestamp entryDate;
+    String initialEntryDate;
 
-    Timestamp departureDate;
+    String finalEntryDate;
 }

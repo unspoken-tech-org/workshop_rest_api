@@ -26,8 +26,8 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     public static final String DEVICE_TYPES = "DEVICE_TYPES";
     public static final String DEVICE_BRANDS = "DEVICE_BRANDS";
     public static final String STATUS = "STATUS";
-    public static final String ENTRY_DATE = "ENTRY_DATE";
-    public static final String DEPARTURE_DATE = "DEPARTURE_DATE";
+    public static final String INITIAL_ENTRY_DATE = "INITIAL_ENTRY_DATE";
+    public static final String FINAL_ENTRY_DATE = "FINAL_ENTRY_DATE";
     public static final String CUSTOMER_NAME = "CUSTOMER_NAME";
 
 
@@ -59,8 +59,8 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(DEVICE_TYPES,UtilsSql.toLiteralArray(deviceParams.getDeviceTypes()))
                 .addValue(DEVICE_BRANDS,UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
                 .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))
-                .addValue(ENTRY_DATE, deviceParams.getEntryDate(), Types.TIMESTAMP_WITH_TIMEZONE)
-                .addValue(DEPARTURE_DATE, deviceParams.getDepartureDate(),  Types.TIMESTAMP_WITH_TIMEZONE)
+                .addValue(INITIAL_ENTRY_DATE, deviceParams.getInitialEntryDate(), Types.VARCHAR)
+                .addValue(FINAL_ENTRY_DATE, deviceParams.getFinalEntryDate() ,  Types.VARCHAR)
                 ;
 
        return jdbcTemplate
