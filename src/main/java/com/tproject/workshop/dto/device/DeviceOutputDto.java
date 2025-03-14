@@ -3,18 +3,21 @@ package com.tproject.workshop.dto.device;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.sql.Timestamp;
+import lombok.experimental.FieldNameConstants;
 
 @Data
+@FieldNameConstants(asEnum = true)
 @AllArgsConstructor
 public class DeviceOutputDto {
-    private int id;
+    private int deviceId;
     private int customerId;
-    private int deviceStatusId;
-    private int brandId;
-    private int modelId;
-    private int typeId;
+    private String customerName;
+    private String deviceStatus;
+    private String brandName;
+    private String modelName;
+    private String typeName;
     private int technicianId;
+    private String technicianName;
     private String problem;
     private String observation;
     private boolean hasUrgency;

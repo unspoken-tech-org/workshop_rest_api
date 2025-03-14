@@ -1,6 +1,8 @@
 package com.tproject.workshop.repository.jdbc.impl;
 
 import com.tproject.workshop.dto.device.DeviceInputDto;
+import com.tproject.workshop.dto.device.DeviceOutputDto;
+import com.tproject.workshop.dto.device.DeviceOutputDto.Fields;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
 import com.tproject.workshop.model.Device;
@@ -85,5 +87,31 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                                         )
                                         .newResultSetExtractor(DeviceTableDto.class)
                         );
+    }
+
+    @Override
+    public DeviceOutputDto findByDeviceId(int deviceId) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue(DEVICE_ID, deviceId, Types.INTEGER);
+
+        return jdbcTemplate
+            .queryForObject(
+                UtilsSql.getQuery("device/getDevice"),
+                params,
+                JdbcTemplateMapperFactory
+                    .newInstance()
+                    .addKeys(Fields.deviceId.name(),
+                        Fields.customerId.name(),
+                        Fields.customerName.name(),
+                        Fields.deviceStatus.name(),
+                        Fields.brandName.name(),
+                        Fields.modelName.name(),
+                        Fields.typeName.name(),
+                        Fields.technicianName.name(),
+                        Fields.problem.name(),
+                        Fields.observation.name(),
+                        Fields.hasUrgency.name()
+                    ).newRowMapper(DeviceOutputDto.class)
+            );
     }
 }

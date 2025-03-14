@@ -1,6 +1,7 @@
 package com.tproject.workshop.repository.jdbc;
 
 import com.tproject.workshop.dto.device.DeviceInputDto;
+import com.tproject.workshop.dto.device.DeviceOutputDto;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
 import com.tproject.workshop.model.Device;
@@ -13,4 +14,6 @@ public interface DeviceRepositoryJdbc {
     Device saveDevice(Device device);
 
     List<DeviceTableDto> listTable(DeviceQueryParam params);
+
+    DeviceOutputDto findByDeviceId(int deviceId);
 }
