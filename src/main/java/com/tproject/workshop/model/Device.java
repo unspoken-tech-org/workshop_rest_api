@@ -1,6 +1,7 @@
 package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
+import java.util.List;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.CreationTimestamp;
@@ -40,6 +41,9 @@ public class Device {
 
     @Column(name = "has_urgency", nullable = false)
     private boolean hasUrgency;
+
+    @Column(name = "color_ids", nullable = false)
+    private List<Integer> colorIds;
 
     @UpdateTimestamp
     @Column(name = "last_update")

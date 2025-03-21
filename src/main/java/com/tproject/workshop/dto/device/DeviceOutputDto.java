@@ -21,4 +21,5 @@ public class DeviceOutputDto {
     private String problem;
     private String observation;
     private boolean hasUrgency;
+    private boolean isRevision;
 }

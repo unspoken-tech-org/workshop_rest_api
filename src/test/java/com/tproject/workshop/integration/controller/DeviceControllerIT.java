@@ -29,7 +29,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
     public void listDevices(int index, Integer statusCode, Map<String, Object> params, String reason) {
         Response response = given().spec(SPEC)
                 .when()
-                .get(BASE_PATH)
+                .post(BASE_PATH + "/filter")
                 .then()
                 .statusCode(statusCode)
                 .extract()

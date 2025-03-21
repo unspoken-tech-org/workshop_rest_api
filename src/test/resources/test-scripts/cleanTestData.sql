@@ -1,4 +1,3 @@
-truncate devices_colors RESTART IDENTITY cascade;
 truncate colors RESTART IDENTITY cascade;
 truncate devices RESTART IDENTITY cascade;
 truncate customers RESTART IDENTITY cascade;
