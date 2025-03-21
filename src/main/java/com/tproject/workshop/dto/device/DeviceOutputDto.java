@@ -1,5 +1,6 @@
 package com.tproject.workshop.dto.device;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -20,6 +21,7 @@ public class DeviceOutputDto {
     private String technicianName;
     private String problem;
     private String observation;
+    private List<String> deviceColors;
     private boolean hasUrgency;
     private boolean isRevision;
 }

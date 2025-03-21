@@ -111,7 +111,8 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                         Fields.problem.name(),
                         Fields.observation.name(),
                         Fields.hasUrgency.name(),
-                        Fields.isRevision.name()
+                        Fields.isRevision.name(),
+                        Fields.deviceColors.name()
                     ).newRowMapper(DeviceOutputDto.class)
             );
     }
