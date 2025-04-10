@@ -27,8 +27,4 @@ public class Customer {
     char gender;
     @Column(name = "email")
     String mail;
-    @Column(name = "phone", nullable = false)
-    String phone;
-    @Column(name = "whatsapp")
-    String cellPhone;
 }

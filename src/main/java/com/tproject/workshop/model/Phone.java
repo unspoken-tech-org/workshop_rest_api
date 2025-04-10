@@ -16,6 +16,8 @@ public class Phone {
     boolean whatsapp;
     @Column(name = "type")
     String type;
+    @Column(name = "is_main")
+    boolean isMain;
     @ManyToOne()
     @JoinColumn(name = "id_customer")
     Customer customer;

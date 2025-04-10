@@ -23,8 +23,6 @@ public class InputCustomerDto {
         inputCustomer.setCpf(cpf);
         inputCustomer.setGender(gender);
         inputCustomer.setMail(mail);
-        inputCustomer.setPhone(phone);
-        inputCustomer.setCellPhone(cellPhone);
 
         return inputCustomer;
     }

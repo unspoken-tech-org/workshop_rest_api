@@ -1,13 +1,11 @@
-INSERT INTO customers(id, name, insert_date, cpf, gender, email, phone, whatsapp) VALUES
+INSERT INTO customers(id, name, insert_date, cpf, gender, email) VALUES
 (
 1,
 'Alfonso Zimmer',
 '2021-04-26 08:41:00.968173',
 '31781477051',
 'm',
-'zimmer@gmail.com',
-'4430356678',
-'44988254493'
+'zimmer@gmail.com'
 ),
 (
 2,
@@ -15,9 +13,7 @@ INSERT INTO customers(id, name, insert_date, cpf, gender, email, phone, whatsapp
 '2023-01-06 14:41:00.968173',
 '46203912042',
 'm',
-'zimmer@gmail.com',
-'44988255540',
-NULL
+'zimmer@gmail.com'
 ),
 (
 3,
@@ -25,9 +21,7 @@ NULL
 '2023-01-06 14:41:00.968173',
 '09857367410',
 'm',
-'belt@gmail.com',
-'44988252235',
-NULL
+'belt@gmail.com'
 )
 ;
 
@@ -43,7 +37,8 @@ VALUES
 (2, 'em_andamento'),
 (3, 'aguardando'),
 (4, 'entregue'),
-(5, 'descartado')
+(5, 'descartado'),
+(6, 'pronto')
 ;
 
 INSERT INTO brands(id, brand) 
@@ -109,6 +104,20 @@ VALUES
 (13, 1, 3, 3, 1, '2021-04-26 08:41:00.968173', '2021-04-26 08:41:00.968173', 'Problem 13', 'Observation 13', 'Budget 13', 1300.00, true, false, '2021-04-26 08:41:00.968173', ('{2}')),
 (14, 2, 4, 4, 2, '2023-01-06 14:41:00.968173', '2023-01-06 14:41:00.968173', 'Problem 14', 'Observation 14', 'Budget 14', 1400.00, false, true, '2023-01-06 14:41:00.968173', ('{1}')),
 (15, 1, 5, 5, 1, '2021-04-26 08:41:00.968173', '2021-04-26 08:41:00.968173', 'Problem 15', 'Observation 15', 'Budget 15', 1500.00, true, false, '2021-04-26 08:41:00.968173', ('{3, 2}'))
+;
+
+INSERT INTO phones(id, id_customer, number, whats, is_main, type)
+VALUES
+(1, 1, '4430356678', false, false, 'telefone'),
+(2, 1, '44988254493', true, true, 'celular'),
+(3, 2, '44988255540', true, true, 'celular'),
+(4, 3, '44988252235', true, true, 'celular')
+;
+
+INSERT INTO customer_contact(id, id_device, id_technician, id_phone, id_device_status, type, call_status, last_contact, conversation)
+VALUES
+(1, 1, 1, 1, 1, 'mensagem', 'atendido/respondido', '2025-01-06 14:41:00.968173', 'Foi passado o orçamento e o cliente disse que vai pensar'),
+(2, 1, 1, 1, 6, 'mensagem', 'nao_atendido/nao_respondido', '2025-01-07 14:41:00.968173', 'Aceitou o orçamento')
 ;
 
 --BEGIN;
