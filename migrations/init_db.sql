@@ -17,6 +17,7 @@ budget varchar,
 labor_value NUMERIC(15,2),
 color_ids INTEGER[] not null,
 has_urgency boolean not null,
+is_revision boolean not null,
 last_update timestamp
 );
 

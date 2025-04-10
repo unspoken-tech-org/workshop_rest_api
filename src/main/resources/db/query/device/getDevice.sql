@@ -1,6 +1,7 @@
 SELECT d.id AS device_id, c.id AS customer_id, c."name" AS customer_name,
 ds.status AS device_status, b.brand AS brand_name, m.model AS model_name, t."type" AS type_name,
-tec.id AS technician_id, tec.technician AS technician_name, d.problem, d.observation, d.has_urgency,
+tec.id AS technician_id, tec.technician AS technician_name, d.problem, d.observation, d.budget,
+d.has_urgency, d.is_revision, d.entry_date, d.departure_date, d.last_update,
 ARRAY_AGG(clr.color ORDER BY clr.color) AS device_colors
 from devices d
 JOIN customers c ON d.id_customer = c.id

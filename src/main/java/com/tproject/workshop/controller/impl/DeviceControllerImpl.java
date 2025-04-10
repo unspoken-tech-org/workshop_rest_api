@@ -4,6 +4,7 @@ import com.tproject.workshop.controller.DeviceController;
 import com.tproject.workshop.dto.device.DeviceOutputDto;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
+import com.tproject.workshop.dto.device.DeviceUpdateInputDto;
 import com.tproject.workshop.service.DeviceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,5 +31,11 @@ public class DeviceControllerImpl implements DeviceController {
     @Override
     public DeviceOutputDto findOne(int deviceId) {
         return deviceService.findDeviceById(deviceId);
+    }
+
+    @Override
+    public DeviceOutputDto update(DeviceUpdateInputDto device) {
+        var updatedDevice = deviceService.updateDevice(device);
+        return updatedDevice;
     }
 }

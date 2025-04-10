@@ -110,9 +110,13 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                         Fields.technicianName.name(),
                         Fields.problem.name(),
                         Fields.observation.name(),
+                        Fields.budget.name(),
                         Fields.hasUrgency.name(),
                         Fields.isRevision.name(),
-                        Fields.deviceColors.name()
+                        Fields.deviceColors.name(),
+                        Fields.departureDate.name(),
+                        Fields.entryDate.name(),
+                        Fields.lastUpdate.name()
                     ).newRowMapper(DeviceOutputDto.class)
             );
     }

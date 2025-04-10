@@ -36,6 +36,8 @@ public class DeviceStatusService {
     }
 
     public DeviceStatus findByStatus(String status){
-        return deviceStatusRepository.findByStatusIgnoreCase(status);
+        return deviceStatusRepository.findByStatusIgnoreCase(status).orElseThrow(() ->
+            new NotFoundException(String.format("Status do dispositivo com nome %s não encontrado", status))
+        );
     }
 }

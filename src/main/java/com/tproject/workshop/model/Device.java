@@ -42,6 +42,9 @@ public class Device {
     @Column(name = "has_urgency", nullable = false)
     private boolean hasUrgency;
 
+    @Column(name = "is_revision", nullable = false)
+    private boolean isRevision;
+
     @Column(name = "color_ids", nullable = false)
     private List<Integer> colorIds;
 
