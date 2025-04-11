@@ -1,21 +1,28 @@
 package com.tproject.workshop.repository.jdbc.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.device.DeviceInputDto;
 import com.tproject.workshop.dto.device.DeviceOutputDto;
-import com.tproject.workshop.dto.device.DeviceOutputDto.Fields;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
 import com.tproject.workshop.model.Device;
 import com.tproject.workshop.repository.jdbc.DeviceRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
+import java.sql.Array;
+import java.sql.Types;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.simpleflatmapper.jdbc.spring.JdbcTemplateMapperFactory;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
-
-import java.sql.Types;
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -34,6 +41,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
 
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
     @Override
     public Device saveDevice(Device device) {
@@ -94,30 +102,54 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue(DEVICE_ID, deviceId, Types.INTEGER);
 
-        return jdbcTemplate
-            .queryForObject(
-                UtilsSql.getQuery("device/getDevice"),
-                params,
-                JdbcTemplateMapperFactory
-                    .newInstance()
-                    .addKeys(Fields.deviceId.name(),
-                        Fields.customerId.name(),
-                        Fields.customerName.name(),
-                        Fields.deviceStatus.name(),
-                        Fields.brandName.name(),
-                        Fields.modelName.name(),
-                        Fields.typeName.name(),
-                        Fields.technicianName.name(),
-                        Fields.problem.name(),
-                        Fields.observation.name(),
-                        Fields.budget.name(),
-                        Fields.hasUrgency.name(),
-                        Fields.isRevision.name(),
-                        Fields.deviceColors.name(),
-                        Fields.departureDate.name(),
-                        Fields.entryDate.name(),
-                        Fields.lastUpdate.name()
-                    ).newRowMapper(DeviceOutputDto.class)
-            );
+        return jdbcTemplate.queryForObject(
+            UtilsSql.getQuery("device/getDevice"),
+            params,
+            rowMapper
+        );
     }
+
+    RowMapper<DeviceOutputDto> rowMapper = (rs, rowNum) -> {
+        // TODO: add configuration to bean
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+//        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        DeviceOutputDto dto = new DeviceOutputDto();
+
+        dto.setDeviceId(rs.getInt("device_id"));
+        dto.setCustomerId(rs.getInt("customer_id"));
+        dto.setCustomerName(rs.getString("customer_name"));
+        dto.setDeviceStatus(rs.getString("device_status"));
+        dto.setBrandName(rs.getString("brand_name"));
+        dto.setModelName(rs.getString("model_name"));
+        dto.setTypeName(rs.getString("type_name"));
+        dto.setTechnicianId(rs.getInt("technician_id"));
+        dto.setTechnicianName(rs.getString("technician_name"));
+        dto.setProblem(rs.getString("problem"));
+        dto.setObservation(rs.getString("observation"));
+        dto.setBudget(rs.getString("budget"));
+        dto.setHasUrgency(rs.getBoolean("has_urgency"));
+        dto.setRevision(rs.getBoolean("is_revision"));
+        dto.setEntryDate(rs.getTimestamp("entry_date"));
+        dto.setDepartureDate(rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date") : null);
+        dto.setLastUpdate(rs.getTimestamp("last_update"));
+
+        Array colorsArray = rs.getArray("device_colors");
+        dto.setDeviceColors(colorsArray != null ? Arrays.asList((String[]) colorsArray.getArray()) : Collections.emptyList());
+
+        String json = rs.getString("customer_contacts");
+        if (json != null && !json.isBlank()) {
+          List<CustomerContactOutputDto> contacts = null;
+          try {
+            contacts = objectMapper.readValue(json, new TypeReference<>() {});
+          } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+          }
+          dto.setCustomerContacts(contacts);
+        } else {
+            dto.setCustomerContacts(Collections.emptyList());
+        }
+
+        return dto;
+    };
 }
