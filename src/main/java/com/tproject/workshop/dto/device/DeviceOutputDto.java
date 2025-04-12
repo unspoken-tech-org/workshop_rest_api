@@ -1,6 +1,7 @@
 package com.tproject.workshop.dto.device;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import java.sql.Timestamp;
 import java.util.List;
@@ -35,5 +36,6 @@ public class DeviceOutputDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
     private Timestamp departureDate;
     private Timestamp lastUpdate;
+    private List<CellPhoneOutputDeviceDto> customerPhones;
     private List<CustomerContactOutputDto> customerContacts;
 }

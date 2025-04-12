@@ -17,7 +17,8 @@ SELECT
   d.departure_date,
   d.last_update,
   color_data.device_colors,
-  contact_data.customer_contacts
+  contact_data.customer_contacts,
+  customer_phones_data.customer_phones
 FROM devices d
 
 JOIN customers c ON d.id_customer = c.id
@@ -32,6 +33,14 @@ LEFT JOIN LATERAL (
   FROM colors clr
   WHERE clr.id = ANY(d.color_ids)
 ) color_data ON true
+LEFT JOIN LATERAL (
+  SELECT COALESCE(json_agg(jsonb_build_object(
+      'id', cp.id,
+      'number', cp.number
+  )), '[]'::json) AS customer_phones
+  FROM phones cp
+  WHERE cp.id_customer = c.id
+) customer_phones_data ON true
 LEFT JOIN LATERAL (
   SELECT COALESCE(json_agg(jsonb_build_object(
       'id', cc.id,
