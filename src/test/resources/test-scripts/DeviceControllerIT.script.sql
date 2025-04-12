@@ -25,7 +25,7 @@ INSERT INTO customers(id, name, insert_date, cpf, gender, email) VALUES
 )
 ;
 
-INSERT INTO technicians(id, name, number)
+INSERT INTO technicians(id, technician_name, number)
 VALUES
 (1, 'Technician 1', '44988254493'),
 (2, 'Technician 2', '44988254493')

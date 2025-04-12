@@ -12,7 +12,7 @@ public class Technician {
     @Column(name = "id", updatable = false)
     private int id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "technician_name", nullable = false)
     private String name;
 
     @Column(name = "number", nullable = false)

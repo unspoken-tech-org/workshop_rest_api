@@ -16,7 +16,11 @@ public class CustomerContactOutputDto {
 
   private int technicianId;
 
+  private String technicianName;
+
   private int phoneId;
+
+  private String phoneNumber;
 
   private String type;
 
