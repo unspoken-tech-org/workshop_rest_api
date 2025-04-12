@@ -25,16 +25,16 @@ public class TechnicianService {
     }
 
     public Technician save(Technician technician){
-        var technicianFound = findByName(technician.getTechnician());
+        var technicianFound = findByName(technician.getName());
         if(technicianFound == null){
-            var technicianName = UtilsString.capitalizeEachWord(technician.getTechnician());
-            technician.setTechnician(technicianName);
+            var technicianName = UtilsString.capitalizeEachWord(technician.getName());
+            technician.setName(technicianName);
             return technicianRepository.save(technician);
         }
         return technicianFound;
     }
 
     private Technician findByName(String name){
-        return technicianRepository.findByTechnicianIgnoreCase(name);
+        return technicianRepository.findByNameIgnoreCase(name);
     }
 }

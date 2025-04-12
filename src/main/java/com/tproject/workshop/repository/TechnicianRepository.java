@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TechnicianRepository extends JpaRepository<Technician, Integer> {
-    Technician findByTechnicianIgnoreCase(String name);
+    Technician findByNameIgnoreCase(String name);
 }

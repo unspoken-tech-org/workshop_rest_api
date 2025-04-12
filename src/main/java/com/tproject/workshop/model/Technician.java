@@ -12,8 +12,8 @@ public class Technician {
     @Column(name = "id", updatable = false)
     private int id;
 
-    @Column(name = "technician", nullable = false)
-    private String technician;
+    @Column(name = "name", nullable = false)
+    private String name;
 
     @Column(name = "number", nullable = false)
     private String number;
