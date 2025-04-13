@@ -8,4 +8,5 @@ import lombok.experimental.FieldNameConstants;
 public class CellPhoneOutputDeviceDto {
   private int id;
   private String number;
+  private boolean main;
 }

@@ -43,7 +43,7 @@ public class Device {
     private boolean hasUrgency;
 
     @Column(name = "is_revision", nullable = false)
-    private boolean isRevision;
+    private boolean revision;
 
     @Column(name = "color_ids", nullable = false)
     private List<Integer> colorIds;

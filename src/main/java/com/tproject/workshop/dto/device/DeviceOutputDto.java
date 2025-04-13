@@ -30,7 +30,7 @@ public class DeviceOutputDto {
     private String budget;
     private List<String> deviceColors;
     private boolean hasUrgency;
-    private boolean isRevision;
+    private boolean revision;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
     private Timestamp entryDate;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")

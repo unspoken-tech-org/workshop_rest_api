@@ -36,7 +36,8 @@ LEFT JOIN LATERAL (
 LEFT JOIN LATERAL (
   SELECT COALESCE(json_agg(jsonb_build_object(
       'id', cp.id,
-      'number', cp.number
+      'number', cp.number,
+      'main', cp.is_main
   )), '[]'::json) AS customer_phones
   FROM phones cp
   WHERE cp.id_customer = c.id
