@@ -15,7 +15,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 @Data
 @Entity(name = "customer_contact")
-public class Contacts {
+public class CustomerContact {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "id", updatable = false)
@@ -28,13 +28,13 @@ public class Contacts {
   private int technicianId;
 
   @Column(name = "id_phone")
-  private int phoneId;
+  private Integer phoneId;
 
   @Column(name = "type", nullable = false)
   private String type;
 
-  @Column(name = "call_status")
-  private String callStatus;
+  @Column(name = "has_made_contact")
+  private boolean hasMadeContact;
 
   @CreationTimestamp
   @Column(name = "last_contact", nullable = false)

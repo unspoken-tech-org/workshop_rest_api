@@ -72,7 +72,7 @@ id_technician int not null,
 id_phone int,
 id_device_status int not null,
 type varchar not null,
-call_status varchar,
+has_made_contact bool not null default false,
 last_contact timestamp not null,
 conversation varchar
 );

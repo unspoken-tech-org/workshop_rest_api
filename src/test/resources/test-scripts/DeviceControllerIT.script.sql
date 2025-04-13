@@ -114,10 +114,11 @@ VALUES
 (4, 3, '44988252235', true, true, 'celular')
 ;
 
-INSERT INTO customer_contact(id, id_device, id_technician, id_phone, id_device_status, type, call_status, last_contact, conversation)
+INSERT INTO customer_contact(id, id_device, id_technician, id_phone, id_device_status, type, has_made_contact, last_contact, conversation)
 VALUES
-(1, 1, 1, 1, 1, 'mensagem', 'atendido/respondido', '2025-01-06 14:41:00.968173', 'Foi passado o orçamento e o cliente disse que vai pensar'),
-(2, 1, 1, 1, 6, 'mensagem', 'nao_atendido/nao_respondido', '2025-01-07 14:41:00.968173', 'Aceitou o orçamento')
+(1, 1, 1, 1, 3, 'mensagem', false, '2025-01-06 14:41:00.968173', 'Foi passado o orçamento e aguardo resposta'),
+(2, 1, 1, null, 2, 'pessoalmente', true, '2025-01-07 14:41:00.968173', 'Cliente aceitou o orçamento'),
+(3, 1, 1, 1, 6, 'mensagem', true, '2025-01-08 14:41:00.968173', 'Avisado que o aparelho está pronto')
 ;
 
 --BEGIN;

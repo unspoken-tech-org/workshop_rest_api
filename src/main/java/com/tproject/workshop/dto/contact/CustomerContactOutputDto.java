@@ -18,13 +18,13 @@ public class CustomerContactOutputDto {
 
   private String technicianName;
 
-  private int phoneId;
+  private Integer phoneId;
 
   private String phoneNumber;
 
   private String type;
 
-  private String callStatus;
+  private boolean hasMadeContact;
 
   private LocalDateTime lastContact;
 

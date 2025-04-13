@@ -52,7 +52,7 @@ LEFT JOIN LATERAL (
       'phoneNumber', pc.number,
       'deviceStatus', dsj.status,
       'type', cc.type,
-      'callStatus', cc.call_status,
+      'hasMadeContact', cc.has_made_contact,
       'lastContact', cc.last_contact,
       'conversation', cc.conversation
   ) ORDER BY cc.last_contact DESC), '[]'::json) AS customer_contacts
