@@ -123,6 +123,7 @@ VALUES
 
 --BEGIN;
 SELECT setval(pg_get_serial_sequence('devices', 'id'), coalesce(MAX(id), 1)) from devices;
+SELECT setval(pg_get_serial_sequence('customer_contact', 'id'), coalesce(MAX(id), 1)) from customer_contact;
 --COMMIT;
 --ALTER TABLE devices ALTER COLUMN id RESTART WITH 3;
 

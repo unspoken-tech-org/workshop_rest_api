@@ -1,5 +1,6 @@
 package com.tproject.workshop.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,7 +20,7 @@ public class CustomerContact {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "id", updatable = false)
-  private int id;
+  private Integer id;
 
   @Column(name = "id_device", nullable = false)
   private int deviceId;
@@ -43,6 +44,7 @@ public class CustomerContact {
   @Column(name = "conversation")
   private String conversation;
 
+  @JsonIgnore
   @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
   @JoinColumn(name = "id_device_status")
   private DeviceStatus deviceStatus;
