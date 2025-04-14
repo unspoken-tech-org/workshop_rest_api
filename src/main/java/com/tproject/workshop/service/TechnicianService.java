@@ -24,6 +24,10 @@ public class TechnicianService {
                 .orElseThrow(() -> new NotFoundException(String.format("Técnico com id %d não encontrado", id)));
     }
 
+    private Technician findByName(String name){
+        return technicianRepository.findByNameIgnoreCase(name);
+    }
+
     public Technician save(Technician technician){
         var technicianFound = findByName(technician.getName());
         if(technicianFound == null){
@@ -34,7 +38,4 @@ public class TechnicianService {
         return technicianFound;
     }
 
-    private Technician findByName(String name){
-        return technicianRepository.findByNameIgnoreCase(name);
-    }
 }
