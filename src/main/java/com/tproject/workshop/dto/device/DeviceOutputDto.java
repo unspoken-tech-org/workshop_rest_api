@@ -38,4 +38,5 @@ public class DeviceOutputDto {
     private Timestamp lastUpdate;
     private List<CellPhoneOutputDeviceDto> customerPhones;
     private List<CustomerContactOutputDto> customerContacts;
+    private List<MinifiedDeviceTableOutputDto> otherDevices;
 }

@@ -18,7 +18,8 @@ SELECT
   d.last_update,
   color_data.device_colors,
   contact_data.customer_contacts,
-  customer_phones_data.customer_phones
+  customer_phones_data.customer_phones,
+  customer_devices.other_devices
 FROM devices d
 
 JOIN customers c ON d.id_customer = c.id
@@ -42,6 +43,26 @@ LEFT JOIN LATERAL (
   FROM phones cp
   WHERE cp.id_customer = c.id
 ) customer_phones_data ON true
+LEFT JOIN LATERAL (
+ SELECT COALESCE(json_agg(jsonb_build_object(
+      'deviceId', od.id,
+      'customerId', od.id_customer,
+      'typeBrandModel', (select concat_ws(' ', ot."type", ob.brand, '|', om.model)),
+      'deviceStatus', ods.status,
+      'problem', od.problem,
+      'hasUrgency', od.has_urgency,
+      'revision', od.is_revision,
+      'entryDate', od.entry_date,
+       'departureDate', od.departure_date
+  ) order by od.entry_date desc), '[]'::json) AS other_devices
+  FROM devices od
+  LEFT JOIN brands_models_types obmt on obmt.id = od.id_brand_model_type
+  LEFT JOIN brands ob on ob.id = obmt.id_brand
+  LEFT JOIN models om on om.id = obmt.id_model
+  LEFT JOIN "types" ot on ot.id = obmt.id_type
+  LEFT JOIN device_status ods on ods.id = od.id_device_status
+  WHERE od.id_customer = c.id
+) customer_devices ON TRUE
 LEFT JOIN LATERAL (
   SELECT COALESCE(json_agg(jsonb_build_object(
       'id', cc.id,
