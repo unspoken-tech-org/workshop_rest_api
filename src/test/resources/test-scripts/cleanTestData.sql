@@ -9,7 +9,6 @@ truncate types RESTART IDENTITY cascade;
 truncate customer_contact RESTART IDENTITY cascade;
 truncate phones RESTART IDENTITY cascade;
 truncate items RESTART IDENTITY cascade;
-truncate payments_devices RESTART IDENTITY cascade;
 truncate purchases_products RESTART IDENTITY cascade;
 truncate products RESTART IDENTITY cascade;
 truncate suppliers RESTART IDENTITY cascade;

@@ -1,0 +1,59 @@
+{
+    "deviceId": 1,
+    "customerId": 1,
+    "customerName": "Alfonso Zimmer",
+    "deviceStatus": "novo",
+    "brandName": "Arno",
+    "modelName": "Model 1",
+    "typeName": "Ventilador",
+    "technicianId": 1,
+    "technicianName": "Technician 1",
+    "problem": "Problem 1",
+    "observation": "Observation 1",
+    "budget": "Budget 1",
+    "deviceColors": [
+        "preto"
+    ],
+    "hasUrgency": true,
+    "entryDate": "26/04/2021",
+    "departureDate": "26/04/2021",
+    "customerPhones": [
+        {
+            "id": 1,
+            "number": "4430356678"
+        },
+        {
+            "id": 2,
+            "number": "44988254493"
+        }
+    ],
+    "customerContacts": [
+        {
+            "id": 2,
+            "deviceId": 1,
+            "technicianId": 1,
+            "technicianName": "Technician 1",
+            "phoneId": 1,
+            "phoneNumber": "4430356678",
+            "type": "mensagem",
+            "hasMadeContact": false,
+            "conversation": "Aceitou o orçamento",
+            "deviceStatus": "pronto",
+            "lastContact": "07/01/2025"
+        },
+        {
+            "id": 1,
+            "deviceId": 1,
+            "technicianId": 1,
+            "technicianName": "Technician 1",
+            "phoneId": 1,
+            "phoneNumber": "4430356678",
+            "type": "mensagem",
+            "hasMadeContact": true,
+            "conversation": "Foi passado o orçamento e o cliente disse que vai pensar",
+            "deviceStatus": "novo",
+            "lastContact": "06/01/2025"
+        }
+    ],
+    "revision": false
+}

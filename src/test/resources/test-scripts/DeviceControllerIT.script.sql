@@ -121,9 +121,17 @@ VALUES
 (3, 1, 1, 1, 6, 'mensagem', true, '2025-01-08 14:41:00.968173', 'Avisado que o aparelho está pronto')
 ;
 
+INSERT INTO payments(id, id_device, payment_date, payment_type, payment_value, category)
+VALUES
+(1, 1, '2023-04-22 08:41:00.968173', 'credito', 100, 'parcial'),
+(2, 1, '2023-04-29 08:41:00.968173', 'credito', 100, 'parcial')
+;
+
 --BEGIN;
 SELECT setval(pg_get_serial_sequence('devices', 'id'), coalesce(MAX(id), 1)) from devices;
 SELECT setval(pg_get_serial_sequence('customer_contact', 'id'), coalesce(MAX(id), 1)) from customer_contact;
+SELECT setval(pg_get_serial_sequence('payments', 'id'), coalesce(MAX(id), 1)) from payments;
+
 --COMMIT;
 --ALTER TABLE devices ALTER COLUMN id RESTART WITH 3;
 

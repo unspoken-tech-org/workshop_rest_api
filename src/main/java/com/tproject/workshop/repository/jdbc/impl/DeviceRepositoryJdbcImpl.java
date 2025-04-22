@@ -151,6 +151,11 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 }, objectMapper)
             );
 
+            dto.setPayments(
+                JsonResultSetMapper.readJsonList(rs, "payments", new TypeReference<>() {
+                }, objectMapper)
+            );
+
             return dto;
         };
     }

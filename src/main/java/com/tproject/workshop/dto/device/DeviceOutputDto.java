@@ -3,6 +3,7 @@ package com.tproject.workshop.dto.device;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
+import com.tproject.workshop.dto.payment.PaymentDeviceOutputDto;
 import java.sql.Timestamp;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -39,4 +40,5 @@ public class DeviceOutputDto {
     private List<CellPhoneOutputDeviceDto> customerPhones;
     private List<CustomerContactOutputDto> customerContacts;
     private List<MinifiedDeviceTableOutputDto> otherDevices;
+    private List<PaymentDeviceOutputDto> payments;
 }

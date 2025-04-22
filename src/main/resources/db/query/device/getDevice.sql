@@ -19,9 +19,9 @@ SELECT
   color_data.device_colors,
   contact_data.customer_contacts,
   customer_phones_data.customer_phones,
-  customer_devices.other_devices
+  customer_devices.other_devices,
+  device_payments.payments
 FROM devices d
-
 JOIN customers c ON d.id_customer = c.id
 JOIN device_status ds ON ds.id = d.id_device_status
 JOIN brands_models_types bmt ON bmt.id = d.id_brand_model_type
@@ -83,5 +83,15 @@ LEFT JOIN LATERAL (
   LEFT JOIN phones pc ON pc.id = cc.id_phone
   WHERE cc.id_device = d.id
 ) contact_data ON true
-
+LEFT JOIN LATERAL(
+	SELECT COALESCE(json_agg(json_build_object(
+		'paymentId', p.id,
+		'paymentDate', p.payment_date,
+		'paymentType', p.payment_type,
+		'paymentValue', p.payment_value,
+		'category', p.category
+	) ORDER BY p.payment_date DESC), '[]'::json) as payments
+	FROM payments p
+	WHERE p.id_device = d.id
+) device_payments ON true
 WHERE d.id = :DEVICE_ID

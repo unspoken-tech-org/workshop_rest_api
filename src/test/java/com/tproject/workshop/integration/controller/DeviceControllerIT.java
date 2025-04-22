@@ -44,4 +44,26 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
         );
     }
 
+    @Order(2)
+    @DisplayName("Get device")
+    @MethodSource("getDeviceArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void getDevice(int index, Integer statusCode, int id, String reason) {
+        Response response = given().spec(SPEC)
+            .when()
+            .get(BASE_PATH + "/" + id)
+            .then()
+            .statusCode(statusCode)
+            .extract()
+            .response();
+
+        super.validateResponse(index, response);
+    }
+
+    private static Stream<Arguments> getDeviceArguments() {
+        return Stream.of(
+            Arguments.of(1, HttpStatus.SC_OK, 1, "get single device")
+        );
+    }
+
 }
