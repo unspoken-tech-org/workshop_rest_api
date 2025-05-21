@@ -2,25 +2,24 @@ package com.tproject.workshop.repository.jdbc.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tproject.workshop.dto.device.DeviceInputDto;
 import com.tproject.workshop.dto.device.DeviceOutputDto;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
-import com.tproject.workshop.model.Device;
 import com.tproject.workshop.repository.jdbc.DeviceRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
 import com.tproject.workshop.utils.mapper.JsonResultSetMapper;
-import java.sql.Array;
-import java.sql.Types;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.simpleflatmapper.jdbc.spring.JdbcTemplateMapperFactory;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+
+import java.sql.Array;
+import java.sql.Types;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -40,22 +39,6 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
-
-    @Override
-    public Device saveDevice(Device device) {
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue(DeviceInputDto.Fields.customerId.name(), device.getCustomer().getIdCustomer(), Types.INTEGER)
-                .addValue(DeviceInputDto.Fields.deviceStatusId.name(), device.getDeviceStatus().getId(), Types.INTEGER)
-                .addValue(DeviceInputDto.Fields.brandId.name(), device.getBrandsModelsTypes().getIdBrand().getIdBrand(), Types.INTEGER)
-                .addValue(DeviceInputDto.Fields.modelId.name(), device.getBrandsModelsTypes().getIdModel().getModel(), Types.INTEGER)
-                .addValue(DeviceInputDto.Fields.typeId.name(), device.getBrandsModelsTypes().getIdType().getIdType(), Types.INTEGER)
-                .addValue(DeviceInputDto.Fields.technicianId.name(), device.getTechnician().getId(), Types.INTEGER)
-                .addValue(DeviceInputDto.Fields.problem.name(), device.getProblem(), Types.VARCHAR)
-                .addValue(DeviceInputDto.Fields.observation.name(), device.getObservation(), Types.VARCHAR)
-                .addValue(DeviceInputDto.Fields.hasUrgency.name(), device.isHasUrgency(), Types.BOOLEAN)
-                ;
-        return null;
-    }
 
     @Override
     public List<DeviceTableDto> listTable(DeviceQueryParam deviceParams) {
@@ -126,6 +109,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setHasUrgency(rs.getBoolean("has_urgency"));
             dto.setRevision(rs.getBoolean("is_revision"));
             dto.setEntryDate(rs.getTimestamp("entry_date"));
+            dto.setLaborValue(rs.getBigDecimal("labor_value"));
             dto.setDepartureDate(
                 rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date")
                     : null);

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.payment.PaymentDeviceOutputDto;
+
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -29,6 +31,7 @@ public class DeviceOutputDto {
     private String problem;
     private String observation;
     private String budget;
+    private BigDecimal laborValue;
     private List<String> deviceColors;
     private boolean hasUrgency;
     private boolean revision;

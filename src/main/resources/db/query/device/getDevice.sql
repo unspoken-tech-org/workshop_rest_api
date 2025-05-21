@@ -11,6 +11,7 @@ SELECT
   d.problem,
   d.observation,
   d.budget,
+  d.labor_value,
   d.has_urgency,
   d.is_revision,
   d.entry_date,

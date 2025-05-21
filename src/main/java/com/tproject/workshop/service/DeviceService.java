@@ -10,12 +10,12 @@ import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.DeviceStatus;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.utils.MapUtils;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -45,8 +45,7 @@ public class DeviceService {
         BeanUtils.copyProperties(device, oldDevice, MapUtils.getNullPropertyNames(device));
         oldDevice.setDeviceStatus(newStatus);
 
-        deviceRepository.saveDevice(oldDevice);
-
+        deviceRepository.save(oldDevice);
         deviceRepository.flush();
 
         return findDeviceById(oldDevice.getId());

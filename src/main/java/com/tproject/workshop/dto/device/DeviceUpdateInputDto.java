@@ -10,5 +10,5 @@ public class DeviceUpdateInputDto {
   private String problem;
   private String observation;
   private String budget;
-//  private BigDecimal laborValue;
+  private BigDecimal laborValue;
 }
