@@ -1,7 +1,6 @@
 package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
-import java.util.List;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,6 +8,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.List;
 
 @Data
 @FieldNameConstants(asEnum = true)
@@ -67,4 +67,8 @@ public class Device {
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_brand_model_type")
     private BrandsModelsTypes brandsModelsTypes;
+
+    public Device(int id) {
+        this.id = id;
+    }
 }
