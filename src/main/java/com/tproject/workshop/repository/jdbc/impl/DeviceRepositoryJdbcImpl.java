@@ -47,46 +47,45 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
                 .addValue(CUSTOMER_PHONE, deviceParams.getCustomerPhone(), Types.VARCHAR)
                 .addValue(CUSTOMER_CPF, deviceParams.getCustomerCpf(), Types.VARCHAR)
-                .addValue(DEVICE_TYPES,UtilsSql.toLiteralArray(deviceParams.getDeviceTypes()))
-                .addValue(DEVICE_BRANDS,UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
+                .addValue(DEVICE_TYPES, UtilsSql.toLiteralArray(deviceParams.getDeviceTypes()))
+                .addValue(DEVICE_BRANDS, UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
                 .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))
                 .addValue(INITIAL_ENTRY_DATE, deviceParams.getInitialEntryDate(), Types.VARCHAR)
-                .addValue(FINAL_ENTRY_DATE, deviceParams.getFinalEntryDate() ,  Types.VARCHAR)
-                ;
+                .addValue(FINAL_ENTRY_DATE, deviceParams.getFinalEntryDate(), Types.VARCHAR);
 
-       return jdbcTemplate
+        return jdbcTemplate
                 .query(
                         UtilsSql.getQuery("device/listTable"),
                         params,
                         JdbcTemplateMapperFactory
-                                        .newInstance()
-                                        .addKeys(DeviceTableDto.Fields.deviceId.name(),
-                                                DeviceTableDto.Fields.customerId.name(),
-                                                DeviceTableDto.Fields.type.name(),
-                                                DeviceTableDto.Fields.brand.name(),
-                                                DeviceTableDto.Fields.model.name(),
-                                                DeviceTableDto.Fields.customerName.name(),
-                                                DeviceTableDto.Fields.entryDate.name(),
-                                                DeviceTableDto.Fields.departureDate.name(),
-                                                DeviceTableDto.Fields.status.name(),
-                                                DeviceTableDto.Fields.observation.name(),
-                                                DeviceTableDto.Fields.problem.name(),
-                                                DeviceTableDto.Fields.hasUrgency.name(),
-                                                DeviceTableDto.Fields.hasUrgency.name()
-                                        )
-                                        .newResultSetExtractor(DeviceTableDto.class)
-                        );
+                                .newInstance()
+                                .addKeys(DeviceTableDto.Fields.deviceId.name(),
+                                        DeviceTableDto.Fields.customerId.name(),
+                                        DeviceTableDto.Fields.type.name(),
+                                        DeviceTableDto.Fields.brand.name(),
+                                        DeviceTableDto.Fields.model.name(),
+                                        DeviceTableDto.Fields.customerName.name(),
+                                        DeviceTableDto.Fields.entryDate.name(),
+                                        DeviceTableDto.Fields.departureDate.name(),
+                                        DeviceTableDto.Fields.status.name(),
+                                        DeviceTableDto.Fields.observation.name(),
+                                        DeviceTableDto.Fields.problem.name(),
+                                        DeviceTableDto.Fields.hasUrgency.name(),
+                                        DeviceTableDto.Fields.hasUrgency.name()
+                                )
+                                .newResultSetExtractor(DeviceTableDto.class)
+                );
     }
 
     @Override
     public DeviceOutputDto findByDeviceId(int deviceId) {
         MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue(DEVICE_ID, deviceId, Types.INTEGER);
+                .addValue(DEVICE_ID, deviceId, Types.INTEGER);
 
         return jdbcTemplate.queryForObject(
-            UtilsSql.getQuery("device/getDevice"),
-            params,
-            getDeviceOutputDtoMapper()
+                UtilsSql.getQuery("device/getDevice"),
+                params,
+                getDeviceOutputDtoMapper()
         );
     }
 
@@ -110,34 +109,35 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setRevision(rs.getBoolean("is_revision"));
             dto.setEntryDate(rs.getTimestamp("entry_date"));
             dto.setLaborValue(rs.getBigDecimal("labor_value"));
+            dto.setServiceValue(rs.getBigDecimal("service_value"));
             dto.setDepartureDate(
-                rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date")
-                    : null);
+                    rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date")
+                            : null);
             dto.setLastUpdate(rs.getTimestamp("last_update"));
 
             Array colorsArray = rs.getArray("device_colors");
             dto.setDeviceColors(
-                colorsArray != null ? Arrays.asList((String[]) colorsArray.getArray())
-                    : Collections.emptyList());
+                    colorsArray != null ? Arrays.asList((String[]) colorsArray.getArray())
+                            : Collections.emptyList());
 
             dto.setCustomerContacts(
-                JsonResultSetMapper.readJsonList(rs, "customer_contacts", new TypeReference<>() {
-                }, objectMapper)
+                    JsonResultSetMapper.readJsonList(rs, "customer_contacts", new TypeReference<>() {
+                    }, objectMapper)
             );
 
             dto.setCustomerPhones(
-                JsonResultSetMapper.readJsonList(rs, "customer_phones", new TypeReference<>() {
-                }, objectMapper)
+                    JsonResultSetMapper.readJsonList(rs, "customer_phones", new TypeReference<>() {
+                    }, objectMapper)
             );
 
             dto.setOtherDevices(
-                JsonResultSetMapper.readJsonList(rs, "other_devices", new TypeReference<>() {
-                }, objectMapper)
+                    JsonResultSetMapper.readJsonList(rs, "other_devices", new TypeReference<>() {
+                    }, objectMapper)
             );
 
             dto.setPayments(
-                JsonResultSetMapper.readJsonList(rs, "payments", new TypeReference<>() {
-                }, objectMapper)
+                    JsonResultSetMapper.readJsonList(rs, "payments", new TypeReference<>() {
+                    }, objectMapper)
             );
 
             return dto;

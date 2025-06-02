@@ -2,6 +2,7 @@ package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -11,6 +12,7 @@ import java.sql.Timestamp;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
 @FieldNameConstants(asEnum = true)
 @Entity(name = "devices")
 public class Device {
@@ -38,6 +40,9 @@ public class Device {
 
     @Column(name = "labor_value", nullable = false)
     private BigDecimal laborValue;
+
+    @Column(name = "service_value")
+    private BigDecimal serviceValue;
 
     @Column(name = "has_urgency", nullable = false)
     private boolean hasUrgency;

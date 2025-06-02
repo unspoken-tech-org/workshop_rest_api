@@ -4,15 +4,14 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.payment.PaymentDeviceOutputDto;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.FieldNameConstants;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-
-import lombok.NoArgsConstructor;
-import lombok.experimental.FieldNameConstants;
 
 @Data
 @FieldNameConstants(asEnum = true)
@@ -32,6 +31,7 @@ public class DeviceOutputDto {
     private String observation;
     private String budget;
     private BigDecimal laborValue;
+    private BigDecimal serviceValue;
     private List<String> deviceColors;
     private boolean hasUrgency;
     private boolean revision;
