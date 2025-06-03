@@ -13,6 +13,7 @@
     "budget": "Budget 1",
     "laborValue": 50.00,
     "serviceValue": 100.00,
+    "laborValueCollected": false,
     "deviceColors": [
         "preto"
     ],

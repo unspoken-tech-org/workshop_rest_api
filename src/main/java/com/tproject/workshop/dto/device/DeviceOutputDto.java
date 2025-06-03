@@ -32,6 +32,7 @@ public class DeviceOutputDto {
     private String budget;
     private BigDecimal laborValue;
     private BigDecimal serviceValue;
+    private boolean laborValueCollected;
     private List<String> deviceColors;
     private boolean hasUrgency;
     private boolean revision;

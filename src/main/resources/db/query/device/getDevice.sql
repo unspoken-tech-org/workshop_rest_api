@@ -13,6 +13,7 @@ SELECT
   d.budget,
   d.labor_value,
   d.service_value,
+  d.labor_value_collected,
   d.has_urgency,
   d.is_revision,
   d.entry_date,

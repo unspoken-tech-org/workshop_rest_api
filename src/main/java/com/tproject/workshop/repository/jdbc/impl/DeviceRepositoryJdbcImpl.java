@@ -110,6 +110,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setEntryDate(rs.getTimestamp("entry_date"));
             dto.setLaborValue(rs.getBigDecimal("labor_value"));
             dto.setServiceValue(rs.getBigDecimal("service_value"));
+            dto.setLaborValueCollected(rs.getBoolean("labor_value_collected"));
             dto.setDepartureDate(
                     rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date")
                             : null);

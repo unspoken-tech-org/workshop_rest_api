@@ -44,6 +44,9 @@ public class Device {
     @Column(name = "service_value")
     private BigDecimal serviceValue;
 
+    @Column(name = "labor_value_collected", nullable = false)
+    private boolean laborValueCollected;
+
     @Column(name = "has_urgency", nullable = false)
     private boolean hasUrgency;
 

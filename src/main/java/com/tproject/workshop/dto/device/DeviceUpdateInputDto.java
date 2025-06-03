@@ -13,4 +13,5 @@ public class DeviceUpdateInputDto {
     private String budget;
     private BigDecimal laborValue;
     private BigDecimal serviceValue;
+    private boolean laborValueCollected;
 }
