@@ -32,7 +32,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         }
         ErrorMetadata.Error error = new ErrorMetadata.Error("entity.not.found.for.request", ex.getMessage());
 
-        return new ResponseEntity<>(new ResponseError(HttpStatus.NOT_FOUND.value(), "Entity not found for request",
+        return new ResponseEntity<>(new ResponseError(HttpStatus.NOT_FOUND.value(), "Entitdade não encontrada",
                 error), HttpStatus.NOT_FOUND);
     }
 
