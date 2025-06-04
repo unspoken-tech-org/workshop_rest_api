@@ -4,7 +4,6 @@ import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.model.DeviceStatus;
 import com.tproject.workshop.repository.CustomerContactRepository;
-import com.tproject.workshop.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +17,18 @@ public class CustomerContactService {
     private final CustomerContactRepository customerContactRepository;
 
     private final DeviceStatusService deviceStatusService;
-    private final PaymentRepository paymentRepository;
+    private final DeviceService deviceService;
+    private final TechnicianService technicianService;
+    private final PhoneService phoneService;
+
 
     public CustomerContact save(CustomerContactInputDto contact) {
-        CustomerContact newContact = new CustomerContact();
+        deviceService.findDeviceById(contact.deviceId());
+        technicianService.findById(contact.technicianId());
+        phoneService.findById(contact.phoneNumberId());
         DeviceStatus status = deviceStatusService.findByStatus(contact.deviceStatus());
 
+        CustomerContact newContact = new CustomerContact();
         newContact.setDeviceId(contact.deviceId());
         newContact.setTechnicianId(contact.technicianId());
         newContact.setHasMadeContact(contact.contactStatus());
