@@ -22,15 +22,15 @@ public class CustomerContactService {
 
     public CustomerContact save(CustomerContactInputDto contact) {
         CustomerContact newContact = new CustomerContact();
-        DeviceStatus status = deviceStatusService.findByStatus(contact.getDeviceStatus());
+        DeviceStatus status = deviceStatusService.findByStatus(contact.deviceStatus());
 
-        newContact.setDeviceId(contact.getDeviceId());
-        newContact.setTechnicianId(contact.getTechnicianId());
-        newContact.setHasMadeContact(contact.getContactStatus());
-        newContact.setConversation(contact.getMessage());
-        newContact.setType(contact.getContactType());
-        newContact.setPhoneId(contact.getPhoneNumberId());
-        newContact.setLastContact(Timestamp.valueOf(LocalDateTime.parse(contact.getContactDate())));
+        newContact.setDeviceId(contact.deviceId());
+        newContact.setTechnicianId(contact.technicianId());
+        newContact.setHasMadeContact(contact.contactStatus());
+        newContact.setConversation(contact.message());
+        newContact.setType(contact.contactType());
+        newContact.setPhoneId(contact.phoneNumberId());
+        newContact.setLastContact(Timestamp.valueOf(LocalDateTime.parse(contact.contactDate())));
         newContact.setDeviceStatus(status);
 
         return customerContactRepository.save(newContact);
