@@ -15,7 +15,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,20 +24,17 @@ public class DeviceService {
     private final DeviceStatusService deviceStatusService;
     private final ObjectMapper mapper;
 
-    public List<DeviceTableDto> list(DeviceQueryParam params){
+    public List<DeviceTableDto> list(DeviceQueryParam params) {
         return deviceRepository.listTable(params);
     }
 
-    public DeviceOutputDto findDeviceById(int deviceId){
-        var result =  deviceRepository.findByDeviceId(deviceId);
-        return Optional.of(result)
-            .orElseThrow(() -> new NotFoundException(String.format("Aparelho com id %d", deviceId)));
+    public DeviceOutputDto findDeviceById(int deviceId) {
+        return deviceRepository.findByDeviceId(deviceId).orElseThrow(() -> new NotFoundException(String.format("Aparelho com id %d não encontrado", deviceId)));
     }
 
-    public DeviceOutputDto updateDevice(DeviceUpdateInputDto device){
-        Device oldDevice =   deviceRepository.findById(device.getDeviceId()).orElseThrow(() ->
-            new NotFoundException(String.format("Aparelho com id %d", device.getDeviceId()))
-        );
+    public DeviceOutputDto updateDevice(DeviceUpdateInputDto device) {
+        Device oldDevice = deviceRepository.findById(device.getDeviceId())
+                .orElseThrow(() -> new NotFoundException(String.format("Aparelho com id %d não encontrado", device.getDeviceId())));
 
         DeviceStatus newStatus = deviceStatusService.findByStatus(device.getDeviceStatus());
 

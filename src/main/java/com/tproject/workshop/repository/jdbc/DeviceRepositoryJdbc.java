@@ -5,9 +5,10 @@ import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface DeviceRepositoryJdbc {
     List<DeviceTableDto> listTable(DeviceQueryParam params);
 
-    DeviceOutputDto findByDeviceId(int deviceId);
+    Optional<DeviceOutputDto> findByDeviceId(int deviceId);
 }

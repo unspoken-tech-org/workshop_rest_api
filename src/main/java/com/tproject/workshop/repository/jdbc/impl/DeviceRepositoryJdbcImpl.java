@@ -10,6 +10,7 @@ import com.tproject.workshop.utils.UtilsSql;
 import com.tproject.workshop.utils.mapper.JsonResultSetMapper;
 import lombok.RequiredArgsConstructor;
 import org.simpleflatmapper.jdbc.spring.JdbcTemplateMapperFactory;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -20,6 +21,7 @@ import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -78,15 +80,20 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     }
 
     @Override
-    public DeviceOutputDto findByDeviceId(int deviceId) {
+    public Optional<DeviceOutputDto> findByDeviceId(int deviceId) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue(DEVICE_ID, deviceId, Types.INTEGER);
 
-        return jdbcTemplate.queryForObject(
-                UtilsSql.getQuery("device/getDevice"),
-                params,
-                getDeviceOutputDtoMapper()
-        );
+        try {
+            DeviceOutputDto device = jdbcTemplate.queryForObject(
+                    UtilsSql.getQuery("device/getDevice"),
+                    params,
+                    getDeviceOutputDtoMapper()
+            );
+            return Optional.ofNullable(device);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
     }
 
     private RowMapper<DeviceOutputDto> getDeviceOutputDtoMapper() {
