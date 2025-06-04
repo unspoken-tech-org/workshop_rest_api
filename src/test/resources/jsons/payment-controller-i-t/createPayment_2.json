@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Requisição Inválida",
+    "error": {
+        "code": "requisicao.invalida",
+        "message": "O tipo de pagamento \"invalid_type\" não é válido. O tipo de pagamento deve ser um dos seguintes: credito, debito, dinheiro ou pix."
+    }
+}

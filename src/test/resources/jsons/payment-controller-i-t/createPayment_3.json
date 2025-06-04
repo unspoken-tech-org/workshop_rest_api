@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Erro de Validação",
+    "error": {
+        "code": "erro.validacao",
+        "message": "value: Valor do pagamento deve ser maior que zero"
+    }
+}
