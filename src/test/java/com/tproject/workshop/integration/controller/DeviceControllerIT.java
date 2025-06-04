@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/DeviceControllerIT.script.sql"})
+@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/DeviceControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
 public class DeviceControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/device";
 

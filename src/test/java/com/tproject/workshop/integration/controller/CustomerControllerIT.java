@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/CustomerControllerIT.script.sql"})
+@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/CustomerControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
 public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/customer";
 
