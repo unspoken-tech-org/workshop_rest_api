@@ -1,6 +1,7 @@
 package com.tproject.workshop.errorhandling;
 
 import com.tproject.workshop.exception.BadRequestException;
+import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Requisição Inválida",
                 error), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(EntityAlreadyExistsException.class)
+    public ResponseEntity<ResponseError> handleEntityAlreadyExistsException(final EntityAlreadyExistsException ex, WebRequest request) {
+        if (EXCEPTION_LOGGER.isWarnEnabled()) {
+            EXCEPTION_LOGGER.warn("Conflict detected for request: {}", request.getDescription(false), ex);
+        }
+        ErrorMetadata.Error error = new ErrorMetadata.Error("recurso.conflito", ex.getMessage());
+
+        return new ResponseEntity<>(new ResponseError(HttpStatus.CONFLICT.value(), "Conflito de Recurso",
+                error), HttpStatus.CONFLICT);
     }
 
     @Override
