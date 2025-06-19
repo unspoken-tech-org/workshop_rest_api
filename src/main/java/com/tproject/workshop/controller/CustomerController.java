@@ -1,25 +1,22 @@
 package com.tproject.workshop.controller;
 
+import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.dto.customer.InputCustomerDto;
-import com.tproject.workshop.model.Customer;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 public interface CustomerController {
 
-    @GetMapping
-    List<Customer> list();
-
     @GetMapping("/{id}")
-    Customer findById(@PathVariable("id") int idCostumer);
-
-    @GetMapping(path = "/find/{name}")
-    List<Customer> findByName(@PathVariable("name") String name);
+    CustomerOutputDto findById(@PathVariable("id") int idCostumer);
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    Customer create(@RequestBody @NotNull @Valid InputCustomerDto inputCustomerDto);
+    @ResponseStatus(HttpStatus.CREATED)
+    CustomerOutputDto create(@RequestBody @NotNull @Valid InputCustomerDto inputCustomerDto);
+
+    @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    CustomerOutputDto update(@PathVariable("id") int id, @RequestBody @NotNull @Valid InputCustomerDto inputCustomerDto);
 }

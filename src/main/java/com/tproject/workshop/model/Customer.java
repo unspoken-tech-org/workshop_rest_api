@@ -1,14 +1,18 @@
 package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Entity(name = "customers")
 public class Customer {
     @Id
@@ -22,9 +26,14 @@ public class Customer {
     Timestamp insertDate;
     @CPF
     @Column(name = "cpf", nullable = false)
-    String  cpf;
+    String cpf;
     @Column(name = "gender", nullable = false)
-    char gender;
+    String gender;
     @Column(name = "email")
-    String mail;
+    String email;
+
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Phone> phones;
 }

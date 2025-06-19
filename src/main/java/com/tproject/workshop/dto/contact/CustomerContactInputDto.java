@@ -1,16 +1,17 @@
 package com.tproject.workshop.dto.contact;
 
 
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
 public record CustomerContactInputDto(
         @NotNull(message = "O ID do dispositivo é obrigatório")
         Integer deviceId,
         String contactType,
         @NotNull(message = "O ID do técnico é obrigatório")
         Integer technicianId,
-        @NotNull(message = "O ID do número de telefone é obrigatório")
-        Integer phoneNumberId,
+        @NotNull(message = "O número de telefone é obrigatório")
+        String phoneNumber,
         @NotEmpty(message = "A mensagem é obrigatória")
         String message,
         @NotNull(message = "O status do contato é obrigatório")

@@ -41,7 +41,8 @@ LEFT JOIN LATERAL (
   SELECT COALESCE(json_agg(jsonb_build_object(
       'id', cp.id,
       'number', cp.number,
-      'main', cp.is_main
+      'main', cp.is_main,
+      'name', cp.name
   )), '[]'::json) AS customer_phones
   FROM phones cp
   WHERE cp.id_customer = c.id
@@ -72,8 +73,7 @@ LEFT JOIN LATERAL (
       'deviceId', cc.id_device,
       'technicianId', cc.id_technician,
       'technicianName', technicians.technician_name,
-      'phoneId', cc.id_phone,
-      'phoneNumber', pc.number,
+      'phone', cc.phone,
       'deviceStatus', dsj.status,
       'type', cc.type,
       'hasMadeContact', cc.has_made_contact,
@@ -83,7 +83,6 @@ LEFT JOIN LATERAL (
   FROM customer_contact cc
   LEFT JOIN device_status dsj ON dsj.id = cc.id_device_status
   LEFT JOIN technicians ON technicians.id = cc.id_technician
-  LEFT JOIN phones pc ON pc.id = cc.id_phone
   WHERE cc.id_device = d.id
 ) contact_data ON true
 LEFT JOIN LATERAL(
