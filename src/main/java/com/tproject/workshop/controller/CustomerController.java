@@ -1,5 +1,7 @@
 package com.tproject.workshop.controller;
 
+import com.tproject.workshop.dto.customer.CustomerFilterDto;
+import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.dto.customer.InputCustomerDto;
 import jakarta.validation.Valid;
@@ -8,7 +10,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 public interface CustomerController {
+
+    @PostMapping("/search")
+    List<CustomerListOutputDto> search(@RequestBody(required = false) CustomerFilterDto filters);
 
     @GetMapping("/{id}")
     CustomerOutputDto findById(@PathVariable("id") int idCostumer);

@@ -10,7 +10,6 @@ public record CustomerContactInputDto(
         String contactType,
         @NotNull(message = "O ID do técnico é obrigatório")
         Integer technicianId,
-        @NotNull(message = "O número de telefone é obrigatório")
         String phoneNumber,
         @NotEmpty(message = "A mensagem é obrigatória")
         String message,

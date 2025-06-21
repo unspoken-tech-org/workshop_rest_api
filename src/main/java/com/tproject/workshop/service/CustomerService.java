@@ -2,6 +2,8 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.cellphone.InputPhoneDto;
+import com.tproject.workshop.dto.customer.CustomerFilterDto;
+import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.dto.customer.InputCustomerDto;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
@@ -27,6 +29,10 @@ public class CustomerService {
 
     public CustomerOutputDto findById(int id) {
         return customerRepository.findCustomerById(id).orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
+    }
+
+    public List<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
+        return customerRepository.findCustomersByFilter(filters);
     }
 
     @Transactional

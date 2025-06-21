@@ -2,6 +2,8 @@ package com.tproject.workshop.repository.jdbc.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tproject.workshop.dto.customer.CustomerFilterDto;
+import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.repository.jdbc.CustomerRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
@@ -14,6 +16,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Types;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -41,6 +44,35 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
         }
     }
 
+    @Override
+    public List<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("CUSTOMER_ID", filters.getId(), Types.INTEGER)
+                .addValue("NAME", filters.getName(), Types.VARCHAR)
+                .addValue("CPF", filters.getCpf(), Types.VARCHAR)
+                .addValue("PHONE", filters.getPhone(), Types.VARCHAR);
+
+        return jdbcTemplate.query(
+                UtilsSql.getQuery("customer/listCustomers"),
+                params,
+                getCustomerListOutputDtoMapper()
+        );
+    }
+
+
+    private RowMapper<CustomerListOutputDto> getCustomerListOutputDtoMapper() {
+        return (rs, rowNum) -> {
+            CustomerListOutputDto dto = new CustomerListOutputDto();
+            dto.setId(rs.getInt("id"));
+            dto.setName(rs.getString("name"));
+            dto.setCpf(rs.getString("cpf"));
+            dto.setEmail(rs.getString("email"));
+            dto.setGender(rs.getString("gender"));
+            dto.setInsertDate(rs.getTimestamp("insert_date").toLocalDateTime());
+            dto.setMainPhone(rs.getString("main_phone"));
+            return dto;
+        };
+    }
 
     private RowMapper<CustomerOutputDto> getCustomerOutputDtoMapper() {
         return (rs, rowNum) -> {
