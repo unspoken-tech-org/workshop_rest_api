@@ -4,7 +4,7 @@ INSERT INTO customers(id, name, insert_date, cpf, gender, email) VALUES
 'Alfonso Zimmer',
 '2021-04-26 08:41:00.968173',
 '31781477051',
-'m',
+'masculino',
 'zimmer@gmail.com'
 ),
 (
@@ -12,7 +12,7 @@ INSERT INTO customers(id, name, insert_date, cpf, gender, email) VALUES
 'Lucas Ribeiro Naga',
 '2023-01-06 14:41:00.968173',
 '46203912042',
-'m',
+'masculino',
 'zimmer@gmail.com'
 ),
 (
@@ -20,7 +20,7 @@ INSERT INTO customers(id, name, insert_date, cpf, gender, email) VALUES
 'Francisco Alves Beltrão',
 '2023-01-06 14:41:00.968173',
 '09857367410',
-'m',
+'masculino',
 'belt@gmail.com'
 )
 ;
@@ -106,19 +106,19 @@ VALUES
 (15, 1, 5, 5, 1, '2021-04-22 08:41:00.968173', '2021-04-26 08:41:00.968173', 'Problem 15', 'Observation 15', 'Budget 15', 50.00, 1500.00, true, false, '2021-04-26 08:41:00.968173', ('{3, 2}'))
 ;
 
-INSERT INTO phones(id, id_customer, number, whats, is_main, type)
+INSERT INTO phones(id, id_customer, number, is_main)
 VALUES
-(1, 1, '4430356678', false, false, 'telefone'),
-(2, 1, '44988254493', true, true, 'celular'),
-(3, 2, '44988255540', true, true, 'celular'),
-(4, 3, '44988252235', true, true, 'celular')
+(1, 1, '4430356678', false),
+(2, 1, '44988254493', true),
+(3, 2, '44988255540', true),
+(4, 3, '44988252235', true)
 ;
 
-INSERT INTO customer_contact(id, id_device, id_technician, id_phone, id_device_status, type, has_made_contact, last_contact, conversation)
+INSERT INTO customer_contact(id, id_device, id_technician, phone, id_device_status, type, has_made_contact, last_contact, conversation)
 VALUES
-(1, 1, 1, 1, 3, 'mensagem', false, '2025-01-06 14:41:00.968173', 'Foi passado o orçamento e aguardo resposta'),
+(1, 1, 1, '44988254493', 3, 'mensagem', false, '2025-01-06 14:41:00.968173', 'Foi passado o orçamento e aguardo resposta'),
 (2, 1, 1, null, 2, 'pessoalmente', true, '2025-01-07 14:41:00.968173', 'Cliente aceitou o orçamento'),
-(3, 1, 1, 1, 6, 'mensagem', true, '2025-01-08 14:41:00.968173', 'Avisado que o aparelho está pronto')
+(3, 1, 1, '44988254493', 6, 'mensagem', true, '2025-01-08 14:41:00.968173', 'Avisado que o aparelho está pronto')
 ;
 
 INSERT INTO payments(id, id_device, payment_date, payment_type, payment_value, category)
@@ -126,13 +126,5 @@ VALUES
 (1, 1, '2023-04-22 08:41:00.968173', 'credito', 100, 'parcial'),
 (2, 1, '2023-04-29 08:41:00.968173', 'credito', 100, 'parcial')
 ;
-
---BEGIN;
-SELECT setval(pg_get_serial_sequence('devices', 'id'), coalesce(MAX(id), 1)) from devices;
-SELECT setval(pg_get_serial_sequence('customer_contact', 'id'), coalesce(MAX(id), 1)) from customer_contact;
-SELECT setval(pg_get_serial_sequence('payments', 'id'), coalesce(MAX(id), 1)) from payments;
-
---COMMIT;
---ALTER TABLE devices ALTER COLUMN id RESTART WITH 3;
 
 

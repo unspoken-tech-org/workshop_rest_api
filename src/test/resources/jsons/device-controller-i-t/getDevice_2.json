@@ -3,6 +3,6 @@
     "title": "Entitdade não encontrada",
     "error": {
         "code": "entity.not.found.for.request",
-        "message": "Aparelho com id 999 não encontrado"
+        "message": "Aparelho com id 9999 não encontrado"
     }
 }

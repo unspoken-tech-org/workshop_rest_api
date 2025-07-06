@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "technicianId: O ID do técnico é obrigatório"
+        "message": "colors: A lista de cores é obrigatória"
     }
 }
