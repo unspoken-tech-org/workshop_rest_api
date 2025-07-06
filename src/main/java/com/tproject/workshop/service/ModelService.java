@@ -1,9 +1,9 @@
 package com.tproject.workshop.service;
 
+import com.tproject.workshop.dto.device.ModelInputDto;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Model;
 import com.tproject.workshop.repository.ModelRepository;
-import com.tproject.workshop.utils.UtilsString;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,28 +15,25 @@ public class ModelService {
 
     private final ModelRepository modelRepository;
 
-    public List<Model> findAll(){
+    public List<Model> findAll() {
         return modelRepository.findAll();
     }
 
-    public Model findById(int id){
+    public Model findById(int id) {
         return modelRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(String.format("Modelo com id %d não encontrada", id)));
     }
 
-    public Model save(Model model){
-        var modelFound = findByName(model.getModel());
-        if(modelFound == null){
-            var modelName = UtilsString.capitalizeEachWord(model.getModel());
-            model.setModel(modelName);
-
-            return modelRepository.save(model);
+    public Model save(ModelInputDto modelInput) {
+        var modelFound = modelRepository.findByModelIgnoreCase(modelInput.model());
+        if (modelFound.isPresent()) {
+            return modelFound.get();
         }
-        return model;
-    }
+        var modelName = modelInput.model().toLowerCase();
+        var newModel = new Model();
+        newModel.setModel(modelName);
 
-    private Model findByName(String name){
-        return modelRepository.findByModelIgnoreCase(name);
+        return modelRepository.save(newModel);
     }
 
 }

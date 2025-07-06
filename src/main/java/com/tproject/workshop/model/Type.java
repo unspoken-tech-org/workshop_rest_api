@@ -12,11 +12,11 @@ public class Type {
     @Id
     @Column(name = "id", updatable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int idType;
+    private Integer idType;
     @Column(name = "type", nullable = false)
     private String type;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "idType",cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "idType", cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     private List<BrandsModelsTypes> brandsModelsTypes;
 }

@@ -3,3 +3,7 @@ SELECT setval(pg_get_serial_sequence('customer_contact', 'id'), coalesce(MAX(id)
 SELECT setval(pg_get_serial_sequence('customers', 'id'), coalesce(MAX(id), 1)) from customers;
 SELECT setval(pg_get_serial_sequence('payments', 'id'), coalesce(MAX(id), 1)) from payments;
 SELECT setval(pg_get_serial_sequence('phones', 'id'), coalesce(MAX(id), 1)) from phones;
+SELECT setval(pg_get_serial_sequence('types', 'id'), coalesce(MAX(id), 1)) from types;
+SELECT setval(pg_get_serial_sequence('brands', 'id'), coalesce(MAX(id), 1)) from brands;
+SELECT setval(pg_get_serial_sequence('models', 'id'), coalesce(MAX(id), 1)) from models;
+SELECT setval(pg_get_serial_sequence('brands_models_types', 'id'), coalesce(MAX(id), 1)) from brands_models_types;
