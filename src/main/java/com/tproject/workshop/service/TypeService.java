@@ -1,6 +1,5 @@
 package com.tproject.workshop.service;
 
-import com.tproject.workshop.dto.device.TypeInputDto;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypeRepository;
@@ -27,15 +26,15 @@ public class TypeService {
         return typeRepository.findByTypeContainingIgnoreCase(name);
     }
 
-    public Type save(TypeInputDto typeInput) {
-        var typeFound = typeRepository.findByTypeIgnoreCase(typeInput.type());
+    public Type createOrReturnExistentType(String type) {
+        var typeFound = typeRepository.findByTypeIgnoreCase(type);
 
         if (typeFound.isPresent()) {
             return typeFound.get();
         }
 
         var newType = new Type();
-        var typeName = typeInput.type().toLowerCase();
+        var typeName = type.toLowerCase();
         newType.setType(typeName);
 
         return typeRepository.save(newType);

@@ -60,10 +60,10 @@ public class DeviceService {
             technician = technicianService.findById(device.technicianId());
         }
 
-        BrandsModelsTypes brandModelType = typeBrandModelService.createBrandModelType(device.typeBrandModel());
+        BrandsModelsTypes brandModelType = typeBrandModelService.createOrReturnExistentBrandModelType(device.typeBrandModel());
         DeviceStatus deviceStatus = deviceStatusService.findByStatus("novo");
 
-        List<Color> colors = device.colors().stream().map(colorService::save).toList();
+        List<Color> colors = device.colors().stream().map(colorService::createOrReturnExistentColor).toList();
         List<Integer> colorIds = colors.stream().map(Color::getIdColor).toList();
 
 

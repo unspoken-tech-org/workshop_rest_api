@@ -1,14 +1,14 @@
 package com.tproject.workshop.dto.device;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public record TypeBrandModelInputDtoRecord(
-        @NotNull(message = "O tipo do aparelho é obrigatório")
-        TypeInputDto type,
-        @NotNull(message = "A marca do aparelho é obrigatória")
-        BrandInputDto brand,
-        @NotNull(message = "O modelo do aparelho é obrigatório")
-        ModelInputDto model
+        @NotBlank(message = "O tipo do aparelho é obrigatório")
+        String type,
+        @NotBlank(message = "A marca do aparelho é obrigatória")
+        String brand,
+        @NotBlank(message = "O modelo do aparelho é obrigatório")
+        String model
 ) {
 }
 

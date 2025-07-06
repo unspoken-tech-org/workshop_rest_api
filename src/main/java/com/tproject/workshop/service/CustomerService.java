@@ -28,7 +28,7 @@ public class CustomerService {
 
 
     public CustomerOutputDto findById(int id) {
-        return customerRepository.findCustomerById(id).orElseThrow(() -> new NotFoundException("Não existe cliente com deviceId " + id));
+        return customerRepository.findCustomerById(id).orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
     }
 
     public List<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
@@ -73,7 +73,7 @@ public class CustomerService {
     @Transactional
     public CustomerOutputDto updateCustomer(int id, InputCustomerDto inputCustomerDto) {
         Customer existingCustomer = customerRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Não existe cliente com deviceId " + id));
+                .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
 
         String cpfOnlyDigits = inputCustomerDto.cpf().replaceAll("\\D", "");
 
@@ -113,7 +113,7 @@ public class CustomerService {
             if (phoneDto.id() != null) {
                 phone = currentPhonesMap.get(phoneDto.id());
                 if (phone == null) {
-                    throw new NotFoundException(String.format("Telefone com deviceId %d não encontrado ou não pertence a este cliente.", phoneDto.id()));
+                    throw new NotFoundException(String.format("Telefone com id %d não encontrado ou não pertence a este cliente.", phoneDto.id()));
                 }
             } else {
                 phone = new Phone();

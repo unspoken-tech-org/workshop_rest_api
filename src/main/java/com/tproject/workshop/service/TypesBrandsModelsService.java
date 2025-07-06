@@ -21,14 +21,14 @@ public class TypesBrandsModelsService {
     private final BrandService brandService;
     private final ModelService modelService;
 
-    BrandsModelsTypes createBrandModelType(TypeBrandModelInputDtoRecord typeBrandModel) {
+    BrandsModelsTypes createOrReturnExistentBrandModelType(TypeBrandModelInputDtoRecord typeBrandModel) {
         var typeInput = typeBrandModel.type();
         var brandInput = typeBrandModel.brand();
         var modelInput = typeBrandModel.model();
 
-        Type type = typeService.save(typeInput);
-        Brand brand = brandService.save(brandInput);
-        Model model = modelService.save(modelInput);
+        Type type = typeService.createOrReturnExistentType(typeInput);
+        Brand brand = brandService.createOrReturnExistentBrand(brandInput);
+        Model model = modelService.createOrReturnExistentModel(modelInput);
 
         var entity = typesBrandsModelsRepository.findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(),
                 model.getIdModel());

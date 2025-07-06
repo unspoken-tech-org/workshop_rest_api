@@ -1,6 +1,5 @@
 package com.tproject.workshop.service;
 
-import com.tproject.workshop.dto.device.BrandInputDto;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Brand;
 import com.tproject.workshop.repository.BrandRepository;
@@ -24,14 +23,14 @@ public class BrandService {
                 .orElseThrow(() -> new NotFoundException(String.format("Marca com id %d não encontrada", id)));
     }
 
-    public Brand save(BrandInputDto brandInput) {
-        var brandFound = brandRepository.findByBrandIgnoreCase(brandInput.brand());
+    public Brand createOrReturnExistentBrand(String brand) {
+        var brandFound = brandRepository.findByBrandIgnoreCase(brand);
         if (brandFound.isPresent()) {
             return brandFound.get();
         }
 
         var newBrand = new Brand();
-        var brandName = brandInput.brand().toLowerCase();
+        var brandName = brand.toLowerCase();
         newBrand.setBrand(brandName);
 
         return brandRepository.save(newBrand);

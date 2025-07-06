@@ -1,6 +1,5 @@
 package com.tproject.workshop.service;
 
-import com.tproject.workshop.dto.device.ColorInputDtoRecord;
 import com.tproject.workshop.model.Color;
 import com.tproject.workshop.repository.ColorRepository;
 import lombok.AllArgsConstructor;
@@ -17,13 +16,13 @@ public class ColorService {
         return colorRepository.findAll();
     }
 
-    public Color save(ColorInputDtoRecord colorInput) {
-        var colorFound = colorRepository.findByColorIgnoreCase(colorInput.color());
+    public Color createOrReturnExistentColor(String color) {
+        var colorFound = colorRepository.findByColorIgnoreCase(color);
         if (colorFound.isPresent()) {
             return colorFound.get();
         }
         var newColor = new Color();
-        newColor.setColor(colorInput.color().toLowerCase());
+        newColor.setColor(color.toLowerCase());
         return colorRepository.save(newColor);
     }
 }
