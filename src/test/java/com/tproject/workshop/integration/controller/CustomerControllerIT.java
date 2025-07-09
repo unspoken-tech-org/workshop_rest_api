@@ -25,13 +25,14 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/customer";
 
     @Order(1)
-    @DisplayName("List customers")
-    @MethodSource("listCustomersArguments")
+    @DisplayName("Search customers")
+    @MethodSource("searchCustomersArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
-    public void listCustomers(int index, Integer statusCode, Map<String, Object> params, String reason) {
+    public void searchCustomers(int index, Integer statusCode, Map<String, Object> params, String reason) {
         Response response = given().spec(SPEC)
                 .when()
-                .get(BASE_PATH)
+                .body(params)
+                .post(BASE_PATH + "/search")
                 .then()
                 .statusCode(statusCode)
                 .extract()
@@ -40,36 +41,19 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
         super.validateResponse(index, response);
     }
 
-    private static Stream<Arguments> listCustomersArguments() {
+    private static Stream<Arguments> searchCustomersArguments() {
         return Stream.of(
-                Arguments.of(1, HttpStatus.SC_OK, Map.of(), "get all Customers")
+                Arguments.of(1, HttpStatus.SC_OK, Map.of(), "get all Customers"),
+                Arguments.of(2, HttpStatus.SC_OK, Map.of("name", "Alfonso"), "get Customer by name"),
+                Arguments.of(3, HttpStatus.SC_OK, Map.of("cpf", "31781477051"), "get Customer by cpf"),
+                Arguments.of(4, HttpStatus.SC_OK, Map.of("phone", "4430356678"), "get Customer by phone"),
+                Arguments.of(5, HttpStatus.SC_OK, Map.of("id", 1), "get Customer by id")
+
+
         );
     }
 
     @Order(2)
-    @DisplayName("find by name")
-    @MethodSource("findCustomersArguments")
-    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
-    public void findCustomersByName(int index, Integer statusCode, String name, String reason) {
-        Response response = given().spec(SPEC)
-                .when()
-                .get(BASE_PATH + "/find/" + name)
-                .then()
-                .statusCode(statusCode)
-                .extract()
-                .response();
-
-        super.validateResponse(index, response);
-    }
-
-    public static Stream<Arguments> findCustomersArguments() {
-        return Stream.of(
-                Arguments.of(1, HttpStatus.SC_OK, "Alfonso", ""),
-                Arguments.of(2, HttpStatus.SC_OK, "XXX", "")
-        );
-    }
-
-    @Order(3)
     @DisplayName("find by Id")
     @MethodSource("findCustomersByIdArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
