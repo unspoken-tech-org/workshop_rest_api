@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Erro de Validação",
+    "error": {
+        "code": "erro.validacao",
+        "message": "deviceId: O ID do dispositivo é obrigatório"
+    }
+}

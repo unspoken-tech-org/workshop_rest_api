@@ -24,10 +24,10 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/customer-contact";
 
     @Order(1)
-    @DisplayName("Save customer")
-    @MethodSource("saveCustomerArguments")
+    @DisplayName("Save customer contact")
+    @MethodSource("saveCustomerContactArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
-    public void saveCustomer(int index, Integer statusCode, Map<String, Object> arguments, String reason) {
+    public void saveCustomerContact(int index, Integer statusCode, Map<String, Object> arguments, String reason) {
         Response response = given().spec(SPEC)
                 .when()
                 .contentType("application/json")
@@ -41,13 +41,13 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
         super.validateResponseIgnoreAttributes(index, response, List.of("lastContact"));
     }
 
-    private static Stream<Arguments> saveCustomerArguments() {
+    private static Stream<Arguments> saveCustomerContactArguments() {
         return Stream.of(
                 Arguments.of(1, HttpStatus.SC_OK, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", "9876543210",
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -57,7 +57,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         // deviceId is missing
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -67,7 +67,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         // technicianId is missing
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -77,17 +77,17 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        // phoneNumberId is missing
+                        // phoneNumber is missing
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
-                ), "missing phoneNumberId"),
+                ), "missing phoneNumber"),
                 Arguments.of(5, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "", // Empty message
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -97,7 +97,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         // message is missing (covered by @NotEmpty, but null would also fail)
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -107,7 +107,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste",
                         // contactStatus is missing
                         "deviceStatus", "entregue",
@@ -117,7 +117,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste",
                         "contactStatus", true,
                         // deviceStatus is missing
@@ -127,7 +127,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue"
@@ -138,7 +138,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 999, // Non-existent deviceId
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste service fail",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -148,7 +148,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 999, // Non-existent technicianId
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste service fail",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -158,17 +158,17 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 999, // Non-existent phoneNumberId
+                        "phoneNumber", 999, // Non-existent phoneNumber
                         "message", "teste service fail",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
-                ), "non-existent phoneNumberId"),
+                ), "non-existent phoneNumber"),
                 Arguments.of(13, HttpStatus.SC_NOT_FOUND, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumberId", 2,
+                        "phoneNumber", 2,
                         "message", "teste service fail",
                         "contactStatus", true,
                         "deviceStatus", "non_existent_status", // Non-existent deviceStatus

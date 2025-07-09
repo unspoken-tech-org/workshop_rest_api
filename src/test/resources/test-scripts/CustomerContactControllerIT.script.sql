@@ -69,7 +69,7 @@ ON CONFLICT (id) DO UPDATE SET
     id_brand_model_type = EXCLUDED.id_brand_model_type;
 
 
-INSERT INTO customer_contact (id_device, id_technician, id_phone, type, has_made_contact, last_contact, conversation, id_device_status) VALUES
-(1, 1, 2, 'ligacao', false, '2024-01-10 09:00:00.000000', 'Previous contact attempt, no answer.', 2)
+INSERT INTO customer_contact (id_device, id_technician, phone, type, has_made_contact, last_contact, conversation, id_device_status) VALUES
+(1, 1, '9876543210', 'ligacao', false, '2024-01-10 09:00:00.000000', 'Previous contact attempt, no answer.', 2)
 ON CONFLICT (id) DO NOTHING;
 
