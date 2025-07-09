@@ -41,7 +41,8 @@ public class CustomerService {
     public CustomerOutputDto saveCustomer(InputCustomerDtoRecord inputCustomerDto) {
         String cpfOnlyDigits = inputCustomerDto.cpf().replaceAll("\\D", "");
         customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
-            throw new EntityAlreadyExistsException(String.format("O cpf %s já está em uso", cpfOnlyDigits));
+            String formattedCpf = UtilsString.formatCpf(cpfOnlyDigits);
+            throw new EntityAlreadyExistsException(String.format("O CPF %s já está em uso", formattedCpf));
         });
 
         List<InputPhoneDto> phones = Optional.ofNullable(inputCustomerDto.phones()).orElse(new ArrayList<>());
@@ -83,7 +84,8 @@ public class CustomerService {
 
         customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
             if (customer.getIdCustomer() != id) {
-                throw new EntityAlreadyExistsException(String.format("O cpf %s já está em uso", cpfOnlyDigits));
+                String formattedCpf = UtilsString.formatCpf(cpfOnlyDigits);
+                throw new EntityAlreadyExistsException(String.format("O CPF %s já está em uso", formattedCpf));
             }
         });
 
@@ -170,9 +172,9 @@ public class CustomerService {
                         Customer customer = p.getCustomer();
                         if (customerId != null && customerId.equals(customer.getIdCustomer())) return;
 
-                        String number = p.getNumber();
+                        String formattedNumber = UtilsString.formatPhoneNumberBR(p.getNumber());
                         String customerName = UtilsString.capitalizeEachWord(customer.getName());
-                        throw new EntityAlreadyExistsException(String.format("O numero %s já está cadastrado para o cliente %s", number, customerName));
+                        throw new EntityAlreadyExistsException(String.format("O numero %s já está cadastrado para o cliente %s", formattedNumber, customerName));
                     }
             );
         }

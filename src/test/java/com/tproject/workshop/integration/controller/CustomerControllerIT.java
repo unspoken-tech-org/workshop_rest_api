@@ -176,7 +176,20 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                                         "isPrimary", true
                                 )
                         )
-                ), "phone already exists")
+                ), "phone already exists"),
+                Arguments.of(8, HttpStatus.SC_CONFLICT, Map.of(
+                        "name", "generoso",
+                        "cpf", "31781477051",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "cpf already exists")
         );
     }
 
@@ -359,7 +372,33 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                                         "isPrimary", false
                                 )
                         )
-                ), "add phone with same number")
+                ), "add phone with same number"),
+                Arguments.of(11, HttpStatus.SC_OK, 1, Map.of(
+                        "name", "Alfonso Zimmer Generoso",
+                        "cpf", "31781477051",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "successfully updated customer with same CPF"),
+                Arguments.of(12, HttpStatus.SC_CONFLICT, 1, Map.of(
+                        "name", "Alfonso Zimmer Generoso",
+                        "cpf", "46203912042",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "CPF already exists")
         );
     }
 }

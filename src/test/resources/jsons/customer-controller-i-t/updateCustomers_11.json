@@ -1,0 +1,18 @@
+{
+    "customerId": 1,
+    "name": "Alfonso Zimmer Generoso",
+    "cpf": "31781477051",
+    "gender": "masculino",
+    "email": "geneder@live.com",
+    "insertDate": "2021-04-26 08:41:00.968173",
+    "phones": [
+        {
+            "id": 3,
+            "number": "4499956752",
+            "main": true
+        }
+    ],
+    "customerDevices": [
+        
+    ]
+}

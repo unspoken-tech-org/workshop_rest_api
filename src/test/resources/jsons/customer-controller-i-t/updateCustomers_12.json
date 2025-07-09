@@ -3,6 +3,6 @@
     "title": "Conflito de Recurso",
     "error": {
         "code": "recurso.conflito",
-        "message": "O numero (44) 3035-6678 já está cadastrado para o cliente Alfonso Zimmer"
+        "message": "O CPF 462.039.120-42 já está em uso"
     }
 }
