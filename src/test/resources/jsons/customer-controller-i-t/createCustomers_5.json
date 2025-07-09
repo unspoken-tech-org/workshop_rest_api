@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "contactDate: A data do contato é obrigatória"
+        "message": "gender: não deve estar em branco"
     }
 }

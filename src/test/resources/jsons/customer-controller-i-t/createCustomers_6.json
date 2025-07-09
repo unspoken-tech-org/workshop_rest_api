@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "cpf: Número de CPF inválido"
+        "message": "phones: não deve estar vazio"
     }
 }

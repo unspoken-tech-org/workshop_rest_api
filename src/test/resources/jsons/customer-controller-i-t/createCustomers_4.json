@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "deviceStatus: O status do dispositivo é obrigatório"
+        "message": "cpf: não deve estar em branco"
     }
 }

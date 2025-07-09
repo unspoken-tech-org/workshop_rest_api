@@ -4,7 +4,7 @@ import com.tproject.workshop.controller.CustomerController;
 import com.tproject.workshop.dto.customer.CustomerFilterDto;
 import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
-import com.tproject.workshop.dto.customer.InputCustomerDto;
+import com.tproject.workshop.dto.customer.InputCustomerDtoRecord;
 import com.tproject.workshop.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,12 +33,12 @@ public class CustomerControllerImpl implements CustomerController {
     }
 
     @Override
-    public CustomerOutputDto create(@Valid InputCustomerDto inputCustomerDto) {
+    public CustomerOutputDto create(@Valid InputCustomerDtoRecord inputCustomerDto) {
         return customerService.saveCustomer(inputCustomerDto);
     }
 
     @Override
-    public CustomerOutputDto update(int id, InputCustomerDto inputCustomerDto) {
+    public CustomerOutputDto update(int id, InputCustomerDtoRecord inputCustomerDto) {
         return customerService.updateCustomer(id, inputCustomerDto);
     }
 }

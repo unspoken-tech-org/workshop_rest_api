@@ -1,0 +1,8 @@
+{
+    "status": 409,
+    "title": "Conflito de Recurso",
+    "error": {
+        "code": "recurso.conflito",
+        "message": "O numero 4430356678 já está cadastrado para o cliente Alfonso Zimmer"
+    }
+}

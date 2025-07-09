@@ -107,13 +107,92 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                 .extract()
                 .response();
 
-        super.validateResponseIgnoreAttributes(index, response, List.of("idCustomer", "insertDate"));
+        super.validateResponseIgnoreAttributes(index, response, List.of("insertDate"));
     }
 
     public static Stream<Arguments> createCustomersArguments() {
         return Stream.of(
-                Arguments.of(1, HttpStatus.SC_OK, Map.of("name", "generoso", "cpf", "31781477051", "gender", "m", "mail", "geneder@live.com", "phone", "4499956752", "cellphone", "5594941236"), ""),
-                Arguments.of(2, HttpStatus.SC_BAD_REQUEST, Map.of("name", "generoso", "cpf", "317.814.770-40", "gender", "m", "mail", "geneder@live.com", "phone", "4499956752", "cellphone", "5594941236"), "wrong cpf number")
+                Arguments.of(1, HttpStatus.SC_CREATED, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "successfully created customer"),
+                Arguments.of(2, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "name", "generoso",
+                        "cpf", "317.814.770-40",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "wrong cpf number"),
+                Arguments.of(3, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "blank name"),
+                Arguments.of(4, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "name", "generoso",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "blank cpf"),
+                Arguments.of(5, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "blank gender"),
+                Arguments.of(6, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com"
+                ), "empty phone list"),
+                Arguments.of(7, HttpStatus.SC_CONFLICT, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4430356678",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "phone already exists")
         );
     }
 }
