@@ -55,8 +55,7 @@ public class CustomerService {
                 .phones(new ArrayList<>())
                 .build();
 
-        List<InputPhoneDto> phones = inputCustomerDto.phones();
-        if (phones != null && !phones.isEmpty()) {
+        if (!phones.isEmpty()) {
             List<Phone> newPhones = phones.stream()
                     .map(phoneDto -> {
                         Phone newPhone = new Phone();
@@ -87,6 +86,9 @@ public class CustomerService {
                 throw new EntityAlreadyExistsException(String.format("O cpf %s já está em uso", cpfOnlyDigits));
             }
         });
+
+        List<InputPhoneDto> phones = Optional.ofNullable(inputCustomerDto.phones()).orElse(new ArrayList<>());
+        validatePhones(phones, id);
 
         existingCustomer.setCpf(cpfOnlyDigits);
         existingCustomer.setName(inputCustomerDto.name());

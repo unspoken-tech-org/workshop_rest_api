@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Erro de Validação",
+    "error": {
+        "code": "erro.validacao",
+        "message": "phones: Não é possível ter menos de 1 ou mais de 3 telefones"
+    }
+}

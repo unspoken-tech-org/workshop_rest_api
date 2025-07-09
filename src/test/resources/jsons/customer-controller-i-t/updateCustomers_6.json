@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Requisição Inválida",
+    "error": {
+        "code": "requisicao.invalida",
+        "message": "Não é possível ter mais de um telefone primário"
+    }
+}
