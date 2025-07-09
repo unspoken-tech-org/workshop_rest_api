@@ -14,15 +14,15 @@ import java.util.List;
 public class SellService {
     private final SellRepository sellRepository;
 
-    public List<Sale> findAllSell(){
+    public List<Sale> findAllSell() {
         return sellRepository.findAll();
     }
 
-    public Sale findById(int idSell){
+    public Sale findById(int idSell) {
         return sellRepository.findById(idSell).orElseThrow(() -> new NotFoundException("Não existe venda com id " + idSell));
     }
 
-    public Sale addSell(InputSellDto inputSellDto){
+    public Sale addSell(InputSellDto inputSellDto) {
         return sellRepository.save(inputSellDto.toSellModel());
     }
 }

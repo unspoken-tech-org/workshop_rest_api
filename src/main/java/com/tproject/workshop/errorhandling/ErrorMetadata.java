@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,19 +18,15 @@ import java.util.regex.Pattern;
 @Setter
 @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
 @NoArgsConstructor
-@SuppressWarnings("squid:S3398")
 public class ErrorMetadata implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = -4204013823809613543L;
     private final transient List<Error> globalErrors = new ArrayList<>();
     private final transient ConcurrentHashMap<String, Object> fieldErrors = new ConcurrentHashMap<>();
 
     public static ErrorsBuilder builder() {
         return new ErrorsBuilder();
-    }
-
-    public List<Error> getGlobalErrors() {
-        return globalErrors;
     }
 
     public Map<String, Object> getFieldErrors() {
@@ -45,7 +42,6 @@ public class ErrorMetadata implements Serializable {
         return this;
     }
 
-    @SuppressWarnings("unchecked")
     private ErrorMetadata addFieldError(final String field, final String error, final String template) {
         Map<String, Object> errorMap = fieldErrors;
         List<String> fieldChar = Arrays.asList(field.split(Pattern.quote(".")));
@@ -58,7 +54,6 @@ public class ErrorMetadata implements Serializable {
     @Setter
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     @NoArgsConstructor
-    @SuppressWarnings("squid:S3398")
     public static final class Error {
 
         private String code;
