@@ -83,17 +83,6 @@
             "departureDate": "26/04/2021"
         },
         {
-            "deviceId": 1,
-            "customerId": 1,
-            "typeBrandModel": "Ventilador Arno | Model 1",
-            "deviceStatus": "novo",
-            "problem": "Problem 1",
-            "hasUrgency": true,
-            "revision": false,
-            "entryDate": "10/04/2023",
-            "departureDate": "26/04/2021"
-        },
-        {
             "deviceId": 3,
             "customerId": 1,
             "typeBrandModel": "Batedeira Britania | Model 3",

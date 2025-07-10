@@ -66,6 +66,7 @@ LEFT JOIN LATERAL (
   LEFT JOIN "types" ot on ot.id = obmt.id_type
   LEFT JOIN device_status ods on ods.id = od.id_device_status
   WHERE od.id_customer = c.id
+  AND  od.id != :DEVICE_ID
 ) customer_devices ON TRUE
 LEFT JOIN LATERAL (
   SELECT COALESCE(json_agg(jsonb_build_object(
