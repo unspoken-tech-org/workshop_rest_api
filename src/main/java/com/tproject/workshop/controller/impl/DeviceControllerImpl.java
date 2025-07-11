@@ -1,14 +1,8 @@
 package com.tproject.workshop.controller.impl;
 
 import com.tproject.workshop.controller.DeviceController;
-import com.tproject.workshop.dto.device.CreateDeviceOutputDtoRecord;
-import com.tproject.workshop.dto.device.DeviceInputDtoRecord;
-import com.tproject.workshop.dto.device.DeviceOutputDto;
-import com.tproject.workshop.dto.device.DeviceQueryParam;
-import com.tproject.workshop.dto.device.DeviceTableDto;
-import com.tproject.workshop.dto.device.DeviceUpdateInputDto;
+import com.tproject.workshop.dto.device.*;
 import com.tproject.workshop.service.DeviceService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,7 +20,7 @@ public class DeviceControllerImpl implements DeviceController {
 
     @Override
     public List<DeviceTableDto> list(@RequestBody(required = false) DeviceQueryParam deviceQueryParam) {
-        if(deviceQueryParam == null) {
+        if (deviceQueryParam == null) {
             deviceQueryParam = new DeviceQueryParam();
         }
         return deviceService.list(deviceQueryParam);
@@ -38,7 +32,7 @@ public class DeviceControllerImpl implements DeviceController {
     }
 
     @Override
-    public DeviceOutputDto update(DeviceUpdateInputDto device) {
+    public DeviceOutputDto update(DeviceUpdateInputDtoRecord device) {
         var updatedDevice = deviceService.updateDevice(device);
         return updatedDevice;
     }

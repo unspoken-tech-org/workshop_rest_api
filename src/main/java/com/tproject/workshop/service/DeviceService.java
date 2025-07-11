@@ -5,9 +5,7 @@ import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
-import com.tproject.workshop.utils.MapUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,14 +32,21 @@ public class DeviceService {
                 .orElseThrow(() -> new NotFoundException(String.format("Aparelho com id %d não encontrado", deviceId)));
     }
 
-    public DeviceOutputDto updateDevice(DeviceUpdateInputDto device) {
-        Device oldDevice = deviceRepository.findById(device.getDeviceId())
+    public DeviceOutputDto updateDevice(DeviceUpdateInputDtoRecord device) {
+        Device oldDevice = deviceRepository.findById(device.deviceId())
                 .orElseThrow(() -> new NotFoundException(
-                        String.format("Aparelho com id %d não encontrado", device.getDeviceId())));
+                        String.format("Aparelho com id %d não encontrado", device.deviceId())));
 
-        DeviceStatus newStatus = deviceStatusService.findByStatus(device.getDeviceStatus());
+        DeviceStatus newStatus = deviceStatusService.findByStatus(device.deviceStatus());
 
-        BeanUtils.copyProperties(device, oldDevice, MapUtils.getNullPropertyNames(device));
+        oldDevice.setProblem(device.problem());
+        oldDevice.setObservation(device.observation());
+        oldDevice.setBudget(device.budget());
+        oldDevice.setLaborValue(device.laborValue());
+        oldDevice.setServiceValue(device.serviceValue());
+        oldDevice.setLaborValueCollected(device.laborValueCollected());
+        oldDevice.setHasUrgency(device.hasUrgency());
+        oldDevice.setRevision(device.revision());
         oldDevice.setDeviceStatus(newStatus);
 
         deviceRepository.saveAndFlush(oldDevice);

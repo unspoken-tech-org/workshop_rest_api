@@ -15,7 +15,7 @@ public interface DeviceController {
     DeviceOutputDto findOne(@PathVariable("deviceId") int deviceId);
 
     @PutMapping("/update")
-    DeviceOutputDto update(@RequestBody DeviceUpdateInputDto device);
+    DeviceOutputDto update(@RequestBody DeviceUpdateInputDtoRecord device);
 
     @PostMapping("/create")
     @ResponseStatus(code = HttpStatus.CREATED)
