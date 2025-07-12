@@ -30,7 +30,7 @@ public class CustomerContactService {
         deviceService.findDeviceById(contact.deviceId());
         technicianService.findById(contact.technicianId());
         DeviceStatus status = deviceStatusService.findByStatus(contact.deviceStatus());
-        
+
         if (contactTypesThatNeedPhone.contains(UtilsString.normalizeString(contact.contactType()))) {
             if (contact.phoneNumber() == null || contact.phoneNumber().isEmpty()) {
                 String joinedNeededContactTypes = String.join(", ", contactTypesThatNeedPhone);
@@ -38,7 +38,8 @@ public class CustomerContactService {
                         String.format("O numero de telefone deve ser fornecido para os tipos de contato: %s", joinedNeededContactTypes)
                 );
             }
-            phoneService.findByNumber(contact.phoneNumber());
+            final String normalizedPhone = contact.phoneNumber().replaceAll("\\D", "");
+            phoneService.findByNumber(normalizedPhone);
         }
 
         CustomerContact newContact = new CustomerContact();
