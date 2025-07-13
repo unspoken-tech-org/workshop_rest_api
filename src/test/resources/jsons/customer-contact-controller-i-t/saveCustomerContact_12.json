@@ -1,8 +1,0 @@
-{
-    "status": 404,
-    "title": "Entitdade não encontrada",
-    "error": {
-        "code": "entity.not.found.for.request",
-        "message": "O numero 999 não está cadastrado"
-    }
-}

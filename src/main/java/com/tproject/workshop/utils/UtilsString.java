@@ -10,8 +10,8 @@ public class UtilsString {
         return Arrays.stream(str.split(" ")).map(StringUtils::capitalize).reduce((a, b) -> a + " " + b).orElse("");
     }
 
-    public static String normalizeString(String paymentType) {
-        return paymentType.toLowerCase()
+    public static String normalizeString(String value) {
+        return value.toLowerCase()
                 .replaceAll("[áàâã]", "a")
                 .replaceAll("[éèê]", "e")
                 .replaceAll("[íìî]", "i")
@@ -20,11 +20,19 @@ public class UtilsString {
                 .replaceAll("[ç]", "c");
     }
 
+    public static String onlyDigits(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        return value.replaceAll("\\D", "");
+    }
+
     /**
      * Formats a phone number to the Brazilian standard.
      * Example output:
-     *  - Mobile: (11) 91234-5678
-     *  - Landline: (11) 1234-5678
+     * - Mobile: (11) 91234-5678
+     * - Landline: (11) 1234-5678
      * Accepts only digits, ignores other characters.
      *
      * @param phoneNumber String containing the phone number (with or without mask)
@@ -32,7 +40,7 @@ public class UtilsString {
      */
     public static String formatPhoneNumberBR(String phoneNumber) {
         if (phoneNumber == null) return null;
-        String digits = phoneNumber.replaceAll("\\D", "");
+        String digits = onlyDigits(phoneNumber);
         if (digits.length() == 11) {
             // Mobile: (XX) 9XXXX-XXXX
             return String.format("(%s) %s-%s",
@@ -54,14 +62,14 @@ public class UtilsString {
 
     public static String formatCpf(String cpf) {
         if (cpf == null) return null;
-        String digits = cpf.replaceAll("\\D", "");
+        String digits = onlyDigits(cpf);
         if (digits.length() == 11) {
             return String.format("%s.%s.%s-%s",
                     digits.substring(0, 3),
                     digits.substring(3, 6),
                     digits.substring(6, 9),
                     digits.substring(9, 11)
-                    );
+            );
         } else {
             return cpf;
         }

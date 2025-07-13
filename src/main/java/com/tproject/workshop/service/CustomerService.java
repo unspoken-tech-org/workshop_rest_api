@@ -39,7 +39,7 @@ public class CustomerService {
 
     @Transactional
     public CustomerOutputDto saveCustomer(InputCustomerDtoRecord inputCustomerDto) {
-        String cpfOnlyDigits = inputCustomerDto.cpf().replaceAll("\\D", "");
+        String cpfOnlyDigits = UtilsString.onlyDigits(inputCustomerDto.cpf());
         customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
             String formattedCpf = UtilsString.formatCpf(cpfOnlyDigits);
             throw new EntityAlreadyExistsException(String.format("O CPF %s já está em uso", formattedCpf));
@@ -51,7 +51,7 @@ public class CustomerService {
         Customer customer = Customer.builder()
                 .cpf(cpfOnlyDigits)
                 .name(inputCustomerDto.name())
-                .email(inputCustomerDto.email())
+                .email(inputCustomerDto.email()) 
                 .gender(inputCustomerDto.gender())
                 .phones(new ArrayList<>())
                 .build();
@@ -59,6 +59,10 @@ public class CustomerService {
         if (!phones.isEmpty()) {
             List<Phone> newPhones = phones.stream()
                     .map(phoneDto -> {
+                        phoneRepository.findByNumber(phoneDto.number()).ifPresent(phone -> {
+                            throw new EntityAlreadyExistsException(String.format("O numero %s já está cadastrado para o cliente %s", UtilsString.formatPhoneNumberBR(phone.getNumber()), phone.getCustomer().getName()));
+                        });
+
                         Phone newPhone = new Phone();
                         newPhone.setCustomer(customer);
                         newPhone.setName(phoneDto.name());
@@ -80,7 +84,7 @@ public class CustomerService {
         Customer existingCustomer = customerRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
 
-        String cpfOnlyDigits = inputCustomerDto.cpf().replaceAll("\\D", "");
+        String cpfOnlyDigits = UtilsString.onlyDigits(inputCustomerDto.cpf());
 
         customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
             if (customer.getIdCustomer() != id) {
