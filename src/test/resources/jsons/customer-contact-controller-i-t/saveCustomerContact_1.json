@@ -1,0 +1,10 @@
+{
+    "id": 2,
+    "deviceId": 1,
+    "technicianId": 2,
+    "phone": "44987654321",
+    "type": "mensagem",
+    "hasMadeContact": true,
+    "lastContact": "2025-07-12T15:20:37.079+00:00",
+    "conversation": "teste"
+}

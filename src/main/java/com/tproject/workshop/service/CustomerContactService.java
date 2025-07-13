@@ -1,17 +1,19 @@
 package com.tproject.workshop.service;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.model.DeviceStatus;
 import com.tproject.workshop.repository.CustomerContactRepository;
 import com.tproject.workshop.utils.UtilsString;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -38,8 +40,8 @@ public class CustomerContactService {
                         String.format("O numero de telefone deve ser fornecido para os tipos de contato: %s", joinedNeededContactTypes)
                 );
             }
-            final String normalizedPhone = contact.phoneNumber().replaceAll("\\D", "");
-            phoneService.findByNumber(normalizedPhone);
+
+            phoneService.findByNumber(contact.phoneNumber());
         }
 
         CustomerContact newContact = new CustomerContact();

@@ -25,7 +25,7 @@ ON CONFLICT (id) DO UPDATE SET
     "number" = EXCLUDED."number";
 
 INSERT INTO phones (id, "number", is_main, id_customer) VALUES
-(2, '9876543210', true, 1)
+(2, '44987654321', true, 1)
 ON CONFLICT (id) DO UPDATE SET
     "number" = EXCLUDED."number",
     is_main = EXCLUDED.is_main,

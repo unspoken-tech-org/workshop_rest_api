@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Erro de Validação",
+    "error": {
+        "code": "erro.validacao",
+        "message": "phoneNumber: O número de telefone, se preenchido, deve ter no mínimo 10 caracteres e no máximo 11"
+    }
+}

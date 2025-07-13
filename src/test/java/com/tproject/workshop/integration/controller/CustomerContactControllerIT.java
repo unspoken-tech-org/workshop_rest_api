@@ -43,21 +43,20 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
 
     private static Stream<Arguments> saveCustomerContactArguments() {
         return Stream.of(
-                Arguments.of(1, HttpStatus.SC_OK, Map.of(
+                Arguments.of(1, HttpStatus.SC_CREATED, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", "9876543210",
+                        "phoneNumber", "44987654321",
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
                 ), "create valid customer contact"),
                 Arguments.of(2, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        // deviceId is missing
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
+                        "phoneNumber", "44987654321",
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -66,8 +65,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(3, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
-                        // technicianId is missing
-                        "phoneNumber", 2,
+                        "phoneNumber", "44987654321",
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -77,7 +75,6 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        // phoneNumber is missing
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -87,8 +84,8 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
-                        "message", "", // Empty message
+                        "phoneNumber", "44987654321",
+                        "message", "",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
@@ -97,8 +94,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
-                        // message is missing (covered by @NotEmpty, but null would also fail)
+                        "phoneNumber", "44987654321",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
@@ -107,9 +103,8 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
+                        "phoneNumber", "44987654321",
                         "message", "teste",
-                        // contactStatus is missing
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
                 ), "missing contactStatus"),
@@ -117,28 +112,25 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
+                        "phoneNumber", "44987654321",
                         "message", "teste",
                         "contactStatus", true,
-                        // deviceStatus is missing
                         "contactDate", "2025-06-03T23:08:14.110245"
                 ), "missing deviceStatus"),
                 Arguments.of(9, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
+                        "phoneNumber", "44987654321",
                         "message", "teste",
                         "contactStatus", true,
                         "deviceStatus", "entregue"
-                        // contactDate is missing
                 ), "missing contactDate"),
-                // New test cases for service layer failures
                 Arguments.of(10, HttpStatus.SC_NOT_FOUND, Map.of(
-                        "deviceId", 999, // Non-existent deviceId
+                        "deviceId", 999,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
+                        "phoneNumber", "44987654321",
                         "message", "teste service fail",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -147,8 +139,8 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(11, HttpStatus.SC_NOT_FOUND, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
-                        "technicianId", 999, // Non-existent technicianId
-                        "phoneNumber", 2,
+                        "technicianId", 999,
+                        "phoneNumber", "44987654321",
                         "message", "teste service fail",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -158,7 +150,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 999, // Non-existent phoneNumber
+                        "phoneNumber", "99999999999",
                         "message", "teste service fail",
                         "contactStatus", true,
                         "deviceStatus", "entregue",
@@ -168,12 +160,32 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
-                        "phoneNumber", 2,
+                        "phoneNumber", "44987654321",
                         "message", "teste service fail",
                         "contactStatus", true,
-                        "deviceStatus", "non_existent_status", // Non-existent deviceStatus
+                        "deviceStatus", "non_existent_status",
                         "contactDate", "2025-06-03T23:08:14.110245"
-                ), "non-existent deviceStatus")
+                ), "non-existent deviceStatus"),
+                Arguments.of(14, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "9999",
+                        "message", "teste service fail",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "phoneNumber does not have min 10 digits"),
+                Arguments.of(15, HttpStatus.SC_CREATED, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "(44) 98765-4321",
+                        "message", "teste service fail",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "phoneNumber with special characters")
         );
     }
 }
