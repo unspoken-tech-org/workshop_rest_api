@@ -226,205 +226,210 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
 
     public static Stream<Arguments> updateCustomersArguments() {
         return Stream.of(
-               Arguments.of(1, HttpStatus.SC_OK, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "successfully updated customer"),
-               Arguments.of(2, HttpStatus.SC_NOT_FOUND, 250, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "customer not found"),
-               Arguments.of(3, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "11111111111",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "wrong cpf number"),
-               Arguments.of(4, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "blank name"),
-               Arguments.of(5, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
-                       "name", "generoso",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "blank cpf"),
-               Arguments.of(6, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4430356678",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               ),
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "can't add multiple primary phones"),
-               Arguments.of(7, HttpStatus.SC_OK, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4430356678",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               ),
-                               Map.of(
-                                       "name", "Fabricio",
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", false
-                               )
-                       )
-               ), "add secondary phone"),
-               Arguments.of(8, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4430356678",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               ),
-                               Map.of(
-                                       "name", "Fabricio",
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", false
-                               ),
-                               Map.of(
-                                       "number", "4499956753",
-                                       "type", "celular",
-                                       "isPrimary", false
-                               ),
-                               Map.of(
-                                       "number", "4499956754",
-                                       "type", "celular",
-                                       "isPrimary", false
-                               )
-                       )
-               ), "add more than 3 phones"),
-               Arguments.of(9, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "449995675",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "add phone with invalid number"),
-               Arguments.of(10, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               ),
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", false
-                               )
-                       )
-               ), "add phone with same number"),
-               Arguments.of(11, HttpStatus.SC_OK, 1, Map.of(
-                       "name", "Alfonso Zimmer Generoso",
-                       "cpf", "31781477051",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "successfully updated customer with same CPF"),
-               Arguments.of(12, HttpStatus.SC_CONFLICT, 1, Map.of(
-                       "name", "Alfonso Zimmer Generoso",
-                       "cpf", "46203912042",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "4499956752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "CPF already exists"),
-               Arguments.of(13, HttpStatus.SC_OK, 1, Map.of(
-                       "name", "generoso",
-                       "cpf", "45931651055",
-                       "gender", "masculino",
-                       "email", "geneder@live.com",
-                       "phones", List.of(
-                               Map.of(
-                                       "number", "(44) 9995-6752",
-                                       "type", "celular",
-                                       "isPrimary", true
-                               )
-                       )
-               ), "successfully updated customer with special characters in phone number"),
+                Arguments.of(1, HttpStatus.SC_OK, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "successfully updated customer"),
+                Arguments.of(2, HttpStatus.SC_NOT_FOUND, 250, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "customer not found"),
+                Arguments.of(3, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "11111111111",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "wrong cpf number"),
+                Arguments.of(4, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "blank name"),
+                Arguments.of(5, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "name", "generoso",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "blank cpf"),
+                Arguments.of(6, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4430356678",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                ),
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "can't add multiple primary phones"),
+                Arguments.of(7, HttpStatus.SC_OK, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4430356678",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                ),
+                                Map.of(
+                                        "name", "Fabricio",
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", false
+                                )
+                        )
+                ), "add secondary phone"),
+                Arguments.of(8, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4430356678",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                ),
+                                Map.of(
+                                        "name", "Fabricio",
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", false
+                                ),
+                                Map.of(
+                                        "number", "4499956753",
+                                        "type", "celular",
+                                        "isPrimary", false
+                                ),
+                                Map.of(
+                                        "number", "4499956754",
+                                        "type", "celular",
+                                        "isPrimary", false
+                                ),
+                                Map.of(
+                                        "number", "4499956755",
+                                        "type", "celular",
+                                        "isPrimary", false
+                                )
+                        )
+                ), "add more than 4 phones"),
+                Arguments.of(9, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "449995675",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "add phone with invalid number"),
+                Arguments.of(10, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                ),
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", false
+                                )
+                        )
+                ), "add phone with same number"),
+                Arguments.of(11, HttpStatus.SC_OK, 1, Map.of(
+                        "name", "Alfonso Zimmer Generoso",
+                        "cpf", "31781477051",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "successfully updated customer with same CPF"),
+                Arguments.of(12, HttpStatus.SC_CONFLICT, 1, Map.of(
+                        "name", "Alfonso Zimmer Generoso",
+                        "cpf", "46203912042",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "4499956752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "CPF already exists"),
+                Arguments.of(13, HttpStatus.SC_OK, 1, Map.of(
+                        "name", "generoso",
+                        "cpf", "45931651055",
+                        "gender", "masculino",
+                        "email", "geneder@live.com",
+                        "phones", List.of(
+                                Map.of(
+                                        "number", "(44) 9995-6752",
+                                        "type", "celular",
+                                        "isPrimary", true
+                                )
+                        )
+                ), "successfully updated customer with special characters in phone number"),
                 Arguments.of(14, HttpStatus.SC_CONFLICT, 1, Map.of(
                         "name", "generoso",
                         "cpf", "45931651055",
