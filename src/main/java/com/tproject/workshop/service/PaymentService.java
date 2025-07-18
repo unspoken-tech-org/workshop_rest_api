@@ -26,13 +26,13 @@ public class PaymentService {
                 normalizedPaymentType.equals("credito"),
                 normalizedPaymentType.equals("debito"),
                 normalizedPaymentType.equals("dinheiro"),
-                normalizedPaymentType.equals("pix")
+                normalizedPaymentType.equals("pix"),
+                normalizedPaymentType.equals("outro")
         ).allMatch(value -> value.equals(false));
 
         if (hasInvalidPaymentType) {
             throw new BadRequestException(String.format("O tipo de pagamento \"%s\" não é válido. O tipo de pagamento deve ser um dos seguintes: credito, debito, dinheiro ou pix.", payment.paymentType()));
         }
-
 
         Payment paymentModel = new Payment();
         paymentModel.setPaymentValue(payment.value());
