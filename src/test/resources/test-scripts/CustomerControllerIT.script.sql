@@ -20,4 +20,5 @@ VALUES
 INSERT INTO phones (id_customer, name, number, is_main)
 VALUES
     (1, null, '4430356678', true),
+    (2, null, '44988098766', false),
     (2, 'Luiz', '44988255540', false);
