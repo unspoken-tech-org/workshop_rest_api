@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +49,10 @@ public class DeviceService {
         oldDevice.setHasUrgency(device.hasUrgency());
         oldDevice.setRevision(device.revision());
         oldDevice.setDeviceStatus(newStatus);
+        Optional.ofNullable(device.technicianId()).ifPresent(id -> {
+            Technician technician = technicianService.findById(id);
+            oldDevice.setTechnician(technician);
+        });
 
         deviceRepository.saveAndFlush(oldDevice);
 
@@ -59,11 +64,6 @@ public class DeviceService {
         Customer customer = customerRepository.findById(device.customerId())
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Cliente com id %d não encontrado", device.customerId())));
-
-        Technician technician = null;
-        if (device.technicianId() != null) {
-            technician = technicianService.findById(device.technicianId());
-        }
 
         BrandsModelsTypes brandModelType = typeBrandModelService.createOrReturnExistentBrandModelType(device.typeBrandModel());
         DeviceStatus deviceStatus = deviceStatusService.findByStatus("novo");
@@ -81,10 +81,10 @@ public class DeviceService {
         newDevice.setLaborValue(device.budgetValue());
         newDevice.setHasUrgency(device.hasUrgency());
         newDevice.setDeviceStatus(deviceStatus);
-
-        if (technician != null) {
+        Optional.ofNullable(device.technicianId()).ifPresent(id -> {
+            Technician technician = technicianService.findById(id);
             newDevice.setTechnician(technician);
-        }
+        });
 
         Device savedDevice = deviceRepository.saveAndFlush(newDevice);
 

@@ -19,7 +19,7 @@ public record InputCustomerDtoRecord(
         String gender,
         String email,
         @NotEmpty
-        @Size(min = 1, max = 3, message = "Não é possível ter menos de 1 ou mais de 3 telefones")
+        @Size(min = 1, max = 4, message = "Não é possível ter menos de 1 ou mais de 4 telefones")
         @Valid
         List<InputPhoneDto> phones
 ) {

@@ -12,7 +12,8 @@ public record DeviceUpdateInputDtoRecord(
         BigDecimal serviceValue,
         boolean laborValueCollected,
         boolean hasUrgency,
-        boolean revision
+        boolean revision,
+        Integer technicianId
 ) {
 
 }
