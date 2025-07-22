@@ -1,6 +1,10 @@
 package com.tproject.workshop.dto.device;
 
 import java.util.List;
+
+import com.tproject.workshop.utils.filter_utils.Ordenation;
+import com.tproject.workshop.utils.filter_utils.OrderByDirection;
+
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 
@@ -24,7 +28,13 @@ public class DeviceQueryParam {
 
     List<Integer> deviceBrands = List.of();
 
+    boolean urgency = false;
+
+    boolean revision = false;
+
     String initialEntryDate;
 
     String finalEntryDate;
+
+    Ordenation ordenation = new Ordenation("entry_date", OrderByDirection.DESC);
 }

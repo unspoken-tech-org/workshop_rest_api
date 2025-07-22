@@ -19,6 +19,7 @@ public class DeviceTableDto {
     private String problem;
     private String observation;
     private boolean hasUrgency;
+    private boolean hasRevision;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
     private Timestamp entryDate;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")

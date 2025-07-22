@@ -37,7 +37,10 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     public static final String INITIAL_ENTRY_DATE = "INITIAL_ENTRY_DATE";
     public static final String FINAL_ENTRY_DATE = "FINAL_ENTRY_DATE";
     public static final String CUSTOMER_NAME = "CUSTOMER_NAME";
-
+    public static final String HAS_URGENCY = "HAS_URGENCY";
+    public static final String HAS_REVISION = "HAS_REVISION";
+    public static final String ORDER_BY_FIELD = "ORDER_BY_FIELD";
+    public static final String ORDER_BY_DIRECTION = "ORDER_BY_DIRECTION";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -53,7 +56,11 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(DEVICE_BRANDS, UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
                 .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))
                 .addValue(INITIAL_ENTRY_DATE, deviceParams.getInitialEntryDate(), Types.VARCHAR)
-                .addValue(FINAL_ENTRY_DATE, deviceParams.getFinalEntryDate(), Types.VARCHAR);
+                .addValue(FINAL_ENTRY_DATE, deviceParams.getFinalEntryDate(), Types.VARCHAR)
+                .addValue(HAS_URGENCY, deviceParams.isUrgency(), Types.BOOLEAN)
+                .addValue(HAS_REVISION, deviceParams.isRevision(), Types.BOOLEAN)
+                .addValue(ORDER_BY_FIELD, deviceParams.getOrdenation().orderByField(), Types.VARCHAR)
+                .addValue(ORDER_BY_DIRECTION, deviceParams.getOrdenation().orderByDirection().toString(), Types.VARCHAR);
 
         return jdbcTemplate
                 .query(
@@ -73,7 +80,8 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                                         DeviceTableDto.Fields.observation.name(),
                                         DeviceTableDto.Fields.problem.name(),
                                         DeviceTableDto.Fields.hasUrgency.name(),
-                                        DeviceTableDto.Fields.hasUrgency.name()
+                                        DeviceTableDto.Fields.hasUrgency.name(),
+                                        DeviceTableDto.Fields.hasRevision.name()
                                 )
                                 .newResultSetExtractor(DeviceTableDto.class)
                 );
