@@ -48,7 +48,7 @@ public class Device {
     private boolean laborValueCollected;
 
     @Column(name = "has_urgency", nullable = false)
-    private boolean hasUrgency;
+    private boolean urgency;
 
     @Column(name = "is_revision", nullable = false)
     private boolean revision;
@@ -59,6 +59,9 @@ public class Device {
     @UpdateTimestamp
     @Column(name = "last_update")
     private Timestamp lastUpdate;
+
+    @Column(name = "last_viewed_at")
+    private Timestamp lastViewedAt;
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_customer")
@@ -75,6 +78,9 @@ public class Device {
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_brand_model_type")
     private BrandsModelsTypes brandsModelsTypes;
+
+    @OneToMany(mappedBy = "device", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<DeviceHistory> deviceHistory;
 
     public Device(int id) {
         this.id = id;
