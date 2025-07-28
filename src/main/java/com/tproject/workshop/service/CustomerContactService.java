@@ -1,19 +1,20 @@
 package com.tproject.workshop.service;
 
+import com.tproject.workshop.dto.contact.CustomerContactInputDto;
+import com.tproject.workshop.exception.BadRequestException;
+import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.model.CustomerContact;
+import com.tproject.workshop.model.Device;
+import com.tproject.workshop.model.DeviceStatus;
+import com.tproject.workshop.repository.CustomerContactRepository;
+import com.tproject.workshop.repository.DeviceRepository;
+import com.tproject.workshop.utils.UtilsString;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import org.springframework.stereotype.Service;
-
-import com.tproject.workshop.dto.contact.CustomerContactInputDto;
-import com.tproject.workshop.exception.BadRequestException;
-import com.tproject.workshop.model.CustomerContact;
-import com.tproject.workshop.model.DeviceStatus;
-import com.tproject.workshop.repository.CustomerContactRepository;
-import com.tproject.workshop.utils.UtilsString;
-
-import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +22,7 @@ public class CustomerContactService {
 
     private final CustomerContactRepository customerContactRepository;
     private final DeviceStatusService deviceStatusService;
-    private final DeviceService deviceService;
+    private final DeviceRepository deviceRepository;
     private final TechnicianService technicianService;
     private final PhoneService phoneService;
 
@@ -29,7 +30,9 @@ public class CustomerContactService {
 
 
     public CustomerContact save(CustomerContactInputDto contact) {
-        deviceService.findDeviceById(contact.deviceId());
+        Device device = deviceRepository.findById(contact.deviceId()).orElseThrow(() ->
+                new NotFoundException(String.format("Não foi encontrado um aparelho com id %d", contact.deviceId()))
+        );
         technicianService.findById(contact.technicianId());
         DeviceStatus status = deviceStatusService.findByStatus(contact.deviceStatus());
 
@@ -43,6 +46,15 @@ public class CustomerContactService {
 
             phoneService.findByNumber(contact.phoneNumber());
         }
+
+        boolean isDeliveredOrDisposed = List.of("entregue", "descartado").contains(status.getStatus());
+
+        device.setDeviceStatus(status);
+        if (isDeliveredOrDisposed) {
+            device.setUrgency(false);
+            device.setRevision(false);
+        }
+        deviceRepository.save(device);
 
         CustomerContact newContact = new CustomerContact();
         newContact.setDeviceId(contact.deviceId());
