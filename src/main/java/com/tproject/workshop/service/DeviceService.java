@@ -6,8 +6,10 @@ import com.tproject.workshop.model.*;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.tproject.workshop.events.DeviceViewedEvent;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +24,7 @@ public class DeviceService {
     private final ColorService colorService;
     private final TypesBrandsModelsService typeBrandModelService;
     private final TechnicianService technicianService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<DeviceTableDto> list(DeviceQueryParam params) {
         return deviceRepository.listTable(params);
@@ -29,8 +32,12 @@ public class DeviceService {
 
     @Transactional(readOnly = true)
     public DeviceOutputDto findDeviceById(int deviceId) {
-        return deviceRepository.findByDeviceId(deviceId)
+        DeviceOutputDto device = deviceRepository.findByDeviceId(deviceId)
                 .orElseThrow(() -> new NotFoundException(String.format("Aparelho com id %d não encontrado", deviceId)));
+
+        eventPublisher.publishEvent(new DeviceViewedEvent(this, deviceId));
+
+        return device;
     }
 
     public DeviceOutputDto updateDevice(DeviceUpdateInputDtoRecord device) {
