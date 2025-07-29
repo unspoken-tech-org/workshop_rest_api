@@ -1,6 +1,5 @@
 package com.tproject.workshop.repository.jdbc.impl;
 
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.dao.EmptyResultDataAccessException;
