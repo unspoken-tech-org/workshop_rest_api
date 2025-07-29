@@ -1,6 +1,7 @@
 package com.tproject.workshop.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -38,7 +39,7 @@ public class CustomerContact {
     private String conversation;
 
     @JsonIgnore
-    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_device_status")
-    private DeviceStatus deviceStatus;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "device_status")
+    private DeviceStatusEnum deviceStatus;
 }

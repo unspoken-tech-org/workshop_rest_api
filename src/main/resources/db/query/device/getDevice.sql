@@ -2,7 +2,7 @@ SELECT
   d.id AS device_id,
   c.id AS customer_id,
   c."name" AS customer_name,
-  ds.status AS device_status,
+  d.device_status AS device_status,
   b.brand AS brand_name,
   m.model AS model_name,
   t."type" AS type_name,
@@ -26,7 +26,6 @@ SELECT
   device_payments.payments
 FROM devices d
 JOIN customers c ON d.id_customer = c.id
-JOIN device_status ds ON ds.id = d.id_device_status
 JOIN brands_models_types bmt ON bmt.id = d.id_brand_model_type
 JOIN brands b ON b.id = bmt.id_brand
 JOIN models m ON m.id = bmt.id_model
@@ -52,7 +51,7 @@ LEFT JOIN LATERAL (
       'deviceId', od.id,
       'customerId', od.id_customer,
       'typeBrandModel', (select concat_ws(' ', ot."type", ob.brand, '|', om.model)),
-      'deviceStatus', ods.status,
+      'deviceStatus', od.device_status,
       'problem', od.problem,
       'hasUrgency', od.has_urgency,
       'revision', od.is_revision,
@@ -64,7 +63,6 @@ LEFT JOIN LATERAL (
   LEFT JOIN brands ob on ob.id = obmt.id_brand
   LEFT JOIN models om on om.id = obmt.id_model
   LEFT JOIN "types" ot on ot.id = obmt.id_type
-  LEFT JOIN device_status ods on ods.id = od.id_device_status
   WHERE od.id_customer = c.id
   AND  od.id != :DEVICE_ID
 ) customer_devices ON TRUE
@@ -75,14 +73,13 @@ LEFT JOIN LATERAL (
       'technicianId', cc.id_technician,
       'technicianName', technicians.technician_name,
       'phone', cc.phone,
-      'deviceStatus', dsj.status,
+      'deviceStatus', cc.device_status,
       'type', cc.type,
       'hasMadeContact', cc.has_made_contact,
       'lastContact', cc.last_contact,
       'conversation', cc.conversation
   ) ORDER BY cc.last_contact DESC), '[]'::json) AS customer_contacts
   FROM customer_contact cc
-  LEFT JOIN device_status dsj ON dsj.id = cc.id_device_status
   LEFT JOIN technicians ON technicians.id = cc.id_technician
   WHERE cc.id_device = d.id
 ) contact_data ON true

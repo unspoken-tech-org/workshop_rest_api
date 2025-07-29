@@ -23,7 +23,7 @@ LEFT JOIN LATERAL (
       'deviceId', d.id,
       'customerId', d.id_customer,
       'typeBrandModel', (select concat_ws(' ', t."type", b.brand, '|', m.model)),
-      'deviceStatus', ds.status,
+      'deviceStatus', d.device_status,
       'problem', d.problem,
       'hasUrgency', d.has_urgency,
       'revision', d.is_revision,
@@ -35,7 +35,6 @@ LEFT JOIN LATERAL (
   LEFT JOIN brands b on b.id = bmt.id_brand
   LEFT JOIN models m on m.id = bmt.id_model
   LEFT JOIN "types" t on t.id = bmt.id_type
-  LEFT JOIN device_status ds on ds.id = d.id_device_status
   WHERE d.id_customer = c.id
 ) customer_devices ON TRUE
 WHERE (:CUSTOMER_ID IS NULL OR c.id = :CUSTOMER_ID)

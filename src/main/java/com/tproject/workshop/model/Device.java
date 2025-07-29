@@ -1,5 +1,7 @@
 package com.tproject.workshop.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -67,9 +69,10 @@ public class Device {
     @JoinColumn(name = "id_customer")
     private Customer customer;
 
-    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_device_status")
-    private DeviceStatus deviceStatus;
+    @JsonIgnore
+    @Enumerated(EnumType.STRING)
+    @Column(name = "device_status")
+    private DeviceStatusEnum deviceStatus;
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_technician")

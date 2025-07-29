@@ -1,11 +1,11 @@
 package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.model.Device;
-import com.tproject.workshop.model.DeviceStatus;
 import com.tproject.workshop.repository.CustomerContactRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.utils.UtilsString;
@@ -21,20 +21,18 @@ import java.util.List;
 public class CustomerContactService {
 
     private final CustomerContactRepository customerContactRepository;
-    private final DeviceStatusService deviceStatusService;
     private final DeviceRepository deviceRepository;
     private final TechnicianService technicianService;
     private final PhoneService phoneService;
 
     private final List<String> contactTypesThatNeedPhone = List.of("ligacao", "mensagem");
 
-
     public CustomerContact save(CustomerContactInputDto contact) {
         Device device = deviceRepository.findById(contact.deviceId()).orElseThrow(() ->
-                new NotFoundException(String.format("Não foi encontrado um aparelho com id %d", contact.deviceId()))
+                new NotFoundException(String.format("Aparelho com id %d não encontrado", contact.deviceId()))
         );
         technicianService.findById(contact.technicianId());
-        DeviceStatus status = deviceStatusService.findByStatus(contact.deviceStatus());
+        DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
 
         if (contactTypesThatNeedPhone.contains(UtilsString.normalizeString(contact.contactType()))) {
             if (contact.phoneNumber() == null || contact.phoneNumber().isEmpty()) {
@@ -47,7 +45,7 @@ public class CustomerContactService {
             phoneService.findByNumber(contact.phoneNumber());
         }
 
-        boolean isDeliveredOrDisposed = List.of("entregue", "descartado").contains(status.getStatus());
+        boolean isDeliveredOrDisposed = List.of(DeviceStatusEnum.ENTREGUE, DeviceStatusEnum.DESCARTADO).contains(status);
 
         device.setDeviceStatus(status);
         if (isDeliveredOrDisposed) {

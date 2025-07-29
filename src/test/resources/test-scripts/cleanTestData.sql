@@ -1,7 +1,6 @@
 truncate colors RESTART IDENTITY cascade;
 truncate devices RESTART IDENTITY cascade;
 truncate customers RESTART IDENTITY cascade;
-truncate device_status RESTART IDENTITY cascade;
 truncate brands RESTART IDENTITY cascade;
 truncate models RESTART IDENTITY cascade;
 truncate technicians RESTART IDENTITY cascade;

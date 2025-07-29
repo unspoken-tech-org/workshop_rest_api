@@ -23,7 +23,7 @@ public class DeviceControllerImpl implements DeviceController {
         if (deviceQueryParam == null) {
             deviceQueryParam = new DeviceQueryParam();
         }
-        return deviceService.list(deviceQueryParam);
+        return deviceService.listDevices(deviceQueryParam);
     }
 
     @Override
