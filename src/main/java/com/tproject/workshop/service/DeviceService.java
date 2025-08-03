@@ -10,6 +10,7 @@ import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +29,7 @@ public class DeviceService {
     private final ApplicationEventPublisher eventPublisher;
 
 
-    public List<DeviceTableDto> listDevices(DeviceQueryParam deviceQueryParam) {
+    public Page<DeviceTableDto> listDevices(DeviceQueryParam deviceQueryParam) {
         return deviceRepository.listTable(deviceQueryParam);
     }
 

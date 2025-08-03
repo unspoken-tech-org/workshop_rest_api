@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,7 +19,7 @@ public class DeviceControllerImpl implements DeviceController {
     private final DeviceService deviceService;
 
     @Override
-    public List<DeviceTableDto> list(@RequestBody(required = false) DeviceQueryParam deviceQueryParam) {
+    public Page<DeviceTableDto> list(@RequestBody(required = false) DeviceQueryParam deviceQueryParam) {
         if (deviceQueryParam == null) {
             deviceQueryParam = new DeviceQueryParam();
         }

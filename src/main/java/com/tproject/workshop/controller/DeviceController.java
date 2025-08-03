@@ -4,12 +4,12 @@ import com.tproject.workshop.dto.device.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface DeviceController {
 
     @PostMapping("/filter")
-    List<DeviceTableDto> list(DeviceQueryParam deviceQueryParam);
+    Page<DeviceTableDto> list(DeviceQueryParam deviceQueryParam);
 
     @GetMapping("/{deviceId}")
     DeviceOutputDto findOne(@PathVariable("deviceId") int deviceId);
