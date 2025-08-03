@@ -8,6 +8,8 @@ public enum DeviceStatusEnum {
     AGUARDANDO,
     ENTREGUE,
     DESCARTADO,
+    APROVADO,
+    NAO_APROVADO,
     PRONTO;
 
     public static DeviceStatusEnum fromString(String status) {

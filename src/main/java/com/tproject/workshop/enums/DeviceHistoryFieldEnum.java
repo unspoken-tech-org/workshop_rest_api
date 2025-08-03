@@ -6,7 +6,7 @@ import lombok.Getter;
 public enum DeviceHistoryFieldEnum {
     URGENCY("urgency"),
     REVISION("revision"),
-    STATUS("status");
+    STATUS("device_status");
 
     private final String field;
 

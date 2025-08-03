@@ -2,9 +2,11 @@ WITH all_statuses (status) AS (
     VALUES
         ('DESCARTADO'),
         ('PRONTO'),
+        ('APROVADO'),
         ('AGUARDANDO'),
         ('NOVO'),
         ('EM_ANDAMENTO'),
+        ('NAO_APROVADO'),
         ('ENTREGUE'),
         ('URGENTE'),
         ('REVISAO')

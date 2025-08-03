@@ -45,10 +45,16 @@ public class CustomerContactService {
             phoneService.findByNumber(contact.phoneNumber());
         }
 
-        boolean isDeliveredOrDisposed = List.of(DeviceStatusEnum.ENTREGUE, DeviceStatusEnum.DESCARTADO).contains(status);
+        boolean resetUrgencyRevision = List.of(
+                DeviceStatusEnum.PRONTO,
+                DeviceStatusEnum.APROVADO,
+                DeviceStatusEnum.NAO_APROVADO,
+                DeviceStatusEnum.ENTREGUE,
+                DeviceStatusEnum.DESCARTADO
+        ).contains(status);
 
         device.setDeviceStatus(status);
-        if (isDeliveredOrDisposed) {
+        if (resetUrgencyRevision) {
             device.setUrgency(false);
             device.setRevision(false);
         }
