@@ -19,7 +19,7 @@ jobs:
 
       - name: Save Docker image as TAR
         run: |
-          docker save -o workshop-api.tar workshop-api:latest
+          docker save workshop-api:latest -o workshop-api.tar
 
       - name: Copy Docker image to server
         uses: appleboy/scp-action@v0.1.7
@@ -30,6 +30,7 @@ jobs:
           port: 22
           source: "workshop-api.tar"
           target: "/home/workshop/deploy/work_shop_rest_api/"
+          tar_tmp_path: "/tmp"
 
       - name: Load image and restart container via SSH
         uses: appleboy/ssh-action@v0.1.10
@@ -41,4 +42,6 @@ jobs:
           script: |
             cd /home/workshop/deploy/work_shop_rest_api
             docker load -i workshop-api.tar
-            docker compose up -d
+            docker compose down
+            docker compose up -d --remove-orphans
+            docker image prune -f 
