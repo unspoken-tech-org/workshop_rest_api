@@ -32,7 +32,6 @@ jobs:
           source: "docker-compose.yml"
           target: "/home/workshop/deploy"
           tar_tmp_path: "/tmp"
-          tar_exec: "tar -czf /tmp/deploy.tar.gz"
           rm: true
 
       - name: Load image and restart container via SSH
