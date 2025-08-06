@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_DATABASE}
+    username: ${DB_USERNAME:workshop_admin}
+    password: ${DB_PASSWORD:pass}
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 50
+      idle-timeout: 600000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
+  jpa:
+    generate-ddl: false
+    hibernate:
+      default_schema: public
+      ddl-auto: none
+      #      allow camel case names on entities
+    #      naming:
+    #        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.temp.use_jdbc_metadata_defaults: false
+
+message: Local
+
+logging:
+  level:
+    root: ERROR
+    org.springframework.web: DEBUG
+    org.hibernate: ERROR

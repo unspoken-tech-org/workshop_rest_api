@@ -11,6 +11,9 @@ import com.tproject.workshop.utils.mapper.JsonResultSetMapper;
 import lombok.RequiredArgsConstructor;
 import org.simpleflatmapper.jdbc.spring.JdbcTemplateMapperFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -41,12 +44,14 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     public static final String HAS_REVISION = "HAS_REVISION";
     public static final String ORDER_BY_FIELD = "ORDER_BY_FIELD";
     public static final String ORDER_BY_DIRECTION = "ORDER_BY_DIRECTION";
+    public static final String PAGE_SIZE = "PAGE_SIZE";
+    public static final String OFFSET = "OFFSET";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
     @Override
-    public List<DeviceTableDto> listTable(DeviceQueryParam deviceParams) {
+    public Page<DeviceTableDto> listTable(DeviceQueryParam deviceParams) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue(DEVICE_ID, deviceParams.getDeviceId(), Types.INTEGER)
                 .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
@@ -60,9 +65,11 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(HAS_URGENCY, deviceParams.isUrgency(), Types.BOOLEAN)
                 .addValue(HAS_REVISION, deviceParams.isRevision(), Types.BOOLEAN)
                 .addValue(ORDER_BY_FIELD, deviceParams.getOrdenation().orderByField(), Types.VARCHAR)
-                .addValue(ORDER_BY_DIRECTION, deviceParams.getOrdenation().orderByDirection().toString(), Types.VARCHAR);
+                .addValue(ORDER_BY_DIRECTION, deviceParams.getOrdenation().orderByDirection().toString(), Types.VARCHAR)
+                .addValue(PAGE_SIZE, deviceParams.getSize())
+                .addValue(OFFSET, deviceParams.getPage());
 
-        return jdbcTemplate
+        List<DeviceTableDto> devices = jdbcTemplate
                 .query(
                         UtilsSql.getQuery("device/listTable"),
                         params,
@@ -85,6 +92,10 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                                 )
                                 .newResultSetExtractor(DeviceTableDto.class)
                 );
+
+        Long total = jdbcTemplate.queryForObject(UtilsSql.getQuery("device/listTable.count"), params, Long.class);
+
+        return new PageImpl<>(devices, PageRequest.of(deviceParams.getPage(), deviceParams.getSize()), total != null ? total : 0);
     }
 
     @Override

@@ -36,5 +36,9 @@ public class DeviceQueryParam {
 
     String finalEntryDate;
 
+    int page = 0;
+    
+    int size = 15;
+
     Ordenation ordenation = new Ordenation("entry_date", OrderByDirection.DESC);
 }
