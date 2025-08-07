@@ -21,6 +21,10 @@ jobs:
         run: |
           docker save workshop-api:latest -o workshop-api.tar
 
+      - name: List files before deploy
+        run: |
+          ls -la
+
       - name: Copy Docker image to server
         uses: appleboy/scp-action@v0.1.7
         with:
