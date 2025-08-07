@@ -29,8 +29,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SERVER_PASSPHRASE }}
           port: 22
-          source: "docker-compose.yml"
-          target: "/home/workshop/deploy"
+          source: |
+            workshop-api.tar
+            docker-compose-production.yml
+            .env.template
+          target: /home/workshop/deploy
           tar_tmp_path: "/tmp"
           rm: true
 
@@ -43,7 +46,15 @@ jobs:
           port: 22
           script: |
             cd /home/workshop/deploy/work_shop_rest_api
+            
+            export POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            export POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            
+            envsubst < .env.template > .env
+            
             docker load -i workshop-api.tar
-            docker compose down
-            docker compose up -d --remove-orphans
-            docker image prune -f 
+            docker compose -f docker-compose-production.yml --env-file .env down
+            docker compose -f docker-compose-production.yml --env-file .env up -d --remove-orphans
+            
+            docker image prune -f
