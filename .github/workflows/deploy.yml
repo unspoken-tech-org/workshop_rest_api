@@ -34,7 +34,7 @@ jobs:
           passphrase: ${{ secrets.SERVER_PASSPHRASE }}
           port: 22
           source: |
-            workshop-api.tar
+            ***-api.tar
             docker-compose-production.yml
             .env.template
           target: /home/workshop/deploy
