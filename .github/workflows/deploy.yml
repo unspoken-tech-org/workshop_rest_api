@@ -1,4 +1,4 @@
-name: Deploy Spring Boot App to Home Server
+name: Deploy Spring Boot App via Self-Hosted Runner
 
 on:
   push:
@@ -7,35 +7,25 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    name: Deploy on Home Server
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout do código
-        uses: actions/checkout@v3
-
-      - name: Configura acesso SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Deploy no servidor via SSH
+      - name: Update local repository
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-            set -e
-          
-            echo "Accessing project folder"
-            cd ~/work_shop_rest_api
+          echo "Access project folder"
+          cd ~/work_shop_rest_api
+          git pull origin main
 
-            echo "Updating code"
-            git pull origin main
+      - name: Replace .env vars
+        run: |
+          echo "Replace environment vars"
+          cd ~/work_shop_rest_api
+          cp .env.template .env
 
-            echo "Replacing .env variables"
-            cp .env.template .env
-            export DB_NAME=${{ secrets.DB_NAME }}
-            export DB_USERNAME=${{ secrets.DB_USERNAME }}
-            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-
-            echo "Updating containers"
-            docker compose -f docker-compose-production.yml down
-            docker compose -f docker-compose-production.yml up -d --build
-          EOF
+      - name: Restart Docker containers
+        run: |
+          echo "Updating Docker containers"
+          cd ~/work_shop_rest_api
+          docker compose -f docker-compose-production.yml down
+          docker compose -f docker-compose-production.yml up -d --build
