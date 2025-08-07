@@ -14,18 +14,18 @@ jobs:
       - name: Update local repository
         run: |
           echo "Access project folder"
-          cd ~/work_shop_rest_api
+          cd ~/deploy/work_shop_rest_api
           git pull origin main
 
       - name: Replace .env vars
         run: |
           echo "Replace environment vars"
-          cd ~/work_shop_rest_api
+          cd ~/deploy/work_shop_rest_api
           cp .env.template .env
 
       - name: Restart Docker containers
         run: |
           echo "Updating Docker containers"
-          cd ~/work_shop_rest_api
+          cd ~/deploy/work_shop_rest_api
           docker compose -f docker-compose-production.yml down
           docker compose -f docker-compose-production.yml up -d --build
