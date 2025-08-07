@@ -1,64 +1,41 @@
-name: Deploy Spring Boot to Local Server
+name: Deploy Spring Boot App to Home Server
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   deploy:
-    name: Build & Deploy Docker Image
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout do código
         uses: actions/checkout@v3
 
-      - name: Build Docker image
-        run: |
-          docker build -t workshop-api:latest .
-
-      - name: Save Docker image as TAR
-        run: |
-          docker save workshop-api:latest -o workshop-api.tar
-
-      - name: List files before deploy
-        run: |
-          ls -la
-
-      - name: Copy Docker image to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Configura acesso SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SERVER_PASSPHRASE }}
-          port: 22
-          source: |
-            ***-api.tar
-            docker-compose-production.yml
-            .env.template
-          target: /home/workshop/deploy
-          tar_tmp_path: "/tmp"
-          rm: true
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Load image and restart container via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            cd /home/workshop/deploy/work_shop_rest_api
-            
-            export POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            export POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-            
-            envsubst < .env.template > .env
-            
-            docker load -i workshop-api.tar
-            docker compose -f docker-compose-production.yml --env-file .env down
-            docker compose -f docker-compose-production.yml --env-file .env up -d --remove-orphans
-            
-            docker image prune -f
+      - name: Deploy no servidor via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+          
+            echo "Accessing project folder"
+            cd ~/work_shop_rest_api
+
+            echo "Updating code"
+            git pull origin main
+
+            echo "Replacing .env variables"
+            cp .env.template .env
+            export DB_NAME=${{ secrets.DB_NAME }}
+            export DB_USERNAME=${{ secrets.DB_USERNAME }}
+            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+            echo "Updating containers"
+            docker compose -f docker-compose-production.yml down
+            docker compose -f docker-compose-production.yml up -d --build
+          EOF
