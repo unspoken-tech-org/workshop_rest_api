@@ -24,11 +24,14 @@ jobs:
           cd ~/deploy/workshop_rest_api
           git pull origin main
 
-      - name: Replace .env vars
+      - name: Write .env with secrets
         run: |
-          echo "Replace environment vars"
           cd ~/deploy/workshop_rest_api
-          cp .env.template .env
+          cat > .env <<EOF
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          EOF
 
       - name: Restart Docker containers
         run: |
