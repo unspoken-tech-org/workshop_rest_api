@@ -11,6 +11,13 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Initial step
+        run: |
+          echo "Actual directory:"
+          pwd
+          echo "Folder content:"
+          ls -la
+
       - name: Update local repository
         run: |
           echo "Access project folder"
@@ -27,5 +34,5 @@ jobs:
         run: |
           echo "Updating Docker containers"
           cd ~/deploy/workshop_rest_api
-          docker compose -f docker-compose-production.yml down
+          docker compose -f docker-compose-production.yml down || true
           docker compose -f docker-compose-production.yml up -d --build

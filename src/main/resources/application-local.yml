@@ -27,4 +27,6 @@ message: Local
 
 logging:
   level:
-    root: WARN
+    root: ERROR
+    org.springframework.web: DEBUG
+    org.hibernate: ERROR
