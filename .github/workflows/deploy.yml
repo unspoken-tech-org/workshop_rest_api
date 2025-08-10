@@ -49,7 +49,7 @@ jobs:
       - name: Grant LAN access at pg_hba.conf
         run: |
           cd ~/deploy/workshop_rest_api
-          PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop-db)
+          PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db)
           docker exec "$PG_CID" bash -lc '
             set -e
             LINE="host all all ${LAN_CIDR} md5"
