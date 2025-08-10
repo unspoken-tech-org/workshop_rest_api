@@ -25,7 +25,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://workshop-db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_PROFILES_ACTIVE: production
       JAVA_TOOL_OPTIONS: "-Xms256m -Xmx768m"
     networks:

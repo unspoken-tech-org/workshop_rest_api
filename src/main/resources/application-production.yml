@@ -1,9 +1,9 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://workshop-db:5432/${DB_NAME}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
       minimum-idle: 5
       maximum-pool-size: 50
@@ -23,9 +23,9 @@ spring:
   flyway:
     enabled: true
     schemas: public
-    url: jdbc:postgresql://workshop-db:5432/${DB_NAME}
-    user: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    user: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     locations: classpath:db/migration/postgresql
 
 message: Local
