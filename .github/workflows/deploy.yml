@@ -31,7 +31,12 @@ jobs:
           DB_NAME=${{ secrets.DB_NAME }}
           DB_USERNAME=${{ secrets.DB_USERNAME }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
+          LAN_CIDR=${{ secrets.LAN_CIDR }}
           EOF
+          
+          echo ".env created:"
+          grep -E '^(DB_NAME|DB_USERNAME|HOST_BIND_IP|LAN_CIDR)=' .env || true
 
       - name: Restart Docker containers
         run: |
@@ -39,3 +44,33 @@ jobs:
           cd ~/deploy/workshop_rest_api
           docker compose -f docker-compose-production.yml down || true
           docker compose -f docker-compose-production.yml up -d --build
+          docker compose -f docker-compose-production.yml ps
+
+      - name: Grant LAN access at pg_hba.conf
+        run: |
+          cd ~/deploy/workshop_rest_api
+          PG_CID=$(docker compose -f docker-compose-production.yml ps -q postgres)
+          docker exec "$PG_CID" bash -lc '
+            set -e
+            LINE="host all all ${LAN_CIDR} md5"
+            FILE="$PGDATA/pg_hba.conf"
+            grep -qF "$LINE" "$FILE" || echo "$LINE" >> "$FILE"
+          '
+          docker restart "$PG_CID"
+
+      - name: Verifica status e logs dos containers
+        run: |
+          cd ~/deploy/workshop_rest_api
+          
+          echo "===== CONTAINERS STATUS ====="
+          docker compose -f docker-compose-production.yml ps
+          
+          echo ""
+          echo "===== CONTAINERS LOGS (Last 50) ====="
+          for service in $(docker compose -f docker-compose-production.yml ps --services); do
+            echo ""
+            echo "----- Logs: $service -----"
+            docker compose -f docker-compose-production.yml logs --tail=50 $service || true
+          done
+
+

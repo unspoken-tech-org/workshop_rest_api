@@ -11,6 +11,9 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${HOST_BIND_IP}:5432:5432"
+    command: [ "-c", "listen_addresses=*" ]
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
