@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  db:
+  workshop_db:
+    container_name: workshop-db
     image: postgres:15
-    container_name: postgres
     restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -12,24 +12,27 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
-      - app-network
+      - workshop-network
 
-  app:
+  workshop_spring_app:
+    container_name: workshop-api
     build: .
-    container_name: spring_app
     ports:
       - "8080:8080"
     depends_on:
-      - db
+      - workshop_db
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://workshop-db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: production
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx768m"
     networks:
-      - app-network
+      - workshop-network
 
 volumes:
   db_data:
 
 networks:
-  app-network:
+  workshop-network:

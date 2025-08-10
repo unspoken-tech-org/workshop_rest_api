@@ -9,7 +9,5 @@ services:
       POSTGRES_DB: workshop_db
       POSTGRES_USER: workshop_admin
       POSTGRES_PASSWORD: pass
-    volumes:
-      - "./migrations:/docker-entrypoint-initdb.d"
     ports:
       - "5445:5432"
