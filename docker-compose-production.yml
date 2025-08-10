@@ -3,9 +3,11 @@ version: '3.8'
 services:
   workshop_db:
     container_name: workshop-db
-    image: postgres:15
+    image: postgres:16
     restart: always
     environment:
+      LC_ALL: C.UTF-8
+      TZ: GMT
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
