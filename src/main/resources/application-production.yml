@@ -22,6 +22,7 @@ spring:
 
   flyway:
     enabled: true
+    baselineOnMigrate: true
     schemas: public
     url: ${SPRING_DATASOURCE_URL}
     user: ${SPRING_DATASOURCE_USERNAME}
