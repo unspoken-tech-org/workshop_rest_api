@@ -51,7 +51,7 @@ jobs:
       - name: Build local images (no registry)
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          docker compose -f "$COMPOSE_FILE" build workshop-api
+          docker compose -f "$COMPOSE_FILE" build workshop_spring_app
 
       - name: Up (recreate & remove orphans)
         working-directory: ${{ env.DEPLOY_DIR }}
