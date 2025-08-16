@@ -31,10 +31,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      workshop-db:
+      workshop_db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://workshop-db:5432/${DB_NAME}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://workshop_db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: production
