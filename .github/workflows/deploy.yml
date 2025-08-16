@@ -12,49 +12,53 @@ jobs:
 
     env:
       COMPOSE_FILE: docker-compose-production.yml
-      DEPLOY_DIR: ~/deploy/workshop_rest_api
+      DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Initial step
         run: |
-          echo "Actual directory:"
-          pwd
-          echo "Folder content:"
-          ls -la
+          echo "Actual directory:" && pwd
+          echo "Folder content:" && ls -la
 
       - name: Prepare deploy directory
         run: |
-          mkdir -p $DEPLOY_DIR
+          mkdir -p "${DEPLOY_DIR}"
 
       - name: Copy repo files to deploy dir
         run: |
-          rsync -a --delete ./ $DEPLOY_DIR
+          rsync -a --delete \
+            --exclude '.git' \
+            ./ "${DEPLOY_DIR}/"
 
       - name: Write .env with secrets
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          cd $DEPLOY_DIR
-          cat > .env <<EOF
+          set -e
+          cat > .env <<'EOF'
           DB_NAME=${{ secrets.DB_NAME }}
           DB_USERNAME=${{ secrets.DB_USERNAME }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
           LAN_CIDR=${{ secrets.LAN_CIDR }}
           EOF
-          
+          chmod 600 .env
           echo ".env created:"
           grep -E '^(DB_NAME|DB_USERNAME|HOST_BIND_IP|LAN_CIDR)=' .env || true
 
       - name: Build local images (no registry)
-        working-directory: $DEPLOY_DIR
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          docker compose -f docker-compose-production.yml build workshop-api
+          docker compose -f "$COMPOSE_FILE" build workshop-api
 
       - name: Up (recreate & remove orphans)
-        working-directory: $$DEPLOY_DIR
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          docker compose -f docker-compose-production.yml up -d --remove-orphans
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
           echo "===== SERVICES ====="
-          docker compose -f docker-compose-production.yml ps
+          docker compose -f "$COMPOSE_FILE" ps
 
       - name: Wait for workshop-api health
         run: |
@@ -75,37 +79,44 @@ jobs:
           docker logs --tail=200 workshop-api || true
           exit 1
 
-      - name: Grant LAN access at pg_hba.conf
+      - name: Grant LAN access at pg_hba.conf (optional)
+        working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          cd $DEPLOY_DIR
-          PG_CID=$(docker compose -f $COMPOSE_FILE ps -q workshop_db)
+          set -e
+          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
+          if [ -z "$PG_CID" ]; then
+            echo "Postgres container not found"; exit 1
+          fi
           docker exec "$PG_CID" bash -lc '
             set -e
-            LINE="host all all ${{ secrets.LAN_CIDR }} md5"
+            LINE="host all all '"${{ secrets.LAN_CIDR }}"' md5"
             FILE="$PGDATA/pg_hba.conf"
             grep -qF "$LINE" "$FILE" || echo "$LINE" >> "$FILE"
           '
           docker restart "$PG_CID"
-
-      - name: Containers status
-        run: |
-          cd ~/deploy/workshop_rest_api
-          echo "===== CONTAINERS STATUS ====="
-          docker compose -f docker-compose-production.yml ps
-
-      - name: Verify containers status and logs
-        run: |
-          cd $DEPLOY_DIR
-          
-          echo "===== CONTAINERS STATUS ====="
-          docker compose -f $COMPOSE_FILE ps
-          
-          echo ""
-          echo "===== CONTAINERS LOGS (Last 50) ====="
-          for service in $(docker compose -f $COMPOSE_FILE ps --services); do
-            echo ""
-            echo "----- Logs: $service -----"
-            docker compose -f $COMPOSE_FILE logs --tail=50 $service || true
+          ATTEMPTS=60; SLEEP=3
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(docker inspect --format='"'{{json .State.Health.Status}}'"' "$PG_CID" 2>/dev/null | tr -d '"')
+            echo "[PG $i/$ATTEMPTS] health: ${STATUS:-unknown}"
+            [ "$STATUS" = "healthy" ] && break
+            sleep $SLEEP
           done
 
+      - name: Containers status
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "===== CONTAINERS STATUS ====="
+          docker compose -f "$COMPOSE_FILE" ps
 
+      - name: Verify containers status and logs
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "===== CONTAINERS STATUS ====="
+          docker compose -f "$COMPOSE_FILE" ps
+          echo ""
+          echo "===== CONTAINERS LOGS (Last 50) ====="
+          for service in $(docker compose -f "$COMPOSE_FILE" ps --services); do
+            echo ""
+            echo "----- Logs: $service -----"
+            docker compose -f "$COMPOSE_FILE" logs --tail=50 "$service" || true
+          done
