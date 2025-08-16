@@ -25,6 +25,7 @@ spring:
 
   flyway:
     enabled: true
+    baselineOnMigrate: true
     schemas: public
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5445}/${DB_DATABASE:workshop_db}
     user: ${DB_USERNAME:workshop_admin}

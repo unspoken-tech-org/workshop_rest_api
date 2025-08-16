@@ -10,6 +10,10 @@ jobs:
     name: Deploy on Home Server
     runs-on: self-hosted
 
+    env:
+      COMPOSE_FILE: docker-compose-production.yml
+      DEPLOY_DIR: ~/deploy/workshop_rest_api
+
     steps:
       - name: Initial step
         run: |
@@ -18,15 +22,17 @@ jobs:
           echo "Folder content:"
           ls -la
 
-      - name: Update local repository
+      - name: Prepare deploy directory
         run: |
-          echo "Access project folder"
-          cd ~/deploy/workshop_rest_api
-          git pull origin main
+          mkdir -p $DEPLOY_DIR
+
+      - name: Copy repo files to deploy dir
+        run: |
+          rsync -a --delete ./ $DEPLOY_DIR
 
       - name: Write .env with secrets
         run: |
-          cd ~/deploy/workshop_rest_api
+          cd $DEPLOY_DIR
           cat > .env <<EOF
           DB_NAME=${{ secrets.DB_NAME }}
           DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -38,18 +44,41 @@ jobs:
           echo ".env created:"
           grep -E '^(DB_NAME|DB_USERNAME|HOST_BIND_IP|LAN_CIDR)=' .env || true
 
-      - name: Restart Docker containers
+      - name: Build local images (no registry)
+        working-directory: $DEPLOY_DIR
         run: |
-          echo "Updating Docker containers"
-          cd ~/deploy/workshop_rest_api
-          docker compose -f docker-compose-production.yml down || true
-          docker compose -f docker-compose-production.yml up -d --build
+          docker compose -f docker-compose-production.yml build workshop-api
+
+      - name: Up (recreate & remove orphans)
+        working-directory: $$DEPLOY_DIR
+        run: |
+          docker compose -f docker-compose-production.yml up -d --remove-orphans
+          echo "===== SERVICES ====="
           docker compose -f docker-compose-production.yml ps
+
+      - name: Wait for workshop-api health
+        run: |
+          set -e
+          ATTEMPTS=90
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
+            echo "[$i/${ATTEMPTS}] workshop-api health: ${STATUS:-unknown}"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "API is healthy ✅"
+              exit 0
+            fi
+            sleep $SLEEP
+          done
+          echo "API did not become healthy in time ❌"
+          echo "Recent logs:"
+          docker logs --tail=200 workshop-api || true
+          exit 1
 
       - name: Grant LAN access at pg_hba.conf
         run: |
-          cd ~/deploy/workshop_rest_api
-          PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db)
+          cd $DEPLOY_DIR
+          PG_CID=$(docker compose -f $COMPOSE_FILE ps -q workshop_db)
           docker exec "$PG_CID" bash -lc '
             set -e
             LINE="host all all ${{ secrets.LAN_CIDR }} md5"
@@ -58,19 +87,25 @@ jobs:
           '
           docker restart "$PG_CID"
 
-      - name: Verify containers status and logs
+      - name: Containers status
         run: |
           cd ~/deploy/workshop_rest_api
-          
           echo "===== CONTAINERS STATUS ====="
           docker compose -f docker-compose-production.yml ps
+
+      - name: Verify containers status and logs
+        run: |
+          cd $DEPLOY_DIR
+          
+          echo "===== CONTAINERS STATUS ====="
+          docker compose -f $COMPOSE_FILE ps
           
           echo ""
           echo "===== CONTAINERS LOGS (Last 50) ====="
-          for service in $(docker compose -f docker-compose-production.yml ps --services); do
+          for service in $(docker compose -f $COMPOSE_FILE ps --services); do
             echo ""
             echo "----- Logs: $service -----"
-            docker compose -f docker-compose-production.yml logs --tail=50 $service || true
+            docker compose -f $COMPOSE_FILE logs --tail=50 $service || true
           done
 
 
