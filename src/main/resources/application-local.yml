@@ -23,8 +23,19 @@ spring:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.temp.use_jdbc_metadata_defaults: false
 
+  flyway:
+    enabled: true
+    baselineOnMigrate: true
+    schemas: public
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5445}/${DB_DATABASE:workshop_db}
+    user: ${DB_USERNAME:workshop_admin}
+    password: ${DB_PASSWORD:pass}
+    locations: classpath:db/migration/postgresql
+
 message: Local
 
 logging:
   level:
-    root: WARN
+    root: ERROR
+    org.springframework.web: DEBUG
+    org.hibernate: ERROR

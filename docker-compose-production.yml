@@ -1,0 +1,56 @@
+services:
+  workshop_db:
+    container_name: workshop-db
+    image: postgres:16
+    restart: always
+    environment:
+      LC_ALL: C.UTF-8
+      TZ: America/Sao_Paulo
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${HOST_BIND_IP}:5432:5432"
+    command: [ "-c", "listen_addresses=*" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - workshop-network
+
+  workshop_spring_app:
+    container_name: workshop-api
+    restart: always
+    build: .
+    image: workshop_rest_api-workshop_spring_app:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      workshop_db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://workshop_db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: production
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx768m"
+      TZ: America/Sao_Paulo
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || curl -fsS http://localhost:8080/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - workshop-network
+
+volumes:
+  db_data:
+
+networks:
+  workshop-network:

@@ -1,49 +1,122 @@
-name: Deploy Spring Boot to Local Server
+name: Deploy Spring Boot App via Self-Hosted Runner
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   deploy:
-    name: Build & Deploy Docker Image
-    runs-on: ubuntu-latest
+    name: Deploy on Home Server
+    runs-on: self-hosted
+
+    env:
+      COMPOSE_FILE: docker-compose-production.yml
+      DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Initial step
         run: |
-          docker build -t workshop-api:latest .
+          echo "Actual directory:" && pwd
+          echo "Folder content:" && ls -la
 
-      - name: Save Docker image as TAR
+      - name: Prepare deploy directory
         run: |
-          docker save workshop-api:latest -o workshop-api.tar
+          mkdir -p "${DEPLOY_DIR}"
 
-      - name: Copy Docker image to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SERVER_PASSPHRASE }}
-          port: 22
-          source: "docker-compose.yml"
-          target: "/home/workshop/deploy"
-          tar_tmp_path: "/tmp"
-          rm: true
+      - name: Copy repo files to deploy dir
+        run: |
+          rsync -a --delete \
+            --exclude '.git' \
+            ./ "${DEPLOY_DIR}/"
 
-      - name: Load image and restart container via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            cd /home/workshop/deploy/work_shop_rest_api
-            docker load -i workshop-api.tar
-            docker compose down
-            docker compose up -d --remove-orphans
-            docker image prune -f 
+      - name: Write .env with secrets
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          set -e
+          cat > .env <<'EOF'
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
+          LAN_CIDR=${{ secrets.LAN_CIDR }}
+          EOF
+          chmod 600 .env
+          echo ".env created:"
+          grep -E '^(DB_NAME|DB_USERNAME|HOST_BIND_IP|LAN_CIDR)=' .env || true
+
+      - name: Build local images (no registry)
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          docker compose -f "$COMPOSE_FILE" build workshop_spring_app
+
+      - name: Up (recreate & remove orphans)
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+          echo "===== SERVICES ====="
+          docker compose -f "$COMPOSE_FILE" ps
+
+      - name: Wait for workshop-api health
+        run: |
+          set -e
+          ATTEMPTS=90
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
+            echo "[$i/${ATTEMPTS}] workshop-api health: ${STATUS:-unknown}"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "API is healthy ✅"
+              exit 0
+            fi
+            sleep $SLEEP
+          done
+          echo "API did not become healthy in time ❌"
+          echo "Recent logs:"
+          docker logs --tail=200 workshop-api || true
+          exit 1
+
+      - name: Grant LAN access at pg_hba.conf (optional)
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          set -e
+          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
+          if [ -z "$PG_CID" ]; then
+            echo "Postgres container not found"; exit 1
+          fi
+          docker exec "$PG_CID" bash -lc '
+            set -e
+            LINE="host all all '"${{ secrets.LAN_CIDR }}"' md5"
+            FILE="$PGDATA/pg_hba.conf"
+            grep -qF "$LINE" "$FILE" || echo "$LINE" >> "$FILE"
+          '
+          docker restart "$PG_CID"
+          ATTEMPTS=60; SLEEP=3
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(docker inspect --format='"'{{json .State.Health.Status}}'"' "$PG_CID" 2>/dev/null | tr -d '"')
+            echo "[PG $i/$ATTEMPTS] health: ${STATUS:-unknown}"
+            [ "$STATUS" = "healthy" ] && break
+            sleep $SLEEP
+          done
+
+      - name: Containers status
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "===== CONTAINERS STATUS ====="
+          docker compose -f "$COMPOSE_FILE" ps
+
+      - name: Verify containers status and logs
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "===== CONTAINERS STATUS ====="
+          docker compose -f "$COMPOSE_FILE" ps
+          echo ""
+          echo "===== CONTAINERS LOGS (Last 50) ====="
+          for service in $(docker compose -f "$COMPOSE_FILE" ps --services); do
+            echo ""
+            echo "----- Logs: $service -----"
+            docker compose -f "$COMPOSE_FILE" logs --tail=50 "$service" || true
+          done
