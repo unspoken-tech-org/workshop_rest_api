@@ -8,4 +8,7 @@ public class CustomerFilterDto {
     private String name;
     private String cpf;
     private String phone;
+
+    int page = 0;    
+    int size = 15;
 } 

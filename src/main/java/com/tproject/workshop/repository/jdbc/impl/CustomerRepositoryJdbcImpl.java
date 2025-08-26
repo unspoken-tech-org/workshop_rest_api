@@ -10,6 +10,9 @@ import com.tproject.workshop.utils.UtilsSql;
 import com.tproject.workshop.utils.mapper.JsonResultSetMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -45,18 +48,24 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
     }
 
     @Override
-    public List<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters) {
+    public Page<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("CUSTOMER_ID", filters.getId(), Types.INTEGER)
                 .addValue("NAME", filters.getName(), Types.VARCHAR)
                 .addValue("CPF", filters.getCpf(), Types.VARCHAR)
-                .addValue("PHONE", filters.getPhone(), Types.VARCHAR);
+                .addValue("PHONE", filters.getPhone(), Types.VARCHAR)
+                .addValue("PAGE_SIZE", filters.getSize(), Types.INTEGER)
+                .addValue("OFFSET", filters.getPage(), Types.INTEGER);
 
-        return jdbcTemplate.query(
+        List<CustomerListOutputDto> customers = jdbcTemplate.query(
                 UtilsSql.getQuery("customer/listCustomers"),
                 params,
                 getCustomerListOutputDtoMapper()
         );
+
+        Long total = jdbcTemplate.queryForObject(UtilsSql.getQuery("customer/listCustomers.count"), params, Long.class);
+
+        return new PageImpl<>(customers, PageRequest.of(filters.getPage(), filters.getSize()), total != null ? total : 0);
     }
 
 
