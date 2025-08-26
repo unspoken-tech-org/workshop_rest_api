@@ -4,12 +4,13 @@ import com.tproject.workshop.dto.customer.CustomerFilterDto;
 import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
 
-import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.domain.Page;
 
 public interface CustomerRepositoryJdbc {
 
     Optional<CustomerOutputDto> findCustomerById(int id);
 
-    List<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters);
+    Page<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters);
 }

@@ -16,6 +16,8 @@ import com.tproject.workshop.repository.PhoneRepository;
 import com.tproject.workshop.utils.UtilsString;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -33,7 +35,7 @@ public class CustomerService {
         return customerRepository.findCustomerById(id).orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
     }
 
-    public List<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
+    public Page<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
         return customerRepository.findCustomersByFilter(filters);
     }
 

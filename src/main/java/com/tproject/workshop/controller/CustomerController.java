@@ -10,12 +10,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface CustomerController {
 
     @PostMapping("/search")
-    List<CustomerListOutputDto> search(@RequestBody(required = false) CustomerFilterDto filters);
+    Page<CustomerListOutputDto> search(@RequestBody(required = false) CustomerFilterDto filters);
 
     @GetMapping("/{id}")
     CustomerOutputDto findById(@PathVariable("id") int idCostumer);
