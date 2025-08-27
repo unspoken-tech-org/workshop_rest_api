@@ -79,7 +79,31 @@ jobs:
           docker logs --tail=200 workshop-api || true
           exit 1
 
-      - name: Grant LAN access at pg_hba.conf (optional)
+      - name: Bootstrap pgBackRest
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          set -e
+
+          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
+          if [ -z "$PG_CID" ]; then
+            echo "Postgres container not found"; exit 1
+          fi
+
+          echo ">>> Verificando stanza..."
+          if docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check; then
+            echo "stanza OK ✅"
+          else
+            echo "stanza ausente, criando..."
+            docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create
+            docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check
+            echo "stanza criada e OK ✅"
+          fi
+          
+          echo ">>> Estado dos backups:"
+          docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest info || true
+
+
+      - name: Grant LAN access at pg_hba.conf
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
           set -e
@@ -87,13 +111,16 @@ jobs:
           if [ -z "$PG_CID" ]; then
             echo "Postgres container not found"; exit 1
           fi
+          
           docker exec "$PG_CID" bash -lc '
             set -e
-            LINE="host all all '"${{ secrets.LAN_CIDR }}"' md5"
             FILE="$PGDATA/pg_hba.conf"
-            grep -qF "$LINE" "$FILE" || echo "$LINE" >> "$FILE"
+            LINE_LOCAL="local all '"${DB_USERNAME}"' md5"
+            LINE_LAN="host all all '"${{ secrets.LAN_CIDR }}"' md5"
+            grep -qF "$LINE_LAN" "$FILE" || echo "$LINE_LAN" >> "$FILE"
           '
           docker restart "$PG_CID"
+          
           ATTEMPTS=60; SLEEP=3
           for i in $(seq 1 $ATTEMPTS); do
             STATUS=$(docker inspect --format='"'{{json .State.Health.Status}}'"' "$PG_CID" 2>/dev/null | tr -d '"')

@@ -1,0 +1,12 @@
+FROM postgres:16
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gnupg ca-certificates lsb-release wget \
+ && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends pgbackrest \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /etc/pgbackrest /var/lib/pgbackrest /var/log/pgbackrest \
+ && chown -R postgres:postgres /etc/pgbackrest /var/lib/pgbackrest /var/log/pgbackrest

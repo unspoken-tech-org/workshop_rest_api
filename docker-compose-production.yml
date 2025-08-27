@@ -1,7 +1,10 @@
 services:
   workshop_db:
     container_name: workshop-db
-    image: postgres:16
+    build:
+      context: .
+      dockerfile: Dockerfile.pgbackrest
+    image: workshop/postgres16-pgbackrest:latest
     restart: always
     environment:
       LC_ALL: C.UTF-8
@@ -11,7 +14,17 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "${HOST_BIND_IP}:5432:5432"
-    command: [ "-c", "listen_addresses=*" ]
+    command:
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "wal_level=replica"
+      - "-c"
+      - "archive_mode=on"
+      - "-c"
+      - "archive_timeout=60s"
+      - "-c"
+      - "archive_command=pgbackrest --stanza=workshop archive-push %p"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}" ]
       interval: 10s
@@ -20,6 +33,10 @@ services:
       start_period: 20s
     volumes:
       - db_data:/var/lib/postgresql/data
+      - /srv/pgbackrest/conf:/etc/pgbackrest
+      - /srv/pgbackrest/repo:/var/lib/pgbackrest
+      - /srv/pgbackrest/logs:/var/log/pgbackrest
+      - /srv/postgres/logical_dumps:/backups/logical
     networks:
       - workshop-network
 
