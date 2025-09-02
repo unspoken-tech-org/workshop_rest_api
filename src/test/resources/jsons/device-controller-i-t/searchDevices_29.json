@@ -1,0 +1,74 @@
+{
+    "content": [
+        {
+            "deviceId": 15,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Aspirador",
+            "brand": "Electrolux",
+            "model": "Model 5",
+            "status": "DESCARTADO",
+            "problem": "Problem 15",
+            "observation": "Observation 15",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "22/04/2021",
+            "departureDate": "26/04/2021"
+        },
+        {
+            "deviceId": 13,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Batedeira",
+            "brand": "Britania",
+            "model": "Model 3",
+            "status": "AGUARDANDO",
+            "problem": "Problem 13",
+            "observation": "Observation 13",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "02/04/2021",
+            "departureDate": "26/04/2021"
+        },
+        {
+            "deviceId": 11,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "NOVO",
+            "problem": "Problem 11",
+            "observation": "Observation 11",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "01/04/2021",
+            "departureDate": "26/04/2021"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalElements": 3,
+    "totalPages": 1,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 3,
+    "empty": false
+}

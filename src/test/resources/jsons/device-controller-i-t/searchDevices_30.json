@@ -1,0 +1,104 @@
+{
+    "content": [
+        {
+            "deviceId": 9,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Ferro de passar",
+            "brand": "Philco",
+            "model": "Model 4",
+            "status": "ENTREGUE",
+            "problem": "Problem 9",
+            "observation": "Observation 9",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "04/02/2025",
+            "departureDate": "26/04/2021"
+        },
+        {
+            "deviceId": 1,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "NOVO",
+            "problem": "Problem 1",
+            "observation": "Observation 1",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "10/04/2023",
+            "departureDate": "26/04/2021"
+        },
+        {
+            "deviceId": 2,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Liquidificador",
+            "brand": "Wallita",
+            "model": "Model 2",
+            "status": "EM_ANDAMENTO",
+            "problem": "Problem 2",
+            "observation": "Observation 2",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "06/01/2023",
+            "departureDate": "06/01/2023"
+        },
+        {
+            "deviceId": 4,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Ferro de passar",
+            "brand": "Philco",
+            "model": "Model 4",
+            "status": "ENTREGUE",
+            "problem": "Problem 4",
+            "observation": "Observation 4",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "06/01/2023",
+            "departureDate": "06/01/2023"
+        },
+        {
+            "deviceId": 6,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "EM_ANDAMENTO",
+            "problem": "Problem 6",
+            "observation": "Observation 6",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "06/01/2023",
+            "departureDate": "06/01/2023"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 5,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "unpaged": false,
+        "paged": true
+    },
+    "last": false,
+    "totalPages": 3,
+    "totalElements": 15,
+    "size": 5,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 5,
+    "empty": false
+}

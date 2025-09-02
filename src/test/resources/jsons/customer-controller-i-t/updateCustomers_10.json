@@ -1,8 +1,8 @@
 {
     "status": 400,
-    "title": "Requisição Inválida",
+    "title": "Erro de Validação",
     "error": {
-        "code": "requisicao.invalida",
-        "message": "Não é possível ter telefones com números iguais"
+        "code": "erro.validacao",
+        "message": "phones[0].number: Número de telefone deve ter entre 10 e 11 dígitos"
     }
 }

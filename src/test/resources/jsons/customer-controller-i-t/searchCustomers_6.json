@@ -1,0 +1,47 @@
+{
+    "content": [
+        {
+            "id": 1,
+            "name": "Alfonso Zimmer",
+            "cpf": "31781477051",
+            "email": "zimmer@gmail.com",
+            "gender": "masculino",
+            "insertDate": "2021-04-26T08:41:00.968173",
+            "mainPhone": "4430356678"
+        },
+        {
+            "id": 4,
+            "name": "João Cláudio da Silva",
+            "cpf": "48541376060",
+            "email": "joao@gmail.com",
+            "gender": "masculino",
+            "insertDate": "2025-01-06T14:41:00.968173",
+            "mainPhone": "48541376060"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 2,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "unpaged": false,
+        "paged": true
+    },
+    "last": false,
+    "totalPages": 2,
+    "totalElements": 4,
+    "size": 2,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 2,
+    "empty": false
+}

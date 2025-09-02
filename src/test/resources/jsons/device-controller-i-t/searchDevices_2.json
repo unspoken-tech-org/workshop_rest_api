@@ -1,0 +1,44 @@
+{
+    "content": [
+        {
+            "deviceId": 1,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "NOVO",
+            "problem": "Problem 1",
+            "observation": "Observation 1",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "10/04/2023",
+            "departureDate": "26/04/2021"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "unpaged": false,
+        "paged": true
+    },
+    "last": true,
+    "totalElements": 1,
+    "totalPages": 1,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 1,
+    "empty": false
+}

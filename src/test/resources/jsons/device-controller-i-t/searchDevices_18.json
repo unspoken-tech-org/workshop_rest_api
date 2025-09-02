@@ -1,0 +1,74 @@
+{
+    "content": [
+        {
+            "deviceId": 1,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "NOVO",
+            "problem": "Problem 1",
+            "observation": "Observation 1",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "10/04/2023",
+            "departureDate": "26/04/2021"
+        },
+        {
+            "deviceId": 6,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "EM_ANDAMENTO",
+            "problem": "Problem 6",
+            "observation": "Observation 6",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "06/01/2023",
+            "departureDate": "06/01/2023"
+        },
+        {
+            "deviceId": 11,
+            "customerId": 1,
+            "customerName": "Alfonso Zimmer",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "NOVO",
+            "problem": "Problem 11",
+            "observation": "Observation 11",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "01/04/2021",
+            "departureDate": "26/04/2021"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "unpaged": false,
+        "paged": true
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 3,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 3,
+    "empty": false
+}

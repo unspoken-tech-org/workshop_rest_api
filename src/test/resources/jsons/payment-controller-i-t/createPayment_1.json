@@ -1,13 +1,13 @@
 {
     "id": 6,
-    "paymentDate": "2025-06-04T00:27:03.565+00:00",
+    "paymentDate": "2025-08-31T19:55:13.938+00:00",
     "paymentType": "credito",
     "paymentValue": 150.0,
     "category": "parcial",
     "device": {
         "id": 1,
         "laborValueCollected": false,
-        "hasUrgency": false,
+        "urgency": false,
         "revision": false
     }
 }

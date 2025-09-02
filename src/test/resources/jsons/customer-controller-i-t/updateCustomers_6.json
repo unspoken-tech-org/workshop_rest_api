@@ -1,8 +1,8 @@
 {
-    "status": 400,
-    "title": "Requisição Inválida",
+    "status": 404,
+    "title": "Entitdade não encontrada",
     "error": {
-        "code": "requisicao.invalida",
-        "message": "Não é possível ter mais de um telefone primário"
+        "code": "entity.not.found.for.request",
+        "message": "Não existe cliente com id 250"
     }
 }

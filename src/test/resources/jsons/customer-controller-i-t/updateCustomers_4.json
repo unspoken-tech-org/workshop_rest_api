@@ -1,8 +1,19 @@
 {
-    "status": 400,
-    "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "name: não deve estar em branco"
-    }
+    "customerId": 3,
+    "name": "Maria Oliveira",
+    "cpf": "98765432100",
+    "gender": "feminino",
+    "email": "maria@gmail.com",
+    "insertDate": "2023-01-06 14:41:00.968173",
+    "phones": [
+        {
+            "id": 4,
+            "number": "99988887777",
+            "name": "Comercial",
+            "main": true
+        }
+    ],
+    "customerDevices": [
+        
+    ]
 }

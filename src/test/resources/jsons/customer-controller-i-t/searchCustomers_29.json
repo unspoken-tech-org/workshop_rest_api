@@ -1,0 +1,65 @@
+{
+    "content": [
+        {
+            "id": 1,
+            "name": "Alfonso Zimmer",
+            "cpf": "31781477051",
+            "email": "zimmer@gmail.com",
+            "gender": "masculino",
+            "insertDate": "2021-04-26T08:41:00.968173",
+            "mainPhone": "4430356678"
+        },
+        {
+            "id": 4,
+            "name": "João Cláudio da Silva",
+            "cpf": "48541376060",
+            "email": "joao@gmail.com",
+            "gender": "masculino",
+            "insertDate": "2025-01-06T14:41:00.968173",
+            "mainPhone": "48541376060"
+        },
+        {
+            "id": 2,
+            "name": "Lucas Ribeiro Naga",
+            "cpf": "46203912042",
+            "email": "lucas@gmail.com",
+            "gender": "masculino",
+            "insertDate": "2023-01-06T14:41:00.968173",
+            "mainPhone": "44988255540"
+        },
+        {
+            "id": 3,
+            "name": "Maria Oliveira",
+            "cpf": "98765432100",
+            "email": "maria@gmail.com",
+            "gender": "feminino",
+            "insertDate": "2023-01-06T14:41:00.968173",
+            "mainPhone": "99988887777"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 1000,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 4,
+    "size": 1000,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 4,
+    "empty": false
+}

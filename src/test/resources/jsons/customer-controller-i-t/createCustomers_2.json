@@ -1,8 +1,19 @@
 {
-    "status": 400,
-    "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "cpf: Número de CPF inválido"
-    }
+    "customerId": 5,
+    "name": "Maria Oliveira Santos",
+    "cpf": "75386544020",
+    "gender": "feminino",
+    "email": "maria@example.com",
+    "insertDate": "2025-09-01 20:01:56.066134",
+    "phones": [
+        {
+            "id": 6,
+            "number": "44900998877",
+            "name": "Pessoal",
+            "main": true
+        }
+    ],
+    "customerDevices": [
+        
+    ]
 }

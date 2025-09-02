@@ -1,15 +1,19 @@
 {
-    "customerId": 3,
-    "name": "generoso",
-    "cpf": "45931651055",
+    "customerId": 5,
+    "name": "João da Silva",
+    "cpf": "75386544020",
     "gender": "masculino",
-    "email": "geneder@live.com",
-    "insertDate": "2025-07-17T22:04:18.401162",
+    "email": "joao@example.com",
+    "insertDate": "2025-09-01 20:01:55.601658",
     "phones": [
         {
-            "id": 4,
-            "number": "4499956752",
+            "id": 6,
+            "number": "11999991111",
+            "name": "Celular Principal",
             "main": true
         }
+    ],
+    "customerDevices": [
+        
     ]
 }

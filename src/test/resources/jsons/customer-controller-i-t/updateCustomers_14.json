@@ -1,8 +1,0 @@
-{
-    "status": 409,
-    "title": "Conflito de Recurso",
-    "error": {
-        "code": "recurso.conflito",
-        "message": "O numero (44) 98825-5540 já está cadastrado para o cliente Lucas Ribeiro Naga"
-    }
-}

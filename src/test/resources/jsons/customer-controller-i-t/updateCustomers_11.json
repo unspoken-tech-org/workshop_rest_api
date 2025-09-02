@@ -1,14 +1,15 @@
 {
     "customerId": 1,
-    "name": "Alfonso Zimmer Generoso",
+    "name": "Alfonso Zimmer Atualizado",
     "cpf": "31781477051",
     "gender": "masculino",
-    "email": "geneder@live.com",
+    "email": "zimmer_novo@gmail.com",
     "insertDate": "2021-04-26 08:41:00.968173",
     "phones": [
         {
-            "id": 4,
-            "number": "4499956752",
+            "id": 1,
+            "number": "4430356678",
+            "name": "Celular Principal Atualizado",
             "main": true
         }
     ],

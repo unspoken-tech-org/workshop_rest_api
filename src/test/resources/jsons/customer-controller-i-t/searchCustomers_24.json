@@ -1,0 +1,38 @@
+{
+    "content": [
+        {
+            "id": 2,
+            "name": "Lucas Ribeiro Naga",
+            "cpf": "46203912042",
+            "email": "lucas@gmail.com",
+            "gender": "masculino",
+            "insertDate": "2023-01-06T14:41:00.968173",
+            "mainPhone": "44988255540"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 1,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 1,
+    "empty": false
+}

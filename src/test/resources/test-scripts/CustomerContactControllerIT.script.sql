@@ -14,12 +14,15 @@ ON CONFLICT (id) DO UPDATE SET
     technician_name = EXCLUDED.technician_name,
     "number" = EXCLUDED."number";
 
-INSERT INTO phones (id, "number", is_main, id_customer) VALUES
-(2, '44987654321', true, 1)
+INSERT INTO phones (id, "number", alias) VALUES
+(2, '44987654321', 'Telefone Teste')
 ON CONFLICT (id) DO UPDATE SET
     "number" = EXCLUDED."number",
-    is_main = EXCLUDED.is_main,
-    id_customer = EXCLUDED.id_customer;
+    alias = EXCLUDED.alias;
+
+INSERT INTO customer_phones (id_customer, id_phone, is_main) VALUES
+(1, 2, true)
+ON CONFLICT DO NOTHING;
 
 INSERT INTO brands (id, brand) VALUES (1, 'GenericBrand')
 ON CONFLICT (id) DO UPDATE SET brand = EXCLUDED.brand;

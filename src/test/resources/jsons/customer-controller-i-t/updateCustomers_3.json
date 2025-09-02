@@ -1,8 +1,19 @@
 {
-    "status": 400,
-    "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "cpf: Número de CPF inválido"
-    }
+    "customerId": 2,
+    "name": "Lucas Ribeiro Naga",
+    "cpf": "46203912042",
+    "gender": "masculino",
+    "email": "lucas@gmail.com",
+    "insertDate": "2023-01-06 14:41:00.968173",
+    "phones": [
+        {
+            "id": 3,
+            "number": "44988255540",
+            "name": "Luiz",
+            "main": true
+        }
+    ],
+    "customerDevices": [
+        
+    ]
 }

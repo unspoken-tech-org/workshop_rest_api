@@ -1,8 +1,8 @@
 {
     "status": 400,
-    "title": "Erro de Validação",
+    "title": "Requisição Inválida",
     "error": {
-        "code": "erro.validacao",
-        "message": "cpf: não deve estar em branco"
+        "code": "requisicao.invalida",
+        "message": "Não é possível ter mais de um telefone primário"
     }
 }
