@@ -35,5 +35,5 @@ public class Customer {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private List<Phone> phones;
+    private List<CustomerPhone> customerPhones;
 }

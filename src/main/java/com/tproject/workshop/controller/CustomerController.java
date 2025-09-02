@@ -15,7 +15,7 @@ import org.springframework.data.domain.Page;
 public interface CustomerController {
 
     @PostMapping("/search")
-    Page<CustomerListOutputDto> search(@RequestBody(required = false) CustomerFilterDto filters);
+    Page<CustomerListOutputDto> search(@RequestBody(required = false) @Valid CustomerFilterDto filters);
 
     @GetMapping("/{id}")
     CustomerOutputDto findById(@PathVariable("id") int idCostumer);

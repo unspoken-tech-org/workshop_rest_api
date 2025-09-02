@@ -1,6 +1,15 @@
 package com.tproject.workshop.service;
 
-import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.tproject.workshop.dto.cellphone.InputPhoneDto;
 import com.tproject.workshop.dto.customer.CustomerFilterDto;
 import com.tproject.workshop.dto.customer.CustomerListOutputDto;
@@ -10,25 +19,21 @@ import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Customer;
+import com.tproject.workshop.model.CustomerPhone;
 import com.tproject.workshop.model.Phone;
+import com.tproject.workshop.repository.CustomerPhoneRepository;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.PhoneRepository;
 import com.tproject.workshop.utils.UtilsString;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
     private final CustomerRepository customerRepository;
     private final PhoneRepository phoneRepository;
+    private final CustomerPhoneRepository customerPhoneRepository;
 
 
     public CustomerOutputDto findById(int id) {
@@ -53,32 +58,18 @@ public class CustomerService {
         Customer customer = Customer.builder()
                 .cpf(cpfOnlyDigits)
                 .name(inputCustomerDto.name())
-                .email(inputCustomerDto.email()) 
+                .email(inputCustomerDto.email())
                 .gender(inputCustomerDto.gender())
-                .phones(new ArrayList<>())
+                .customerPhones(new ArrayList<>())
                 .build();
 
+        Customer savedCustomer = customerRepository.save(customer);
+        
         if (!phones.isEmpty()) {
-            List<Phone> newPhones = phones.stream()
-                    .map(phoneDto -> {
-                        phoneRepository.findByNumber(phoneDto.number()).ifPresent(phone -> {
-                            throw new EntityAlreadyExistsException(String.format("O numero %s já está cadastrado para o cliente %s", UtilsString.formatPhoneNumberBR(phone.getNumber()), phone.getCustomer().getName()));
-                        });
-
-                        Phone newPhone = new Phone();
-                        newPhone.setCustomer(customer);
-                        newPhone.setName(phoneDto.name());
-                        newPhone.setNumber(phoneDto.number());
-                        newPhone.setMain(phoneDto.isPrimary());
-                        return newPhone;
-                    })
-                    .toList();
-            customer.getPhones().addAll(newPhones);
+            createCustomerPhones(savedCustomer, phones);
         }
 
-        Customer savedCustomer = customerRepository.save(customer);
-
-        return toDto(savedCustomer);
+        return findById(savedCustomer.getIdCustomer());
     }
 
     @Transactional
@@ -103,7 +94,7 @@ public class CustomerService {
         existingCustomer.setEmail(inputCustomerDto.email());
         existingCustomer.setGender(inputCustomerDto.gender());
 
-        this.syncPhones(existingCustomer, inputCustomerDto.phones());
+        this.syncCustomerPhones(existingCustomer, inputCustomerDto.phones());
 
         customerRepository.save(existingCustomer);
 
@@ -112,37 +103,50 @@ public class CustomerService {
         return findById(id);
     }
 
-    private void syncPhones(Customer customer, List<InputPhoneDto> phoneDtos) {
-        if (phoneDtos == null) {
-            customer.getPhones().clear();
+    private void createCustomerPhones(Customer customer, List<InputPhoneDto> phoneDtos) {
+        for (InputPhoneDto phoneDto : phoneDtos) {
+            Phone phone = phoneRepository.findByNumber(phoneDto.number())
+                    .orElseGet(() -> {
+                        Phone newPhone = Phone.builder()
+                                .number(phoneDto.number())
+                                .phoneAlias(phoneDto.name())
+                                .build();
+                        return phoneRepository.save(newPhone);
+                    });
+
+            if (phoneDto.name() != null && !phoneDto.name().isEmpty()) {
+                phone.setPhoneAlias(phoneDto.name());
+                phoneRepository.save(phone);
+            }
+
+            Optional<CustomerPhone> existingAssociation = customerPhoneRepository
+                    .findByCustomerIdAndPhoneNumber(customer.getIdCustomer(), phone.getNumber());
+            
+            if (existingAssociation.isPresent()) {
+                throw new EntityAlreadyExistsException(
+                    String.format("O numero %s já está associado a este cliente", 
+                    UtilsString.formatPhoneNumberBR(phone.getNumber())));
+            }
+
+            if (phoneDto.isPrimary()) {
+                customerPhoneRepository.clearMainPhoneForCustomer(customer.getIdCustomer());
+            }
+
+            CustomerPhone customerPhone = new CustomerPhone(customer, phone, phoneDto.isPrimary());
+            
+            customerPhoneRepository.save(customerPhone);
+        }
+    }
+
+    private void syncCustomerPhones(Customer customer, List<InputPhoneDto> phoneDtos) {
+        if (phoneDtos == null || phoneDtos.isEmpty()) {
+            customerPhoneRepository.deleteByCustomerIdCustomer(customer.getIdCustomer());
             return;
         }
 
-        Map<Integer, Phone> currentPhonesMap = customer.getPhones().stream()
-                .collect(Collectors.toMap(Phone::getIdCellphone, Function.identity()));
-
-        List<Phone> phonesToKeep = new ArrayList<>();
-
-        for (InputPhoneDto phoneDto : phoneDtos) {
-            Phone phone;
-            if (phoneDto.id() != null) {
-                phone = currentPhonesMap.get(phoneDto.id());
-                if (phone == null) {
-                    throw new NotFoundException(String.format("Telefone com id %d não encontrado ou não pertence a este cliente.", phoneDto.id()));
-                }
-            } else {
-                phone = new Phone();
-                phone.setCustomer(customer);
-            }
-
-            phone.setName(phoneDto.name());
-            phone.setNumber(phoneDto.number());
-            phone.setMain(phoneDto.isPrimary());
-            phonesToKeep.add(phone);
-        }
-
-        customer.getPhones().clear();
-        customer.getPhones().addAll(phonesToKeep);
+        customerPhoneRepository.deleteByCustomerIdCustomer(customer.getIdCustomer());
+        
+        createCustomerPhones(customer, phoneDtos);
     }
 
     /**
@@ -175,34 +179,26 @@ public class CustomerService {
 
         for (var phone : phones) {
             phoneRepository.findByNumber(phone.number()).ifPresent((p) -> {
-                        Customer customer = p.getCustomer();
-                        if (customerId != null && customerId.equals(customer.getIdCustomer())) return;
+                List<CustomerPhone> associations = customerPhoneRepository.findByPhone_IdCellphone(p.getIdCellphone());
+                
+                for (CustomerPhone association : associations) {
+                    Customer associatedCustomer = association.getCustomer();
+                    
+                    // On customer update the phone may already exist for this customer
+                    if (customerId != null && customerId.equals(associatedCustomer.getIdCustomer())) continue;
 
+                    // Let pass secondary existent phone
+                    if (!phone.isPrimary()) continue;
+
+                    // If trying to use as primary a phone that's already primary for another customer
+                    if (association.isMain()) {
                         String formattedNumber = UtilsString.formatPhoneNumberBR(p.getNumber());
-                        String customerName = UtilsString.capitalizeEachWord(customer.getName());
-                        throw new EntityAlreadyExistsException(String.format("O numero %s já está cadastrado para o cliente %s", formattedNumber, customerName));
+                        String customerName = UtilsString.capitalizeEachWord(associatedCustomer.getName());
+                        throw new EntityAlreadyExistsException(String.format("O numero %s já está cadastrado como principal para o cliente %s", formattedNumber, customerName));
                     }
-            );
+                }
+            });
         }
     }
 
-    private CustomerOutputDto toDto(Customer customer) {
-        var phonesDtoList = customer.getPhones().stream().map(phone -> CellPhoneOutputDeviceDto.builder()
-                .id(phone.getIdCellphone())
-                .number(phone.getNumber())
-                .main(phone.isMain())
-                .name(phone.getName())
-                .build()
-        ).toList();
-
-        return CustomerOutputDto.builder()
-                .customerId(customer.getIdCustomer())
-                .name(customer.getName())
-                .insertDate(customer.getInsertDate().toLocalDateTime().toString())
-                .email(customer.getEmail())
-                .gender(customer.getGender())
-                .cpf(customer.getCpf())
-                .phones(phonesDtoList)
-                .build();
-    }
 }

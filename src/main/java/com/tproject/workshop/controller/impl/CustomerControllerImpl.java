@@ -24,7 +24,7 @@ public class CustomerControllerImpl implements CustomerController {
     private final CustomerService customerService;
 
     @Override
-    public Page<CustomerListOutputDto> search(CustomerFilterDto filters) {
+    public Page<CustomerListOutputDto> search(@Valid CustomerFilterDto filters) {
         CustomerFilterDto nonNullFilters = Objects.requireNonNullElseGet(filters, CustomerFilterDto::new);
         return customerService.searchCustomers(nonNullFilters);
     }

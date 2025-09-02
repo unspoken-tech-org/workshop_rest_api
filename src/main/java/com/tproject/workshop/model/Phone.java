@@ -4,9 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity(name = "phones")
 public class Phone {
     @Id
@@ -15,13 +21,10 @@ public class Phone {
     int idCellphone;
     @Column(name = "number")
     String number;
-    @Column(name = "name")
-    String name;
-    @Column(name = "is_main")
-    boolean main;
-
+    @Column(name = "alias")
+    String phoneAlias;
+    
+    @OneToMany(mappedBy = "phone", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    @ManyToOne()
-    @JoinColumn(name = "id_customer")
-    Customer customer;
+    private List<CustomerPhone> customerPhones;
 }

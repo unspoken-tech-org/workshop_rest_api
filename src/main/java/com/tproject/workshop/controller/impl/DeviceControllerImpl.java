@@ -1,15 +1,21 @@
 package com.tproject.workshop.controller.impl;
 
-import com.tproject.workshop.controller.DeviceController;
-import com.tproject.workshop.dto.device.*;
-import com.tproject.workshop.service.DeviceService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import org.springframework.data.domain.Page;
+import com.tproject.workshop.controller.DeviceController;
+import com.tproject.workshop.dto.device.CreateDeviceOutputDtoRecord;
+import com.tproject.workshop.dto.device.DeviceInputDtoRecord;
+import com.tproject.workshop.dto.device.DeviceOutputDto;
+import com.tproject.workshop.dto.device.DeviceQueryParam;
+import com.tproject.workshop.dto.device.DeviceTableDto;
+import com.tproject.workshop.dto.device.DeviceUpdateInputDtoRecord;
+import com.tproject.workshop.service.DeviceService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,7 +25,7 @@ public class DeviceControllerImpl implements DeviceController {
     private final DeviceService deviceService;
 
     @Override
-    public Page<DeviceTableDto> list(@RequestBody(required = false) DeviceQueryParam deviceQueryParam) {
+    public Page<DeviceTableDto> list(@RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam) {
         if (deviceQueryParam == null) {
             deviceQueryParam = new DeviceQueryParam();
         }
@@ -33,8 +39,7 @@ public class DeviceControllerImpl implements DeviceController {
 
     @Override
     public DeviceOutputDto update(DeviceUpdateInputDtoRecord device) {
-        var updatedDevice = deviceService.updateDevice(device);
-        return updatedDevice;
+        return deviceService.updateDevice(device);
     }
 
     @Override

@@ -63,11 +63,6 @@ last_viewed_devices AS (
     left join brands b on b.id = bmt.id_brand
     left join models m on m.id = bmt.id_model
     left join "types" t on t.id  = bmt.id_type
-    left join (
-                select id_customer, string_agg(number, ', ') as numbers
-                from phones
-                group by id_customer
-    ) p on p.id_customer = c.id
     where d.last_viewed_at is not null
     order by d.last_viewed_at desc
     limit 10

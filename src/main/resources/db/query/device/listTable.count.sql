@@ -5,19 +5,34 @@ left join brands_models_types bmt on bmt.id = d.id_brand_model_type
 left join brands b on b.id = bmt.id_brand
 left join models m on m.id = bmt.id_model
 left join "types" t on t.id  = bmt.id_type
-left join (
-            select id_customer, string_agg(number, ', ') as numbers
-            from phones
-            group by id_customer
-) p on p.id_customer = c.id
 where
     (:DEVICE_ID IS NULL OR d.id = :DEVICE_ID)
-    AND (:CUSTOMER_NAME IS NULL OR c.name ilike CONCAT('%', :CUSTOMER_NAME, '%'))
-    AND (:CUSTOMER_PHONE IS NULL OR p.numbers ilike CONCAT('%', :CUSTOMER_PHONE, '%'))
-    AND (:CUSTOMER_CPF IS NULL OR c.cpf ilike CONCAT('%', :CUSTOMER_CPF, '%'))
+    AND (:CUSTOMER_NAME IS NULL OR (:CUSTOMER_NAME != '' AND LOWER(unaccent(c.name)) ilike CONCAT('%', LOWER(unaccent(:CUSTOMER_NAME)), '%')))
+        AND (:CUSTOMER_PHONE IS NULL 
+        OR (:CUSTOMER_PHONE != '' 
+            AND EXISTS(
+            SELECT 1 FROM customer_phones cp
+            LEFT JOIN phones p on p.id = cp.id_phone
+            WHERE cp.id_customer = d.id_customer
+            AND p.number ILIKE CONCAT('%', :CUSTOMER_PHONE, '%')
+            )
+        )
+    )
+    AND (:CUSTOMER_CPF IS NULL OR (:CUSTOMER_CPF != '' AND c.cpf ilike CONCAT('%', :CUSTOMER_CPF, '%')))
     AND (COALESCE(array_length(:STATUS::text[], 1), 0) = 0 OR d.device_status = ANY(:STATUS::text[]))
     AND (COALESCE(array_length(:DEVICE_TYPES::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_TYPES::int[]))
-    AND (COALESCE(array_length(:DEVICE_BRANDS::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_BRANDS::int[]))
-    AND (:INITIAL_ENTRY_DATE IS NULL OR :FINAL_ENTRY_DATE IS NULL OR d.entry_date BETWEEN :INITIAL_ENTRY_DATE::timestamp  AND :FINAL_ENTRY_DATE::timestamp )
-    AND (:HAS_URGENCY IS FALSE OR d.has_urgency = :HAS_URGENCY)
-    AND (:HAS_REVISION IS FALSE OR d.is_revision = :HAS_REVISION)
+    AND (COALESCE(array_length(:DEVICE_BRANDS::int[], 1), 0) = 0 OR b.id = ANY(:DEVICE_BRANDS::int[]))
+    AND ((:INITIAL_ENTRY_DATE IS NULL AND :FINAL_ENTRY_DATE IS NULL) 
+        OR ((:INITIAL_ENTRY_DATE IS NOT NULL AND :FINAL_ENTRY_DATE IS NOT NULL)
+            AND d.entry_date BETWEEN :INITIAL_ENTRY_DATE::timestamp AND :FINAL_ENTRY_DATE::timestamp
+        )
+        OR ((:INITIAL_ENTRY_DATE IS NOT NULL AND :FINAL_ENTRY_DATE IS NULL)
+            AND d.entry_date >= :INITIAL_ENTRY_DATE::timestamp
+        )
+        OR ((:INITIAL_ENTRY_DATE IS NULL AND :FINAL_ENTRY_DATE IS NOT NULL)
+            AND d.entry_date <= :FINAL_ENTRY_DATE::timestamp
+        )
+    )
+        
+    AND (:HAS_URGENCY IS NULL OR d.has_urgency = :HAS_URGENCY)
+    AND (:HAS_REVISION IS NULL OR d.is_revision = :HAS_REVISION)
