@@ -126,7 +126,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setBrandName(rs.getString("brand_name"));
             dto.setModelName(rs.getString("model_name"));
             dto.setTypeName(rs.getString("type_name"));
-            dto.setTechnicianId(rs.getInt("technician_id"));
+            dto.setTechnicianId((Integer) rs.getObject("technician_id"));
             dto.setTechnicianName(rs.getString("technician_name"));
             dto.setProblem(rs.getString("problem"));
             dto.setObservation(rs.getString("observation"));

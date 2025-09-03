@@ -25,7 +25,7 @@ public class DeviceOutputDto {
     private String brandName;
     private String modelName;
     private String typeName;
-    private int technicianId;
+    private Integer technicianId;
     private String technicianName;
     private String problem;
     private String observation;
