@@ -779,23 +779,23 @@ WHERE
 
 UPDATE "types"
 SET
-    "type" = REGEXP_REPLACE(TRIM("type"), '\s+', ' ', 'g')
+    "type" = REGEXP_REPLACE(TRIM("type"), '\\s+', ' ', 'g')
 WHERE
-    "type" <> REGEXP_REPLACE(TRIM("type"), '\s+', ' ', 'g');
+    "type" <> REGEXP_REPLACE(TRIM("type"), '\\s+', ' ', 'g');
 
 -- Trim and replace spaces on brands
 UPDATE brands
 SET
-    brand = REGEXP_REPLACE(TRIM(brand), '\s+', ' ', 'g')
+    brand = REGEXP_REPLACE(TRIM(brand), '\\s+', ' ', 'g')
 WHERE
-    brand <> REGEXP_REPLACE(TRIM(brand), '\s+', ' ', 'g');
+    brand <> REGEXP_REPLACE(TRIM(brand), '\\s+', ' ', 'g');
 
 -- Trim and replace spaces on models
 UPDATE models
 SET
-    model = REGEXP_REPLACE(TRIM(model), '\s+', ' ', 'g')
+    model = REGEXP_REPLACE(TRIM(model), '\\s+', ' ', 'g')
 WHERE
-    model <> REGEXP_REPLACE(TRIM(model), '\s+', ' ', 'g');
+    model <> REGEXP_REPLACE(TRIM(model), '\\s+', ' ', 'g');
 
 begin;
 -- Remove duplicated values
@@ -803,11 +803,11 @@ CREATE TEMP TABLE type_mapping AS
 WITH duplicates AS (
     -- Find groups of types duplicates (case insensitive and spaces normalized)
     SELECT 
-        REGEXP_REPLACE(TRIM(LOWER(type)), '\s+', ' ', 'g') as type_lower,
+        REGEXP_REPLACE(TRIM(LOWER(type)), '\\s+', ' ', 'g') as type_lower,
         MIN(id) as keep_id,  -- Oldest ID that will be kept
         ARRAY_AGG(id ORDER BY id) as all_ids  -- All IDs of the group
     FROM types 
-    GROUP BY REGEXP_REPLACE(TRIM(LOWER(type)), '\s+', ' ', 'g')
+    GROUP BY REGEXP_REPLACE(TRIM(LOWER(type)), '\\s+', ' ', 'g')
     HAVING COUNT(*) > 1
 ),
 mapping_data AS (
@@ -830,11 +830,11 @@ CREATE TEMP TABLE brand_mapping AS
 WITH duplicates AS (
     -- Find groups of brands duplicates (case insensitive and spaces normalized)
     SELECT 
-        REGEXP_REPLACE(TRIM(LOWER(brand)), '\s+', ' ', 'g') as brand_lower,
+        REGEXP_REPLACE(TRIM(LOWER(brand)), '\\s+', ' ', 'g') as brand_lower,
         MIN(id) as keep_id,  -- Oldest ID that will be kept
         ARRAY_AGG(id ORDER BY id) as all_ids  -- All IDs of the group
     FROM brands 
-    GROUP BY REGEXP_REPLACE(TRIM(LOWER(brand)), '\s+', ' ', 'g')
+    GROUP BY REGEXP_REPLACE(TRIM(LOWER(brand)), '\\s+', ' ', 'g')
     HAVING COUNT(*) > 1
 ),
 mapping_data AS (
@@ -857,11 +857,11 @@ CREATE TEMP TABLE model_mapping AS
 WITH duplicates AS (
     -- Find groups of models duplicates (case insensitive and spaces normalized)
     SELECT 
-        REGEXP_REPLACE(TRIM(LOWER(model)), '\s+', ' ', 'g') as model_lower,
+        REGEXP_REPLACE(TRIM(LOWER(model)), '\\s+', ' ', 'g') as model_lower,
         MIN(id) as keep_id,  -- Oldest ID that will be kept
         ARRAY_AGG(id ORDER BY id) as all_ids  -- All IDs of the group
     FROM models 
-    GROUP BY REGEXP_REPLACE(TRIM(LOWER(model)), '\s+', ' ', 'g')
+    GROUP BY REGEXP_REPLACE(TRIM(LOWER(model)), '\\s+', ' ', 'g')
     HAVING COUNT(*) > 1
 ),
 mapping_data AS (
@@ -932,3 +932,7 @@ SELECT setval(pg_get_serial_sequence('models', 'id'), coalesce(MAX(id), 1)) from
 SELECT setval(pg_get_serial_sequence('brands_models_types', 'id'), coalesce(MAX(id), 1)) from brands_models_types;
 
 COMMIT;
+
+drop table type_mapping;
+drop table brand_mapping;
+drop table model_mapping;

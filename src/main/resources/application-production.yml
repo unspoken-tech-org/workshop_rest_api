@@ -19,6 +19,7 @@ spring:
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.temp.use_jdbc_metadata_defaults: false
+      hibernate.default_schema: public
 
   flyway:
     enabled: true
