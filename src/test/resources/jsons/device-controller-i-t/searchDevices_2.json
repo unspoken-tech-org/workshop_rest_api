@@ -12,8 +12,7 @@
             "observation": "Observation 1",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/04/2023",
-            "departureDate": "26/04/2021"
+            "entryDate": "10/04/2023"
         }
     ],
     "pageable": {

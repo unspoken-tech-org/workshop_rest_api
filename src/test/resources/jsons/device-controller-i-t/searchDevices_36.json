@@ -12,8 +12,7 @@
             "observation": "Observation 1",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/04/2023",
-            "departureDate": "26/04/2021"
+            "entryDate": "10/04/2023"
         },
         {
             "deviceId": 11,
@@ -27,8 +26,7 @@
             "observation": "Observation 11",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/04/2021",
-            "departureDate": "26/04/2021"
+            "entryDate": "01/04/2021"
         }
     ],
     "pageable": {
@@ -36,8 +34,8 @@
         "pageSize": 15,
         "sort": {
             "empty": true,
-            "unsorted": true,
-            "sorted": false
+            "sorted": false,
+            "unsorted": true
         },
         "offset": 0,
         "unpaged": false,
@@ -50,8 +48,8 @@
     "number": 0,
     "sort": {
         "empty": true,
-        "unsorted": true,
-        "sorted": false
+        "sorted": false,
+        "unsorted": true
     },
     "first": true,
     "numberOfElements": 2,

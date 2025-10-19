@@ -12,38 +12,7 @@
             "observation": "Observation 1",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/04/2023",
-            "departureDate": "26/04/2021"
-        },
-        {
-            "deviceId": 2,
-            "customerId": 2,
-            "customerName": "Lucas Ribeiro Naga",
-            "type": "Liquidificador",
-            "brand": "Wallita",
-            "model": "Model 2",
-            "status": "EM_ANDAMENTO",
-            "problem": "Problem 2",
-            "observation": "Observation 2",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
-        },
-        {
-            "deviceId": 6,
-            "customerId": 2,
-            "customerName": "Lucas Ribeiro Naga",
-            "type": "Ventilador",
-            "brand": "Arno",
-            "model": "Model 1",
-            "status": "EM_ANDAMENTO",
-            "problem": "Problem 6",
-            "observation": "Observation 6",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
+            "entryDate": "10/04/2023"
         },
         {
             "deviceId": 12,
@@ -57,8 +26,35 @@
             "observation": "Observation 12",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
+            "entryDate": "06/01/2023"
+        },
+        {
+            "deviceId": 6,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "EM_ANDAMENTO",
+            "problem": "Problem 6",
+            "observation": "Observation 6",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "03/01/2023"
+        },
+        {
+            "deviceId": 2,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Liquidificador",
+            "brand": "Wallita",
+            "model": "Model 2",
+            "status": "EM_ANDAMENTO",
+            "problem": "Problem 2",
+            "observation": "Observation 2",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "01/01/2023"
         },
         {
             "deviceId": 11,
@@ -72,8 +68,7 @@
             "observation": "Observation 11",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/04/2021",
-            "departureDate": "26/04/2021"
+            "entryDate": "01/04/2021"
         },
         {
             "deviceId": 7,
@@ -87,8 +82,7 @@
             "observation": "Observation 7",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/10/2020",
-            "departureDate": "26/04/2021"
+            "entryDate": "10/10/2020"
         }
     ],
     "pageable": {
@@ -104,8 +98,8 @@
         "paged": true
     },
     "last": true,
-    "totalPages": 1,
     "totalElements": 6,
+    "totalPages": 1,
     "size": 15,
     "number": 0,
     "sort": {

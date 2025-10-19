@@ -11,8 +11,8 @@
             "unsorted": true
         },
         "offset": 0,
-        "paged": true,
-        "unpaged": false
+        "unpaged": false,
+        "paged": true
     },
     "last": true,
     "totalElements": 0,

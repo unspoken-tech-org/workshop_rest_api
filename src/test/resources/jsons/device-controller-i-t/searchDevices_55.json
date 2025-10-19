@@ -13,7 +13,7 @@
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "04/02/2025",
-            "departureDate": "26/04/2021"
+            "departureDate": "01/05/2021"
         },
         {
             "deviceId": 1,
@@ -27,82 +27,21 @@
             "observation": "Observation 1",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/04/2023",
-            "departureDate": "26/04/2021"
+            "entryDate": "10/04/2023"
         },
         {
-            "deviceId": 4,
+            "deviceId": 14,
             "customerId": 2,
             "customerName": "Lucas Ribeiro Naga",
             "type": "Ferro de passar",
             "brand": "Philco",
             "model": "Model 4",
             "status": "ENTREGUE",
-            "problem": "Problem 4",
-            "observation": "Observation 4",
+            "problem": "Problem 14",
+            "observation": "Observation 14",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
-        },
-        {
-            "deviceId": 6,
-            "customerId": 2,
-            "customerName": "Lucas Ribeiro Naga",
-            "type": "Ventilador",
-            "brand": "Arno",
-            "model": "Model 1",
-            "status": "EM_ANDAMENTO",
-            "problem": "Problem 6",
-            "observation": "Observation 6",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
-        },
-        {
-            "deviceId": 8,
-            "customerId": 2,
-            "customerName": "Lucas Ribeiro Naga",
-            "type": "Batedeira",
-            "brand": "Britania",
-            "model": "Model 3",
-            "status": "AGUARDANDO",
-            "problem": "Problem 8",
-            "observation": "Observation 8",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
-        },
-        {
-            "deviceId": 2,
-            "customerId": 2,
-            "customerName": "Lucas Ribeiro Naga",
-            "type": "Liquidificador",
-            "brand": "Wallita",
-            "model": "Model 2",
-            "status": "EM_ANDAMENTO",
-            "problem": "Problem 2",
-            "observation": "Observation 2",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
-        },
-        {
-            "deviceId": 10,
-            "customerId": 2,
-            "customerName": "Lucas Ribeiro Naga",
-            "type": "Aspirador",
-            "brand": "Electrolux",
-            "model": "Model 5",
-            "status": "DESCARTADO",
-            "problem": "Problem 10",
-            "observation": "Observation 10",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "06/01/2023",
+            "entryDate": "07/01/2023",
             "departureDate": "06/01/2023"
         },
         {
@@ -117,23 +56,79 @@
             "observation": "Observation 12",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
+            "entryDate": "06/01/2023"
         },
         {
-            "deviceId": 14,
+            "deviceId": 10,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Aspirador",
+            "brand": "Electrolux",
+            "model": "Model 5",
+            "status": "DESCARTADO",
+            "problem": "Problem 10",
+            "observation": "Observation 10",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "05/01/2023",
+            "departureDate": "07/01/2023"
+        },
+        {
+            "deviceId": 8,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Batedeira",
+            "brand": "Britania",
+            "model": "Model 3",
+            "status": "AGUARDANDO",
+            "problem": "Problem 8",
+            "observation": "Observation 8",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "04/01/2023"
+        },
+        {
+            "deviceId": 6,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Ventilador",
+            "brand": "Arno",
+            "model": "Model 1",
+            "status": "EM_ANDAMENTO",
+            "problem": "Problem 6",
+            "observation": "Observation 6",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "03/01/2023"
+        },
+        {
+            "deviceId": 4,
             "customerId": 2,
             "customerName": "Lucas Ribeiro Naga",
             "type": "Ferro de passar",
             "brand": "Philco",
             "model": "Model 4",
             "status": "ENTREGUE",
-            "problem": "Problem 14",
-            "observation": "Observation 14",
+            "problem": "Problem 4",
+            "observation": "Observation 4",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
+            "entryDate": "02/01/2023",
+            "departureDate": "05/01/2023"
+        },
+        {
+            "deviceId": 2,
+            "customerId": 2,
+            "customerName": "Lucas Ribeiro Naga",
+            "type": "Liquidificador",
+            "brand": "Wallita",
+            "model": "Model 2",
+            "status": "EM_ANDAMENTO",
+            "problem": "Problem 2",
+            "observation": "Observation 2",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "01/01/2023"
         },
         {
             "deviceId": 3,
@@ -147,8 +142,7 @@
             "observation": "Observation 3",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "03/09/2021",
-            "departureDate": "26/04/2021"
+            "entryDate": "03/09/2021"
         },
         {
             "deviceId": 15,
@@ -163,7 +157,7 @@
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "22/04/2021",
-            "departureDate": "26/04/2021"
+            "departureDate": "04/05/2021"
         },
         {
             "deviceId": 13,
@@ -177,8 +171,7 @@
             "observation": "Observation 13",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "02/04/2021",
-            "departureDate": "26/04/2021"
+            "entryDate": "02/04/2021"
         },
         {
             "deviceId": 11,
@@ -192,8 +185,7 @@
             "observation": "Observation 11",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/04/2021",
-            "departureDate": "26/04/2021"
+            "entryDate": "01/04/2021"
         },
         {
             "deviceId": 7,
@@ -207,8 +199,7 @@
             "observation": "Observation 7",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/10/2020",
-            "departureDate": "26/04/2021"
+            "entryDate": "10/10/2020"
         },
         {
             "deviceId": 5,
@@ -223,7 +214,7 @@
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "28/04/2017",
-            "departureDate": "26/04/2021"
+            "departureDate": "28/04/2021"
         }
     ],
     "pageable": {
@@ -239,8 +230,8 @@
         "paged": true
     },
     "last": true,
-    "totalPages": 1,
     "totalElements": 15,
+    "totalPages": 1,
     "size": 100,
     "number": 0,
     "sort": {

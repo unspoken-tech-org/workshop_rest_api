@@ -3,6 +3,7 @@ package com.tproject.workshop.integration.controller;
 import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -12,6 +13,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -339,6 +343,229 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                 ), "create device with colors null")
 
 
+        );
+    }
+
+    @Order(4)
+    @DisplayName("Update device")
+    @MethodSource("updateDeviceArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void updateDevice(int index, Integer statusCode, Map<String, Object> params, String reason) {
+        Response response = given().spec(SPEC)
+                .when()
+                .body(params)
+                .put(BASE_PATH + "/update")
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+
+        String actualStatus = params.getOrDefault("deviceStatus", "NOVO").toString();
+        boolean isResponseOK = response.statusCode() == 200;
+        boolean isStatusDeliveredOrDiscarded = List.of("ENTREGUE", "DESCARTADO").contains(actualStatus);
+
+        if (isResponseOK && isStatusDeliveredOrDiscarded) {
+            LocalDate actualDate = LocalDate.now();
+            String departureDateString = response.jsonPath().get("departureDate").toString();
+            LocalDate departureDate = LocalDate.parse(departureDateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            Assertions.assertThat(departureDate)
+                    .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
+                    .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
+        }
+
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate"));
+    }
+
+    private static Stream<Arguments> updateDeviceArguments() {
+        return Stream.of(
+                // Successful update tests
+                Arguments.of(1, HttpStatus.SC_OK, new HashMap<String, Object>() {{
+                    put("deviceId", 1);
+                    put("deviceStatus", "EM_ANDAMENTO");
+                    put("problem", "Problema atualizado");
+                    put("observation", "Observação atualizada");
+                    put("budget", "Orçamento atualizado");
+                    put("laborValue", 75.0);
+                    put("serviceValue", 150.0);
+                    put("laborValueCollected", true);
+                    put("hasUrgency", false);
+                    put("revision", true);
+                    put("technicianId", 2);
+                }}, "update device with all fields"),
+
+                Arguments.of(2, HttpStatus.SC_OK, new HashMap<String, Object>() {{
+                    put("deviceId", 2);
+                    put("deviceStatus", "AGUARDANDO");
+                    put("problem", "Problema simples");
+                    put("observation", "Observação simples");
+                    put("budget", "Orçamento simples");
+                    put("laborValue", 50.0);
+                    put("serviceValue", 100.0);
+                    put("laborValueCollected", false);
+                    put("hasUrgency", true);
+                    put("revision", false);
+                }}, "update device without technicianId"),
+
+                Arguments.of(3, HttpStatus.SC_OK, new HashMap<String, Object>() {{
+                    put("deviceId", 3);
+                    put("deviceStatus", "ENTREGUE");
+                    put("problem", "Problema resolvido");
+                    put("observation", "Aparelho entregue");
+                    put("budget", "Orçamento final");
+                    put("laborValue", 100.0);
+                    put("serviceValue", 200.0);
+                    put("laborValueCollected", true);
+                    put("hasUrgency", false);
+                    put("revision", false);
+                    put("technicianId", 1);
+                }}, "update device to status ENTREGUE"),
+
+                Arguments.of(4, HttpStatus.SC_OK, Map.of(
+                        "deviceId", 4,
+                        "deviceStatus", "DESCARTADO",
+                        "problem", "Aparelho descartado",
+                        "observation", "Não foi possível consertar",
+                        "budget", "Orçamento descartado",
+                        "laborValue", 50.0,
+                        "serviceValue", 100.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update device to status DESCARTADO"),
+
+                Arguments.of(5, HttpStatus.SC_OK, new HashMap<String, Object>() {{
+                    put("deviceId", 5);
+                    put("deviceStatus", "PRONTO");
+                    put("problem", "Aparelho pronto");
+                    put("observation", "Aguardando retirada");
+                    put("budget", "Orçamento final");
+                    put("laborValue", 80.0);
+                    put("serviceValue", 160.0);
+                    put("laborValueCollected", false);
+                    put("hasUrgency", false);
+                    put("revision", true);
+                    put("technicianId", 2);
+                }}, "update device to status PRONTO"),
+
+                // Validation tests - required fields
+                Arguments.of(6, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceStatus", "EM_ANDAMENTO",
+                        "problem", "Problema teste",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", 50.0,
+                        "serviceValue", 100.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update device without deviceId"),
+
+                Arguments.of(7, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceId", 1,
+                        "problem", "Problema teste",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", 50.0,
+                        "serviceValue", 100.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update device without deviceStatus"),
+
+                Arguments.of(8, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceId", 1,
+                        "deviceStatus", "EM_ANDAMENTO",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", 50.0,
+                        "serviceValue", 100.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update device without problem"),
+
+                // Device not found tests
+                Arguments.of(9, HttpStatus.SC_NOT_FOUND, Map.of(
+                        "deviceId", 9999,
+                        "deviceStatus", "EM_ANDAMENTO",
+                        "problem", "Problema teste",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", 50.0,
+                        "serviceValue", 100.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update non-existent device"),
+
+                // Technician not found tests
+                Arguments.of(10, HttpStatus.SC_NOT_FOUND, new HashMap<String, Object>() {{
+                    put("deviceId", 1);
+                    put("deviceStatus", "EM_ANDAMENTO");
+                    put("problem", "Problema teste");
+                    put("observation", "Observação teste");
+                    put("budget", "Orçamento teste");
+                    put("laborValue", 50.0);
+                    put("serviceValue", 100.0);
+                    put("laborValueCollected", false);
+                    put("hasUrgency", false);
+                    put("revision", false);
+                    put("technicianId", 9999);
+                }}, "update device with non-existent technician"),
+
+                // Invalid status tests
+                Arguments.of(11, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceId", 1,
+                        "deviceStatus", "STATUS_INVALIDO",
+                        "problem", "Problema teste",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", 50.0,
+                        "serviceValue", 100.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update device with invalid status"),
+
+                // Negative value tests
+                Arguments.of(12, HttpStatus.SC_OK, Map.of(
+                        "deviceId", 1,
+                        "deviceStatus", "EM_ANDAMENTO",
+                        "problem", "Problema teste",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", 0.0,
+                        "serviceValue", 0.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update device with zero values"),
+
+                Arguments.of(13, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceId", 1,
+                        "deviceStatus", "EM_ANDAMENTO",
+                        "problem", "Problema teste",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", -10.0,
+                        "serviceValue", 20.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update laborValue with negative value"),
+
+                Arguments.of(14, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceId", 1,
+                        "deviceStatus", "EM_ANDAMENTO",
+                        "problem", "Problema teste",
+                        "observation", "Observação teste",
+                        "budget", "Orçamento teste",
+                        "laborValue", 10.0,
+                        "serviceValue", -20.0,
+                        "laborValueCollected", false,
+                        "hasUrgency", false,
+                        "revision", false
+                ), "update serviceValue with negative value")
         );
     }
 }

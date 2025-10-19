@@ -1,0 +1,103 @@
+{
+    "deviceId": 4,
+    "customerId": 2,
+    "customerName": "Lucas Ribeiro Naga",
+    "deviceStatus": "DESCARTADO",
+    "brandName": "Philco",
+    "modelName": "Model 4",
+    "typeName": "Ferro de passar",
+    "technicianId": 2,
+    "technicianName": "Technician 2",
+    "problem": "Aparelho descartado",
+    "observation": "Não foi possível consertar",
+    "budget": "Orçamento descartado",
+    "laborValue": 50.00,
+    "serviceValue": 100.00,
+    "laborValueCollected": false,
+    "deviceColors": [
+        "azul"
+    ],
+    "hasUrgency": false,
+    "revision": false,
+    "entryDate": "02/01/2023",
+    "departureDate": "19/10/2025",
+    "lastUpdate": "2025-10-19T17:06:09.321+00:00",
+    "customerPhones": [
+        {
+            "id": 3,
+            "number": "44988255540",
+            "name": "Lucas Principal",
+            "main": true
+        }
+    ],
+    "customerContacts": [
+        
+    ],
+    "otherDevices": [
+        {
+            "deviceId": 14,
+            "customerId": 2,
+            "typeBrandModel": "Ferro de passar Philco | Model 4",
+            "deviceStatus": "ENTREGUE",
+            "problem": "Problem 14",
+            "hasUrgency": false,
+            "revision": true,
+            "entryDate": "07/01/2023",
+            "departureDate": "06/01/2023"
+        },
+        {
+            "deviceId": 12,
+            "customerId": 2,
+            "typeBrandModel": "Liquidificador Wallita | Model 2",
+            "deviceStatus": "EM_ANDAMENTO",
+            "problem": "Problem 12",
+            "hasUrgency": false,
+            "revision": true,
+            "entryDate": "06/01/2023"
+        },
+        {
+            "deviceId": 10,
+            "customerId": 2,
+            "typeBrandModel": "Aspirador Electrolux | Model 5",
+            "deviceStatus": "DESCARTADO",
+            "problem": "Problem 10",
+            "hasUrgency": false,
+            "revision": true,
+            "entryDate": "05/01/2023",
+            "departureDate": "07/01/2023"
+        },
+        {
+            "deviceId": 8,
+            "customerId": 2,
+            "typeBrandModel": "Batedeira Britania | Model 3",
+            "deviceStatus": "AGUARDANDO",
+            "problem": "Problem 8",
+            "hasUrgency": false,
+            "revision": true,
+            "entryDate": "04/01/2023"
+        },
+        {
+            "deviceId": 6,
+            "customerId": 2,
+            "typeBrandModel": "Ventilador Arno | Model 1",
+            "deviceStatus": "EM_ANDAMENTO",
+            "problem": "Problem 6",
+            "hasUrgency": false,
+            "revision": true,
+            "entryDate": "03/01/2023"
+        },
+        {
+            "deviceId": 2,
+            "customerId": 2,
+            "typeBrandModel": "Liquidificador Wallita | Model 2",
+            "deviceStatus": "EM_ANDAMENTO",
+            "problem": "Problem 2",
+            "hasUrgency": false,
+            "revision": true,
+            "entryDate": "01/01/2023"
+        }
+    ],
+    "payments": [
+        
+    ]
+}

@@ -7,8 +7,8 @@
         "pageSize": 15,
         "sort": {
             "empty": true,
-            "unsorted": true,
-            "sorted": false
+            "sorted": false,
+            "unsorted": true
         },
         "offset": 0,
         "unpaged": false,
@@ -21,8 +21,8 @@
     "number": 0,
     "sort": {
         "empty": true,
-        "unsorted": true,
-        "sorted": false
+        "sorted": false,
+        "unsorted": true
     },
     "first": true,
     "numberOfElements": 0,

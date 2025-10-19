@@ -7,6 +7,7 @@ import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.repository.jdbc.CustomerRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
+import com.tproject.workshop.utils.UtilsString;
 import com.tproject.workshop.utils.mapper.JsonResultSetMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -52,7 +53,7 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("CUSTOMER_ID", filters.getId(), Types.INTEGER)
                 .addValue("NAME", filters.getName(), Types.VARCHAR)
-                .addValue("CPF", filters.getCpf(), Types.VARCHAR)
+                .addValue("CPF", UtilsString.onlyDigits((filters.getCpf())), Types.VARCHAR)
                 .addValue("PHONE", filters.getPhone(), Types.VARCHAR)
                 .addValue("PAGE_SIZE", filters.getSize(), Types.INTEGER)
                 .addValue("OFFSET", filters.getPage(), Types.INTEGER);
