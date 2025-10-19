@@ -12,8 +12,8 @@
             "observation": "Observation 10",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "06/01/2023",
-            "departureDate": "06/01/2023"
+            "entryDate": "05/01/2023",
+            "departureDate": "07/01/2023"
         },
         {
             "deviceId": 15,
@@ -28,7 +28,7 @@
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "22/04/2021",
-            "departureDate": "26/04/2021"
+            "departureDate": "04/05/2021"
         },
         {
             "deviceId": 5,
@@ -43,7 +43,7 @@
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "28/04/2017",
-            "departureDate": "26/04/2021"
+            "departureDate": "28/04/2021"
         }
     ],
     "pageable": {
@@ -59,8 +59,8 @@
         "paged": true
     },
     "last": true,
-    "totalPages": 1,
     "totalElements": 3,
+    "totalPages": 1,
     "size": 15,
     "number": 0,
     "sort": {

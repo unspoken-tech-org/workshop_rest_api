@@ -7,6 +7,7 @@ import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
 import com.tproject.workshop.repository.jdbc.DeviceRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
+import com.tproject.workshop.utils.UtilsString;
 import com.tproject.workshop.utils.mapper.JsonResultSetMapper;
 import lombok.RequiredArgsConstructor;
 import org.simpleflatmapper.jdbc.spring.JdbcTemplateMapperFactory;
@@ -56,7 +57,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(DEVICE_ID, deviceParams.getDeviceId(), Types.INTEGER)
                 .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
                 .addValue(CUSTOMER_PHONE, deviceParams.getCustomerPhone(), Types.VARCHAR)
-                .addValue(CUSTOMER_CPF, deviceParams.getCustomerCpf(), Types.VARCHAR)
+                .addValue(CUSTOMER_CPF, UtilsString.onlyDigits(deviceParams.getCustomerCpf()), Types.VARCHAR)
                 .addValue(DEVICE_TYPES, UtilsSql.toLiteralArray(deviceParams.getDeviceTypes()))
                 .addValue(DEVICE_BRANDS, UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
                 .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))

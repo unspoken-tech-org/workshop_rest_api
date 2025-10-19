@@ -14,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -49,6 +51,7 @@ public class DeviceService {
                         String.format("Aparelho com id %d não encontrado", device.deviceId())));
 
         DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(device.deviceStatus());
+        boolean hasToSetDepartureDate = List.of(DeviceStatusEnum.ENTREGUE, DeviceStatusEnum.DESCARTADO).contains(newStatus);
         Optional<DeviceHistory> optionalHistory = this.addDeviceHistoryOnUpdate(oldDevice, device);
 
         oldDevice.setProblem(device.problem());
@@ -65,6 +68,9 @@ public class DeviceService {
             oldDevice.setTechnician(technician);
         });
         optionalHistory.ifPresent(history -> oldDevice.getDeviceHistory().add(history));
+        if (hasToSetDepartureDate) {
+            oldDevice.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
+        }
 
         deviceRepository.saveAndFlush(oldDevice);
 

@@ -1,0 +1,166 @@
+{
+    "deviceId": 1,
+    "customerId": 1,
+    "customerName": "Alfonso Zimmer",
+    "deviceStatus": "EM_ANDAMENTO",
+    "brandName": "Arno",
+    "modelName": "Model 1",
+    "typeName": "Ventilador",
+    "technicianId": 2,
+    "technicianName": "Technician 2",
+    "problem": "Problema atualizado",
+    "observation": "Observação atualizada",
+    "budget": "Orçamento atualizado",
+    "laborValue": 75.00,
+    "serviceValue": 150.00,
+    "laborValueCollected": true,
+    "deviceColors": [
+        "preto"
+    ],
+    "hasUrgency": false,
+    "revision": true,
+    "entryDate": "10/04/2023",
+    "lastUpdate": "2025-10-19T16:52:06.671+00:00",
+    "customerPhones": [
+        {
+            "id": 1,
+            "number": "4430356678",
+            "name": "Telefone Secundário",
+            "main": false
+        },
+        {
+            "id": 2,
+            "number": "44988254493",
+            "name": "Telefone Principal",
+            "main": true
+        }
+    ],
+    "customerContacts": [
+        {
+            "id": 3,
+            "deviceId": 1,
+            "technicianId": 1,
+            "technicianName": "Technician 1",
+            "phone": "44988254493",
+            "type": "mensagem",
+            "hasMadeContact": true,
+            "conversation": "Avisado que o aparelho está pronto",
+            "deviceStatus": "PRONTO",
+            "lastContact": "08/01/2025"
+        },
+        {
+            "id": 2,
+            "deviceId": 1,
+            "technicianId": 1,
+            "technicianName": "Technician 1",
+            "type": "pessoalmente",
+            "hasMadeContact": true,
+            "conversation": "Cliente aceitou o orçamento",
+            "deviceStatus": "EM_ANDAMENTO",
+            "lastContact": "07/01/2025"
+        },
+        {
+            "id": 1,
+            "deviceId": 1,
+            "technicianId": 1,
+            "technicianName": "Technician 1",
+            "phone": "44988254493",
+            "type": "mensagem",
+            "hasMadeContact": false,
+            "conversation": "Foi passado o orçamento e aguardo resposta",
+            "deviceStatus": "AGUARDANDO",
+            "lastContact": "06/01/2025"
+        }
+    ],
+    "otherDevices": [
+        {
+            "deviceId": 9,
+            "customerId": 1,
+            "typeBrandModel": "Ferro de passar Philco | Model 4",
+            "deviceStatus": "ENTREGUE",
+            "problem": "Problem 9",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "04/02/2025",
+            "departureDate": "01/05/2021"
+        },
+        {
+            "deviceId": 3,
+            "customerId": 1,
+            "typeBrandModel": "Batedeira Britania | Model 3",
+            "deviceStatus": "AGUARDANDO",
+            "problem": "Problem 3",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "03/09/2021"
+        },
+        {
+            "deviceId": 15,
+            "customerId": 1,
+            "typeBrandModel": "Aspirador Electrolux | Model 5",
+            "deviceStatus": "DESCARTADO",
+            "problem": "Problem 15",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "22/04/2021",
+            "departureDate": "04/05/2021"
+        },
+        {
+            "deviceId": 13,
+            "customerId": 1,
+            "typeBrandModel": "Batedeira Britania | Model 3",
+            "deviceStatus": "AGUARDANDO",
+            "problem": "Problem 13",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "02/04/2021"
+        },
+        {
+            "deviceId": 11,
+            "customerId": 1,
+            "typeBrandModel": "Ventilador Arno | Model 1",
+            "deviceStatus": "NOVO",
+            "problem": "Problem 11",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "01/04/2021"
+        },
+        {
+            "deviceId": 7,
+            "customerId": 1,
+            "typeBrandModel": "Liquidificador Wallita | Model 2",
+            "deviceStatus": "EM_ANDAMENTO",
+            "problem": "Problem 7",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "10/10/2020"
+        },
+        {
+            "deviceId": 5,
+            "customerId": 1,
+            "typeBrandModel": "Aspirador Electrolux | Model 5",
+            "deviceStatus": "DESCARTADO",
+            "problem": "Problem 5",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "28/04/2017",
+            "departureDate": "28/04/2021"
+        }
+    ],
+    "payments": [
+        {
+            "paymentId": 2,
+            "paymentDate": "29/04/2023",
+            "paymentType": "credito",
+            "paymentValue": 100.00,
+            "category": "parcial"
+        },
+        {
+            "paymentId": 1,
+            "paymentDate": "22/04/2023",
+            "paymentType": "credito",
+            "paymentValue": 100.00,
+            "category": "parcial"
+        }
+    ]
+}

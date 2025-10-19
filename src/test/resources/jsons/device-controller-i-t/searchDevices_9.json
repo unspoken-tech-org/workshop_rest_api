@@ -12,8 +12,7 @@
             "observation": "Observation 1",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/04/2023",
-            "departureDate": "26/04/2021"
+            "entryDate": "10/04/2023"
         },
         {
             "deviceId": 11,
@@ -27,8 +26,7 @@
             "observation": "Observation 11",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/04/2021",
-            "departureDate": "26/04/2021"
+            "entryDate": "01/04/2021"
         }
     ],
     "pageable": {
@@ -44,8 +42,8 @@
         "paged": true
     },
     "last": true,
-    "totalPages": 1,
     "totalElements": 2,
+    "totalPages": 1,
     "size": 15,
     "number": 0,
     "sort": {
