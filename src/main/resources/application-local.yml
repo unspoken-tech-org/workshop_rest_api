@@ -39,3 +39,4 @@ logging:
     root: ERROR
     org.springframework.web: DEBUG
     org.hibernate: ERROR
+    org.flywaydb: DEBUG
