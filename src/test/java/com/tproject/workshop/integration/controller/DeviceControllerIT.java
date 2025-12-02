@@ -373,7 +373,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
         }
 
-        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate"));
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate", "departureDate"));
     }
 
     private static Stream<Arguments> updateDeviceArguments() {
