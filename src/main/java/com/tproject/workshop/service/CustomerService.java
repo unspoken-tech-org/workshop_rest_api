@@ -10,19 +10,24 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.cellphone.InputPhoneDto;
 import com.tproject.workshop.dto.customer.CustomerFilterDto;
 import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.dto.customer.InputCustomerDtoRecord;
+import com.tproject.workshop.dto.device.MinifiedDeviceTableOutputDto;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Customer;
 import com.tproject.workshop.model.CustomerPhone;
+import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.Phone;
 import com.tproject.workshop.repository.CustomerPhoneRepository;
 import com.tproject.workshop.repository.CustomerRepository;
+import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PhoneRepository;
 import com.tproject.workshop.utils.UtilsString;
 
@@ -34,10 +39,68 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final PhoneRepository phoneRepository;
     private final CustomerPhoneRepository customerPhoneRepository;
+    private final DeviceRepository deviceRepository;
 
 
     public CustomerOutputDto findById(int id) {
         return customerRepository.findCustomerById(id).orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
+    }
+
+    /**
+     * JPA-based implementation for benchmark comparison with JDBC.
+     * Returns the same CustomerOutputDto but uses Hibernate instead of native SQL.
+     */
+    public CustomerOutputDto findByIdUsingJpa(int id) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
+
+        List<CellPhoneOutputDeviceDto> phones = customer.getCustomerPhones().stream()
+                .map(cp -> CellPhoneOutputDeviceDto.builder()
+                        .id(cp.getPhone().getIdCellphone())
+                        .number(cp.getPhone().getNumber())
+                        .name(cp.getPhone().getPhoneAlias())
+                        .main(cp.isMain())
+                        .build())
+                .toList();
+
+        List<Device> devices = deviceRepository.findByCustomerIdCustomerOrderByEntryDateDesc(id);
+        List<MinifiedDeviceTableOutputDto> customerDevices = devices.stream()
+                .map(this::mapDeviceToMinifiedDto)
+                .toList();
+
+        return CustomerOutputDto.builder()
+                .customerId(customer.getIdCustomer())
+                .name(customer.getName())
+                .cpf(customer.getCpf())
+                .gender(customer.getGender())
+                .email(customer.getEmail())
+                .insertDate(customer.getInsertDate() != null ? customer.getInsertDate().toString() : null)
+                .phones(phones)
+                .customerDevices(customerDevices)
+                .build();
+    }
+
+    private MinifiedDeviceTableOutputDto mapDeviceToMinifiedDto(Device device) {
+        MinifiedDeviceTableOutputDto dto = new MinifiedDeviceTableOutputDto();
+        dto.setDeviceId(device.getId());
+        dto.setCustomerId(device.getCustomer().getIdCustomer());
+        dto.setDeviceStatus(device.getDeviceStatus() != null ? device.getDeviceStatus().name() : null);
+        dto.setProblem(device.getProblem());
+        dto.setHasUrgency(device.isUrgency());
+        dto.setRevision(device.isRevision());
+        dto.setEntryDate(device.getEntryDate() != null ? device.getEntryDate().toLocalDateTime() : null);
+        dto.setDepartureDate(device.getDepartureDate() != null ? device.getDepartureDate().toLocalDateTime() : null);
+
+        // Build typeBrandModel string: "Type Brand | Model"
+        BrandsModelsTypes bmt = device.getBrandsModelsTypes();
+        if (bmt != null) {
+            String type = bmt.getIdType() != null ? bmt.getIdType().getType() : "";
+            String brand = bmt.getIdBrand() != null ? bmt.getIdBrand().getBrand() : "";
+            String model = bmt.getIdModel() != null ? bmt.getIdModel().getModel() : "";
+            dto.setTypeBrandModel(String.format("%s %s | %s", type, brand, model).trim());
+        }
+
+        return dto;
     }
 
     public Page<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {

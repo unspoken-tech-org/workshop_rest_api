@@ -20,6 +20,13 @@ public interface CustomerController {
     @GetMapping("/{id}")
     CustomerOutputDto findById(@PathVariable("id") int idCostumer);
 
+    /**
+     * Temporary endpoint for JPA vs JDBC benchmark comparison.
+     * Returns the same data as findById but uses JPA instead of native SQL.
+     */
+    @GetMapping("/{id}/jpa")
+    CustomerOutputDto findByIdJpa(@PathVariable("id") int id);
+
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     CustomerOutputDto create(@RequestBody @NotNull @Valid InputCustomerDtoRecord inputCustomerDto);

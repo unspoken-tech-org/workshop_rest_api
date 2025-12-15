@@ -35,6 +35,11 @@ public class CustomerControllerImpl implements CustomerController {
     }
 
     @Override
+    public CustomerOutputDto findByIdJpa(int id) {
+        return customerService.findByIdUsingJpa(id);
+    }
+
+    @Override
     public CustomerOutputDto create(@Valid InputCustomerDtoRecord inputCustomerDto) {
         return customerService.saveCustomer(inputCustomerDto);
     }
