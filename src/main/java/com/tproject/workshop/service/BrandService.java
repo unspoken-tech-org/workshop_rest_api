@@ -4,7 +4,9 @@ import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Brand;
 import com.tproject.workshop.repository.BrandRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,18 +25,27 @@ public class BrandService {
                 .orElseThrow(() -> new NotFoundException(String.format("Marca com id %d não encontrada", id)));
     }
 
+    @Transactional
     public Brand createOrReturnExistentBrand(String brand) {
         var brandFound = brandRepository.findByBrandIgnoreCase(brand);
         if (brandFound.isPresent()) {
             return brandFound.get();
         }
 
-        var newBrand = new Brand();
-        var brandName = brand.toLowerCase();
-        newBrand.setBrand(brandName);
+        var brandName = brand.toLowerCase().trim().replaceAll("\\s+", " ");
+        try {
+            var newBrand = new Brand();
+            newBrand.setBrand(brandName);
 
-        return brandRepository.save(newBrand);
+            return brandRepository.save(newBrand);
+        } catch (DataIntegrityViolationException e) {
+            return findBrandOnCreate(brandName, brand);
+        }
+    }
 
+    private Brand findBrandOnCreate(String brandName, String originalBrand) {
+        return brandRepository.findByBrandIgnoreCase(brandName)
+                .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar marca: " + originalBrand));
     }
 
     public List<Brand> findAll(String name) {

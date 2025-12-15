@@ -280,11 +280,11 @@ docker-compose -f docker-compose-local.yml down --volumes
        │
        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   GitHub Actions                             │
-│                   (Self-Hosted Runner)                       │
-│                                                              │
+│                   GitHub Actions                            │
+│                   (Self-Hosted Runner)                      │
+│                                                             │
 │  1. Checkout ──► 2. Sync Files ──► 3. Build Image           │
-│                                           │                  │
+│                                           │                 │
 │  6. Verify ◄── 5. Health Check ◄── 4. Deploy                │
 └─────────────────────────────────────────────────────────────┘
 ```
