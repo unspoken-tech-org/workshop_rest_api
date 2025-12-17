@@ -13,11 +13,11 @@ spring:
 
   jpa:
     generate-ddl: false
+    open-in-view: false
     hibernate:
       default_schema: public
       ddl-auto: none
     properties:
-      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.temp.use_jdbc_metadata_defaults: false
       hibernate.default_schema: public
 
@@ -34,6 +34,11 @@ message: Local
 
 logging:
   level:
-    root: ERROR
-    org.springframework.web: DEBUG
-    org.hibernate: ERROR
+    root: INFO
+    com.tproject.workshop: INFO
+    http.access: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO

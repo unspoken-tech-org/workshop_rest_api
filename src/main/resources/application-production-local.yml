@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5445/workshop_db
+    username: workshop_admin
+    password: pass
+  flyway:
+    url: jdbc:postgresql://localhost:5445/workshop_db
+    user: workshop_admin
+    password: pass
+
