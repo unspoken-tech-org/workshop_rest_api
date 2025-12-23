@@ -6,6 +6,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=flat&logo=githubactions&logoColor=white)
 ![Flyway](https://img.shields.io/badge/Flyway-Migrations-CC0200?style=flat&logo=flyway&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-Observability-F46800?style=flat&logo=grafana&logoColor=white)
 
 > **Enterprise-grade ERP solution engineered for near zero-latency local network environments.**  
 > Built for device repair workshops requiring high availability without cloud dependency.
@@ -216,6 +217,67 @@ public void onDeviceViewed(DeviceViewedEvent event) {
 | **Build** | Gradle | 8.4 | Dependency management, build automation |
 | **Container** | Docker | Multi-stage | Optimized production images |
 | **CI/CD** | GitHub Actions | - | Automated deployment pipeline |
+| **Observability** | Grafana + Loki | 10.2 / 2.9 | Log aggregation and dashboards |
+
+---
+
+## Observability
+
+The application includes a complete observability stack for log aggregation and visualization.
+
+### Architecture
+
+```
+Application → Promtail → Loki → Grafana
+   (JSON logs)   (collector)  (storage)  (dashboards)
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Structured Logs** | JSON format with correlation ID, HTTP metadata, duration |
+| **Request Tracing** | `X-Request-Id` header propagated through all logs |
+| **Sensitive Data Masking** | Automatic masking of passwords, tokens, CPF, etc. |
+| **Error Correlation** | Full request body logged on 4xx/5xx errors |
+| **7-Day Retention** | Configurable log retention in Loki |
+
+### Quick Start (Local with Observability)
+
+```bash
+# Start full stack: database + app + observability
+docker-compose -f docker-compose-local-full.yml up -d --build
+
+# Access Grafana
+open http://localhost:3000  # admin/admin
+```
+
+> **Nota:** A aplicação precisa rodar como container Docker para que o Promtail capture os logs.
+
+### Service Endpoints (with Observability)
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Grafana | `http://localhost:3000` | Dashboards and log exploration |
+| Loki | `http://localhost:3100` | Log aggregation API |
+
+### Useful LogQL Queries
+
+```logql
+# All API logs
+{container_name="workshop-api"}
+
+# Only errors
+{container_name="workshop-api"} | json | level="ERROR"
+
+# Slow requests (>1s)
+{container_name="workshop-api"} | json | durationMs > 1000
+
+# Trace specific request
+{container_name="workshop-api"} | json | requestId="abc-123"
+```
+
+> **Full documentation:** See [Observability Guide](estudos/guides/ObservabilityGuide.md) for detailed setup, queries, and troubleshooting.
 
 ---
 
@@ -360,9 +422,13 @@ workshop_rest_api/
 ├── src/main/resources/
 │   ├── db/migration/        # Flyway migrations
 │   └── db/query/            # External SQL files
-├── docker-compose-local.yml      # Development environment
-├── docker-compose-production.yml # Production deployment
-├── Dockerfile                    # Multi-stage build
+├── docker-compose-local.yml               # Development: database only
+├── docker-compose-local-full.yml          # Development: full stack with observability
+├── docker-compose-production.yml          # Production: full stack with observability
+├── infra/                                 # Observability configurations
+│   ├── loki-config.yaml
+│   └── promtail-config.yaml
+├── Dockerfile                             # Multi-stage build
 └── .github/workflows/deploy.yml  # CI/CD pipeline
 ```
 
