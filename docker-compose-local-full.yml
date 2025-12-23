@@ -1,0 +1,116 @@
+# docker-compose-local-full.yml
+# Ambiente local completo: DB + App + Observabilidade
+#
+# Uso:
+#   docker-compose -f docker-compose-local-full.yml up -d --build
+#
+# Serviços incluídos:
+#   - workshop-db: PostgreSQL (porta 5445)
+#   - workshop-api: Aplicação Spring Boot (porta 8080)
+#   - loki: Agregador de logs (porta 3100)
+#   - promtail: Coletor de logs dos containers
+#   - grafana: Dashboard de visualização (porta 3000)
+
+services:
+  workshop-db:
+    container_name: workshop-db
+    image: postgres:16.1-alpine
+    environment:
+      LC_ALL: C.UTF-8
+      TZ: America/Sao_Paulo
+      POSTGRES_DB: workshop_db
+      POSTGRES_USER: workshop_admin
+      POSTGRES_PASSWORD: pass
+    ports:
+      - "5445:5432"
+    networks:
+      - workshop-local-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workshop_admin -d workshop_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  workshop-api:
+    container_name: workshop-api
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://workshop-db:5432/workshop_db
+      SPRING_DATASOURCE_USERNAME: workshop_admin
+      SPRING_DATASOURCE_PASSWORD: pass
+      SPRING_PROFILES_ACTIVE: production
+      TZ: America/Sao_Paulo
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
+    depends_on:
+      workshop-db:
+        condition: service_healthy
+    networks:
+      - workshop-local-network
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./infra/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - workshop-local-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/promtail-config.yaml:/etc/promtail/config.yaml:ro
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+    networks:
+      - workshop-local-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+    networks:
+      - workshop-local-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  loki_data:
+  grafana_data:
+
+networks:
+  workshop-local-network:
+

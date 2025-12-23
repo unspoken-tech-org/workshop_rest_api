@@ -43,10 +43,12 @@ jobs:
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
           LAN_CIDR=${{ secrets.LAN_CIDR }}
+          GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           EOF
           chmod 600 .env
           echo ".env created:"
-          grep -E '^(DB_NAME|DB_USERNAME|HOST_BIND_IP|LAN_CIDR)=' .env || true
+          grep -E '^(DB_NAME|DB_USERNAME|HOST_BIND_IP|LAN_CIDR|GRAFANA_ADMIN_USER|GRAFANA_ADMIN_PASSWORD)=' .env || true
 
       - name: Build local images (no registry)
         working-directory: ${{ env.DEPLOY_DIR }}
@@ -78,6 +80,72 @@ jobs:
           echo "Recent logs:"
           docker logs --tail=200 workshop-api || true
           exit 1
+
+      - name: Wait for observability stack
+        run: |
+          set -e
+          echo "=== Verificando stack de observabilidade ==="
+          
+          # Verificar Loki (com retry)
+          echo ">>> Verificando Loki..."
+          ATTEMPTS=30
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            LOKI_STATUS=$(curl -s http://localhost:3100/ready 2>/dev/null || echo "not ready")
+            echo "[$i/${ATTEMPTS}] Loki: ${LOKI_STATUS}"
+            if [ "$LOKI_STATUS" = "ready" ]; then
+              echo "Loki is ready ✅"
+              break
+            fi
+            if [ $i -eq $ATTEMPTS ]; then
+              echo "Loki did not become ready in time ⚠️"
+              docker logs loki --tail=50 || true
+            fi
+            sleep $SLEEP
+          done
+          
+          # Verificar Grafana
+          echo ""
+          echo ">>> Verificando Grafana..."
+          ATTEMPTS=30
+          for i in $(seq 1 $ATTEMPTS); do
+            GRAFANA_STATUS=$(curl -s http://localhost:3000/api/health 2>/dev/null | grep -o '"database":"ok"' || echo "not ready")
+            echo "[$i/${ATTEMPTS}] Grafana: ${GRAFANA_STATUS}"
+            if [ "$GRAFANA_STATUS" = '"database":"ok"' ]; then
+              echo "Grafana is ready ✅"
+              break
+            fi
+            if [ $i -eq $ATTEMPTS ]; then
+              echo "Grafana did not become ready in time ⚠️"
+              docker logs grafana --tail=50 || true
+            fi
+            sleep $SLEEP
+          done
+          
+          # Verificar Promtail
+          echo ""
+          echo ">>> Verificando Promtail..."
+          TARGETS=$(docker logs promtail 2>&1 | grep -c "added Docker target" || echo "0")
+          echo "Promtail coletando $TARGETS containers"
+          if [ "$TARGETS" -gt 0 ]; then
+            echo "Promtail is collecting logs ✅"
+          else
+            echo "Promtail may not be collecting logs ⚠️"
+            docker logs promtail --tail=30 || true
+          fi
+          
+          # Verificar labels no Loki
+          echo ""
+          echo ">>> Verificando labels no Loki..."
+          LABELS=$(curl -s http://localhost:3100/loki/api/v1/labels 2>/dev/null || echo "{}")
+          if echo "$LABELS" | grep -q "container_name"; then
+            echo "Labels OK ✅"
+          else
+            echo "Labels may not be available yet (normal on first deploy) ⚠️"
+          fi
+          
+          echo ""
+          echo "=== Stack de observabilidade verificada ==="
 
       - name: Bootstrap pgBackRest
         working-directory: ${{ env.DEPLOY_DIR }}

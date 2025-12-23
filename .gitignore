@@ -38,3 +38,6 @@ out/
 
 ### Cursor IDE ###
 .cursor/rules/
+
+### POC Files ###
+estudos/

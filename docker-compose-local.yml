@@ -1,11 +1,10 @@
-version: "3"
 services:
   workshop-db:
     container_name: workshop-db
     image: postgres:16.1-alpine
     environment:
       LC_ALL: C.UTF-8
-      TZ: GMT
+      TZ: America/Sao_Paulo
       POSTGRES_DB: workshop_db
       POSTGRES_USER: workshop_admin
       POSTGRES_PASSWORD: pass
