@@ -26,11 +26,7 @@ services:
       - "-c"
       - "archive_command=pgbackrest --stanza=workshop archive-push %p"
     healthcheck:
-      test: [ "CMD-SHELL",
-              "pg_isready -h 127.0.0.1 -p 5432 -U \"$DB_USERNAME\" -d \"$DB_NAME\" >/dev/null 2>&1" ,
-              "&&",
-              "psql -U \"$DB_USERNAME\" -d \"$DB_NAME\" -tAc \"SELECT 1\" >/dev/null 2>&1"
-      ]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB && psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c 'SELECT 1' > /dev/null"]
       interval: 10s
       timeout: 5s
       retries: 10
