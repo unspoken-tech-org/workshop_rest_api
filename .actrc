@@ -1,0 +1,6 @@
+# act configuration
+# Use custom image with rsync and other tools
+-P self-hosted=workshop-act-runner:latest
+-P ubuntu-latest=workshop-act-runner:latest
+--secret-file .secrets
+--pull=false

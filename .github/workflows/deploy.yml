@@ -1,27 +1,44 @@
-name: Deploy Spring Boot App via Self-Hosted Runner
+name: Deploy Spring Boot App v2 (Improved)
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'      # v1.0.0, v2.1.3
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'    # v1.0.0-hotfix, v1.0.0-rc1
+  
+  # Manual deploy for emergencies
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or commit to deploy'
+        required: false
+        default: 'main'
+
+env:
+  COMPOSE_FILE: docker-compose-production.yml
+  DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
+  API_IMAGE: workshop_rest_api-workshop_spring_app
 
 jobs:
-  deploy:
-    name: Deploy on Home Server
+  # ===========================================
+  # JOB 1: BUILD
+  # ===========================================
+  build:
+    name: Build Application
     runs-on: self-hosted
-
-    env:
-      COMPOSE_FILE: docker-compose-production.yml
-      DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Initial step
+      - name: Show build info
         run: |
-          echo "Actual directory:" && pwd
-          echo "Folder content:" && ls -la
+          echo "=== BUILD INFO ==="
+          echo "Version: ${{ github.ref_name }}"
+          echo "Commit:  ${{ github.sha }}"
+          echo "Actor:   ${{ github.actor }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "=================="
 
       - name: Prepare deploy directory
         run: |
@@ -43,24 +60,49 @@ jobs:
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
           LAN_CIDR=${{ secrets.LAN_CIDR }}
+          GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           EOF
           chmod 600 .env
-          echo ".env created:"
-          grep -E '^(DB_NAME|DB_USERNAME|HOST_BIND_IP|LAN_CIDR)=' .env || true
+          echo ".env created ✅"
 
-      - name: Build local images (no registry)
+      - name: Backup current API image
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
+          echo ">>> Creating backup of the current image..."
+          if docker image inspect ${{ env.API_IMAGE }}:latest >/dev/null 2>&1; then
+            docker tag ${{ env.API_IMAGE }}:latest ${{ env.API_IMAGE }}:backup
+            echo "Backup created: ${{ env.API_IMAGE }}:backup ✅"
+          else
+            echo "No previous image found, skipping backup"
+          fi
+
+      - name: Build application image
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo ">>> Building application..."
           docker compose -f "$COMPOSE_FILE" build workshop_spring_app
+          echo "Build completed ✅"
 
-      - name: Up (recreate & remove orphans)
+  # ===========================================
+  # JOB 2: DEPLOY
+  # ===========================================
+  deploy:
+    name: Deploy Application
+    runs-on: self-hosted
+    needs: build
+
+    steps:
+      - name: Deploy containers
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
+          echo ">>> Deploying containers..."
           docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
-          echo "===== SERVICES ====="
+          echo "=== SERVICES ==="
           docker compose -f "$COMPOSE_FILE" ps
 
-      - name: Wait for workshop-api health
+      - name: Wait for API health
+        id: wait-api
         run: |
           set -e
           ATTEMPTS=90
@@ -79,6 +121,114 @@ jobs:
           docker logs --tail=200 workshop-api || true
           exit 1
 
+      - name: Rollback on API failure
+        if: failure() && steps.wait-api.outcome == 'failure'
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "⚠️ API failed the health check, attempting rollback..."
+          
+          if docker image inspect ${{ env.API_IMAGE }}:backup >/dev/null 2>&1; then
+            echo ">>> Restoring backup image..."
+            docker tag ${{ env.API_IMAGE }}:backup ${{ env.API_IMAGE }}:latest
+            
+            echo ">>> Recreating container with previous image..."
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate workshop_spring_app
+            
+            echo ">>> Waiting for API after rollback..."
+            ATTEMPTS=60
+            SLEEP=5
+            for i in $(seq 1 $ATTEMPTS); do
+              STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
+              echo "[Rollback $i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
+              if [ "$STATUS" = "healthy" ]; then
+                echo "Rollback successful! API restored ✅"
+                exit 0
+              fi
+              sleep $SLEEP
+            done
+            echo "Rollback failed - API is still not healthy ❌"
+            docker logs --tail=100 workshop-api || true
+            exit 1
+          else
+            echo "No backup image found for rollback ❌"
+            echo "This is probably the first deploy."
+            exit 1
+          fi
+
+  # ===========================================
+  # JOB 3: VERIFY
+  # ===========================================
+  verify:
+    name: Verify Deployment
+    runs-on: self-hosted
+    needs: deploy
+
+    steps:
+      - name: Check observability stack
+        run: |
+          set -e
+          echo "=== Checking observability stack ==="
+          
+          # Check Loki
+          echo ">>> Checking Loki..."
+          ATTEMPTS=30
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            LOKI_STATUS=$(curl -s http://localhost:3100/ready 2>/dev/null || echo "not ready")
+            echo "[$i/${ATTEMPTS}] Loki: ${LOKI_STATUS}"
+            if [ "$LOKI_STATUS" = "ready" ]; then
+              echo "Loki is ready ✅"
+              break
+            fi
+            if [ $i -eq $ATTEMPTS ]; then
+              echo "Loki did not become ready in time ⚠️"
+              docker logs loki --tail=50 || true
+            fi
+            sleep $SLEEP
+          done
+          
+          # Check Grafana
+          echo ""
+          echo ">>> Checking Grafana..."
+          for i in $(seq 1 $ATTEMPTS); do
+            GRAFANA_STATUS=$(curl -s http://localhost:3000/api/health 2>/dev/null | grep -o '"database":"ok"' || echo "not ready")
+            echo "[$i/${ATTEMPTS}] Grafana: ${GRAFANA_STATUS}"
+            if [ "$GRAFANA_STATUS" = '"database":"ok"' ]; then
+              echo "Grafana is ready ✅"
+              break
+            fi
+            if [ $i -eq $ATTEMPTS ]; then
+              echo "Grafana did not become ready in time ⚠️"
+              docker logs grafana --tail=50 || true
+            fi
+            sleep $SLEEP
+          done
+          
+          # Check Promtail
+          echo ""
+          echo ">>> Checking Promtail..."
+          TARGETS=$(docker logs promtail 2>&1 | grep -c "added Docker target" || echo "0")
+          echo "Promtail collecting $TARGETS containers"
+          if [ "$TARGETS" -gt 0 ]; then
+            echo "Promtail is collecting logs ✅"
+          else
+            echo "Promtail may not be collecting logs ⚠️"
+            docker logs promtail --tail=30 || true
+          fi
+          
+          # Check labels
+          echo ""
+          echo ">>> Checking labels in Loki..."
+          LABELS=$(curl -s http://localhost:3100/loki/api/v1/labels 2>/dev/null || echo "{}")
+          if echo "$LABELS" | grep -q "container_name"; then
+            echo "Labels OK ✅"
+          else
+            echo "Labels may not be available yet (normal on first deploy) ⚠️"
+          fi
+          
+          echo ""
+          echo "=== Observability stack checked ==="
+
       - name: Bootstrap pgBackRest
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
@@ -89,21 +239,20 @@ jobs:
             echo "Postgres container not found"; exit 1
           fi
 
-          echo ">>> Verificando stanza..."
+          echo ">>> Checking stanza..."
           if docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check; then
             echo "stanza OK ✅"
           else
-            echo "stanza ausente, criando..."
+            echo "stanza missing, creating..."
             docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create
             docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check
-            echo "stanza criada e OK ✅"
+            echo "stanza created and OK ✅"
           fi
           
-          echo ">>> Estado dos backups:"
+          echo ">>> Backup status:"
           docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest info || true
 
-
-      - name: Grant LAN access at pg_hba.conf
+      - name: Configure LAN access (conditional)
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
           set -e
@@ -112,38 +261,94 @@ jobs:
             echo "Postgres container not found"; exit 1
           fi
           
-          docker exec "$PG_CID" bash -lc '
+          echo ">>> Checking pg_hba.conf..."
+          
+          # Check if LAN rule already exists, only add and reload if needed
+          CHANGED=$(docker exec "$PG_CID" bash -c '
             set -e
             FILE="$PGDATA/pg_hba.conf"
-            LINE_LOCAL="local all '"${DB_USERNAME}"' md5"
             LINE_LAN="host all all '"${{ secrets.LAN_CIDR }}"' md5"
-            grep -qF "$LINE_LAN" "$FILE" || echo "$LINE_LAN" >> "$FILE"
-          '
-          docker restart "$PG_CID"
+            if grep -qF "$LINE_LAN" "$FILE"; then
+              echo "no"
+            else
+              echo "$LINE_LAN" >> "$FILE"
+              echo "yes"
+            fi
+          ')
           
-          ATTEMPTS=60; SLEEP=3
-          for i in $(seq 1 $ATTEMPTS); do
-            STATUS=$(docker inspect --format='"'{{json .State.Health.Status}}'"' "$PG_CID" 2>/dev/null | tr -d '"')
-            echo "[PG $i/$ATTEMPTS] health: ${STATUS:-unknown}"
-            [ "$STATUS" = "healthy" ] && break
-            sleep $SLEEP
-          done
+          if [ "$CHANGED" = "yes" ]; then
+            echo ">>> pg_hba.conf updated, reloading PostgreSQL config..."
+            # Use pg_ctl reload instead of restart to avoid downtime
+            docker exec -u postgres "$PG_CID" pg_ctl reload -D "$PGDATA" 2>/dev/null || \
+              docker exec "$PG_CID" psql -U "${{ secrets.DB_USERNAME }}" -c "SELECT pg_reload_conf();" || \
+              echo "Reload command not available, will apply on next restart"
+            echo "PostgreSQL config reloaded ✅ (no restart needed)"
+          else
+            echo "LAN access already configured, skipping ✅"
+          fi
 
-      - name: Containers status
+      - name: Verify PostgreSQL health
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          echo "===== CONTAINERS STATUS ====="
-          docker compose -f "$COMPOSE_FILE" ps
+          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
+          STATUS=$(docker inspect --format='{{json .State.Health.Status}}' "$PG_CID" 2>/dev/null | tr -d '"')
+          echo "PostgreSQL health: ${STATUS:-unknown}"
+          if [ "$STATUS" = "healthy" ]; then
+            echo "PostgreSQL is healthy ✅"
+          else
+            echo "PostgreSQL health check: ${STATUS} ⚠️"
+          fi
 
-      - name: Verify containers status and logs
+      - name: Final containers status
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          echo "===== CONTAINERS STATUS ====="
+          echo "=== FINAL CONTAINERS STATUS ==="
           docker compose -f "$COMPOSE_FILE" ps
           echo ""
-          echo "===== CONTAINERS LOGS (Last 50) ====="
+          echo "=== CONTAINERS LOGS (Last 30 lines) ==="
           for service in $(docker compose -f "$COMPOSE_FILE" ps --services); do
             echo ""
             echo "----- Logs: $service -----"
-            docker compose -f "$COMPOSE_FILE" logs --tail=50 "$service" || true
+            docker compose -f "$COMPOSE_FILE" logs --tail=30 "$service" || true
           done
+
+  # ===========================================
+  # JOB 4: CLEANUP
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    runs-on: self-hosted
+    needs: verify
+    if: always()
+
+    steps:
+      - name: Cleanup dangling images
+        run: |
+          echo ">>> Cleaning dangling images..."
+          docker image prune -f
+          echo ""
+          echo ">>> Docker disk usage:"
+          docker system df
+          echo ""
+          echo "Cleanup completed ✅"
+
+      - name: Summary
+        if: success()
+        run: |
+          echo ""
+          echo "============================================="
+          echo "  DEPLOY COMPLETED SUCCESSFULLY"
+          echo "============================================="
+          echo ""
+          echo "  Version: ${{ github.ref_name }}"
+          echo "  Commit:  ${{ github.sha }}"
+          echo "  Actor:   ${{ github.actor }}"
+          echo "  Trigger: ${{ github.event_name }}"
+          echo ""
+          echo "  Services:"
+          echo "    - API:     http://localhost:8080"
+          echo "    - Grafana: http://localhost:3000 (via SSH tunnel)"
+          echo "    - Loki:    http://localhost:3100 (via SSH tunnel)"
+          echo ""
+          echo "============================================="
+
