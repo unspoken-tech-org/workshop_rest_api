@@ -1,3 +1,6 @@
+app:
+  version: '@project.version@'
+
 spring:
   profiles:
     active: local
@@ -6,9 +9,6 @@ spring:
     hibernate:
       default_schema: public
       ddl-auto: validate
-#      allow camel case names on entities
-#      naming:
-#        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.temp.use_jdbc_metadata_defaults: false
