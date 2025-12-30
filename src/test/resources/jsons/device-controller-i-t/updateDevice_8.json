@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "problem: O problema do aparelho não pode ser vazio. Adicione o problema"
+        "message": "problem: O problema do aparelho não pode estar vazio. Adicione o problema"
     }
 }

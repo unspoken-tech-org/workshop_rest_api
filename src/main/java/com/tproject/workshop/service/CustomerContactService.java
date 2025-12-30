@@ -11,6 +11,7 @@ import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.utils.UtilsString;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ public class CustomerContactService {
 
     private final List<String> contactTypesThatNeedPhone = List.of("ligacao", "mensagem");
 
+    @Transactional
     public CustomerContact save(CustomerContactInputDto contact) {
         Device device = deviceRepository.findById(contact.deviceId()).orElseThrow(() ->
                 new NotFoundException(String.format("Aparelho com id %d não encontrado", contact.deviceId()))

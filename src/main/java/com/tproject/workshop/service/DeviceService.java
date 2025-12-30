@@ -45,6 +45,7 @@ public class DeviceService {
         return device;
     }
 
+    @Transactional
     public DeviceOutputDto updateDevice(DeviceUpdateInputDtoRecord device) {
         Device oldDevice = deviceRepository.findById(device.deviceId())
                 .orElseThrow(() -> new NotFoundException(
