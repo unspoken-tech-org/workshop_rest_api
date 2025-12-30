@@ -8,6 +8,7 @@ import com.tproject.workshop.repository.PaymentRepository;
 import com.tproject.workshop.utils.UtilsString;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Stream;
 
@@ -17,6 +18,7 @@ public class PaymentService {
     private final PaymentRepository repository;
     private final DeviceService deviceService;
 
+    @Transactional
     public Payment save(PaymentDeviceInputDto payment) {
         deviceService.findDeviceById(payment.deviceId());
 

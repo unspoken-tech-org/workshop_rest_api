@@ -5,6 +5,7 @@ import com.tproject.workshop.model.Technician;
 import com.tproject.workshop.repository.TechnicianRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public class TechnicianService {
                 .orElseThrow(() -> new NotFoundException(String.format("Técnico com id %d não encontrado", id)));
     }
 
-
+    @Transactional
     public Technician save(Technician technician) {
         var technicianFound = technicianRepository.findByNameIgnoreCase(technician.getName());
         if (technicianFound.isPresent()) {
