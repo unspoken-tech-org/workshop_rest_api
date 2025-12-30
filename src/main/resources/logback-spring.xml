@@ -39,6 +39,8 @@
          JSON structured logs for Loki/ELK
          ======================================== -->
     <springProfile name="production">
+        <springProperty scope="context" name="appVersion" source="app.version" defaultValue="unknown"/>
+        
         <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
                 <!-- MDC fields -->
@@ -58,8 +60,8 @@
                     <stackTrace>stackTrace</stackTrace>
                 </fieldNames>
                 
-                <!-- Add application name -->
-                <customFields>{"application":"workshop-api","version":"1.0.2"}</customFields>
+                <!-- Add application name and version (version is injected from build.gradle) -->
+                <customFields>{"application":"workshop-api","version":"${appVersion}"}</customFields>
                 
                 <!-- Exception formatting -->
                 <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">

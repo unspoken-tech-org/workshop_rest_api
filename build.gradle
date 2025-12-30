@@ -5,7 +5,19 @@ plugins {
 }
 
 group = 'com.tproject'
-version = '1.1.0'
+version = '1.1.1'
+
+springBoot {
+    buildInfo()
+}
+
+processResources {
+    filesMatching('**/application*.yml') {
+        filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [
+            'project.version': project.version.toString()
+        ])
+    }
+}
 
 java {
     sourceCompatibility = '21'

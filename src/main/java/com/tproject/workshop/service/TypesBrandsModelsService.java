@@ -9,6 +9,7 @@ import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypesBrandsModelsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class TypesBrandsModelsService {
     private final BrandService brandService;
     private final ModelService modelService;
 
+    @Transactional
     BrandsModelsTypes createOrReturnExistentBrandModelType(TypeBrandModelInputDtoRecord typeBrandModel) {
         var typeInput = typeBrandModel.type();
         var brandInput = typeBrandModel.brand();
@@ -45,6 +47,7 @@ public class TypesBrandsModelsService {
         return typesBrandsModelsRepository.saveAndFlush(brandModelType);
     }
 
+    @Transactional(readOnly = true)
     public List<TypeRecord> getTypesBrandsModels() {
         return typesBrandsModelsRepository.getTypesBrandsModels();
     }
