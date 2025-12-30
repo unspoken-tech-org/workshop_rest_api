@@ -1,6 +1,6 @@
 {
     "status": 404,
-    "title": "Entitdade não encontrada",
+    "title": "Entidade não encontrada",
     "error": {
         "code": "entity.not.found.for.request",
         "message": "Não existe cliente com id 250"

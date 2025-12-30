@@ -50,6 +50,7 @@ public class CustomerService {
      * JPA-based implementation for benchmark comparison with JDBC.
      * Returns the same CustomerOutputDto but uses Hibernate instead of native SQL.
      */
+    @Transactional(readOnly = true)
     public CustomerOutputDto findByIdUsingJpa(int id) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
