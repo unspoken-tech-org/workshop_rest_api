@@ -41,3 +41,18 @@ logging:
     org.hibernate: WARN
     org.hibernate.SQL: WARN
     org.flywaydb: INFO
+
+jwt:
+  rsa:
+    public-key: file:/app/config/keys/public.pem
+    private-key: file:/app/config/keys/private-pkcs8.pem
+  access-token:
+    expiration: 900        # 15 minutes
+  refresh-token:
+    expiration: 604800     # 7 days
+
+# CORS - origens permitidas em produção
+cors:
+  allowed-origins:
+    - https://api.seu-dominio.com
+    - https://seu-dominio.com
