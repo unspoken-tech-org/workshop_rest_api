@@ -10,4 +10,5 @@ truncate phones RESTART IDENTITY cascade;
 truncate customer_phones RESTART IDENTITY cascade;
 truncate payments RESTART IDENTITY cascade;
 truncate brands_models_types RESTART IDENTITY cascade;
-
+truncate refresh_tokens RESTART IDENTITY cascade;
+truncate api_keys RESTART IDENTITY cascade;
