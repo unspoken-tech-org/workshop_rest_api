@@ -9,14 +9,18 @@ services:
     environment:
       LC_ALL: C.UTF-8
       TZ: America/Sao_Paulo
+      PGTZ: America/Sao_Paulo
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "${HOST_BIND_IP}:5432:5432"
     command:
+      - "postgres"
       - "-c"
       - "listen_addresses=*"
+      - "-c"
+      - "timezone=America/Sao_Paulo"
       - "-c"
       - "wal_level=replica"
       - "-c"
@@ -55,7 +59,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: production
-      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx768m"
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo"
       TZ: America/Sao_Paulo
     healthcheck:
       test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || curl -fsS http://localhost:8080/actuator/health || exit 1" ]
