@@ -3,7 +3,10 @@ package com.tproject.workshop.service.auth;
 import com.tproject.workshop.config.security.RsaKeyProperties;
 import com.tproject.workshop.exception.InvalidTokenException;
 import com.tproject.workshop.exception.TokenExpiredException;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,10 +24,10 @@ import java.util.UUID;
 public class JwtService {
 
     private final RsaKeyProperties rsaKeys;
-    
+
     @Value("${jwt.access-token.expiration}")
     private long accessTokenExpiration;
-    
+
     private static final String ISSUER = "workshop-api";
     private static final String AUDIENCE = "workshop-api";
 
@@ -34,11 +37,11 @@ public class JwtService {
     public String generateAccessToken(String subject, Map<String, Object> claims) {
         Instant now = Instant.now();
         Instant expiry = now.plusSeconds(accessTokenExpiration);
-        
+
         return Jwts.builder()
                 .header()
-                    .type("JWT")
-                    .and()
+                .type("JWT")
+                .and()
                 .subject(subject)
                 .issuer(ISSUER)
                 .audience().add(AUDIENCE).and()
@@ -53,6 +56,10 @@ public class JwtService {
     /**
      * Validates the token and extracts claims.
      * Throws exception if invalid or expired.
+     *
+     * @return Claims object
+     * @throws InvalidTokenException if token is invalid
+     * @throws TokenExpiredException if token is expired
      */
     public Claims validateAndGetClaims(String token) {
         try {
