@@ -41,6 +41,7 @@ public class AbstractIntegrationLiveTest {
     protected static final String PROTOCOL_HTTP = "http://";
 
     protected static final int API_PORT = 8081;
+    protected static final String API_KEY = TestAuthHelper.MOBILE_API_KEY;
 
 
     @Autowired
@@ -52,12 +53,42 @@ public class AbstractIntegrationLiveTest {
 
     protected static final RequestSpecification SPEC = createRequestSpecification(API_PORT);
 
+    // Lazy-initialized authenticated spec (cached after first use)
+    private static RequestSpecification cachedAuthenticatedSpec;
 
     protected static RequestSpecification createRequestSpecification(int apiPort) {
         return new RequestSpecBuilder().setContentType(ContentType.JSON)
                 .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + apiPort)
                 .addFilter(new ResponseLoggingFilter())
                 .addFilter(new RequestLoggingFilter()).build();
+    }
+
+    /**
+     * Returns a RequestSpecification with JWT authentication using the default API Key.
+     * Uses lazy initialization to avoid calling the auth endpoint before Spring context is ready.
+     *
+     * @return RequestSpecification with JWT authentication
+     */
+    protected static RequestSpecification getAuthenticatedSpec() {
+        if (cachedAuthenticatedSpec == null) {
+            String token = TestAuthHelper.getAccessToken(SPEC, API_KEY);
+            cachedAuthenticatedSpec = new RequestSpecBuilder().setContentType(ContentType.JSON)
+                    .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT)
+                    .addFilter(new ResponseLoggingFilter())
+                    .addFilter(new RequestLoggingFilter())
+                    .addHeader("Authorization", "Bearer " + token)
+                    .build();
+        }
+        return cachedAuthenticatedSpec;
+    }
+
+    /**
+     * Alias for getAuthenticatedSpec() to maintain compatibility with existing tests.
+     *
+     * @deprecated Use getAuthenticatedSpec() for clarity
+     */
+    protected static RequestSpecification AUTHENTICATED_SPEC() {
+        return getAuthenticatedSpec();
     }
 
     public void validateResponse(Object index, Object response) {
