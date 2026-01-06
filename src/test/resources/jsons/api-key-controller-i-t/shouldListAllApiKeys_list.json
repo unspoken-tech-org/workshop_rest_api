@@ -1,0 +1,58 @@
+[
+    {
+        "id": 1,
+        "maskedKeyValue": "sk_mobile_****7890",
+        "clientName": "test_app",
+        "platform": "MOBILE",
+        "description": "Test API Key - Mobile",
+        "active": true,
+        "createdAt": "2026-01-06T01:21:24.620180Z",
+        "lastUsedAt": "2026-01-06T01:21:27.998623Z"
+    },
+    {
+        "id": 2,
+        "maskedKeyValue": "sk_web_****7890",
+        "clientName": "test_app",
+        "platform": "WEB",
+        "description": "Test API Key - Web",
+        "active": true,
+        "createdAt": "2026-01-06T01:21:24.620180Z"
+    },
+    {
+        "id": 3,
+        "maskedKeyValue": "sk_desktop_****7890",
+        "clientName": "test_app",
+        "platform": "DESKTOP",
+        "description": "Test API Key - Desktop",
+        "active": true,
+        "createdAt": "2026-01-06T01:21:24.620180Z"
+    },
+    {
+        "id": 4,
+        "maskedKeyValue": "sk_server_****7890",
+        "clientName": "test_app",
+        "platform": "SERVER",
+        "description": "Test API Key - Server",
+        "active": true,
+        "createdAt": "2026-01-06T01:21:24.620180Z"
+    },
+    {
+        "id": 5,
+        "maskedKeyValue": "sk_mobile_****7890",
+        "clientName": "test_expired",
+        "platform": "MOBILE",
+        "description": "Test API Key - Expired",
+        "active": true,
+        "createdAt": "2026-01-06T01:21:24.620180Z",
+        "expiresAt": "2026-01-05T01:21:24.620180Z"
+    },
+    {
+        "id": 6,
+        "maskedKeyValue": "sk_mobile_****7890",
+        "clientName": "test_inactive",
+        "platform": "MOBILE",
+        "description": "Test API Key - Inactive",
+        "active": false,
+        "createdAt": "2026-01-06T01:21:24.620180Z"
+    }
+]

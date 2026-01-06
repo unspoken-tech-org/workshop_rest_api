@@ -1,0 +1,8 @@
+{
+    "status": 401,
+    "title": "API Key Inválida",
+    "error": {
+        "code": "auth.invalid.api.key",
+        "message": "An API Key already exists for this client on this platform"
+    }
+}
