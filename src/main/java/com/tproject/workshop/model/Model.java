@@ -2,6 +2,7 @@ package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 
 import java.util.List;
 
@@ -17,5 +18,6 @@ public class Model {
     private String model;
 
     @OneToMany(mappedBy = "idModel", cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<BrandsModelsTypes> brandsModelsTypes;
 }
