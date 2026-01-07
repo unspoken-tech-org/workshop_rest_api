@@ -3,13 +3,11 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.dto.device.*;
 import com.tproject.workshop.enums.DeviceHistoryFieldEnum;
 import com.tproject.workshop.enums.DeviceStatusEnum;
-import com.tproject.workshop.events.DeviceViewedEvent;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +26,6 @@ public class DeviceService {
     private final ColorService colorService;
     private final TypesBrandsModelsService typeBrandModelService;
     private final TechnicianService technicianService;
-    private final ApplicationEventPublisher eventPublisher;
 
 
     public Page<DeviceTableDto> listDevices(DeviceQueryParam deviceQueryParam) {
@@ -37,12 +34,8 @@ public class DeviceService {
 
     @Transactional(readOnly = true)
     public DeviceOutputDto findDeviceById(int deviceId) {
-        DeviceOutputDto device = deviceRepository.findByDeviceId(deviceId)
+        return deviceRepository.findByDeviceId(deviceId)
                 .orElseThrow(() -> new NotFoundException(String.format("Aparelho com id %d não encontrado", deviceId)));
-
-        eventPublisher.publishEvent(new DeviceViewedEvent(this, deviceId));
-
-        return device;
     }
 
     @Transactional
