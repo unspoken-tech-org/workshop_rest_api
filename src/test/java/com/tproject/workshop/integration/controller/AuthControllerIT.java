@@ -2,6 +2,7 @@ package com.tproject.workshop.integration.controller;
 
 import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import com.tproject.workshop.integration.TestAuthHelper;
+import io.jsonwebtoken.Jwts;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.*;
@@ -10,8 +11,14 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
@@ -174,9 +181,26 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
         super.validateResponse("invalid_refresh", response);
     }
 
+    @Order(8)
+    @DisplayName("Reject refresh with expired refresh token (R2)")
+    @Test
+    public void shouldReturn401_whenExpiredRefreshToken() {
+        // The token 'rt_EXPIRED_TOKEN_1234567890' is inserted via AuthSetup.sql with an expired date
+        Response response = given().spec(SPEC)
+                .body(Map.of("refreshToken", "rt_EXPIRED_TOKEN_1234567890"))
+                .when()
+                .post(AUTH_PATH + "/refresh")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED)
+                .extract()
+                .response();
+
+        super.validateResponse("expired_refresh", response);
+    }
+
     // ========== Revoke Token Endpoint Tests ==========
 
-    @Order(8)
+    @Order(9)
     @DisplayName("Revoke refresh token successfully")
     @Test
     public void shouldReturn204_whenRevokingValidToken() {
@@ -201,7 +225,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
 
     // ========== Protected Endpoint Tests ==========
 
-    @Order(9)
+    @Order(10)
     @DisplayName("Access protected endpoint with valid JWT")
     @Test
     public void shouldReturn200_whenAccessingProtectedEndpointWithValidJwt() {
@@ -213,7 +237,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_OK);
     }
 
-    @Order(10)
+    @Order(11)
     @DisplayName("Reject access to protected endpoint without JWT")
     @Test
     public void shouldReturn401_whenAccessingProtectedEndpointWithoutJwt() {
@@ -224,12 +248,44 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_UNAUTHORIZED);
     }
 
-    @Order(11)
+    @Order(12)
     @DisplayName("Reject access to protected endpoint with invalid JWT")
     @Test
     public void shouldReturn401_whenAccessingProtectedEndpointWithInvalidJwt() {
         given().spec(SPEC)
                 .header("Authorization", "Bearer invalid.jwt.token")
+                .when()
+                .get("/v1/admin/api-keys")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+    }
+
+    @Order(13)
+    @DisplayName("Reject access with JWT signed by a different RSA key (Key Rotation Scenario)")
+    @Test
+    public void shouldReturn401_whenJwtSignedByDifferentKey() throws NoSuchAlgorithmException {
+        // 1. Generate a completely different RSA KeyPair for this test
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        keyPairGenerator.initialize(2048);
+        KeyPair differentKeyPair = keyPairGenerator.generateKeyPair();
+
+        // 2. Create a JWT signed with this "intruder" private key
+        Instant now = Instant.now();
+        String intruderToken = Jwts.builder()
+                .header().type("JWT").and()
+                .subject("Test-Client")
+                .issuer("workshop-api")
+                .audience().add("workshop-api").and()
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(900)))
+                .id(UUID.randomUUID().toString())
+                .signWith(differentKeyPair.getPrivate(), Jwts.SIG.RS256)
+                .compact();
+
+        // 3. Try to access a protected endpoint with this token
+        // The server will try to validate it using its own public key and fail
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + intruderToken)
                 .when()
                 .get("/v1/admin/api-keys")
                 .then()
