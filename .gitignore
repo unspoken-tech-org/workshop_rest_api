@@ -39,9 +39,6 @@ out/
 ### Cursor IDE ###
 .cursor/rules/
 
-### POC Files ###
-estudos/
-
 ### RSA Keys ###
 *.pem
 *.key
@@ -53,3 +50,8 @@ config/keys/
 !src/main/resources/keys/*.pem
 !src/test/resources/keys/
 !src/test/resources/keys/*.pem
+
+### POC Files ###
+estudos/
+
+.gemini/
