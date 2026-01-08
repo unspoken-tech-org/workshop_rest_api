@@ -22,6 +22,7 @@ public final class TestAuthHelper {
     public static final String WEB_API_KEY = "sk_web_TEST_KEY_WEB_12345678901234567890";
     public static final String DESKTOP_API_KEY = "sk_desktop_TEST_KEY_DESKTOP_12345678901234567890";
     public static final String SERVER_API_KEY = "sk_server_TEST_KEY_SERVER_12345678901234567890";
+    public static final String SERVICE_API_KEY = "sk_mobile_TEST_KEY_SERVICE_12345678901234567890";
     public static final String EXPIRED_API_KEY = "sk_mobile_TEST_KEY_EXPIRED_12345678901234567890";
     public static final String INACTIVE_API_KEY = "sk_mobile_TEST_KEY_INACTIVE_12345678901234567890";
     public static final String INVALID_API_KEY = "sk_mobile_INVALID_KEY_DOES_NOT_EXIST";

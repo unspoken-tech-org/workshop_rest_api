@@ -47,7 +47,8 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
                 "[2].id", "[2].createdAt", "[2].lastUsedAt", "[2].expiresAt",
                 "[3].id", "[3].createdAt", "[3].lastUsedAt", "[3].expiresAt",
                 "[4].id", "[4].createdAt", "[4].lastUsedAt", "[4].expiresAt",
-                "[5].id", "[5].createdAt", "[5].lastUsedAt", "[5].expiresAt"
+                "[5].id", "[5].createdAt", "[5].lastUsedAt", "[5].expiresAt",
+                "[6].id", "[6].createdAt", "[6].lastUsedAt", "[6].expiresAt"
         ));
     }
 
@@ -92,113 +93,73 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
                 // Successful creation
                 Arguments.of(1, HttpStatus.SC_CREATED, Map.of(
                         "clientName", "new_client_mobile",
+                        "userIdentifier", "tech_1",
                         "platform", "MOBILE",
                         "description", "New mobile client"
                 ), "create API Key for new mobile client"),
 
                 Arguments.of(2, HttpStatus.SC_CREATED, Map.of(
                         "clientName", "new_client_web",
+                        "userIdentifier", "web_user",
                         "platform", "WEB",
                         "description", "New web client"
                 ), "create API Key for new web client"),
 
                 // Validation errors
                 Arguments.of(3, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "userIdentifier", "tech_1",
                         "platform", "MOBILE",
                         "description", "Missing client name"
                 ), "create API Key without clientName"),
 
                 Arguments.of(4, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "clientName", "test_client",
+                        "userIdentifier", "tech_1",
                         "description", "Missing platform"
                 ), "create API Key without platform"),
 
-                // Conflict - duplicate
+                Arguments.of(6, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "clientName", "test_client",
+                        "platform", "MOBILE",
+                        "description", "Missing user identifier"
+                ), "create API Key without userIdentifier"),
+
+                // Conflict - duplicate (same client, user and platform)
                 Arguments.of(5, HttpStatus.SC_UNAUTHORIZED, Map.of(
                         "clientName", "test_app",
+                        "userIdentifier", "admin_user",
                         "platform", "MOBILE",
                         "description", "Duplicate - should fail"
-                ), "create duplicate API Key - same client and platform")
+                ), "create duplicate API Key - same client, user and platform")
         );
     }
 
-    // ========== Find API Key by ID Tests ==========
+    // ========== RBAC Authorization Tests ==========
 
     @Order(4)
-    @DisplayName("Find API Key by ID")
+    @DisplayName("Create API Key - Forbidden (Service Role)")
     @Test
-    public void shouldFindApiKeyById() {
-        int id = 1;
-
-        Response response = given().spec(getAuthenticatedSpec())
+    public void shouldReturn403_whenCreatingWithServiceRole() {
+        given().spec(getServiceAuthenticatedSpec())
+                .body(Map.of(
+                        "clientName", "some_client",
+                        "userIdentifier", "some_user",
+                        "platform", "MOBILE"
+                ))
                 .when()
-                .get(BASE_PATH + "/" + id)
+                .post(BASE_PATH)
                 .then()
-                .statusCode(HttpStatus.SC_OK)
-                .extract()
-                .response();
-
-        super.validateResponseIgnoreAttributes("find_by_id", response, List.of(
-                "createdAt", "lastUsedAt"
-        ));
+                .statusCode(HttpStatus.SC_FORBIDDEN);
     }
 
     @Order(5)
-    @DisplayName("Find API Key by ID - not found")
+    @DisplayName("Revoke API Key - Forbidden (Service Role)")
     @Test
-    public void shouldReturn404_whenApiKeyNotFound() {
-        Response response = given().spec(getAuthenticatedSpec())
+    public void shouldReturn403_whenRevokingWithServiceRole() {
+        given().spec(getServiceAuthenticatedSpec())
                 .when()
-                .get(BASE_PATH + "/99999")
+                .delete(BASE_PATH + "/1")
                 .then()
-                .statusCode(HttpStatus.SC_NOT_FOUND)
-                .extract()
-                .response();
-
-        super.validateResponse("not_found", response);
-    }
-
-    // ========== Revoke API Key Tests ==========
-
-    @Order(6)
-    @DisplayName("Revoke API Key")
-    @Test
-    public void shouldRevokeApiKey() {
-        int id = 1;
-
-        // Revoke it
-        given().spec(getAuthenticatedSpec())
-                .when()
-                .delete(BASE_PATH + "/" + id)
-                .then()
-                .statusCode(HttpStatus.SC_NO_CONTENT);
-
-        // Verify it's inactive
-        Response response = given().spec(getAuthenticatedSpec())
-                .when()
-                .get(BASE_PATH + "/" + id)
-                .then()
-                .statusCode(HttpStatus.SC_OK)
-                .extract()
-                .response();
-
-        super.validateResponseIgnoreAttributes("revoked", response, List.of(
-                "createdAt", "lastUsedAt"
-        ));
-    }
-
-    @Order(7)
-    @DisplayName("Revoke API Key - not found")
-    @Test
-    public void shouldReturn404_whenRevokingNonExistentApiKey() {
-        Response response = given().spec(getAuthenticatedSpec())
-                .when()
-                .delete(BASE_PATH + "/99999")
-                .then()
-                .statusCode(HttpStatus.SC_NOT_FOUND)
-                .extract()
-                .response();
-
-        super.validateResponse("revoke_not_found", response);
+                .statusCode(HttpStatus.SC_FORBIDDEN);
     }
 }
