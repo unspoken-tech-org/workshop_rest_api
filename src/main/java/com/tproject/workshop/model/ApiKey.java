@@ -28,9 +28,17 @@ public class ApiKey {
     @Column(name = "client_name", nullable = false, length = 100)
     private String clientName;
 
+    @Column(name = "user_identifier", nullable = false, length = 100)
+    private String userIdentifier;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Platform platform;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private Role role = Role.SERVICE;
 
     @Column
     private String description;
