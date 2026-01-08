@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -47,18 +49,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Claims claims = jwtService.validateAndGetClaims(token);
             String subject = claims.getSubject();
 
+            // Extract roles from claims
+            @SuppressWarnings("unchecked")
+            List<String> roles = claims.get("roles", List.class);
+            List<SimpleGrantedAuthority> authorities = roles == null ? Collections.emptyList() :
+                    roles.stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .toList();
+
             // Creates authentication in the Spring Security context
             UsernamePasswordAuthenticationToken authentication = 
                     new UsernamePasswordAuthenticationToken(
                             subject,
                             null,
-                            Collections.emptyList()  // No roles
+                            authorities
                     );
             
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.debug("JWT authentication succeeded for: {}", subject);
+            log.debug("JWT authentication succeeded for: {} with roles: {}", subject, roles);
 
         } catch (Exception e) {
             log.warn("JWT authentication failed: {}", e.getMessage());

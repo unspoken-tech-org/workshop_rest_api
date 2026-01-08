@@ -14,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -30,6 +31,17 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger EXCEPTION_LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ResponseError> handleAccessDeniedException(final AccessDeniedException ex, WebRequest request) {
+        EXCEPTION_LOGGER.warn("Access denied for request: {} | Message: {}",
+                request.getDescription(false), ex.getMessage());
+
+        ErrorMetadata.Error error = new ErrorMetadata.Error("auth.access.denied", "Acesso Negado: Você não tem permissão para realizar esta operação.");
+
+        return new ResponseEntity<>(new ResponseError(HttpStatus.FORBIDDEN.value(), "Acesso Negado",
+                error), HttpStatus.FORBIDDEN);
+    }
 
     @ExceptionHandler({NotFoundException.class, EmptyResultDataAccessException.class})
     public ResponseEntity<ResponseError> handleNotFoundException(final Exception ex, WebRequest request) {
