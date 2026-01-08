@@ -25,6 +25,11 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
     List<ApiKey> findByClientNameAndActiveTrue(String clientName);
 
     /**
+     * Finds all active API Keys for a specific user within a client.
+     */
+    List<ApiKey> findByClientNameAndUserIdentifierAndActiveTrue(String clientName, String userIdentifier);
+
+    /**
      * Finds all active API Keys for a platform.
      */
     List<ApiKey> findByPlatformAndActiveTrue(Platform platform);
@@ -51,7 +56,7 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
     void deactivateByClientName(String clientName);
 
     /**
-     * Checks if there is an active API Key for the client on the platform.
+     * Checks if there is an active API Key for the client, user and platform.
      */
-    boolean existsByClientNameAndPlatformAndActiveTrue(String clientName, Platform platform);
+    boolean existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(String clientName, String userIdentifier, Platform platform);
 }

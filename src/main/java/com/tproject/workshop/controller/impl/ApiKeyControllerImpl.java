@@ -24,7 +24,9 @@ public class ApiKeyControllerImpl implements ApiKeyController {
     public ApiKeyCreatedResponse create(@Valid @RequestBody CreateApiKeyRequest request) {
         return apiKeyService.createApiKey(
                 request.clientName(),
+                request.userIdentifier(),
                 request.platform(),
+                request.role(),
                 request.description(),
                 request.expiresAt()
         );
