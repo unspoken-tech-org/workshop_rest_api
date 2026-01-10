@@ -17,6 +17,7 @@ services:
   workshop_spring_app_qa:
     build: .
     container_name: workshop-api-qa
+    command: ["java", "-Dspring.profiles.active=qa", "-jar", "app.jar"]
     environment:
       - SPRING_PROFILES_ACTIVE=qa
       - SPRING_DATASOURCE_URL=jdbc:postgresql://workshop_db_qa:5432/${DB_NAME}
@@ -26,6 +27,12 @@ services:
       - workshop-qa-network
     volumes:
       - ./config/qa_keys:/app/config/qa_keys:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     depends_on:
       workshop_db_qa:
         condition: service_healthy
