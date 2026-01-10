@@ -57,12 +57,10 @@ services:
   cloudflared_qa:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-qa
-    command: tunnel --no-autoupdate run
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN_QA}
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN_QA}
     networks:
       - workshop-qa-network
-    restart: unless-stopped
 
 networks:
   workshop-qa-network:
