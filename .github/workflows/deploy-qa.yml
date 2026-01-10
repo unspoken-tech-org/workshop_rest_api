@@ -1,6 +1,9 @@
 name: Deploy QA Environment
 
 on:
+  push:
+    branches:
+      - feature/secure_app
   workflow_dispatch:
     inputs:
       ref:
