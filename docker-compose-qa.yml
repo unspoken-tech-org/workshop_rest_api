@@ -18,12 +18,14 @@ services:
     build: .
     container_name: workshop-api-qa
     environment:
-      - SPRING_PROFILES_ACTIVE=production
+      - SPRING_PROFILES_ACTIVE=qa
       - SPRING_DATASOURCE_URL=jdbc:postgresql://workshop_db_qa:5432/${DB_NAME}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
     networks:
       - workshop-qa-network
+    volumes:
+      - ./config/qa_keys:/app/config/qa_keys:ro
     depends_on:
       workshop_db_qa:
         condition: service_healthy

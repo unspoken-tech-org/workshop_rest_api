@@ -66,11 +66,11 @@ jobs:
       - name: Inject JWT Keys for QA
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          mkdir -p config/keys
-          echo "${{ secrets.QA_JWT_RSA_PRIVATE_KEY_B64 }}" | base64 -d > config/keys/private-pkcs8.pem
-          echo "${{ secrets.QA_JWT_RSA_PUBLIC_KEY_B64 }}" | base64 -d > config/keys/public.pem
-          chmod 600 config/keys/private-pkcs8.pem
-          echo "QA RSA keys injected ✅"
+          mkdir -p config/qa_keys
+          echo "${{ secrets.QA_JWT_RSA_PRIVATE_KEY_B64 }}" | base64 -d > config/qa_keys/private-pkcs8.pem
+          echo "${{ secrets.QA_JWT_RSA_PUBLIC_KEY_B64 }}" | base64 -d > config/qa_keys/public.pem
+          chmod 600 config/qa_keys/private-pkcs8.pem
+          echo "QA RSA keys injected into config/qa_keys ✅"
 
       - name: Build QA application image
         working-directory: ${{ env.DEPLOY_DIR }}

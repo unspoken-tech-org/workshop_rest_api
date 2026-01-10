@@ -1,0 +1,56 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      idle-timeout: 600000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
+  jpa:
+    generate-ddl: false
+    hibernate:
+      default_schema: public
+      ddl-auto: none
+    properties:
+      hibernate.temp.use_jdbc_metadata_defaults: false
+      hibernate.default_schema: public
+
+  flyway:
+    enabled: true
+    baselineOnMigrate: true
+    schemas: public
+    url: ${SPRING_DATASOURCE_URL}
+    user: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    locations: classpath:db/migration/postgresql
+
+message: QA-Environment
+
+logging:
+  level:
+    root: INFO
+    com.tproject.workshop: INFO
+    http.access: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate: WARN
+    org.flywaydb: INFO
+
+jwt:
+  rsa:
+    public-key: file:/app/config/qa_keys/public.pem
+    private-key: file:/app/config/qa_keys/private-pkcs8.pem
+  access-token:
+    expiration: 900
+  refresh-token:
+    expiration: 604800
+
+# CORS - origens permitidas em QA
+cors:
+  allowed-origins:
+    - https://api-qa.eletroluk.com
