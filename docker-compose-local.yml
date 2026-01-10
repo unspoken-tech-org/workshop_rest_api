@@ -5,8 +5,13 @@ services:
     environment:
       LC_ALL: C.UTF-8
       TZ: America/Sao_Paulo
+      PGTZ: America/Sao_Paulo
       POSTGRES_DB: workshop_db
       POSTGRES_USER: workshop_admin
       POSTGRES_PASSWORD: pass
     ports:
       - "5445:5432"
+    command:
+      - "postgres"
+      - "-c"
+      - "timezone=America/Sao_Paulo"

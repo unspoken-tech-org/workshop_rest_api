@@ -2,7 +2,10 @@ package com.tproject.workshop.errorhandling;
 
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
+import com.tproject.workshop.exception.InvalidApiKeyException;
+import com.tproject.workshop.exception.InvalidTokenException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.TokenExpiredException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -11,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -27,6 +31,17 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger EXCEPTION_LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ResponseError> handleAccessDeniedException(final AccessDeniedException ex, WebRequest request) {
+        EXCEPTION_LOGGER.warn("Access denied for request: {} | Message: {}",
+                request.getDescription(false), ex.getMessage());
+
+        ErrorMetadata.Error error = new ErrorMetadata.Error("auth.access.denied", "Acesso Negado: Você não tem permissão para realizar esta operação.");
+
+        return new ResponseEntity<>(new ResponseError(HttpStatus.FORBIDDEN.value(), "Acesso Negado",
+                error), HttpStatus.FORBIDDEN);
+    }
 
     @ExceptionHandler({NotFoundException.class, EmptyResultDataAccessException.class})
     public ResponseEntity<ResponseError> handleNotFoundException(final Exception ex, WebRequest request) {
@@ -99,6 +114,39 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         ErrorMetadata.Error error = new ErrorMetadata.Error("erro.validacao", errorMessage.toString());
         return new ResponseError(HttpStatus.BAD_REQUEST.value(), "Erro de Validação", error);
+    }
+
+    @ExceptionHandler(InvalidApiKeyException.class)
+    public ResponseEntity<ResponseError> handleInvalidApiKeyException(final InvalidApiKeyException ex, WebRequest request) {
+        EXCEPTION_LOGGER.warn("Invalid API Key for request: {} | Message: {}",
+                request.getDescription(false), ex.getMessage());
+        
+        ErrorMetadata.Error error = new ErrorMetadata.Error("auth.invalid.api.key", ex.getMessage());
+
+        return new ResponseEntity<>(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "API Key Inválida",
+                error), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ResponseError> handleInvalidTokenException(final InvalidTokenException ex, WebRequest request) {
+        EXCEPTION_LOGGER.warn("Invalid token for request: {} | Message: {}",
+                request.getDescription(false), ex.getMessage());
+        
+        ErrorMetadata.Error error = new ErrorMetadata.Error("auth.invalid.token", ex.getMessage());
+
+        return new ResponseEntity<>(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "Token Inválido",
+                error), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<ResponseError> handleTokenExpiredException(final TokenExpiredException ex, WebRequest request) {
+        EXCEPTION_LOGGER.warn("Expired token for request: {} | Message: {}",
+                request.getDescription(false), ex.getMessage());
+        
+        ErrorMetadata.Error error = new ErrorMetadata.Error("auth.token.expired", ex.getMessage());
+
+        return new ResponseEntity<>(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "Token Expirado",
+                error), HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(Exception.class)

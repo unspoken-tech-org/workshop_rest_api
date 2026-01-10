@@ -1,4 +1,6 @@
 spring:
+  jackson:
+    time-zone: America/Sao_Paulo
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5445/workshop_db
@@ -27,4 +29,26 @@ spring:
 server:
   port: 8081
 
+# Timezone
+spring.main.banner-mode: off
+logging:
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS,America/Sao_Paulo
+
 message: Integration Test
+
+# JWT Configuration for Tests
+jwt:
+  rsa:
+    public-key: classpath:keys/public.pem
+    private-key: classpath:keys/private-pkcs8.pem
+  access-token:
+    expiration: 900
+  refresh-token:
+    expiration: 604800
+
+# CORS para testes
+cors:
+  allowed-origins:
+    - http://localhost:8081
+    - http://127.0.0.1:8081

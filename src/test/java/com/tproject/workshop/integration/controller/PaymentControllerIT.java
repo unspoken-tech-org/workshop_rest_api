@@ -6,6 +6,7 @@ import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -19,16 +20,27 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql(value = {"/test-scripts/cleanTestData.sql", "/test-scripts/PaymentControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
+@Sql(value = {"/test-scripts/cleanTestData.sql", "/test-scripts/AuthSetup.sql", "/test-scripts/PaymentControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
 public class PaymentControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/payment";
+
+    @Order(0)
+    @DisplayName("Reject access without JWT")
+    @Test
+    public void shouldReturn401_whenNoJwt() {
+        given().spec(SPEC)
+                .when()
+                .get(BASE_PATH + "/1")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+    }
 
     @Order(1)
     @DisplayName("Create payment")
     @MethodSource("createPaymentArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void createPayment(int index, Integer statusCode, Map<String, Object> arguments, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .contentType("application/json")
                 .body(arguments)

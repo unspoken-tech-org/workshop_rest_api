@@ -66,6 +66,27 @@ jobs:
           chmod 600 .env
           echo ".env created ✅"
 
+      - name: Create JWT keys directory
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          mkdir -p config/keys
+          chmod 700 config/keys
+          echo "JWT keys directory created ✅"
+
+      - name: Inject RSA Private Key
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}" | base64 -d > config/keys/private-pkcs8.pem
+          chmod 600 config/keys/private-pkcs8.pem
+          echo "RSA private key injected ✅"
+
+      - name: Inject RSA Public Key
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}" | base64 -d > config/keys/public.pem
+          chmod 644 config/keys/public.pem
+          echo "RSA public key injected ✅"
+
       - name: Backup current API image
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |

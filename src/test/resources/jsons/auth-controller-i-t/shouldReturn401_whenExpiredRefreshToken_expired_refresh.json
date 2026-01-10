@@ -1,0 +1,8 @@
+{
+    "status": 401,
+    "title": "Token Inválido",
+    "error": {
+        "code": "auth.invalid.token",
+        "message": "Refresh token expired"
+    }
+}

@@ -1,0 +1,149 @@
+name: Deploy QA Environment
+
+on:
+  push:
+    branches:
+      - feature/secure_app
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or commit to deploy to QA'
+        required: false
+        default: 'main'
+
+env:
+  COMPOSE_FILE: docker-compose-qa.yml
+  DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api_qa
+  API_IMAGE: workshop_api_qa
+
+jobs:
+  # ===========================================
+  # JOB 1: BUILD & PREPARE
+  # ===========================================
+  build:
+    name: Build & Prepare QA
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Show QA build info
+        run: |
+          echo "=== QA BUILD INFO ==="
+          echo "Ref:     ${{ github.event.inputs.ref }}"
+          echo "Commit:  ${{ github.sha }}"
+          echo "Actor:   ${{ github.actor }}"
+          echo "====================="
+
+      - name: Prepare QA deploy directory
+        run: |
+          mkdir -p "${DEPLOY_DIR}"
+
+      - name: Copy repo files to QA deploy dir
+        run: |
+          rsync -a --delete \
+            --exclude '.git' \
+            ./ "${DEPLOY_DIR}/"
+
+      - name: Write .env for QA
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          set -e
+          cat > .env <<'EOF'
+          DB_NAME=${{ secrets.QA_DB_NAME }}
+          DB_USERNAME=${{ secrets.QA_DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.QA_DB_PASSWORD }}
+          CF_API_TOKEN_QA=${{ secrets.CF_API_TOKEN_QA }}
+          CLOUDFLARE_TUNNEL_TOKEN_QA=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
+          ADMIN_EMAIL=${{ secrets.QA_ADMIN_EMAIL }}
+          EOF
+          chmod 600 .env
+          echo ".env created for QA ✅"
+
+      - name: Inject JWT Keys for QA
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          mkdir -p config/qa_keys
+          echo "${{ secrets.QA_JWT_RSA_PRIVATE_KEY_B64 }}" | base64 -d > config/qa_keys/private-pkcs8.pem
+          echo "${{ secrets.QA_JWT_RSA_PUBLIC_KEY_B64 }}" | base64 -d > config/qa_keys/public.pem
+          chmod 600 config/qa_keys/private-pkcs8.pem
+          echo "QA RSA keys injected into config/qa_keys ✅"
+
+      - name: Build QA application image
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo ">>> Building QA application (forced no-cache)..."
+          docker compose -f "$COMPOSE_FILE" build --no-cache workshop_spring_app_qa
+          echo "Build completed ✅"
+
+  # ===========================================
+  # JOB 2: DEPLOY QA
+  # ===========================================
+  deploy:
+    name: Deploy QA
+    runs-on: self-hosted
+    needs: build
+
+    steps:
+      - name: Deploy QA containers
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo ">>> Deploying QA containers..."
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+          echo "=== QA SERVICES ==="
+          docker compose -f "$COMPOSE_FILE" ps
+
+      - name: Wait for QA API health
+        id: wait-api
+        run: |
+          set -e
+          ATTEMPTS=60
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api-qa 2>/dev/null | tr -d '"')
+            echo "[$i/${ATTEMPTS}] QA API health: ${STATUS:-unknown}"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "QA API is healthy ✅"
+              exit 0
+            fi
+            sleep $SLEEP
+          done
+          echo "QA API did not become healthy ❌"
+          docker logs --tail=100 workshop-api-qa || true
+          exit 1
+
+  # ===========================================
+  # JOB 3: VALIDATE INFRA
+  # ===========================================
+  validate:
+    name: Validate QA Infra
+    runs-on: self-hosted
+    needs: deploy
+
+    steps:
+      - name: Verify Cloudflare Tunnel (QA)
+        run: |
+          echo ">>> Checking cloudflared-qa logs..."
+          docker logs cloudflared-qa 2>&1 | grep "Connection" | tail -n 5 || echo "No connection logs yet"
+
+      - name: Verify Caddy SSL (QA)
+        run: |
+          echo ">>> Checking caddy-proxy-qa logs..."
+          docker logs caddy-proxy-qa 2>&1 | tail -n 20
+
+      - name: Summary QA
+        if: success()
+        run: |
+          echo ""
+          echo "============================================="
+          echo "  QA DEPLOY COMPLETED SUCCESSFULLY"
+          echo "============================================="
+          echo ""
+          echo "  Subdomain: https://api-qa.eletroluk.com"
+          echo "  Local Port: http://localhost:8081"
+          echo "  Local SSL:  https://localhost:8443"
+          echo ""
+          echo "============================================="

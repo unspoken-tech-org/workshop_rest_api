@@ -1,0 +1,70 @@
+services:
+  workshop_db_qa:
+    image: postgres:15-alpine
+    container_name: workshop-db-qa
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      - workshop-qa-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  workshop_spring_app_qa:
+    build: .
+    container_name: workshop-api-qa
+    command: ["java", "-Dspring.profiles.active=qa", "-jar", "app.jar"]
+    environment:
+      - SPRING_PROFILES_ACTIVE=qa
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://workshop_db_qa:5432/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+    networks:
+      - workshop-qa-network
+    volumes:
+      - ./config/qa_keys:/app/config/qa_keys:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      workshop_db_qa:
+        condition: service_healthy
+
+  caddy_qa:
+    build:
+      context: ./infra/caddy
+    container_name: caddy-proxy-qa
+    ports:
+      - "8081:80"
+      - "8443:443"
+    environment:
+      - CF_API_TOKEN_QA=${CF_API_TOKEN_QA}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+    volumes:
+      - ./infra/caddy/Caddyfile-qa:/etc/caddy/Caddyfile
+      - caddy_qa_data:/data
+    networks:
+      - workshop-qa-network
+    restart: unless-stopped
+
+  cloudflared_qa:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-qa
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN_QA}
+    networks:
+      - workshop-qa-network
+
+networks:
+  workshop-qa-network:
+    name: workshop-qa-network
+
+volumes:
+  caddy_qa_data:
