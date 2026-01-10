@@ -75,8 +75,8 @@ jobs:
       - name: Build QA application image
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          echo ">>> Building QA application..."
-          docker compose -f "$COMPOSE_FILE" build workshop_spring_app_qa
+          echo ">>> Building QA application (forced no-cache)..."
+          docker compose -f "$COMPOSE_FILE" build --no-cache workshop_spring_app_qa
           echo "Build completed ✅"
 
   # ===========================================
