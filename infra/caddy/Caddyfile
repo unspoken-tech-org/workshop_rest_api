@@ -1,0 +1,17 @@
+{
+    email {env.ADMIN_EMAIL}
+}
+
+api.eletroluk.com {
+    # Proxy para o container da API Spring Boot de Produção
+    reverse_proxy workshop_spring_app:8080
+
+    # Automação SSL via DNS-01 (Cloudflare)
+    tls {
+        dns cloudflare {env.CF_API_TOKEN}
+    }
+
+    log {
+        output file /data/caddy-production.log
+    }
+}

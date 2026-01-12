@@ -14,7 +14,7 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${HOST_BIND_IP}:5432:5432"
+      - "127.0.0.1:5432:5432"
     command:
       - "postgres"
       - "-c"
@@ -30,7 +30,7 @@ services:
       - "-c"
       - "archive_command=pgbackrest --stanza=workshop archive-push %p"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB && psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c 'SELECT 1' > /dev/null"]
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB && psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c 'SELECT 1' > /dev/null" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -49,8 +49,9 @@ services:
     restart: always
     build: .
     image: workshop_rest_api-workshop_spring_app:latest
-    ports:
-      - "8080:8080"
+    command: [ "java", "-Dspring.profiles.active=production", "-jar", "app.jar" ]
+    expose:
+      - "8080"
     depends_on:
       workshop_db:
         condition: service_healthy
@@ -62,11 +63,40 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo"
       TZ: America/Sao_Paulo
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || curl -fsS http://localhost:8080/actuator/health || exit 1" ]
-      interval: 10s
-      timeout: 5s
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1" ]
+      interval: 15s
+      timeout: 10s
       retries: 12
-      start_period: 30s
+      start_period: 45s
+    networks:
+      - workshop-network
+
+  caddy:
+    build:
+      context: ./infra/caddy
+    container_name: caddy_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CF_API_TOKEN=${CF_API_TOKEN}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      workshop_spring_app:
+        condition: service_healthy
+    networks:
+      - workshop-network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - workshop-network
 
@@ -77,8 +107,6 @@ services:
   loki:
     image: grafana/loki:2.9.2
     container_name: loki
-    ports:
-      - "127.0.0.1:3100:3100"  # Apenas localhost
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - ./infra/loki-config.yaml:/etc/loki/local-config.yaml:ro
@@ -87,7 +115,7 @@ services:
       - workshop-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:3100/ready || exit 1"]
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:3100/ready || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -100,7 +128,11 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/promtail-config.yaml:/etc/promtail/config.yaml:ro
-    command: -config.file=/etc/promtail/config.yaml
+    environment:
+      - LOKI_URL=http://loki:3100
+      - ENV_NAME=production
+      - APP_CONTAINER_NAME=workshop-api
+    command: -config.file=/etc/promtail/config.yaml -config.expand-env=true
     depends_on:
       - loki
     networks:
@@ -110,13 +142,12 @@ services:
   grafana:
     image: grafana/grafana:10.2.3
     container_name: grafana
-    ports:
-      - "127.0.0.1:3000:3000"  # Apenas localhost (acesso via SSH tunnel)
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/
+      - GF_SERVER_ROOT_URL=https://grafana.eletroluk.com
+      - GF_SERVER_DOMAIN=grafana.eletroluk.com
       - GF_INSTALL_PLUGINS=grafana-clock-panel
     volumes:
       - grafana_data:/var/lib/grafana
@@ -126,7 +157,7 @@ services:
       - workshop-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -136,6 +167,8 @@ volumes:
   db_data:
   loki_data:
   grafana_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   workshop-network:

@@ -5,8 +5,8 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
-      minimum-idle: 5
-      maximum-pool-size: 50
+      minimum-idle: 2
+      maximum-pool-size: 10
       idle-timeout: 600000
       connection-timeout: 30000
       max-lifetime: 1800000
@@ -29,29 +29,28 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     locations: classpath:db/migration/postgresql
 
-message: Local
+message: QA-Environment
 
 logging:
   level:
     root: INFO
     com.tproject.workshop: INFO
     http.access: INFO
-    org.springframework.web: WARN
-    org.springframework.security: WARN
+    org.springframework.web: INFO
+    org.springframework.security: INFO
     org.hibernate: WARN
-    org.hibernate.SQL: WARN
     org.flywaydb: INFO
 
 jwt:
   rsa:
-    public-key: file:/app/config/keys/public.pem
-    private-key: file:/app/config/keys/private-pkcs8.pem
+    public-key: file:/app/config/qa_keys/public.pem
+    private-key: file:/app/config/qa_keys/private-pkcs8.pem
   access-token:
-    expiration: 900        # 15 minutes
+    expiration: 900
   refresh-token:
-    expiration: 604800     # 7 days
+    expiration: 604800
 
-# CORS - origens permitidas em produção
+# CORS - origens permitidas em QA
 cors:
   allowed-origins:
-    - https://api.eletroluk.com
+    - https://api-qa.eletroluk.com

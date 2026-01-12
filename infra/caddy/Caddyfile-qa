@@ -1,0 +1,17 @@
+{
+    email {env.ADMIN_EMAIL}
+}
+
+api-qa.eletroluk.com {
+    # Proxy para o container da API de QA
+    reverse_proxy workshop_spring_app_qa:8080
+
+    # Automação SSL via DNS-01 (Cloudflare) usando o Token de QA
+    tls {
+        dns cloudflare {env.CF_API_TOKEN_QA}
+    }
+
+    log {
+        output file /data/caddy-qa.log
+    }
+}
