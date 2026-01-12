@@ -35,10 +35,10 @@
     </springProfile>
 
     <!-- ========================================
-         PROFILE: PRODUCTION
+         PROFILE: PRODUCTION & QA
          JSON structured logs for Loki/ELK
          ======================================== -->
-    <springProfile name="production">
+    <springProfile name="production,qa">
         <springProperty scope="context" name="appVersion" source="app.version" defaultValue="unknown"/>
         
         <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">

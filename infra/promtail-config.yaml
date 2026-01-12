@@ -6,7 +6,7 @@ positions:
   filename: /tmp/positions.yaml
 
 clients:
-  - url: http://loki:3100/loki/api/v1/push
+  - url: ${LOKI_URL}/loki/api/v1/push
 
 scrape_configs:
   # Docker service discovery
@@ -27,7 +27,7 @@ scrape_configs:
         replacement: 'docker_logs'
       # Add environment label
       - target_label: 'environment'
-        replacement: 'production'
+        replacement: '${ENV_NAME}'
 
     pipeline_stages:
       # Parse Docker JSON log format
@@ -39,7 +39,7 @@ scrape_configs:
 
       # Parse application JSON logs (for workshop-api)
       - match:
-          selector: '{container_name="workshop-api"}'
+          selector: '{container_name="${APP_CONTAINER_NAME}"}'
           stages:
             - json:
                 expressions:
