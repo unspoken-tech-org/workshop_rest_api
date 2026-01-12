@@ -1,6 +1,7 @@
 package com.tproject.workshop.service.auth;
 
 import com.tproject.workshop.exception.InvalidTokenException;
+import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.RefreshToken;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,16 +30,16 @@ public class RefreshTokenService {
      * Generates a new refresh token and saves it to the database.
      */
     @Transactional
-    public String createRefreshToken(String clientId, String deviceId) {
-        // Revoke previous tokens for the same device
-        refreshTokenRepository.revokeByClientIdAndDeviceId(clientId, deviceId);
+    public String createRefreshToken(ApiKey apiKey, String deviceId) {
+        // Revoke previous tokens for the same client and device
+        refreshTokenRepository.revokeByClientNameAndDeviceId(apiKey.getClientName(), deviceId);
 
         // Generate new token
         String token = generateSecureToken();
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(token)
-                .clientId(clientId)
+                .apiKey(apiKey)
                 .deviceId(deviceId)
                 .expiresAt(Instant.now().plusSeconds(refreshTokenExpiration))
                 .revoked(false)
@@ -47,15 +48,20 @@ public class RefreshTokenService {
 
         refreshTokenRepository.save(refreshToken);
 
-        log.info("Refresh token created for client: {}, device: {}", clientId, deviceId);
+        log.info("Refresh token created for client: {}, user: {}, device: {}", 
+                apiKey.getClientName(), apiKey.getUserIdentifier(), deviceId);
         return token;
     }
 
     /**
-     * Validates the refresh token and returns the clientId.
+     * Validates the refresh token and returns the associated ApiKey.
+     *
+     * @param token the refresh token
+     * @return the associated ApiKey
+     * @throws InvalidTokenException if token is not found, revoked, or expired
      */
     @Transactional(readOnly = true)
-    public String validateRefreshToken(String token) {
+    public ApiKey validateRefreshToken(String token) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
                 .orElseThrow(() -> new InvalidTokenException("Refresh token not found"));
 
@@ -69,7 +75,13 @@ public class RefreshTokenService {
             throw new InvalidTokenException("Refresh token expired");
         }
 
-        return refreshToken.getClientId();
+        // We also check if the parent API Key is still active
+        if (!refreshToken.getApiKey().isActive()) {
+            log.warn("Refresh token invalid because associated API Key is inactive");
+            throw new InvalidTokenException("Associated API Key is inactive");
+        }
+
+        return refreshToken.getApiKey();
     }
 
     /**
@@ -89,9 +101,9 @@ public class RefreshTokenService {
      * Revokes all refresh tokens for a client.
      */
     @Transactional
-    public void revokeAllTokensForClient(String clientId) {
-        refreshTokenRepository.revokeAllByClientId(clientId);
-        log.info("All refresh tokens revoked for client: {}", clientId);
+    public void revokeAllTokensForClient(String clientName) {
+        refreshTokenRepository.revokeAllByClientName(clientName);
+        log.info("All refresh tokens revoked for client: {}", clientName);
     }
 
     private String generateSecureToken() {

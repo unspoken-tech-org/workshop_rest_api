@@ -55,6 +55,7 @@ public class AbstractIntegrationLiveTest {
 
     // Lazy-initialized authenticated spec (cached after first use)
     private static RequestSpecification cachedAuthenticatedSpec;
+    private static RequestSpecification cachedServiceAuthenticatedSpec;
 
     protected static RequestSpecification createRequestSpecification(int apiPort) {
         return new RequestSpecBuilder().setContentType(ContentType.JSON)
@@ -64,22 +65,38 @@ public class AbstractIntegrationLiveTest {
     }
 
     /**
-     * Returns a RequestSpecification with JWT authentication using the default API Key.
-     * Uses lazy initialization to avoid calling the auth endpoint before Spring context is ready.
+     * Returns a RequestSpecification with JWT authentication using the default API Key (ADMIN).
      *
      * @return RequestSpecification with JWT authentication
      */
     protected static RequestSpecification getAuthenticatedSpec() {
         if (cachedAuthenticatedSpec == null) {
             String token = TestAuthHelper.getAccessToken(SPEC, API_KEY);
-            cachedAuthenticatedSpec = new RequestSpecBuilder().setContentType(ContentType.JSON)
-                    .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT)
-                    .addFilter(new ResponseLoggingFilter())
-                    .addFilter(new RequestLoggingFilter())
-                    .addHeader("Authorization", "Bearer " + token)
-                    .build();
+            cachedAuthenticatedSpec = buildAuthenticatedSpec(token);
         }
         return cachedAuthenticatedSpec;
+    }
+
+    /**
+     * Returns a RequestSpecification with JWT authentication using a SERVICE role API Key.
+     *
+     * @return RequestSpecification with JWT authentication
+     */
+    protected static RequestSpecification getServiceAuthenticatedSpec() {
+        if (cachedServiceAuthenticatedSpec == null) {
+            String token = TestAuthHelper.getAccessToken(SPEC, TestAuthHelper.SERVICE_API_KEY);
+            cachedServiceAuthenticatedSpec = buildAuthenticatedSpec(token);
+        }
+        return cachedServiceAuthenticatedSpec;
+    }
+
+    private static RequestSpecification buildAuthenticatedSpec(String token) {
+        return new RequestSpecBuilder().setContentType(ContentType.JSON)
+                .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT)
+                .addFilter(new ResponseLoggingFilter())
+                .addFilter(new RequestLoggingFilter())
+                .addHeader("Authorization", "Bearer " + token)
+                .build();
     }
 
     /**

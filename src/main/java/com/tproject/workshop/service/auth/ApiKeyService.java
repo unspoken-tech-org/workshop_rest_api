@@ -6,6 +6,7 @@ import com.tproject.workshop.exception.InvalidApiKeyException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.Platform;
+import com.tproject.workshop.model.Role;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
 import lombok.RequiredArgsConstructor;
@@ -32,16 +33,7 @@ public class ApiKeyService {
      */
     @Transactional
     public void validateApiKey(String apiKey) {
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("API Key missing in request");
-            throw new InvalidApiKeyException("API Key is required");
-        }
-
-        ApiKey key = apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
-                .orElseThrow(() -> {
-                    log.warn("Invalid or inactive API Key: {}", maskApiKey(apiKey));
-                    return new InvalidApiKeyException("Invalid API Key");
-                });
+        ApiKey key = findByKeyValue(apiKey);
 
         // Check expiration
         if (key.getExpiresAt() != null && key.getExpiresAt().isBefore(Instant.now())) {
@@ -58,6 +50,25 @@ public class ApiKeyService {
     }
 
     /**
+     * Finds an active API Key by its value.
+     *
+     * @param apiKey the API key value
+     * @return the ApiKey entity
+     * @throws InvalidApiKeyException if not found or inactive
+     */
+    @Transactional(readOnly = true)
+    public ApiKey findByKeyValue(String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new InvalidApiKeyException("API Key is required");
+        }
+        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
+                .orElseThrow(() -> {
+                    log.warn("Invalid or inactive API Key: {}", maskApiKey(apiKey));
+                    return new InvalidApiKeyException("Invalid API Key");
+                });
+    }
+
+    /**
      * Returns the client identifier based on the API Key.
      *
      * @param apiKey the API key
@@ -68,6 +79,19 @@ public class ApiKeyService {
         return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
                 .map(ApiKey::getClientName)
                 .orElse("unknown_" + apiKey.substring(0, Math.min(8, apiKey.length())));
+    }
+
+    /**
+     * Returns the user identifier based on the API Key.
+     *
+     * @param apiKey the API key
+     * @return the user identifier associated with the key
+     */
+    @Transactional(readOnly = true)
+    public String getUserIdentifier(String apiKey) {
+        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
+                .map(ApiKey::getUserIdentifier)
+                .orElse("unknown");
     }
 
     /**
@@ -84,36 +108,55 @@ public class ApiKeyService {
     }
 
     /**
+     * Returns the role associated with the API Key.
+     *
+     * @param apiKey the API key
+     * @return the role
+     * @throws InvalidApiKeyException if key not found
+     */
+    @Transactional(readOnly = true)
+    public Role getRole(String apiKey) {
+        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
+                .map(ApiKey::getRole)
+                .orElseThrow(() -> new InvalidApiKeyException("Invalid API Key"));
+    }
+
+    /**
      * Creates a new API Key for a client on a specific platform.
      *
-     * @param clientName  client name
-     * @param platform    platform (MOBILE, WEB, DESKTOP, SERVER)
-     * @param description optional description
-     * @param expiresAt   optional expiration date
+     * @param clientName     client name (Company)
+     * @param userIdentifier user identifier (Technician/Device)
+     * @param platform       platform (MOBILE, WEB, DESKTOP, SERVER)
+     * @param role           role (ADMIN, SERVICE)
+     * @param description    optional description
+     * @param expiresAt      optional expiration date
      * @return the generated API Key with full key value (only shown once)
      */
     @Transactional
-    public ApiKeyCreatedResponse createApiKey(String clientName, Platform platform,
+    public ApiKeyCreatedResponse createApiKey(String clientName, String userIdentifier,
+                                              Platform platform, Role role,
                                               String description, Instant expiresAt) {
-        if (apiKeyRepository.existsByClientNameAndPlatformAndActiveTrue(clientName, platform)) {
-            log.warn("An API Key already exists for client {} on platform {}",
-                    clientName, platform);
+        if (apiKeyRepository.existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(clientName, userIdentifier, platform)) {
+            log.warn("An active API Key already exists for client {} and user {} on platform {}",
+                    clientName, userIdentifier, platform);
             throw new InvalidApiKeyException(
-                    "An API Key already exists for this client on this platform");
+                    "An active API Key already exists for this client and user on this platform");
         }
 
         ApiKey apiKey = ApiKey.builder()
                 .keyValue(KeyGeneratorUtils.generateSecureKey(platform))
                 .clientName(clientName)
+                .userIdentifier(userIdentifier)
                 .platform(platform)
+                .role(role != null ? role : Role.SERVICE)
                 .description(description)
                 .expiresAt(expiresAt)
                 .active(true)
                 .build();
 
         ApiKey savedKey = apiKeyRepository.save(apiKey);
-        log.info("API Key created for client: {} (platform: {})",
-                clientName, platform);
+        log.info("API Key created for client: {}, user: {} (platform: {}, role: {})",
+                clientName, userIdentifier, platform, apiKey.getRole());
 
         return ApiKeyCreatedResponse.fromEntity(savedKey);
     }

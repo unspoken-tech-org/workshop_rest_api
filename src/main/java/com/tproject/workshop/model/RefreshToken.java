@@ -21,8 +21,9 @@ public class RefreshToken {
     @Column(nullable = false, unique = true, length = 100)
     private String token;
 
-    @Column(name = "client_id", nullable = false, length = 50)
-    private String clientId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "api_key_id", nullable = false)
+    private ApiKey apiKey;
 
     @Column(name = "device_id", nullable = false, length = 100)
     private String deviceId;

@@ -3,56 +3,79 @@
         "id": 1,
         "maskedKeyValue": "sk_mobile_****7890",
         "clientName": "test_app",
+        "userIdentifier": "admin_user",
         "platform": "MOBILE",
-        "description": "Test API Key - Mobile",
+        "role": "ADMIN",
+        "description": "Test API Key - Mobile Admin",
         "active": true,
-        "createdAt": "2026-01-06T01:21:24.620180Z",
-        "lastUsedAt": "2026-01-06T01:21:27.998623Z"
+        "createdAt": "2026-01-08T17:37:36.135626Z",
+        "lastUsedAt": "2026-01-08T17:37:38.048411Z"
     },
     {
         "id": 2,
         "maskedKeyValue": "sk_web_****7890",
         "clientName": "test_app",
+        "userIdentifier": "admin_user",
         "platform": "WEB",
-        "description": "Test API Key - Web",
+        "role": "ADMIN",
+        "description": "Test API Key - Web Admin",
         "active": true,
-        "createdAt": "2026-01-06T01:21:24.620180Z"
+        "createdAt": "2026-01-08T17:37:36.135626Z"
     },
     {
         "id": 3,
         "maskedKeyValue": "sk_desktop_****7890",
         "clientName": "test_app",
+        "userIdentifier": "admin_user",
         "platform": "DESKTOP",
-        "description": "Test API Key - Desktop",
+        "role": "ADMIN",
+        "description": "Test API Key - Desktop Admin",
         "active": true,
-        "createdAt": "2026-01-06T01:21:24.620180Z"
+        "createdAt": "2026-01-08T17:37:36.135626Z"
     },
     {
         "id": 4,
         "maskedKeyValue": "sk_server_****7890",
         "clientName": "test_app",
+        "userIdentifier": "admin_user",
         "platform": "SERVER",
-        "description": "Test API Key - Server",
+        "role": "ADMIN",
+        "description": "Test API Key - Server Admin",
         "active": true,
-        "createdAt": "2026-01-06T01:21:24.620180Z"
+        "createdAt": "2026-01-08T17:37:36.135626Z"
     },
     {
         "id": 5,
         "maskedKeyValue": "sk_mobile_****7890",
         "clientName": "test_expired",
+        "userIdentifier": "expired_user",
         "platform": "MOBILE",
+        "role": "SERVICE",
         "description": "Test API Key - Expired",
         "active": true,
-        "createdAt": "2026-01-06T01:21:24.620180Z",
-        "expiresAt": "2026-01-05T01:21:24.620180Z"
+        "createdAt": "2026-01-08T17:37:36.135626Z",
+        "expiresAt": "2026-01-07T17:37:36.135626Z"
     },
     {
         "id": 6,
         "maskedKeyValue": "sk_mobile_****7890",
         "clientName": "test_inactive",
+        "userIdentifier": "inactive_user",
         "platform": "MOBILE",
+        "role": "SERVICE",
         "description": "Test API Key - Inactive",
         "active": false,
-        "createdAt": "2026-01-06T01:21:24.620180Z"
+        "createdAt": "2026-01-08T17:37:36.135626Z"
+    },
+    {
+        "id": 7,
+        "maskedKeyValue": "sk_mobile_****7890",
+        "clientName": "test_service_app",
+        "userIdentifier": "service_user",
+        "platform": "MOBILE",
+        "role": "SERVICE",
+        "description": "Test API Key - Service Only",
+        "active": true,
+        "createdAt": "2026-01-08T17:37:36.135626Z"
     }
 ]
