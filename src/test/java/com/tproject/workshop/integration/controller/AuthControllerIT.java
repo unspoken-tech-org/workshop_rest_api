@@ -223,9 +223,48 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_UNAUTHORIZED);
     }
 
+    @Order(10)
+    @DisplayName("Refresh tokens are scoped to api key and device id")
+    @Test
+    public void shouldAllowRefreshTokensForDifferentUsersOnSameDevice() {
+        String deviceId = "shared-device-id";
+
+        String firstUserRefreshToken = given().spec(SPEC)
+                .header(API_KEY_HEADER, TestAuthHelper.MOBILE_API_KEY)
+                .body(Map.of(
+                        "deviceId", deviceId,
+                        "appVersion", "1.0.0"
+                ))
+                .when()
+                .post(AUTH_PATH + "/token")
+                .then()
+                .statusCode(HttpStatus.SC_OK)
+                .extract()
+                .jsonPath()
+                .getString("refreshToken");
+
+        given().spec(SPEC)
+                .header(API_KEY_HEADER, TestAuthHelper.MOBILE_API_KEY_SECOND_USER)
+                .body(Map.of(
+                        "deviceId", deviceId,
+                        "appVersion", "1.0.0"
+                ))
+                .when()
+                .post(AUTH_PATH + "/token")
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+
+        given().spec(SPEC)
+                .body(Map.of("refreshToken", firstUserRefreshToken))
+                .when()
+                .post(AUTH_PATH + "/refresh")
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+    }
+
     // ========== Protected Endpoint Tests ==========
 
-    @Order(10)
+    @Order(11)
     @DisplayName("Access protected endpoint with valid JWT")
     @Test
     public void shouldReturn200_whenAccessingProtectedEndpointWithValidJwt() {
@@ -237,7 +276,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_OK);
     }
 
-    @Order(11)
+    @Order(12)
     @DisplayName("Reject access to protected endpoint without JWT")
     @Test
     public void shouldReturn401_whenAccessingProtectedEndpointWithoutJwt() {
@@ -248,7 +287,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_UNAUTHORIZED);
     }
 
-    @Order(12)
+    @Order(13)
     @DisplayName("Reject access to protected endpoint with invalid JWT")
     @Test
     public void shouldReturn401_whenAccessingProtectedEndpointWithInvalidJwt() {
@@ -260,7 +299,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_UNAUTHORIZED);
     }
 
-    @Order(13)
+    @Order(14)
     @DisplayName("Reject access with JWT signed by a different RSA key (Key Rotation Scenario)")
     @Test
     public void shouldReturn401_whenJwtSignedByDifferentKey() throws NoSuchAlgorithmException {

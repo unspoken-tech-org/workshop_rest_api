@@ -32,7 +32,7 @@ public class RefreshTokenService {
     @Transactional
     public String createRefreshToken(ApiKey apiKey, String deviceId) {
         // Revoke previous tokens for the same client and device
-        refreshTokenRepository.revokeByClientNameAndDeviceId(apiKey.getClientName(), deviceId);
+        refreshTokenRepository.revokeByApiKeyIdAndDeviceId(apiKey.getId(), deviceId);
 
         // Generate new token
         String token = generateSecureToken();

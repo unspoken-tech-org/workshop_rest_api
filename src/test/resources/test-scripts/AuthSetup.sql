@@ -5,7 +5,8 @@ VALUES
     (1, 'sk_mobile_TEST_KEY_MOBILE_12345678901234567890', 'test_app', 'admin_user', 'MOBILE', 'ADMIN', 'Test API Key - Mobile Admin', true, CURRENT_TIMESTAMP),
     (2, 'sk_web_TEST_KEY_WEB_12345678901234567890', 'test_app', 'admin_user', 'WEB', 'ADMIN', 'Test API Key - Web Admin', true, CURRENT_TIMESTAMP),
     (3, 'sk_desktop_TEST_KEY_DESKTOP_12345678901234567890', 'test_app', 'admin_user', 'DESKTOP', 'ADMIN', 'Test API Key - Desktop Admin', true, CURRENT_TIMESTAMP),
-    (4, 'sk_server_TEST_KEY_SERVER_12345678901234567890', 'test_app', 'admin_user', 'SERVER', 'ADMIN', 'Test API Key - Server Admin', true, CURRENT_TIMESTAMP);
+    (4, 'sk_server_TEST_KEY_SERVER_12345678901234567890', 'test_app', 'admin_user', 'SERVER', 'ADMIN', 'Test API Key - Server Admin', true, CURRENT_TIMESTAMP),
+    (8, 'sk_mobile_TEST_KEY_MOBILE_2_12345678901234567890', 'test_app', 'second_user', 'MOBILE', 'ADMIN', 'Test API Key - Mobile Admin 2', true, CURRENT_TIMESTAMP);
 
 -- Insert a SERVICE role API Key for access restriction testing
 INSERT INTO api_keys (id, key_value, client_name, user_identifier, platform, role, description, active, created_at)

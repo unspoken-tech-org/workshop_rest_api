@@ -19,6 +19,7 @@ public final class TestAuthHelper {
 
     // Test API Keys (must match AuthSetup.sql)
     public static final String MOBILE_API_KEY = "sk_mobile_TEST_KEY_MOBILE_12345678901234567890";
+    public static final String MOBILE_API_KEY_SECOND_USER = "sk_mobile_TEST_KEY_MOBILE_2_12345678901234567890";
     public static final String WEB_API_KEY = "sk_web_TEST_KEY_WEB_12345678901234567890";
     public static final String DESKTOP_API_KEY = "sk_desktop_TEST_KEY_DESKTOP_12345678901234567890";
     public static final String SERVER_API_KEY = "sk_server_TEST_KEY_SERVER_12345678901234567890";
