@@ -4,10 +4,7 @@ import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -23,16 +20,27 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/DeviceControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
+@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/AuthSetup.sql", "/test-scripts/DeviceControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
 public class DeviceControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/device";
+
+    @Order(0)
+    @DisplayName("Reject access without JWT")
+    @Test
+    public void shouldReturn401_whenNoJwt() {
+        given().spec(SPEC)
+                .when()
+                .get(BASE_PATH + "/1")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+    }
 
     @Order(1)
     @DisplayName("search devices")
     @MethodSource("searchDevicesArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void searchDevices(int index, Integer statusCode, Map<String, Object> params, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .body(params)
                 .post(BASE_PATH + "/filter")
@@ -157,7 +165,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
     @MethodSource("getDeviceArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void getDevice(int index, Integer statusCode, int id, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .get(BASE_PATH + "/" + id)
                 .then()
@@ -180,7 +188,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
     @MethodSource("createDeviceArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void createDevice(int index, Integer statusCode, Map<String, Object> params, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .body(params)
                 .post(BASE_PATH + "/create")
@@ -351,7 +359,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
     @MethodSource("updateDeviceArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void updateDevice(int index, Integer statusCode, Map<String, Object> params, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .body(params)
                 .put(BASE_PATH + "/update")

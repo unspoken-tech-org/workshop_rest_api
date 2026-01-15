@@ -20,8 +20,6 @@ public class PaymentService {
 
     @Transactional
     public Payment save(PaymentDeviceInputDto payment) {
-        deviceService.findDeviceById(payment.deviceId());
-
         String normalizedPaymentType = UtilsString.normalizeString(payment.paymentType()).toLowerCase();
 
         boolean hasInvalidPaymentType = Stream.of(

@@ -39,5 +39,19 @@ out/
 ### Cursor IDE ###
 .cursor/rules/
 
+### RSA Keys ###
+*.pem
+*.key
+/keys/
+config/keys/
+
+# Allow dev/test keys (NOT used in production)
+!src/main/resources/keys/
+!src/main/resources/keys/*.pem
+!src/test/resources/keys/
+!src/test/resources/keys/*.pem
+
 ### POC Files ###
 estudos/
+
+.gemini/

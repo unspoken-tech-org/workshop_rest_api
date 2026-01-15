@@ -3,6 +3,7 @@ package com.tproject.workshop.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 
 import java.util.List;
 
@@ -18,5 +19,6 @@ public class Type {
 
     @JsonIgnore
     @OneToMany(mappedBy = "idType", cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<BrandsModelsTypes> brandsModelsTypes;
 }

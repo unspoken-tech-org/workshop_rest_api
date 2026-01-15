@@ -2,9 +2,11 @@ package com.tproject.workshop.controller.impl;
 
 import com.tproject.workshop.controller.DeviceController;
 import com.tproject.workshop.dto.device.*;
+import com.tproject.workshop.events.DeviceViewedEvent;
 import com.tproject.workshop.service.DeviceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeviceControllerImpl implements DeviceController {
 
     private final DeviceService deviceService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Page<DeviceTableDto> list(@RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam) {
@@ -27,6 +30,7 @@ public class DeviceControllerImpl implements DeviceController {
 
     @Override
     public DeviceOutputDto findOne(int deviceId) {
+        eventPublisher.publishEvent(new DeviceViewedEvent(this, deviceId));
         return deviceService.findDeviceById(deviceId);
     }
 

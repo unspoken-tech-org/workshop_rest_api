@@ -7,6 +7,7 @@ import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -20,16 +21,27 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/CustomerControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
+@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/AuthSetup.sql", "/test-scripts/CustomerControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
 public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/customer";
+
+    @Order(0)
+    @DisplayName("Reject access without JWT")
+    @Test
+    public void shouldReturn401_whenNoJwt() {
+        given().spec(SPEC)
+                .when()
+                .get(BASE_PATH + "/1")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+    }
 
     @Order(1)
     @DisplayName("Search customers")
     @MethodSource("searchCustomersArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void searchCustomers(int index, Integer statusCode, Map<String, Object> params, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .body(params)
                 .post(BASE_PATH + "/search")
@@ -99,7 +111,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     @MethodSource("findCustomersByIdArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void findCustomersById(int index, Integer statusCode, int id, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .get(BASE_PATH + "/" + id)
                 .then()
@@ -122,7 +134,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     @MethodSource("createCustomersArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void createCustomers(int index, Integer statusCode, Map<String, Object> arguments, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .contentType("application/json")
                 .body(arguments)
@@ -262,7 +274,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     @MethodSource("updateCustomersArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
     public void updateCustomers(int index, Integer statusCode, Integer id, Map<String, Object> arguments, String reason) {
-        Response response = given().spec(SPEC)
+        Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .contentType("application/json")
                 .body(arguments)

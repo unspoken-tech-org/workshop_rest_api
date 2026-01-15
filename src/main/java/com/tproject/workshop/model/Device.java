@@ -5,6 +5,7 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -67,6 +68,7 @@ public class Device {
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_customer")
+    @ToString.Exclude
     private Customer customer;
 
     @JsonIgnore
@@ -76,13 +78,16 @@ public class Device {
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_technician")
+    @ToString.Exclude
     private Technician technician;
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_brand_model_type")
+    @ToString.Exclude
     private BrandsModelsTypes brandsModelsTypes;
 
     @OneToMany(mappedBy = "device", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<DeviceHistory> deviceHistory;
 
     public Device(int id) {
