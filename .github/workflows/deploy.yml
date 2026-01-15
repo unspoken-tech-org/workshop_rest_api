@@ -58,10 +58,9 @@ jobs:
           DB_NAME=${{ secrets.DB_NAME }}
           DB_USERNAME=${{ secrets.DB_USERNAME }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
-          LAN_CIDR=${{ secrets.LAN_CIDR }}
           GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
           GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
           EOF
           chmod 600 .env
           echo ".env created ✅"
@@ -272,41 +271,6 @@ jobs:
           
           echo ">>> Backup status:"
           docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest info || true
-
-      - name: Configure LAN access (conditional)
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          set -e
-          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
-          if [ -z "$PG_CID" ]; then
-            echo "Postgres container not found"; exit 1
-          fi
-          
-          echo ">>> Checking pg_hba.conf..."
-          
-          # Check if LAN rule already exists, only add and reload if needed
-          CHANGED=$(docker exec "$PG_CID" bash -c '
-            set -e
-            FILE="$PGDATA/pg_hba.conf"
-            LINE_LAN="host all all '"${{ secrets.LAN_CIDR }}"' md5"
-            if grep -qF "$LINE_LAN" "$FILE"; then
-              echo "no"
-            else
-              echo "$LINE_LAN" >> "$FILE"
-              echo "yes"
-            fi
-          ')
-          
-          if [ "$CHANGED" = "yes" ]; then
-            echo ">>> pg_hba.conf updated, reloading PostgreSQL config..."
-            # Use pg_ctl reload instead of restart to avoid downtime
-            docker exec -u postgres "$PG_CID" pg_ctl reload -D "$PGDATA" 2>/dev/null || \
-              docker exec "$PG_CID" psql -U "${{ secrets.DB_USERNAME }}" -c "SELECT pg_reload_conf();" || \
-              echo "Reload command not available, will apply on next restart"
-            echo "PostgreSQL config reloaded ✅ (no restart needed)"
-          else
-            echo "LAN access already configured, skipping ✅"
-          fi
 
       - name: Verify PostgreSQL health
         working-directory: ${{ env.DEPLOY_DIR }}

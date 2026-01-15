@@ -19,21 +19,21 @@
 **Test:** 1000 requests, 50 concurrent connections  
 **Environment:** Windows 11, Intel i5, 16GB RAM, PostgreSQL 16 in Docker
 
-| Implementation | p50 | p95 | p99 | Throughput |
-|----------------|-----|-----|-----|------------|
-| **JDBC** (native SQL) | 34ms | 65ms | 80ms | **1,362 req/s** |
-| **JPA** (Hibernate) | 77ms | 110ms | 127ms | 624 req/s |
+| Implementation        | p50  | p95   | p99   | Throughput      |
+|-----------------------|------|-------|-------|-----------------|
+| **JDBC** (native SQL) | 34ms | 65ms  | 80ms  | **1,362 req/s** |
+| **JPA** (Hibernate)   | 77ms | 110ms | 127ms | 624 req/s       |
 
 ### Key Findings
 
-| Metric | JDBC Advantage |
-|--------|----------------|
-| **Latency (p50)** | 2.3x faster |
-| **Throughput** | 2.2x higher |
-| **Tail Latency (p99)** | 37% lower |
+| Metric                 | JDBC Advantage |
+|------------------------|----------------|
+| **Latency (p50)**      | 2.3x faster    |
+| **Throughput**         | 2.2x higher    |
+| **Tail Latency (p99)** | 37% lower      |
 
-> **Why the difference?** The JDBC implementation uses a single SQL query with `LATERAL JOIN` and `json_agg()` 
-> to fetch customer + phones + devices in one database round-trip. JPA/Hibernate executes multiple queries 
+> **Why the difference?** The JDBC implementation uses a single SQL query with `LATERAL JOIN` and `json_agg()`
+> to fetch customer + phones + devices in one database round-trip. JPA/Hibernate executes multiple queries
 > (N+1 pattern) and adds ORM overhead for entity hydration and dirty checking.
 
 <details>
@@ -57,7 +57,8 @@ JPA (GET /v1/customer/{id}/jpa)
 
 ### The Challenge
 
-Device repair workshops operate in environments where **internet connectivity is unreliable** or **latency-sensitive operations cannot tolerate cloud round-trips**. Traditional SaaS solutions fail when:
+Device repair workshops operate in environments where **internet connectivity is unreliable** or **latency-sensitive
+operations cannot tolerate cloud round-trips**. Traditional SaaS solutions fail when:
 
 - Network outages halt business operations
 - Cloud latency impacts user experience during peak hours
@@ -68,15 +69,16 @@ Device repair workshops operate in environments where **internet connectivity is
 
 This project applies **cloud-native engineering practices** to an **on-premise deployment model**:
 
-| Cloud-Native Practice | On-Premise Benefit |
-|-----------------------|-------------------|
-| Docker containerization | Reproducible deployments, isolated environments |
-| CI/CD pipelines | Automated, reliable updates to local server |
-| Database migrations (Flyway) | Version-controlled schema evolution |
-| Health checks & monitoring | Self-healing infrastructure |
-| WAL archiving (pgBackRest) | Enterprise-grade backup without cloud storage |
+| Cloud-Native Practice        | On-Premise Benefit                              |
+|------------------------------|-------------------------------------------------|
+| Docker containerization      | Reproducible deployments, isolated environments |
+| CI/CD pipelines              | Automated, reliable updates to local server     |
+| Database migrations (Flyway) | Version-controlled schema evolution             |
+| Health checks & monitoring   | Self-healing infrastructure                     |
+| WAL archiving (pgBackRest)   | Enterprise-grade backup without cloud storage   |
 
-**Result:** A system that runs entirely on local hardware with the reliability and maintainability of modern cloud applications.
+**Result:** A system that runs entirely on local hardware with the reliability and maintainability of modern cloud
+applications.
 
 ---
 
@@ -91,12 +93,14 @@ This project applies **cloud-native engineering practices** to an **on-premise d
 **Context:** On-premise deployment to a single server with limited operational overhead.
 
 **Rationale:**
+
 - **Near zero network latency** between modules — all communication is in-process method calls
-- **Simplified deployment** — one Docker Compose file manages the entire stack
+- **Simplified deployment** — Two Docker Compose stacks (app + gateway) manage the infrastructure
 - **Reduced operational complexity** — no service discovery, no distributed tracing, no inter-service authentication
 - **Transactional consistency** — ACID transactions across the entire domain without saga patterns
 
-**Trade-offs accepted:** Horizontal scaling requires vertical scaling of the host machine. This is acceptable for the target deployment environment (single workshop location).
+**Trade-offs accepted:** Horizontal scaling requires vertical scaling of the host machine. This is acceptable for the
+target deployment environment (single workshop location).
 
 ---
 
@@ -104,7 +108,8 @@ This project applies **cloud-native engineering practices** to an **on-premise d
 
 **Decision:** Implement implicit CQRS using JPA for writes and Spring JDBC for reads.
 
-**Context:** Complex reporting queries with multiple JOINs and aggregations were causing Hibernate N+1 problems and excessive memory usage.
+**Context:** Complex reporting queries with multiple JOINs and aggregations were causing Hibernate N+1 problems and
+excessive memory usage.
 
 **Implementation:**
 
@@ -116,9 +121,8 @@ This project applies **cloud-native engineering practices** to an **on-premise d
 │   │   JPA (Commands)    │    │    JDBC (Queries)       │    │
 │   │                     │    │                         │    │
 │   │ • Entity management │    │ • Native SQL            │    │
-│   │ • Relationships     │    │ • Direct DTO mapping    │    │
-│   │ • Transactions      │    │ • Zero ORM overhead     │    │
-│   │ • Cascade operations│    │ • Complex aggregations  │    │
+│   │ • Relationships     │    │ • Transactions          │    │
+│   │ • Cascade operations│    │ • Direct DTO mapping    │    │
 │   └─────────────────────┘    └─────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -128,9 +132,9 @@ This project applies **cloud-native engineering practices** to an **on-premise d
 ```java
 // Single interface combining both strategies
 @Repository
-public interface CustomerRepository 
-    extends JpaRepository<Customer, Integer>, CustomerRepositoryJdbc {
-    
+public interface CustomerRepository
+        extends JpaRepository<Customer, Integer>, CustomerRepositoryJdbc {
+
     // JPA: Used for writes and simple lookups
     Optional<Customer> findFirstByCpf(String cpf);
 }
@@ -138,6 +142,7 @@ public interface CustomerRepository
 // JDBC interface for optimized reads
 public interface CustomerRepositoryJdbc {
     Optional<CustomerOutputDto> findCustomerById(int id);
+
     Page<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters);
 }
 ```
@@ -157,12 +162,14 @@ src/main/resources/db/query/
 ```
 
 **Advanced PostgreSQL Features Used:**
+
 - `LATERAL JOIN` for correlated subqueries without N+1
 - `json_agg()` / `jsonb_build_object()` for nested object construction in SQL
 - `unaccent()` for accent-insensitive search
 - Array parameters (`ANY(:STATUS::text[])`) for multi-value filters
 
-**Result:** 
+**Result:**
+
 - Read operations return DTOs directly — no entity-to-DTO conversion layer
 - Complex reports execute in single database round-trip
 - Write operations maintain full Hibernate benefits (dirty checking, cascades, audit)
@@ -191,11 +198,16 @@ public DeviceOutputDto findDeviceById(int deviceId) {
 @Transactional
 @Async
 public void onDeviceViewed(DeviceViewedEvent event) {
-    deviceRepository.updateLastViewedAt(event.getDeviceId(), Instant.now());
+    Device device = deviceRepository.findById(event.getDeviceId())
+            .orElseThrow(() -> new NotFoundException("Aparelho não encontrado"));
+
+    device.setLastViewedAt(Timestamp.from(Instant.now()));
+    deviceRepository.save(device);
 }
 ```
 
 **Benefits:**
+
 - Main thread returns response immediately
 - Secondary operations execute in background
 - Domain events provide audit trail
@@ -203,21 +215,71 @@ public void onDeviceViewed(DeviceViewedEvent event) {
 
 ---
 
+## Security & High Availability
+
+The system implements a **Zero Trust** hybrid security model designed to function seamlessly both over the internet (
+WAN) and within the local network (LAN) without internet access.
+
+### Hybrid Access Strategy
+
+| Context            | Technology        | Mechanism           | Benefit                                      |
+|--------------------|-------------------|---------------------|----------------------------------------------|
+| **WAN (Internet)** | Cloudflare Tunnel | Zero Trust Edge     | DDoS protection, WAF, no open firewall ports |
+| **LAN (Offline)**  | Split-Brain DNS   | Caddy (Gateway)     | High availability even during ISP outages    |
+
+**Key Feature: Split-Brain DNS**
+
+- **Public DNS:** Resolves `api.eletroluk.com` to Cloudflare edge.
+- **Local Router DNS:** Resolves `api.eletroluk.com` to the local server IP (e.g., 192.168.x.x).
+- **Caddy Proxy (Gateway):** Handles automatic SSL certificates (via DNS-01 challenge) so the same domain works everywhere with
+  valid encryption, removing the need for SSL pinning on clients.
+
+### Authentication & Authorization
+
+1. **Hybrid Auth Flow:**
+    - **API Keys:** Long-lived keys used for device onboarding (Mobile/CLI).
+    - **JWT (RS256):** Short-lived (15 min) access tokens for session management.
+    - **Refresh Tokens:** Opaque, revocable tokens (7 days) linked to the API Key.
+2. **RBAC (Role-Based Access Control):**
+    - `ADMIN`: Full system management, including key generation.
+    - `SERVICE`: Standard business operations.
+3. **Key Management:** Cryptographic keys are injected via CI/CD secrets (Production) or mounted locally (Dev), never
+   hardcoded.
+
+---
+
+## Environment Strategy
+
+We strictly segregate **QA** and **Production** environments to allow infrastructure experimentation without risking
+production data stability.
+
+| Layer        | Production (`api.eletroluk.com`) | QA (`api-qa.eletroluk.com`)        |
+|--------------|----------------------------------|------------------------------------|
+| **Network**  | Dedicated Cloudflare Tunnel      | Separate Tunnel + Split DNS        |
+| **Database** | `workshop_db`                    | `workshop_db_qa` (Isolated Volume) |
+| **Keys**     | Production RSA Keys              | QA RSA Keys (Separate signature)   |
+| **Safety**   | **Prod Tokens Invalid in QA**    | **QA Tokens Invalid in Prod**      |
+
+> **Fail-Safe Design:** The application profile (`-Dspring.profiles.active=qa`) enforces strict connection isolation. A
+> QA build is physically incapable of connecting to the Production database or accepting Production tokens.
+
+---
+
 ## Tech Stack
 
-| Layer | Technology | Version | Purpose |
-|-------|------------|---------|---------|
-| **Runtime** | Java | 21 LTS | Modern language features, virtual threads ready |
-| **Framework** | Spring Boot | 3.1.8 | Production-ready application framework |
-| **Persistence** | Spring Data JPA | - | ORM for write operations |
-| **Persistence** | Spring JDBC | - | Native SQL for read operations |
-| **Database** | PostgreSQL | 16 | Advanced SQL features (LATERAL, JSON) |
-| **Migrations** | Flyway | 11.11.0 | Version-controlled schema management |
-| **Backup** | pgBackRest | - | WAL archiving, point-in-time recovery |
-| **Build** | Gradle | 8.4 | Dependency management, build automation |
-| **Container** | Docker | Multi-stage | Optimized production images |
-| **CI/CD** | GitHub Actions | - | Automated deployment pipeline |
-| **Observability** | Grafana + Loki | 10.2 / 2.9 | Log aggregation and dashboards |
+| Layer             | Technology      | Version     | Purpose                                         |
+|-------------------|-----------------|-------------|-------------------------------------------------|
+| **Runtime**       | Java            | 21 LTS      | Modern language features, virtual threads ready |
+| **Framework**     | Spring Boot     | 3.1.8       | Production-ready application framework          |
+| **Persistence**   | Spring Data JPA | -           | ORM for write operations                        |
+| **Persistence**   | Spring JDBC     | -           | Native SQL for read operations                  |
+| **Database**      | PostgreSQL      | 16          | Advanced SQL features (LATERAL, JSON)           |
+| **Migrations**    | Flyway          | 11.11.0     | Version-controlled schema management            |
+| **Backup**        | pgBackRest      | -           | WAL archiving, point-in-time recovery           |
+| **Build**         | Gradle          | 8.4         | Dependency management, build automation         |
+| **Container**     | Docker          | Multi-stage | Optimized production images                     |
+| **CI/CD**         | GitHub Actions  | -           | Automated deployment pipeline                   |
+| **Observability** | Grafana + Loki  | 10.2 / 2.9  | Log aggregation and dashboards                  |
 
 ---
 
@@ -234,13 +296,13 @@ Application → Promtail → Loki → Grafana
 
 ### Features
 
-| Feature | Description |
-|---------|-------------|
-| **Structured Logs** | JSON format with correlation ID, HTTP metadata, duration |
-| **Request Tracing** | `X-Request-Id` header propagated through all logs |
-| **Sensitive Data Masking** | Automatic masking of passwords, tokens, CPF, etc. |
-| **Error Correlation** | Full request body logged on 4xx/5xx errors |
-| **7-Day Retention** | Configurable log retention in Loki |
+| Feature                    | Description                                              |
+|----------------------------|----------------------------------------------------------|
+| **Structured Logs**        | JSON format with correlation ID, HTTP metadata, duration |
+| **Request Tracing**        | `X-Request-Id` header propagated through all logs        |
+| **Sensitive Data Masking** | Automatic masking of passwords, tokens, CPF, etc.        |
+| **Error Correlation**      | Full request body logged on 4xx/5xx errors               |
+| **7-Day Retention**        | Configurable log retention in Loki                       |
 
 ### Quick Start (Local with Observability)
 
@@ -252,14 +314,14 @@ docker-compose -f docker-compose-local-full.yml up -d --build
 open http://localhost:3000  # admin/admin
 ```
 
-> **Nota:** A aplicação precisa rodar como container Docker para que o Promtail capture os logs.
+> **Note:** The application must run as a Docker container for Promtail to capture logs.
 
 ### Service Endpoints (with Observability)
 
-| Service | URL | Purpose |
-|---------|-----|---------|
+| Service | URL                     | Purpose                        |
+|---------|-------------------------|--------------------------------|
 | Grafana | `http://localhost:3000` | Dashboards and log exploration |
-| Loki | `http://localhost:3100` | Log aggregation API |
+| Loki    | `http://localhost:3100` | Log aggregation API            |
 
 ### Useful LogQL Queries
 
@@ -276,8 +338,6 @@ open http://localhost:3000  # admin/admin
 # Trace specific request
 {container_name="workshop-api"} | json | requestId="abc-123"
 ```
-
-> **Full documentation:** See [Observability Guide](estudos/guides/ObservabilityGuide.md) for detailed setup, queries, and troubleshooting.
 
 ---
 
@@ -305,11 +365,11 @@ docker-compose -f docker-compose-local.yml up -d
 
 ### Service Endpoints
 
-| Service | URL | Purpose |
-|---------|-----|---------|
-| API | `http://localhost:8080` | REST API |
+| Service      | URL                                     | Purpose            |
+|--------------|-----------------------------------------|--------------------|
+| API          | `http://localhost:8080`                 | REST API           |
 | Health Check | `http://localhost:8080/actuator/health` | Application health |
-| Database | `localhost:5445` | PostgreSQL (dev) |
+| Database     | `localhost:5445`                        | PostgreSQL (dev)   |
 
 ### Stopping the Environment
 
@@ -334,53 +394,56 @@ docker-compose -f docker-compose-local.yml down --volumes
 
 ### Deployment Architecture
 
+The project uses a robust **Self-Hosted** deployment pipeline designed for reliability and zero-downtime updates.
+
 ```
 ┌─────────────┐
-│  Git Push   │
-│  to main    │
+│  Git Tag    │
+│  (v1.0.0)   │
 └──────┬──────┘
        │
        ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   GitHub Actions                            │
-│                   (Self-Hosted Runner)                      │
-│                                                             │
-│  1. Checkout ──► 2. Sync Files ──► 3. Build Image           │
-│                                           │                 │
-│  6. Verify ◄── 5. Health Check ◄── 4. Deploy                │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                             GitHub Actions                               │
+│                          (Self-Hosted Runner)                            │
+│                                                                          │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐            │
+│  │  BUILD   ├───►│  DEPLOY  ├───►│  VERIFY  ├───►│ CLEANUP  │            │
+│  └────┬─────┘    └────┬─────┘    └────┬─────┘    └──────────┘            │
+│       │               │               │                                  │
+│   1. Backup       4. Compose Up   6. Obs. Check                          │
+│   2. Inject Keys  5. Health Check 7. pgBackRest                          │
+│   3. Build Img        │                                                  │
+│                       ▼                                                  │
+│                 (Rollback on Fail)                                       │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Pipeline Features
 
-| Feature | Implementation |
-|---------|----------------|
-| **Trigger** | Push to `main` branch |
-| **Runner** | Self-hosted on target server |
-| **Build** | Docker multi-stage (Gradle → JRE) |
-| **Deploy** | `docker compose up -d --remove-orphans` |
-| **Validation** | Health check polling (90 attempts × 5s) |
-| **Secrets** | Injected via GitHub Secrets → `.env` file |
-| **Backup** | pgBackRest stanza bootstrap on deploy |
+| Feature           | Implementation                                                 |
+|-------------------|----------------------------------------------------------------|
+| **Trigger**       | Push to tag `v*` (e.g., `v1.2.0`) or Manual Dispatch           |
+| **Runner**        | Self-hosted on target server                                   |
+| **Secrets**       | Injected via GitHub Secrets → `.env` & `config/keys/`          |
+| **Backup**        | Current running image is tagged `:backup` before build         |
+| **Rollback**      | **Automated** restore of `:backup` image if Health Check fails |
+| **Verification**  | Validates Loki, Grafana, Promtail, and PostgreSQL status       |
+| **Observability** | Deploys with full logging stack enabled                        |
 
-### Health Checks
+### Health & Safety Checks
 
-```yaml
-# API Health Check
-healthcheck:
-  test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health"]
-  interval: 10s
-  timeout: 5s
-  retries: 12
-  start_period: 30s
+The pipeline implements a "Trust but Verify" approach:
 
-# Database Health Check  
-healthcheck:
-  test: ["CMD-SHELL", "pg_isready && psql -tAc 'SELECT 1'"]
-  interval: 10s
-  timeout: 5s
-  retries: 10
-```
+1. **API Health:** Polls `/actuator/health` for 90 attempts (approx 7.5 min).
+2. **Observability:** Ensures logs are being collected and Grafana is accessible.
+3. **Backup Stanza:** Verifies pgBackRest configuration is valid.
+4. **Rollback:** If the API fails to start, the previous stable image is immediately restored to minimize downtime.
+
+### Environments
+
+- **Production:** Deploys from `main` (via tags) to `api.eletroluk.com`.
+- **QA:** Manual deployment via `workflow_dispatch` to `api-qa.eletroluk.com` (Isolated DB and Keys).
 
 ---
 
@@ -390,14 +453,17 @@ Schema changes are managed through Flyway migrations:
 
 ```
 src/main/resources/db/migration/postgresql/
-├── V1__initial_schema.sql
-├── V2__add_customer_phones_relation.sql
-├── V3__data_sanitization.sql
-├── V4__fix_duplicates.sql
-└── V5__add_unique_constraints.sql
+├── V1__10_08_2025_initial.sql
+├── V2__31_08_2025_add_many_to_many_customer_phones.sql
+├── V3__03_09_2025_sanatize_data.sql
+├── V4__02_12_25_fix_color_duplicates_before_unique_constraints.sql
+├── V5__02_12_25_add_unique_constraints.sql
+├── V6__03_01_2026_create_api_keys_table.sql
+└── V7__03_01_2026_create_refresh_tokens_table.sql
 ```
 
 **Migration Best Practices Applied:**
+
 - Forward-only migrations (no rollbacks in production)
 - Idempotent operations where possible
 - Data migrations separated from schema migrations
@@ -410,6 +476,7 @@ src/main/resources/db/migration/postgresql/
 ```
 workshop_rest_api/
 ├── src/main/java/com/tproject/workshop/
+│   ├── config/              # Configuration classes (Security, OpenAPI, Jackson)
 │   ├── controller/          # REST endpoints (Interface + Impl pattern)
 │   ├── service/             # Business logic, transaction boundaries
 │   ├── repository/          # JPA repositories
@@ -418,18 +485,28 @@ workshop_rest_api/
 │   ├── dto/                 # Request/Response objects
 │   ├── events/              # Domain events
 │   ├── exception/           # Custom exceptions
-│   └── errorhandling/       # Global exception handler
+│   ├── errorhandling/       # Global exception handler
+│   └── validation/          # Custom validators
 ├── src/main/resources/
 │   ├── db/migration/        # Flyway migrations
-│   └── db/query/            # External SQL files
+│   ├── db/query/            # External SQL files
+│   └── keys/                # Cryptographic keys
 ├── docker-compose-local.yml               # Development: database only
 ├── docker-compose-local-full.yml          # Development: full stack with observability
-├── docker-compose-production.yml          # Production: full stack with observability
-├── infra/                                 # Observability configurations
+├── docker-compose-production.yml          # Production: Application stack
+├── docker-compose-qa.yml                  # QA: Isolated environment
+├── docker-compose-gateway.yml             # Gateway: Ingress + Tunnels
+├── infra/                                 # Infrastructure configurations
+│   ├── act/                 # GitHub Actions runner utils
+│   ├── caddy/               # Reverse proxy config
+│   │   └── Caddyfile-gateway
 │   ├── loki-config.yaml
 │   └── promtail-config.yaml
 ├── Dockerfile                             # Multi-stage build
-└── .github/workflows/deploy.yml  # CI/CD pipeline
+├── Dockerfile.pgbackrest                  # Backup sidecar container
+└── .github/workflows/
+    ├── deploy.yml           # Production pipeline
+    └── deploy-qa.yml        # QA pipeline
 ```
 
 ---

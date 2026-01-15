@@ -1,0 +1,79 @@
+name: Deploy Gateway Stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual Deployment'
+        required: false
+        default: 'Maintenance/Update'
+
+env:
+  COMPOSE_FILE: docker-compose-gateway.yml
+  DEPLOY_DIR: /home/workshop/deploy/gateway_stack
+
+jobs:
+  deploy-gateway:
+    name: Deploy Gateway & Tunnels
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p "${DEPLOY_DIR}"
+          rsync -a --delete \
+            --exclude '.git' \
+            ./ "${DEPLOY_DIR}/"
+
+      - name: Create Ingress Network
+        run: |
+          docker network create workshop-ingress || true
+          echo "Network workshop-ingress ensured ✅"
+
+      - name: Write .env for Gateway
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          set -e
+          cat > .env <<'EOF'
+          CF_API_TOKEN=${{ secrets.CF_API_TOKEN }}
+          CF_API_TOKEN_QA=${{ secrets.CF_API_TOKEN_QA }}
+          CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          CLOUDFLARE_TUNNEL_TOKEN_QA=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
+          EOF
+          chmod 600 .env
+          echo ".env created for Gateway ✅"
+
+      - name: Deploy Gateway Stack
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo ">>> Deploying Gateway, Tunnels and Proxy..."
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+          echo "Gateway Stack deployed 🚀"
+
+      - name: Health Check
+        run: |
+          sleep 10
+          echo ">>> Checking Caddy status..."
+          if docker ps | grep -q caddy-gateway; then
+            echo "Caddy is running ✅"
+          else
+            echo "Caddy failed to start ❌"
+            exit 1
+          fi
+          
+          echo ">>> Checking Tunnels..."
+          if docker ps | grep -q cloudflared-gateway-prod; then
+            echo "Tunnel Prod OK ✅"
+          else
+             echo "Tunnel Prod Missing ⚠️"
+          fi
+          
+          if docker ps | grep -q cloudflared-gateway-qa; then
+            echo "Tunnel QA OK ✅"
+          else
+             echo "Tunnel QA Missing ⚠️"
+          fi

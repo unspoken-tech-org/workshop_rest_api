@@ -1,0 +1,19 @@
+{
+    email {env.ADMIN_EMAIL}
+}
+
+# Produção
+api.eletroluk.com {
+    reverse_proxy workshop-api:8080
+    tls {
+        dns cloudflare {env.CF_API_TOKEN}
+    }
+}
+
+# QA
+api-qa.eletroluk.com {
+    reverse_proxy workshop-api-qa:8080
+    tls {
+        dns cloudflare {env.CF_API_TOKEN_QA}
+    }
+}
