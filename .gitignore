@@ -54,4 +54,8 @@ config/keys/
 ### POC Files ###
 estudos/
 
+.opencode/
+.specify/
+/scripts/
+specs/
 .gemini/

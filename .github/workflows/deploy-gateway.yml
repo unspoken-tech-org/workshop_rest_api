@@ -1,9 +1,12 @@
 name: Deploy Gateway Stack
 
 on:
+  push:
+    branches:
+      - release/1.2.0
   workflow_dispatch:
     inputs:
-      reason:
+      ref:
         description: 'Manual Deployment'
         required: false
         default: 'Maintenance/Update'
@@ -47,11 +50,18 @@ jobs:
           chmod 600 .env
           echo ".env created for Gateway ✅"
 
+      - name: Build Caddy Gateway Image
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo ">>> Building Caddy Gateway image..."
+          docker compose -f "$COMPOSE_FILE" build caddy-gateway
+          echo "Caddy Gateway image built ✅"
+
       - name: Deploy Gateway Stack
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
           echo ">>> Deploying Gateway, Tunnels and Proxy..."
-          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans --force-recreate
           echo "Gateway Stack deployed 🚀"
 
       - name: Health Check
