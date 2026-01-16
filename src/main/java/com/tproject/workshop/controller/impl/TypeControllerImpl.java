@@ -1,7 +1,7 @@
 package com.tproject.workshop.controller.impl;
 
 import com.tproject.workshop.controller.TypeController;
-import com.tproject.workshop.model.Type;
+import com.tproject.workshop.dto.type.TypeResponseDto;
 import com.tproject.workshop.service.TypeService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +15,8 @@ public class TypeControllerImpl implements TypeController {
     private final TypeService typeService;
 
     @Override
-    public List<Type> findAll(String name) {
-        return typeService.findAll(name);
+    public List<TypeResponseDto> findAll(String name) {
+        return typeService.findAllDto(name);
     }
-
 }
+

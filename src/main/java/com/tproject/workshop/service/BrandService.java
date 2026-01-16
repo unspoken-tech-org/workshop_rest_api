@@ -1,5 +1,6 @@
 package com.tproject.workshop.service;
 
+import com.tproject.workshop.dto.brand.BrandResponseDto;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Brand;
 import com.tproject.workshop.repository.BrandRepository;
@@ -16,9 +17,17 @@ public class BrandService {
 
     private final BrandRepository brandRepository;
 
-    public List<Brand> findAll() {
-        return brandRepository.findAll();
+    public List<BrandResponseDto> findAllDto(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return brandRepository.findAll().stream()
+                    .map(this::toDto)
+                    .toList();
+        }
+        return brandRepository.findByBrandContainingIgnoreCase(name).stream()
+                .map(this::toDto)
+                .toList();
     }
+
 
     public Brand findById(int id) {
         return brandRepository.findById(id)
@@ -48,12 +57,10 @@ public class BrandService {
                 .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar marca: " + originalBrand));
     }
 
-    public List<Brand> findAll(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            return brandRepository.findAll();
-        }
-
-        return brandRepository.findByBrandContainingIgnoreCase(name);
+    private BrandResponseDto toDto(Brand brand) {
+        return new BrandResponseDto(
+                brand.getIdBrand(),
+                brand.getBrand()
+        );
     }
-
 }

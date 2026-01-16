@@ -99,15 +99,6 @@ public class AbstractIntegrationLiveTest {
                 .build();
     }
 
-    /**
-     * Alias for getAuthenticatedSpec() to maintain compatibility with existing tests.
-     *
-     * @deprecated Use getAuthenticatedSpec() for clarity
-     */
-    protected static RequestSpecification AUTHENTICATED_SPEC() {
-        return getAuthenticatedSpec();
-    }
-
     public void validateResponse(Object index, Object response) {
         validateResponse(index, response, new DefaultComparator(JSONCompareMode.STRICT));
     }

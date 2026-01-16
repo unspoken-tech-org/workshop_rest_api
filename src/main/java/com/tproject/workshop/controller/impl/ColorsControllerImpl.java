@@ -1,7 +1,7 @@
 package com.tproject.workshop.controller.impl;
 
 import com.tproject.workshop.controller.ColorsController;
-import com.tproject.workshop.model.Color;
+import com.tproject.workshop.dto.color.ColorResponseDto;
 import com.tproject.workshop.service.ColorService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +17,7 @@ public class ColorsControllerImpl implements ColorsController {
     private final ColorService colorService;
 
     @Override
-    public List<Color> getColors() {
-        return colorService.getColors();
+    public List<ColorResponseDto> getColors() {
+        return colorService.getColorsDto();
     }
 }

@@ -3,11 +3,7 @@ package com.tproject.workshop.integration.controller;
 import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -55,7 +51,7 @@ public class PaymentControllerIT extends AbstractIntegrationLiveTest {
 
     private static Stream<Arguments> createPaymentArguments() {
         return Stream.of(
-                Arguments.of(1, HttpStatus.SC_OK, Map.of(
+                Arguments.of(1, HttpStatus.SC_CREATED, Map.of(
                         "deviceId", 1,
                         "paymentType", "credito",
                         "value", 150.00,

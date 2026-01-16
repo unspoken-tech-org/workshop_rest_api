@@ -1,5 +1,6 @@
 package com.tproject.workshop.service;
 
+import com.tproject.workshop.dto.color.ColorResponseDto;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Color;
 import com.tproject.workshop.repository.ColorRepository;
@@ -15,8 +16,11 @@ import java.util.List;
 public class ColorService {
     private final ColorRepository colorRepository;
 
-    public List<Color> getColors() {
-        return colorRepository.findAll();
+    public List<ColorResponseDto> getColorsDto() {
+        return colorRepository.findAll()
+                .stream()
+                .map(this::toDto)
+                .toList();
     }
 
     @Transactional
@@ -25,7 +29,7 @@ public class ColorService {
         if (colorFound.isPresent()) {
             return colorFound.get();
         }
-        
+
         var colorName = color.toLowerCase().trim().replaceAll("\\s+", " ");
         try {
             var newColor = new Color();
@@ -39,5 +43,12 @@ public class ColorService {
     private Color findColorOnCreate(String colorName, String originalColor) {
         return colorRepository.findByColorIgnoreCase(colorName)
                 .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar cor: " + originalColor));
+    }
+
+    private ColorResponseDto toDto(Color color) {
+        return new ColorResponseDto(
+                color.getIdColor(),
+                color.getColor()
+        );
     }
 }

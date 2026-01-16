@@ -1,6 +1,7 @@
 package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.payment.PaymentDeviceInputDto;
+import com.tproject.workshop.dto.payment.PaymentResponseDto;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.Payment;
@@ -19,7 +20,7 @@ public class PaymentService {
     private final DeviceService deviceService;
 
     @Transactional
-    public Payment save(PaymentDeviceInputDto payment) {
+    public PaymentResponseDto save(PaymentDeviceInputDto payment) {
         String normalizedPaymentType = UtilsString.normalizeString(payment.paymentType()).toLowerCase();
 
         boolean hasInvalidPaymentType = Stream.of(
@@ -40,6 +41,19 @@ public class PaymentService {
         paymentModel.setCategory(payment.category());
         paymentModel.setDevice(new Device(payment.deviceId()));
 
-        return repository.save(paymentModel);
+        Payment saved = repository.save(paymentModel);
+
+        return toDto(saved);
+    }
+
+    private PaymentResponseDto toDto(Payment model) {
+        return new PaymentResponseDto(
+                model.getId(),
+                model.getPaymentDate().toLocalDateTime(),
+                model.getPaymentType(),
+                model.getPaymentValue(),
+                model.getCategory(),
+                model.getDevice().getId()
+        );
     }
 }

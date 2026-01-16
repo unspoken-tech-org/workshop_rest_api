@@ -2,10 +2,11 @@ package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
-import com.tproject.workshop.model.CustomerContact;
+import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,5 +24,5 @@ public interface CustomerContactController {
   @ApiResponse(responseCode = "201", description = "Contact registered successfully")
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  CustomerContact save(@RequestBody CustomerContactInputDto contact);
+  CustomerContactOutputDto save(@Valid @RequestBody CustomerContactInputDto contact);
 }

@@ -1,7 +1,7 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
-import com.tproject.workshop.model.Brand;
+import com.tproject.workshop.dto.brand.BrandResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,7 +21,7 @@ public interface BrandController {
   @ApiGlobalResponses
   @ApiResponse(responseCode = "200", description = "Brands retrieved successfully")
   @GetMapping
-  List<Brand> list(
+  List<BrandResponseDto> list(
       @Parameter(description = "Optional case-insensitive filter applied to the brand name")
       @RequestParam(required = false) String name);
 }

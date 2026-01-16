@@ -1,7 +1,7 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
-import com.tproject.workshop.model.Technician;
+import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -19,14 +19,14 @@ public interface TechnicianController {
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Technician retrieved successfully")
     @GetMapping("/{id}")
-    Technician find(@Parameter(description = "Technician identifier") @PathVariable("id") Integer id);
+    TechnicianResponseDto find(@Parameter(description = "Technician identifier") @PathVariable("id") Integer id);
 
     @Operation(
             summary = "List technicians",
             description = "Returns every active technician, supporting assignment dropdowns and routing rules.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Technicians listed successfully")
-    @GetMapping("/list")
-    List<Technician> list();
+    @GetMapping
+    List<TechnicianResponseDto> list();
 
 }

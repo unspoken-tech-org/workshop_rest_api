@@ -1,38 +1,46 @@
 package com.tproject.workshop.dto.contact;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
-import lombok.experimental.FieldNameConstants;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-@Data
-@FieldNameConstants(asEnum = true)
-public class CustomerContactOutputDto {
+@Schema(description = "Customer contact details response")
+public record CustomerContactOutputDto(
+        @Schema(example = "1")
+        Integer id,
 
-    private int id;
+        @Schema(example = "10")
+        int deviceId,
 
-    private int deviceId;
+        @Schema(example = "5")
+        int technicianId,
 
-    private int technicianId;
+        @Schema(example = "John Technician")
+        String technicianName,
 
-    private String technicianName;
+        @Schema(example = "(11) 99999-9999")
+        String phone,
 
-    private String phone;
+        @Schema(example = "WHATSAPP")
+        String type,
 
-    private String type;
+        @Schema(example = "true")
+        boolean hasMadeContact,
 
-    private boolean hasMadeContact;
+        @Schema(hidden = true)
+        LocalDateTime lastContact,
 
-    private LocalDateTime lastContact;
+        @Schema(example = "Aparelho pronto para retirada")
+        String conversation,
 
-    private String conversation;
-
-    private String deviceStatus;
-
+        @Schema(example = "NOVO, PRONTO, APROVADO")
+        String deviceStatus
+) {
     @JsonProperty("lastContact")
-    public String getLastContact() {
+    @Schema(name = "lastContact", example = "16/01/2024")
+    public String getFormattedLastContact() {
         return lastContact != null ? lastContact.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null;
     }
 }

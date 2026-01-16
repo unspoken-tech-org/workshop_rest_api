@@ -1,7 +1,7 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
-import com.tproject.workshop.model.Type;
+import com.tproject.workshop.dto.type.TypeResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,7 +20,7 @@ public interface TypeController {
   @ApiGlobalResponses
   @ApiResponse(responseCode = "200", description = "Types retrieved successfully")
   @GetMapping
-  List<Type> findAll(
+  List<TypeResponseDto> findAll(
       @Parameter(description = "Optional case-insensitive filter applied to the type name")
       @RequestParam(required = false) String name);
 }

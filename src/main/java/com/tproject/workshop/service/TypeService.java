@@ -1,5 +1,6 @@
 package com.tproject.workshop.service;
 
+import com.tproject.workshop.dto.type.TypeResponseDto;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypeRepository;
@@ -15,6 +16,13 @@ import java.util.List;
 public class TypeService {
     private final TypeRepository typeRepository;
 
+
+    public List<TypeResponseDto> findAllDto(String name) {
+        return findAll(name).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     public Type findById(int id) {
         return typeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(String.format("Tipo com id %d não encontrado", id)));
@@ -27,6 +35,7 @@ public class TypeService {
 
         return typeRepository.findByTypeContainingIgnoreCase(name);
     }
+
 
     @Transactional
     public Type createOrReturnExistentType(String type) {
@@ -50,6 +59,13 @@ public class TypeService {
     private Type findTypeOnCreate(String typeName, String originalType) {
         return typeRepository.findByTypeIgnoreCase(typeName)
                 .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar tipo: " + originalType));
+    }
+    
+    private TypeResponseDto toDto(Type type) {
+        return new TypeResponseDto(
+                type.getIdType(),
+                type.getType()
+        );
     }
 
 }

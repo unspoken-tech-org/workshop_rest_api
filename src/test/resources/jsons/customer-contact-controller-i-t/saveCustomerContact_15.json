@@ -2,9 +2,11 @@
     "id": 2,
     "deviceId": 1,
     "technicianId": 2,
+    "technicianName": "Contact Test Tech",
     "phone": "44987654321",
     "type": "mensagem",
     "hasMadeContact": true,
-    "lastContact": "2025-07-12T15:20:06.692+00:00",
-    "conversation": "teste service fail"
+    "lastContact": "16/01/2026",
+    "conversation": "teste service fail",
+    "deviceStatus": "ENTREGUE"
 }
