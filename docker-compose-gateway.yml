@@ -1,0 +1,49 @@
+services:
+  caddy-gateway:
+    build:
+      context: ./infra/caddy
+    image: workshop/caddy-gateway:latest
+    container_name: caddy-gateway
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CF_API_TOKEN=${CF_API_TOKEN}
+      - CF_API_TOKEN_QA=${CF_API_TOKEN_QA}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+    volumes:
+      - ./infra/caddy/Caddyfile-gateway:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - workshop-ingress
+    depends_on:
+      - cloudflared-prod
+      - cloudflared-qa
+
+  # Tunnel de Produção
+  cloudflared-prod:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-gateway-prod
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - workshop-ingress
+
+  # Tunnel de QA
+  cloudflared-qa:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-gateway-qa
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN_QA}
+    networks:
+      - workshop-ingress
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  workshop-ingress:
+    external: true

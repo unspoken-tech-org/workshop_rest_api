@@ -58,13 +58,33 @@ jobs:
           DB_NAME=${{ secrets.DB_NAME }}
           DB_USERNAME=${{ secrets.DB_USERNAME }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
-          LAN_CIDR=${{ secrets.LAN_CIDR }}
           GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
           GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
           EOF
           chmod 600 .env
           echo ".env created ✅"
+
+      - name: Create JWT keys directory
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          mkdir -p config/keys
+          chmod 700 config/keys
+          echo "JWT keys directory created ✅"
+
+      - name: Inject RSA Private Key
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}" | base64 -d > config/keys/private-pkcs8.pem
+          chmod 600 config/keys/private-pkcs8.pem
+          echo "RSA private key injected ✅"
+
+      - name: Inject RSA Public Key
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}" | base64 -d > config/keys/public.pem
+          chmod 644 config/keys/public.pem
+          echo "RSA public key injected ✅"
 
       - name: Backup current API image
         working-directory: ${{ env.DEPLOY_DIR }}
@@ -80,8 +100,8 @@ jobs:
       - name: Build application image
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          echo ">>> Building application..."
-          docker compose -f "$COMPOSE_FILE" build workshop_spring_app
+          echo ">>> Building application (no-cache)..."
+          docker compose -f "$COMPOSE_FILE" build --no-cache workshop_spring_app
           echo "Build completed ✅"
 
   # ===========================================
@@ -130,10 +150,10 @@ jobs:
           if docker image inspect ${{ env.API_IMAGE }}:backup >/dev/null 2>&1; then
             echo ">>> Restoring backup image..."
             docker tag ${{ env.API_IMAGE }}:backup ${{ env.API_IMAGE }}:latest
-            
+          
             echo ">>> Recreating container with previous image..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate workshop_spring_app
-            
+          
             echo ">>> Waiting for API after rollback..."
             ATTEMPTS=60
             SLEEP=5
@@ -252,41 +272,6 @@ jobs:
           echo ">>> Backup status:"
           docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest info || true
 
-      - name: Configure LAN access (conditional)
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          set -e
-          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
-          if [ -z "$PG_CID" ]; then
-            echo "Postgres container not found"; exit 1
-          fi
-          
-          echo ">>> Checking pg_hba.conf..."
-          
-          # Check if LAN rule already exists, only add and reload if needed
-          CHANGED=$(docker exec "$PG_CID" bash -c '
-            set -e
-            FILE="$PGDATA/pg_hba.conf"
-            LINE_LAN="host all all '"${{ secrets.LAN_CIDR }}"' md5"
-            if grep -qF "$LINE_LAN" "$FILE"; then
-              echo "no"
-            else
-              echo "$LINE_LAN" >> "$FILE"
-              echo "yes"
-            fi
-          ')
-          
-          if [ "$CHANGED" = "yes" ]; then
-            echo ">>> pg_hba.conf updated, reloading PostgreSQL config..."
-            # Use pg_ctl reload instead of restart to avoid downtime
-            docker exec -u postgres "$PG_CID" pg_ctl reload -D "$PGDATA" 2>/dev/null || \
-              docker exec "$PG_CID" psql -U "${{ secrets.DB_USERNAME }}" -c "SELECT pg_reload_conf();" || \
-              echo "Reload command not available, will apply on next restart"
-            echo "PostgreSQL config reloaded ✅ (no restart needed)"
-          else
-            echo "LAN access already configured, skipping ✅"
-          fi
-
       - name: Verify PostgreSQL health
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
@@ -344,11 +329,6 @@ jobs:
           echo "  Commit:  ${{ github.sha }}"
           echo "  Actor:   ${{ github.actor }}"
           echo "  Trigger: ${{ github.event_name }}"
-          echo ""
-          echo "  Services:"
-          echo "    - API:     http://localhost:8080"
-          echo "    - Grafana: http://localhost:3000 (via SSH tunnel)"
-          echo "    - Loki:    http://localhost:3100 (via SSH tunnel)"
           echo ""
           echo "============================================="
 

@@ -10,3 +10,5 @@ SELECT setval(pg_get_serial_sequence('payments', 'id'), coalesce(MAX(id), 1)) fr
 SELECT setval(pg_get_serial_sequence('phones', 'id'), coalesce(MAX(id), 1)) from phones;
 SELECT setval(pg_get_serial_sequence('technicians', 'id'), coalesce(MAX(id), 1)) from technicians;
 SELECT setval(pg_get_serial_sequence('types', 'id'), coalesce(MAX(id), 1)) from types;
+SELECT setval(pg_get_serial_sequence('api_keys', 'id'), coalesce(MAX(id), 1)) from api_keys;
+SELECT setval(pg_get_serial_sequence('refresh_tokens', 'id'), coalesce(MAX(id), 1)) from refresh_tokens;
