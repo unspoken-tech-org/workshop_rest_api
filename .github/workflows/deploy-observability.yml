@@ -50,9 +50,7 @@ jobs:
         run: |
           rsync -a --delete \
             --include='docker-compose-observability.yml' \
-            --include='infra/' \
-            --include='infra/promtail-config-*.yaml' \
-            --include='infra/grafana-provisioning/**' \
+            --include='infra/***' \
             --exclude='*' \
             ./ "${DEPLOY_DIR}/"
 
@@ -185,7 +183,7 @@ jobs:
             echo "Checking logs for environment: $env"
             QUERY=$(printf 'query={environment="%s"}' "$env")
             RESULT=$(curl -s -G "http://localhost:3100/loki/api/v1/query" --data-urlencode "$QUERY" || echo "{}")
-            
+          
             if echo "$RESULT" | grep -q "stream"; then
               echo "  Logs from $env environment found ✅"
             else

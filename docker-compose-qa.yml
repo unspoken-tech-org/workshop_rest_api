@@ -48,8 +48,10 @@ services:
 networks:
   workshop-qa-network:
     name: workshop-qa-network
+    driver: bridge
   workshop-ingress:
-    external: true
+    name: workshop-ingress
+    driver: bridge
 
 volumes:
   db_qa_data:

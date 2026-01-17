@@ -31,11 +31,6 @@ jobs:
             --exclude '.git' \
             ./ "${DEPLOY_DIR}/"
 
-      - name: Create Ingress Network
-        run: |
-          docker network create workshop-ingress || true
-          echo "Network workshop-ingress ensured ✅"
-
       - name: Write .env for Gateway
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |

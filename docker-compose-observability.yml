@@ -124,13 +124,16 @@ networks:
     name: observability-network
     driver: bridge
   
-  # External networks (created by other stacks)
+  # Shared networks (created/used by multiple stacks)
   workshop-network:
-    external: true
+    name: workshop-network
+    driver: bridge
   workshop-qa-network:
-    external: true
+    name: workshop-qa-network
+    driver: bridge
   workshop-ingress:
-    external: true
+    name: workshop-ingress
+    driver: bridge
 
 # ==========================================
 # VOLUMES
