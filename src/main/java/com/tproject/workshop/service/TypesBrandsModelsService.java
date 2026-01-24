@@ -8,6 +8,7 @@ import com.tproject.workshop.model.Model;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypesBrandsModelsRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +24,7 @@ public class TypesBrandsModelsService {
     private final ModelService modelService;
 
     @Transactional
-    BrandsModelsTypes createOrReturnExistentBrandModelType(TypeBrandModelInputDtoRecord typeBrandModel) {
+    public BrandsModelsTypes createOrReturnExistentBrandModelType(TypeBrandModelInputDtoRecord typeBrandModel) {
         var typeInput = typeBrandModel.type();
         var brandInput = typeBrandModel.brand();
         var modelInput = typeBrandModel.model();
@@ -44,7 +45,13 @@ public class TypesBrandsModelsService {
         brandModelType.setIdModel(model);
         brandModelType.setIdType(type);
 
-        return typesBrandsModelsRepository.saveAndFlush(brandModelType);
+        try {
+            return typesBrandsModelsRepository.saveAndFlush(brandModelType);
+        } catch (DataIntegrityViolationException e) {
+            return typesBrandsModelsRepository.findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(),
+                            model.getIdModel())
+                    .orElseThrow(() -> new RuntimeException("Erro ao criar ou buscar associação de tipo, marca e modelo", e));
+        }
     }
 
     @Transactional(readOnly = true)
