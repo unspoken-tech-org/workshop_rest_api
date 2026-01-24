@@ -1,6 +1,8 @@
 package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
+import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
+import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
@@ -29,11 +31,11 @@ public class CustomerContactService {
     private final List<String> contactTypesThatNeedPhone = List.of("ligacao", "mensagem");
 
     @Transactional
-    public CustomerContact save(CustomerContactInputDto contact) {
+    public CustomerContactOutputDto save(CustomerContactInputDto contact) {
         Device device = deviceRepository.findById(contact.deviceId()).orElseThrow(() ->
                 new NotFoundException(String.format("Aparelho com id %d não encontrado", contact.deviceId()))
         );
-        technicianService.findById(contact.technicianId());
+        TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
         DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
 
         if (contactTypesThatNeedPhone.contains(UtilsString.normalizeString(contact.contactType()))) {
@@ -72,7 +74,24 @@ public class CustomerContactService {
         newContact.setLastContact(Timestamp.valueOf(LocalDateTime.parse(contact.contactDate())));
         newContact.setDeviceStatus(status);
 
-        return customerContactRepository.save(newContact);
+        CustomerContact saved = customerContactRepository.save(newContact);
+
+        return toDto(saved, technician.name());
+    }
+
+    private CustomerContactOutputDto toDto(CustomerContact model, String technicianName) {
+        return new CustomerContactOutputDto(
+                model.getId(),
+                model.getDeviceId(),
+                model.getTechnicianId(),
+                technicianName,
+                model.getPhone(),
+                model.getType(),
+                model.isHasMadeContact(),
+                model.getLastContact().toLocalDateTime(),
+                model.getConversation(),
+                model.getDeviceStatus().name()
+        );
     }
 
 }

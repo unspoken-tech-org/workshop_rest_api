@@ -58,13 +58,31 @@ jobs:
           DB_NAME=${{ secrets.DB_NAME }}
           DB_USERNAME=${{ secrets.DB_USERNAME }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          HOST_BIND_IP=${{ secrets.HOST_BIND_IP }}
-          LAN_CIDR=${{ secrets.LAN_CIDR }}
-          GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
-          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
           EOF
           chmod 600 .env
           echo ".env created ✅"
+
+      - name: Create JWT keys directory
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          mkdir -p config/keys
+          chmod 700 config/keys
+          echo "JWT keys directory created ✅"
+
+      - name: Inject RSA Private Key
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}" | base64 -d > config/keys/private-pkcs8.pem
+          chmod 600 config/keys/private-pkcs8.pem
+          echo "RSA private key injected ✅"
+
+      - name: Inject RSA Public Key
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo "${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}" | base64 -d > config/keys/public.pem
+          chmod 644 config/keys/public.pem
+          echo "RSA public key injected ✅"
 
       - name: Backup current API image
         working-directory: ${{ env.DEPLOY_DIR }}
@@ -80,8 +98,8 @@ jobs:
       - name: Build application image
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
-          echo ">>> Building application..."
-          docker compose -f "$COMPOSE_FILE" build workshop_spring_app
+          echo ">>> Building application (no-cache)..."
+          docker compose -f "$COMPOSE_FILE" build --no-cache workshop_spring_app
           echo "Build completed ✅"
 
   # ===========================================
@@ -130,10 +148,10 @@ jobs:
           if docker image inspect ${{ env.API_IMAGE }}:backup >/dev/null 2>&1; then
             echo ">>> Restoring backup image..."
             docker tag ${{ env.API_IMAGE }}:backup ${{ env.API_IMAGE }}:latest
-            
+          
             echo ">>> Recreating container with previous image..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate workshop_spring_app
-            
+          
             echo ">>> Waiting for API after rollback..."
             ATTEMPTS=60
             SLEEP=5
@@ -164,71 +182,6 @@ jobs:
     needs: deploy
 
     steps:
-      - name: Check observability stack
-        run: |
-          set -e
-          echo "=== Checking observability stack ==="
-          
-          # Check Loki
-          echo ">>> Checking Loki..."
-          ATTEMPTS=30
-          SLEEP=5
-          for i in $(seq 1 $ATTEMPTS); do
-            LOKI_STATUS=$(curl -s http://localhost:3100/ready 2>/dev/null || echo "not ready")
-            echo "[$i/${ATTEMPTS}] Loki: ${LOKI_STATUS}"
-            if [ "$LOKI_STATUS" = "ready" ]; then
-              echo "Loki is ready ✅"
-              break
-            fi
-            if [ $i -eq $ATTEMPTS ]; then
-              echo "Loki did not become ready in time ⚠️"
-              docker logs loki --tail=50 || true
-            fi
-            sleep $SLEEP
-          done
-          
-          # Check Grafana
-          echo ""
-          echo ">>> Checking Grafana..."
-          for i in $(seq 1 $ATTEMPTS); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health)
-            echo "[$i/${ATTEMPTS}] Grafana HTTP: ${HTTP_CODE}"
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Grafana is ready ✅"
-              break
-            fi
-            if [ $i -eq $ATTEMPTS ]; then
-              echo "Grafana did not become ready in time ⚠️"
-              docker logs grafana --tail=50 || true
-            fi
-            sleep $SLEEP
-          done
-          
-          # Check Promtail
-          echo ""
-          echo ">>> Checking Promtail..."
-          TARGETS=$(docker logs promtail 2>&1 | grep -c "added Docker target" || echo "0")
-          echo "Promtail collecting $TARGETS containers"
-          if [ "$TARGETS" -gt 0 ]; then
-            echo "Promtail is collecting logs ✅"
-          else
-            echo "Promtail may not be collecting logs ⚠️"
-            docker logs promtail --tail=30 || true
-          fi
-          
-          # Check labels
-          echo ""
-          echo ">>> Checking labels in Loki..."
-          LABELS=$(curl -s http://localhost:3100/loki/api/v1/labels 2>/dev/null || echo "{}")
-          if echo "$LABELS" | grep -q "container_name"; then
-            echo "Labels OK ✅"
-          else
-            echo "Labels may not be available yet (normal on first deploy) ⚠️"
-          fi
-          
-          echo ""
-          echo "=== Observability stack checked ==="
-
       - name: Bootstrap pgBackRest
         working-directory: ${{ env.DEPLOY_DIR }}
         run: |
@@ -251,41 +204,6 @@ jobs:
           
           echo ">>> Backup status:"
           docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest info || true
-
-      - name: Configure LAN access (conditional)
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          set -e
-          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
-          if [ -z "$PG_CID" ]; then
-            echo "Postgres container not found"; exit 1
-          fi
-          
-          echo ">>> Checking pg_hba.conf..."
-          
-          # Check if LAN rule already exists, only add and reload if needed
-          CHANGED=$(docker exec "$PG_CID" bash -c '
-            set -e
-            FILE="$PGDATA/pg_hba.conf"
-            LINE_LAN="host all all '"${{ secrets.LAN_CIDR }}"' md5"
-            if grep -qF "$LINE_LAN" "$FILE"; then
-              echo "no"
-            else
-              echo "$LINE_LAN" >> "$FILE"
-              echo "yes"
-            fi
-          ')
-          
-          if [ "$CHANGED" = "yes" ]; then
-            echo ">>> pg_hba.conf updated, reloading PostgreSQL config..."
-            # Use pg_ctl reload instead of restart to avoid downtime
-            docker exec -u postgres "$PG_CID" pg_ctl reload -D "$PGDATA" 2>/dev/null || \
-              docker exec "$PG_CID" psql -U "${{ secrets.DB_USERNAME }}" -c "SELECT pg_reload_conf();" || \
-              echo "Reload command not available, will apply on next restart"
-            echo "PostgreSQL config reloaded ✅ (no restart needed)"
-          else
-            echo "LAN access already configured, skipping ✅"
-          fi
 
       - name: Verify PostgreSQL health
         working-directory: ${{ env.DEPLOY_DIR }}
@@ -344,11 +262,6 @@ jobs:
           echo "  Commit:  ${{ github.sha }}"
           echo "  Actor:   ${{ github.actor }}"
           echo "  Trigger: ${{ github.event_name }}"
-          echo ""
-          echo "  Services:"
-          echo "    - API:     http://localhost:8080"
-          echo "    - Grafana: http://localhost:3000 (via SSH tunnel)"
-          echo "    - Loki:    http://localhost:3100 (via SSH tunnel)"
           echo ""
           echo "============================================="
 

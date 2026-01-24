@@ -40,3 +40,21 @@ logging:
     org.springframework.web: DEBUG
     org.hibernate: ERROR
     org.flywaydb: DEBUG
+
+jwt:
+  rsa:
+    public-key: classpath:keys/public.pem
+    private-key: classpath:keys/private-pkcs8.pem
+  access-token:
+    expiration: 900        # 15 minutes
+  refresh-token:
+    expiration: 604800     # 7 days
+
+# CORS para desenvolvimento local
+cors:
+  allowed-origins:
+    - http://localhost:3000
+    - http://localhost:8080
+    - http://localhost:8081
+    - http://127.0.0.1:3000
+    - http://127.0.0.1:8080

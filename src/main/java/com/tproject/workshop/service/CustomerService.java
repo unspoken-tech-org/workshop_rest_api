@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -175,7 +176,12 @@ public class CustomerService {
                                 .number(phoneDto.number())
                                 .phoneAlias(phoneDto.name())
                                 .build();
-                        return phoneRepository.save(newPhone);
+                        try {
+                            return phoneRepository.save(newPhone);
+                        } catch (DataIntegrityViolationException e) {
+                            return phoneRepository.findByNumber(phoneDto.number())
+                                    .orElseThrow(() -> new RuntimeException("Erro ao criar ou buscar telefone", e));
+                        }
                     });
 
             if (phoneDto.name() != null && !phoneDto.name().isEmpty()) {

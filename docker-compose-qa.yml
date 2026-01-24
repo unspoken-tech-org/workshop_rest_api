@@ -1,0 +1,57 @@
+services:
+  workshop_db_qa:
+    image: postgres:16-alpine
+    container_name: workshop-db-qa
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db_qa_data:/var/lib/postgresql/data
+    networks:
+      - workshop-qa-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  workshop_spring_app_qa:
+    build: .
+    container_name: workshop-api-qa
+    labels:
+      workshop.env: "qa"
+    command: ["java", "-Dspring.profiles.active=qa", "-jar", "app.jar"]
+    environment:
+      - SPRING_PROFILES_ACTIVE=qa
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://workshop_db_qa:5432/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo
+    networks:
+      - workshop-qa-network
+      - workshop-ingress
+    volumes:
+      - ./config/qa_keys:/app/config/qa_keys:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      workshop_db_qa:
+        condition: service_healthy
+
+networks:
+  workshop-qa-network:
+    name: workshop-qa-network
+    driver: bridge
+  workshop-ingress:
+    name: workshop-ingress
+    driver: bridge
+
+volumes:
+  db_qa_data:

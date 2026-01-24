@@ -1,0 +1,207 @@
+name: Deploy Observability Stack
+
+on:
+  push:
+    branches:
+      - release/1.2.0
+    paths:
+      - 'docker-compose-observability.yml'
+      - 'infra/promtail-config-*.yaml'
+      - 'infra/grafana-provisioning/**'
+      - '.github/workflows/deploy-observability.yml'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or commit to deploy'
+        required: false
+        default: 'release/1.2.0'
+
+env:
+  COMPOSE_FILE: docker-compose-observability.yml
+  DEPLOY_DIR: /home/workshop/deploy/observability_stack
+
+jobs:
+  # ===========================================
+  # JOB 1: BUILD & PREPARE
+  # ===========================================
+  build:
+    name: Build & Prepare Observability
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Show build info
+        run: |
+          echo "=== OBSERVABILITY BUILD INFO ==="
+          echo "Ref:     ${{ github.event.inputs.ref }}"
+          echo "Commit:  ${{ github.sha }}"
+          echo "Actor:   ${{ github.actor }}"
+          echo "================================"
+
+      - name: Prepare observability deploy directory
+        run: |
+          mkdir -p "${DEPLOY_DIR}"
+
+      - name: Copy files to deploy dir
+        run: |
+          rsync -a --delete \
+            --include='docker-compose-observability.yml' \
+            --include='infra/***' \
+            --exclude='*' \
+            ./ "${DEPLOY_DIR}/"
+
+      - name: Write .env for observability
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          set -e
+          cat > .env <<'EOF'
+          GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          EOF
+          chmod 600 .env
+          echo ".env created for observability ✅"
+
+  # ===========================================
+  # JOB 2: DEPLOY OBSERVABILITY
+  # ===========================================
+  deploy:
+    name: Deploy Observability
+    runs-on: self-hosted
+    needs: build
+
+    steps:
+      - name: Deploy observability containers
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          echo ">>> Deploying observability stack..."
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+          echo "=== OBSERVABILITY SERVICES ==="
+          docker compose -f "$COMPOSE_FILE" ps
+
+      - name: Wait for Loki health
+        id: wait-loki
+        run: |
+          set -e
+          ATTEMPTS=30
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(curl -s http://localhost:3100/ready 2>/dev/null || echo "not ready")
+            echo "[$i/${ATTEMPTS}] Loki: ${STATUS}"
+            if [ "$STATUS" = "ready" ]; then
+              echo "Loki is ready ✅"
+              exit 0
+            fi
+            sleep $SLEEP
+          done
+          echo "Loki did not become ready ❌"
+          docker logs loki-unified --tail=100 || true
+          exit 1
+
+      - name: Wait for Grafana health
+        id: wait-grafana
+        run: |
+          set -e
+          ATTEMPTS=40
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health 2>/dev/null || echo "000")
+            echo "[$i/${ATTEMPTS}] Grafana HTTP: ${HTTP_CODE}"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Grafana is ready ✅"
+              exit 0
+            fi
+            sleep $SLEEP
+          done
+          echo "Grafana did not become ready ❌"
+          docker logs grafana-unified --tail=100 || true
+          exit 1
+
+  # ===========================================
+  # JOB 3: VALIDATE
+  # ===========================================
+  validate:
+    name: Validate Observability
+    runs-on: self-hosted
+    needs: deploy
+
+    steps:
+      - name: Check Promtail instances
+        run: |
+          echo "=== Checking Promtail instances ==="
+          
+          for instance in promtail-prod promtail-qa promtail-gateway; do
+            echo ""
+            echo ">>> Checking $instance..."
+            if docker ps --filter "name=$instance" --filter "status=running" | grep -q "$instance"; then
+              echo "$instance is running ✅"
+              TARGETS=$(docker logs "$instance" 2>&1 | grep -c "added Docker target" || echo "0")
+              echo "  Collecting $TARGETS containers"
+            else
+              echo "$instance is NOT running ⚠️"
+            fi
+          done
+
+      - name: Check Loki labels
+        run: |
+          echo ""
+          echo ">>> Checking labels in Loki..."
+          LABELS=$(curl -s http://localhost:3100/loki/api/v1/labels 2>/dev/null || echo "{}")
+          if echo "$LABELS" | grep -q "environment"; then
+            echo "Environment labels found ✅"
+            echo "$LABELS" | jq '.data' || echo "$LABELS"
+          else
+            echo "Labels may not be available yet (normal on first deploy) ⚠️"
+          fi
+
+      - name: Check Grafana datasource
+        run: |
+          echo ""
+          echo ">>> Checking Grafana datasources..."
+          # Wait a bit for Grafana to provision datasources
+          sleep 5
+          DATASOURCES=$(curl -s -u "${{ secrets.GRAFANA_ADMIN_USER }}:${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
+            http://localhost:3000/api/datasources 2>/dev/null || echo "[]")
+          if echo "$DATASOURCES" | grep -q "Loki"; then
+            echo "Loki datasource provisioned ✅"
+          else
+            echo "Loki datasource NOT found ⚠️"
+            echo "$DATASOURCES"
+          fi
+
+      - name: Test log ingestion
+        run: |
+          echo ""
+          echo ">>> Testing log ingestion from all environments..."
+          sleep 10  # Wait for logs to be ingested
+          
+          for env in production qa gateway; do
+            echo ""
+            echo "Checking logs for environment: $env"
+            QUERY=$(printf 'query={environment="%s"}' "$env")
+            RESULT=$(curl -s -G "http://localhost:3100/loki/api/v1/query" --data-urlencode "$QUERY" || echo "{}")
+          
+            if echo "$RESULT" | grep -q "stream"; then
+              echo "  Logs from $env environment found ✅"
+            else
+              echo "  No logs from $env yet (may be normal on first deploy) ℹ️"
+            fi
+          done
+
+      - name: Summary
+        if: success()
+        run: |
+          echo ""
+          echo "============================================="
+          echo "  OBSERVABILITY DEPLOY COMPLETED"
+          echo "============================================="
+          echo ""
+          echo "Access Grafana at:"
+          echo "  - https://grafana.eletroluk.com"
+          echo ""
+          echo "Loki endpoint: http://localhost:3100"
+          echo ""
+          echo "============================================="

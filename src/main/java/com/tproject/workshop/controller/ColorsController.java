@@ -1,7 +1,7 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
-import com.tproject.workshop.model.Color;
+import com.tproject.workshop.dto.color.ColorResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,5 +17,5 @@ public interface ColorsController {
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Colors retrieved successfully")
     @GetMapping
-    List<Color> getColors();
+    List<ColorResponseDto> getColors();
 }
