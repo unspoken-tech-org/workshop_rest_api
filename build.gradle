@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.tproject'
-version = '1.1.2-hotfix'
+version = '1.2.0'
 
 springBoot {
     buildInfo()
