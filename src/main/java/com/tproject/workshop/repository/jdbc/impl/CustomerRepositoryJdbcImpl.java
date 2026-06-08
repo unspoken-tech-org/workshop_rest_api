@@ -56,7 +56,7 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
                 .addValue("CPF", UtilsString.onlyDigits((filters.getCpf())), Types.VARCHAR)
                 .addValue("PHONE", filters.getPhone(), Types.VARCHAR)
                 .addValue("PAGE_SIZE", filters.getSize(), Types.INTEGER)
-                .addValue("OFFSET", filters.getPage(), Types.INTEGER);
+                .addValue("OFFSET", filters.getPage() * filters.getSize(), Types.INTEGER);
 
         List<CustomerListOutputDto> customers = jdbcTemplate.query(
                 UtilsSql.getQuery("customer/listCustomers"),

@@ -68,7 +68,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(ORDER_BY_FIELD, deviceParams.getOrdenation().orderByField(), Types.VARCHAR)
                 .addValue(ORDER_BY_DIRECTION, deviceParams.getOrdenation().orderByDirection().toString(), Types.VARCHAR)
                 .addValue(PAGE_SIZE, deviceParams.getSize())
-                .addValue(OFFSET, deviceParams.getPage());
+                .addValue(OFFSET, deviceParams.getPage() * deviceParams.getSize());
 
         List<DeviceTableDto> devices = jdbcTemplate
                 .query(
