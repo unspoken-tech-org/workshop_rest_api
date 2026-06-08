@@ -1,0 +1,8 @@
+{
+    "status": 404,
+    "title": "Entidade não encontrada",
+    "error": {
+        "code": "entity.not.found.for.request",
+        "message": "Aparelho com id 999 não encontrado"
+    }
+}

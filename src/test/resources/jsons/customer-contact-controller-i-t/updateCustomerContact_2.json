@@ -1,0 +1,12 @@
+{
+    "id": 1,
+    "deviceId": 1,
+    "technicianId": 2,
+    "technicianName": "Contact Test Tech",
+    "phone": "44987654321",
+    "type": "WHATSAPP",
+    "hasMadeContact": true,
+    "lastContact": "03/06/2025",
+    "conversation": "device is ready",
+    "deviceStatus": "PRONTO"
+}

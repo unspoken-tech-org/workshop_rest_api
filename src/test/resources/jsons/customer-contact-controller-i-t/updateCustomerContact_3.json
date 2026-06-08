@@ -3,6 +3,6 @@
     "title": "Requisição Inválida",
     "error": {
         "code": "requisicao.invalida",
-        "message": "Não foi encontrado o status: non_existent_status"
+        "message": "O numero de telefone deve ser fornecido para os tipos de contato: ligacao, mensagem"
     }
 }

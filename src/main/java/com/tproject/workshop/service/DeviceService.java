@@ -27,6 +27,14 @@ public class DeviceService {
     private final TypesBrandsModelsService typeBrandModelService;
     private final TechnicianService technicianService;
 
+    private static final List<DeviceStatusEnum> STATUS_THAT_RESET_URGENCY_REVISION = List.of(
+            DeviceStatusEnum.PRONTO,
+            DeviceStatusEnum.APROVADO,
+            DeviceStatusEnum.NAO_APROVADO,
+            DeviceStatusEnum.ENTREGUE,
+            DeviceStatusEnum.DESCARTADO
+    );
+
 
     public Page<DeviceTableDto> listDevices(DeviceQueryParam deviceQueryParam) {
         return deviceRepository.listTable(deviceQueryParam);
@@ -36,6 +44,21 @@ public class DeviceService {
     public DeviceOutputDto findDeviceById(int deviceId) {
         return deviceRepository.findByDeviceId(deviceId)
                 .orElseThrow(() -> new NotFoundException(String.format("Aparelho com id %d não encontrado", deviceId)));
+    }
+
+    @Transactional
+    public void updateDeviceStatus(int deviceId, DeviceStatusEnum status) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Aparelho com id %d não encontrado", deviceId)));
+
+        boolean resetUrgencyRevision = STATUS_THAT_RESET_URGENCY_REVISION.contains(status);
+        device.setDeviceStatus(status);
+        if (resetUrgencyRevision) {
+            device.setUrgency(false);
+            device.setRevision(false);
+        }
+        deviceRepository.save(device);
     }
 
     @Transactional

@@ -20,4 +20,9 @@ public class CustomerContactControllerImpl implements CustomerContactController 
     public CustomerContactOutputDto save(@Valid CustomerContactInputDto contact) {
         return customerContactService.save(contact);
     }
+
+    @Override
+    public CustomerContactOutputDto update(int id, @Valid CustomerContactInputDto contact) {
+        return customerContactService.update(id, contact);
+    }
 }
