@@ -168,7 +168,7 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
                 ), "non-existent phoneNumber"),
-                Arguments.of(13, HttpStatus.SC_NOT_FOUND, Map.of(
+                Arguments.of(13, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "deviceId", 1,
                         "contactType", "mensagem",
                         "technicianId", 2,
@@ -198,6 +198,127 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
                 ), "phoneNumber with special characters")
+        );
+    }
+
+    @Order(2)
+    @DisplayName("Update customer contact")
+    @MethodSource("updateCustomerContactArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} id {2} body {3} reason {4}")
+    public void updateCustomerContact(int index, Integer statusCode, Integer id, Map<String, Object> arguments, String reason) {
+        Response response = given().spec(getAuthenticatedSpec())
+                .when()
+                .contentType("application/json")
+                .body(arguments)
+                .put(BASE_PATH + "/{id}", id)
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastContact"));
+    }
+
+    private static Stream<Arguments> updateCustomerContactArguments() {
+        return Stream.of(
+                Arguments.of(1, HttpStatus.SC_OK, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "44987654321",
+                        "message", "updated message",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "update all fields"),
+                Arguments.of(2, HttpStatus.SC_OK, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "WHATSAPP",
+                        "technicianId", 2,
+                        "phoneNumber", "44987654321",
+                        "message", "device is ready",
+                        "contactStatus", true,
+                        "deviceStatus", "PRONTO",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "update device status to PRONTO"),
+                Arguments.of(3, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "missing phoneNumber for mensagem"),
+                Arguments.of(4, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "44987654321",
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "non_existent_status",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "invalid device status"),
+                Arguments.of(5, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "44987654321",
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "invalid_date"
+                ), "invalid date format"),
+                Arguments.of(6, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "9999",
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "phoneNumber less than 10 digits"),
+                Arguments.of(7, HttpStatus.SC_NOT_FOUND, 999, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "44987654321",
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "non-existent contact id"),
+                Arguments.of(8, HttpStatus.SC_NOT_FOUND, 1, Map.of(
+                        "deviceId", 999,
+                        "contactType", "mensagem",
+                        "technicianId", 2,
+                        "phoneNumber", "44987654321",
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "non-existent device id"),
+                Arguments.of(9, HttpStatus.SC_NOT_FOUND, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "mensagem",
+                        "technicianId", 999,
+                        "phoneNumber", "44987654321",
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "non-existent technician id"),
+                Arguments.of(10, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "deviceId", 1,
+                        "contactType", "ligacao",
+                        "technicianId", 2,
+                        "message", "teste",
+                        "contactStatus", true,
+                        "deviceStatus", "entregue",
+                        "contactDate", "2025-06-03T23:08:14.110245"
+                ), "missing phoneNumber for ligacao")
         );
     }
 }

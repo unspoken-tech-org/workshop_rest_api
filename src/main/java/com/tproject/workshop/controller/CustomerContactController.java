@@ -4,11 +4,14 @@ import com.tproject.workshop.config.openapi.ApiGlobalResponses;
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
@@ -25,4 +28,17 @@ public interface CustomerContactController {
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   CustomerContactOutputDto save(@Valid @RequestBody CustomerContactInputDto contact);
+
+  @Operation(
+      summary = "Update customer contact",
+      description =
+          "Updates an existing customer contact entry, changing the message, type, phone, status, "
+              + "and optionally updating the device status.")
+  @ApiGlobalResponses
+  @ApiResponse(responseCode = "200", description = "Contact updated successfully")
+  @PutMapping("/{id}")
+  @ResponseStatus(HttpStatus.OK)
+  CustomerContactOutputDto update(
+      @Parameter(description = "Contact identifier") @PathVariable("id") int id,
+      @Valid @RequestBody CustomerContactInputDto contact);
 }
