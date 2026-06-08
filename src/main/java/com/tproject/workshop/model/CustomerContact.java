@@ -31,7 +31,6 @@ public class CustomerContact {
     @Column(name = "has_made_contact")
     private boolean hasMadeContact;
 
-    @CreationTimestamp
     @Column(name = "last_contact", nullable = false)
     private Timestamp lastContact;
 
