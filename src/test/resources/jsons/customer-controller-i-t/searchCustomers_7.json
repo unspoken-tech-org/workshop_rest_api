@@ -1,23 +1,6 @@
 {
     "content": [
-        {
-            "id": 2,
-            "name": "Lucas Ribeiro Naga",
-            "cpf": "46203912042",
-            "email": "lucas@gmail.com",
-            "gender": "masculino",
-            "insertDate": "2023-01-06T14:41:00.968173",
-            "mainPhone": "44988255540"
-        },
-        {
-            "id": 3,
-            "name": "Maria Oliveira",
-            "cpf": "98765432100",
-            "email": "maria@gmail.com",
-            "gender": "feminino",
-            "insertDate": "2023-01-06T14:41:00.968173",
-            "mainPhone": "99988887777"
-        }
+        
     ],
     "pageable": {
         "pageNumber": 2,
@@ -28,12 +11,13 @@
             "unsorted": true
         },
         "offset": 4,
-        "unpaged": false,
-        "paged": true
+        "paged": true,
+        "unpaged": false
     },
     "last": true,
-    "totalPages": 3,
-    "totalElements": 6,
+    "totalPages": 2,
+    "totalElements": 4,
+    "first": false,
     "size": 2,
     "number": 2,
     "sort": {
@@ -41,7 +25,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": false,
-    "numberOfElements": 2,
-    "empty": false
+    "numberOfElements": 0,
+    "empty": true
 }
