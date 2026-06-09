@@ -37,7 +37,9 @@ class DeviceStatusValidatorTest {
                 true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -61,7 +63,9 @@ class DeviceStatusValidatorTest {
                 true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -85,7 +89,9 @@ class DeviceStatusValidatorTest {
                 true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -112,7 +118,9 @@ class DeviceStatusValidatorTest {
                 true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -140,7 +148,9 @@ class DeviceStatusValidatorTest {
                 true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act

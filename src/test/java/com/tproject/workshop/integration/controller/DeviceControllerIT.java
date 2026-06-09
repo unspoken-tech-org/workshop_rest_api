@@ -576,4 +576,203 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                 ), "update serviceValue with negative value")
         );
     }
+
+    @Order(5)
+    @DisplayName("Update device status (dedicated endpoint)")
+    @MethodSource("updateDeviceStatusArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void updateDeviceStatus(int index, Integer statusCode, int deviceId, Map<String, Object> params, String reason) {
+        Response response = given().spec(getAuthenticatedSpec())
+                .when()
+                .body(params)
+                .put(BASE_PATH + "/update/" + deviceId + "/status")
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+
+        String actualStatus = params.getOrDefault("deviceStatus", "NOVO").toString();
+        boolean isResponseOK = response.statusCode() == 200;
+        boolean isStatusDeliveredOrDiscarded = List.of("ENTREGUE", "DESCARTADO").contains(actualStatus);
+
+        if (isResponseOK && isStatusDeliveredOrDiscarded) {
+            LocalDate actualDate = LocalDate.now();
+            String departureDateString = response.jsonPath().get("departureDate").toString();
+            LocalDate departureDate = LocalDate.parse(departureDateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            Assertions.assertThat(departureDate)
+                    .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
+                    .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
+        }
+
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate", "departureDate"));
+    }
+
+    private static Stream<Arguments> updateDeviceStatusArguments() {
+        return Stream.of(
+                Arguments.of(1, HttpStatus.SC_OK, 1, Map.of(
+                        "deviceStatus", "AGUARDANDO"
+                ), "update device status to AGUARDANDO"),
+                Arguments.of(2, HttpStatus.SC_OK, 5, Map.of(
+                        "deviceStatus", "ENTREGUE"
+                ), "update device status to ENTREGUE, should auto-set departureDate"),
+                Arguments.of(3, HttpStatus.SC_NOT_FOUND, 9999, Map.of(
+                        "deviceStatus", "NOVO"
+                ), "update status of non-existent device"),
+                Arguments.of(4, HttpStatus.SC_BAD_REQUEST, 1, Map.of(
+                        "deviceStatus", "STATUS_INVALIDO"
+                ), "update device with invalid status")
+        );
+    }
+
+    @Order(6)
+    @DisplayName("Update device urgency (dedicated endpoint)")
+    @MethodSource("updateDeviceUrgencyArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void updateDeviceUrgency(int index, Integer statusCode, int deviceId, Map<String, Object> params, String expectedStatus, String reason) {
+        Response response = given().spec(getAuthenticatedSpec())
+                .when()
+                .body(params)
+                .put(BASE_PATH + "/update/" + deviceId + "/urgency")
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+
+        if (response.statusCode() == 200 && expectedStatus != null) {
+            String actualStatus = response.jsonPath().get("deviceStatus").toString();
+            Assertions.assertThat(actualStatus)
+                    .as("O status deve ser '%s' após a atualização de urgência", expectedStatus)
+                    .isEqualTo(expectedStatus);
+        }
+
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate"));
+    }
+
+    private static Stream<Arguments> updateDeviceUrgencyArguments() {
+        return Stream.of(
+                Arguments.of(1, HttpStatus.SC_OK, 2, Map.of(
+                        "hasUrgency", true
+                ), null, "set urgency to true on AGUARDANDO device"),
+                Arguments.of(2, HttpStatus.SC_OK, 4, Map.of(
+                        "hasUrgency", true
+                ), "NOVO", "set urgency on DESCARTADO device, should revert to NOVO"),
+                Arguments.of(3, HttpStatus.SC_NOT_FOUND, 9999, Map.of(
+                        "hasUrgency", true
+                ), null, "update urgency of non-existent device")
+        );
+    }
+
+    @Order(7)
+    @DisplayName("Update device revision (dedicated endpoint)")
+    @MethodSource("updateDeviceRevisionArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void updateDeviceRevision(int index, Integer statusCode, int deviceId, Map<String, Object> params, String expectedStatus, String reason) {
+        Response response = given().spec(getAuthenticatedSpec())
+                .when()
+                .body(params)
+                .put(BASE_PATH + "/update/" + deviceId + "/revision")
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+
+        if (response.statusCode() == 200 && expectedStatus != null) {
+            String actualStatus = response.jsonPath().get("deviceStatus").toString();
+            Assertions.assertThat(actualStatus)
+                    .as("O status deve ser '%s' após a atualização de revisão", expectedStatus)
+                    .isEqualTo(expectedStatus);
+        }
+
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate"));
+    }
+
+    private static Stream<Arguments> updateDeviceRevisionArguments() {
+        return Stream.of(
+                Arguments.of(1, HttpStatus.SC_OK, 2, Map.of(
+                        "revision", true
+                ), null, "set revision to true on AGUARDANDO device"),
+                Arguments.of(2, HttpStatus.SC_OK, 4, Map.of(
+                        "revision", true
+                ), null, "set revision on DESCARTADO device, should revert to NOVO"),
+                Arguments.of(3, HttpStatus.SC_NOT_FOUND, 9999, Map.of(
+                        "revision", true
+                ), null, "update revision of non-existent device")
+        );
+    }
+
+    @Order(8)
+    @DisplayName("Update device with date fields")
+    @MethodSource("updateDeviceWithDatesArguments")
+    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
+    public void updateDeviceWithDates(int index, Integer statusCode, Map<String, Object> params, String reason) {
+        Response response = given().spec(getAuthenticatedSpec())
+                .when()
+                .body(params)
+                .put(BASE_PATH + "/update")
+                .then()
+                .statusCode(statusCode)
+                .extract()
+                .response();
+
+        String actualStatus = params.getOrDefault("deviceStatus", "NOVO").toString();
+        boolean isResponseOK = response.statusCode() == 200;
+        boolean isStatusDeliveredOrDiscarded = List.of("ENTREGUE", "DESCARTADO").contains(actualStatus);
+        boolean hasDepartureDateParam = params.containsKey("departureDate");
+
+        if (isResponseOK && isStatusDeliveredOrDiscarded && !hasDepartureDateParam) {
+            LocalDate actualDate = LocalDate.now();
+            String departureDateString = response.jsonPath().get("departureDate").toString();
+            LocalDate departureDate = LocalDate.parse(departureDateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            Assertions.assertThat(departureDate)
+                    .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
+                    .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
+        }
+
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate", "departureDate"));
+    }
+
+    private static Stream<Arguments> updateDeviceWithDatesArguments() {
+        return Stream.of(
+                Arguments.of(1, HttpStatus.SC_OK, new HashMap<String, Object>() {{
+                    put("deviceId", 1);
+                    put("deviceStatus", "EM_ANDAMENTO");
+                    put("problem", "Teste com entryDate");
+                    put("observation", "Observação");
+                    put("budget", "Orçamento");
+                    put("laborValue", 50.0);
+                    put("serviceValue", 100.0);
+                    put("laborValueCollected", false);
+                    put("hasUrgency", false);
+                    put("revision", false);
+                    put("entryDate", "15/06/2026");
+                }}, "update device with entryDate only"),
+                Arguments.of(2, HttpStatus.SC_OK, new HashMap<String, Object>() {{
+                    put("deviceId", 2);
+                    put("deviceStatus", "AGUARDANDO");
+                    put("problem", "Teste com departureDate");
+                    put("observation", "Observação");
+                    put("budget", "Orçamento");
+                    put("laborValue", 50.0);
+                    put("serviceValue", 100.0);
+                    put("laborValueCollected", false);
+                    put("hasUrgency", false);
+                    put("revision", false);
+                    put("departureDate", "20/06/2026");
+                }}, "update device with departureDate only"),
+                Arguments.of(3, HttpStatus.SC_OK, new HashMap<String, Object>() {{
+                    put("deviceId", 5);
+                    put("deviceStatus", "ENTREGUE");
+                    put("problem", "Teste com ambas as datas");
+                    put("observation", "Observação");
+                    put("budget", "Orçamento");
+                    put("laborValue", 80.0);
+                    put("serviceValue", 160.0);
+                    put("laborValueCollected", false);
+                    put("hasUrgency", false);
+                    put("revision", false);
+                    put("entryDate", "10/06/2026");
+                    put("departureDate", "25/06/2026");
+                }}, "update device with both dates and status ENTREGUE")
+        );
+    }
 }
