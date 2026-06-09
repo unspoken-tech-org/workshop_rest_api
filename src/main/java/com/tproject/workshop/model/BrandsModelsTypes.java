@@ -3,6 +3,10 @@ package com.tproject.workshop.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.ToString;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Data
 @Entity(name = "brands_models_types")
@@ -26,4 +30,12 @@ public class BrandsModelsTypes {
     @JoinColumn(name = "id_type")
     @ToString.Exclude
     private Type idType;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

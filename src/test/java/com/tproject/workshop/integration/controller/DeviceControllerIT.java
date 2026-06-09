@@ -173,7 +173,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                 .extract()
                 .response();
 
-        super.validateResponse(index, response);
+        super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate"));
     }
 
     private static Stream<Arguments> getDeviceArguments() {
