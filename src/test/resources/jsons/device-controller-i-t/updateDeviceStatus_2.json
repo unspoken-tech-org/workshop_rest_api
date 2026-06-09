@@ -1,26 +1,28 @@
 {
-    "deviceId": 1,
+    "deviceId": 5,
     "customerId": 1,
     "customerName": "Alfonso Zimmer",
-    "deviceStatus": "NOVO",
-    "brandName": "Arno",
-    "modelName": "Model 1",
-    "typeName": "Ventilador",
+    "deviceStatus": "ENTREGUE",
+    "brandName": "Electrolux",
+    "modelName": "Model 5",
+    "typeName": "Aspirador",
     "technicianId": 1,
     "technicianName": "Technician 1",
-    "problem": "Problem 1",
-    "observation": "Observation 1",
-    "budget": "Budget 1",
+    "problem": "Problem 5",
+    "observation": "Observation 5",
+    "budget": "Budget 5",
     "laborValue": 50.00,
-    "serviceValue": 100.00,
+    "serviceValue": 500.00,
     "laborValueCollected": false,
     "deviceColors": [
+        "branco",
         "preto"
     ],
-    "hasUrgency": true,
+    "hasUrgency": false,
     "revision": false,
-    "entryDate": "10/04/2023",
-    "lastUpdate": "2023-01-06T14:41:00.968-03:00",
+    "entryDate": "28/04/2017",
+    "departureDate": "09/06/2026",
+    "lastUpdate": "2026-06-09T14:01:27.725-03:00",
     "customerPhones": [
         {
             "id": 1,
@@ -36,41 +38,7 @@
         }
     ],
     "customerContacts": [
-        {
-            "id": 3,
-            "deviceId": 1,
-            "technicianId": 1,
-            "technicianName": "Technician 1",
-            "phone": "44988254493",
-            "type": "mensagem",
-            "hasMadeContact": true,
-            "lastContact": "08/01/2025",
-            "conversation": "Avisado que o aparelho está pronto",
-            "deviceStatus": "PRONTO"
-        },
-        {
-            "id": 2,
-            "deviceId": 1,
-            "technicianId": 1,
-            "technicianName": "Technician 1",
-            "type": "pessoalmente",
-            "hasMadeContact": true,
-            "lastContact": "07/01/2025",
-            "conversation": "Cliente aceitou o orçamento",
-            "deviceStatus": "EM_ANDAMENTO"
-        },
-        {
-            "id": 1,
-            "deviceId": 1,
-            "technicianId": 1,
-            "technicianName": "Technician 1",
-            "phone": "44988254493",
-            "type": "mensagem",
-            "hasMadeContact": false,
-            "lastContact": "06/01/2025",
-            "conversation": "Foi passado o orçamento e aguardo resposta",
-            "deviceStatus": "AGUARDANDO"
-        }
+        
     ],
     "otherDevices": [
         {
@@ -83,6 +51,16 @@
             "revision": false,
             "entryDate": "04/02/2025",
             "departureDate": "01/05/2021"
+        },
+        {
+            "deviceId": 1,
+            "customerId": 1,
+            "typeBrandModel": "Ventilador Arno | Model 1",
+            "deviceStatus": "NOVO",
+            "problem": "Problem 1",
+            "hasUrgency": true,
+            "revision": false,
+            "entryDate": "10/04/2023"
         },
         {
             "deviceId": 3,
@@ -134,33 +112,9 @@
             "hasUrgency": true,
             "revision": false,
             "entryDate": "10/10/2020"
-        },
-        {
-            "deviceId": 5,
-            "customerId": 1,
-            "typeBrandModel": "Aspirador Electrolux | Model 5",
-            "deviceStatus": "DESCARTADO",
-            "problem": "Problem 5",
-            "hasUrgency": true,
-            "revision": false,
-            "entryDate": "28/04/2017",
-            "departureDate": "28/04/2021"
         }
     ],
     "payments": [
-        {
-            "paymentId": 2,
-            "paymentDate": "29/04/2023",
-            "paymentType": "credito",
-            "paymentValue": 100.00,
-            "category": "parcial"
-        },
-        {
-            "paymentId": 1,
-            "paymentDate": "22/04/2023",
-            "paymentType": "credito",
-            "paymentValue": 100.00,
-            "category": "parcial"
-        }
+        
     ]
 }

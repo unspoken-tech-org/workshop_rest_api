@@ -2,7 +2,7 @@
     "deviceId": 1,
     "customerId": 1,
     "customerName": "Alfonso Zimmer",
-    "deviceStatus": "NOVO",
+    "deviceStatus": "AGUARDANDO",
     "brandName": "Arno",
     "modelName": "Model 1",
     "typeName": "Ventilador",
@@ -20,7 +20,7 @@
     "hasUrgency": true,
     "revision": false,
     "entryDate": "10/04/2023",
-    "lastUpdate": "2023-01-06T14:41:00.968-03:00",
+    "lastUpdate": "2026-06-09T14:01:27.536-03:00",
     "customerPhones": [
         {
             "id": 1,

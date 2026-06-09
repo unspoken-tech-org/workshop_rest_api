@@ -1,5 +1,6 @@
 package com.tproject.workshop.dto.device;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tproject.workshop.validation.ValidDeviceStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
@@ -7,6 +8,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public record DeviceUpdateInputDtoRecord(
         @Schema(description = "Identifier of the device being updated", example = "42")
@@ -36,7 +38,13 @@ public record DeviceUpdateInputDtoRecord(
         @Schema(description = "Indicates if the device is under revision", example = "false")
         boolean revision,
         @Schema(description = "Technician responsible for the update", example = "7")
-        Integer technicianId
+        Integer technicianId,
+        @Schema(description = "Entry date (dd/MM/yyyy)", example = "15/06/2026")
+        @JsonFormat(pattern = "dd/MM/yyyy")
+        LocalDate entryDate,
+        @Schema(description = "Departure date (dd/MM/yyyy)", example = "20/06/2026")
+        @JsonFormat(pattern = "dd/MM/yyyy")
+        LocalDate departureDate
 ) {
 
 }

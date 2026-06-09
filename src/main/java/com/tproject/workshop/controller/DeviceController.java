@@ -39,6 +39,36 @@ public interface DeviceController {
     DeviceOutputDto update(@RequestBody DeviceUpdateInputDtoRecord device);
 
     @Operation(
+            summary = "Update device status",
+            description = "Updates only the device status. Resets urgency and revision for terminal statuses, auto-sets departure date when delivered or discarded.")
+    @ApiGlobalResponses
+    @ApiResponse(responseCode = "200", description = "Device status updated successfully")
+    @PutMapping("/update/{deviceId}/status")
+    DeviceOutputDto updateStatus(
+            @Parameter(description = "Device identifier") @PathVariable("deviceId") int deviceId,
+            @RequestBody @Valid DeviceStatusInputRecord dto);
+
+    @Operation(
+            summary = "Update device urgency",
+            description = "Toggles the urgency flag. Reverts status to NOVO if the device is currently delivered or discarded.")
+    @ApiGlobalResponses
+    @ApiResponse(responseCode = "200", description = "Device urgency updated successfully")
+    @PutMapping("/update/{deviceId}/urgency")
+    DeviceOutputDto updateUrgency(
+            @Parameter(description = "Device identifier") @PathVariable("deviceId") int deviceId,
+            @RequestBody @Valid DeviceUrgencyInputRecord dto);
+
+    @Operation(
+            summary = "Update device revision",
+            description = "Toggles the revision flag. Reverts status to NOVO if the device is currently delivered or discarded.")
+    @ApiGlobalResponses
+    @ApiResponse(responseCode = "200", description = "Device revision updated successfully")
+    @PutMapping("/update/{deviceId}/revision")
+    DeviceOutputDto updateRevision(
+            @Parameter(description = "Device identifier") @PathVariable("deviceId") int deviceId,
+            @RequestBody @Valid DeviceRevisionInputRecord dto);
+
+    @Operation(
             summary = "Create device",
             description = "Registers a new device intake with catalog mapping, color selection, and urgency flags.")
     @ApiGlobalResponses

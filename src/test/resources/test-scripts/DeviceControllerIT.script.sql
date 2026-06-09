@@ -79,7 +79,7 @@ INSERT INTO colors(id, color) VALUES
 
 INSERT INTO devices (id, id_customer, id_brand_model_type, device_status, id_technician, entry_date, departure_date, problem, observation, budget, labor_value, service_value, has_urgency, is_revision, last_update, color_ids)
 VALUES
-(1, 1, 1, 'NOVO', 1, '2023-04-10 08:41:00.968173', null, 'Problem 1', 'Observation 1', 'Budget 1', 50.00, 100.00, true, false, null, ('{1}')),
+(1, 1, 1, 'NOVO', 1, '2023-04-10 08:41:00.968173', null, 'Problem 1', 'Observation 1', 'Budget 1', 50.00, 100.00, true, false, '2023-01-06 14:41:00.968173', ('{1}')),
 (2, 2, 2, 'EM_ANDAMENTO', 2, '2023-01-01 14:41:00.968173', null, 'Problem 2', 'Observation 2', 'Budget 2', 50.00, 200.00, false, true, '2023-01-06 14:41:00.968173',('{2}')),
 (3, 1, 3, 'AGUARDANDO', 1, '2021-09-03 08:41:00.968173', null, 'Problem 3', 'Observation 3', 'Budget 3', 50.00, 300.00, true, false, null, ('{3}')),
 (4, 2, 4, 'ENTREGUE', 2, '2023-01-02 14:41:00.968173', '2023-01-05 14:41:00.968173', 'Problem 4', 'Observation 4', 'Budget 4', 50.00, 400.00, false, true, '2023-01-06 14:41:00.968173', ('{4}')),

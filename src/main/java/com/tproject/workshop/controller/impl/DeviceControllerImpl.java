@@ -40,6 +40,21 @@ public class DeviceControllerImpl implements DeviceController {
     }
 
     @Override
+    public DeviceOutputDto updateStatus(int deviceId, @Valid DeviceStatusInputRecord dto) {
+        return deviceService.updateDeviceStatus(deviceId, dto);
+    }
+
+    @Override
+    public DeviceOutputDto updateUrgency(int deviceId, @Valid DeviceUrgencyInputRecord dto) {
+        return deviceService.updateDeviceUrgency(deviceId, dto);
+    }
+
+    @Override
+    public DeviceOutputDto updateRevision(int deviceId, @Valid DeviceRevisionInputRecord dto) {
+        return deviceService.updateDeviceRevision(deviceId, dto);
+    }
+
+    @Override
     public CreateDeviceOutputDtoRecord create(@Valid @RequestBody DeviceInputDtoRecord device) {
         return deviceService.createDevice(device);
     }
