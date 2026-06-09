@@ -3,7 +3,7 @@ package com.tproject.workshop.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.sql.Timestamp;
@@ -21,7 +21,7 @@ public class Customer {
     int idCustomer;
     @Column(name = "name", nullable = false)
     String name;
-    @CreationTimestamp(source = SourceType.DB)
+    @CreationTimestamp
     @Column(name = "insert_date", nullable = false)
     Timestamp insertDate;
     @CPF
@@ -36,4 +36,8 @@ public class Customer {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<CustomerPhone> customerPhones;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Timestamp updatedAt;
 }
