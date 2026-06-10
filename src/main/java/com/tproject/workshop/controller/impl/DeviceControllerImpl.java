@@ -58,4 +58,9 @@ public class DeviceControllerImpl implements DeviceController {
     public CreateDeviceOutputDtoRecord create(@Valid @RequestBody DeviceInputDtoRecord device) {
         return deviceService.createDevice(device);
     }
+
+    @Override
+    public Page<DeviceTableDto> search(@RequestBody @Valid DeviceSearchParam params) {
+        return deviceService.searchDevices(params);
+    }
 }

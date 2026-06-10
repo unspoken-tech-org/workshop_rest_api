@@ -86,8 +86,14 @@ public class DeviceService {
         return device;
     }
 
+    @Transactional(readOnly = true)
     public Page<DeviceTableDto> listDevices(DeviceQueryParam deviceQueryParam) {
         return deviceRepository.listTable(deviceQueryParam);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DeviceTableDto> searchDevices(DeviceSearchParam params) {
+        return deviceRepository.searchTable(params);
     }
 
     @Transactional(readOnly = true)

@@ -76,4 +76,11 @@ public interface DeviceController {
     @PostMapping("/create")
     @ResponseStatus(code = HttpStatus.CREATED)
     CreateDeviceOutputDtoRecord create(@RequestBody DeviceInputDtoRecord device);
+
+    @Operation(summary = "Search devices",
+            description = "Full-text fuzzy search across device type, brand, model, and customer name. Supports pagination and auxiliary filters (status, urgency, revision, entry dates).")
+    @ApiGlobalResponses
+    @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
+    @PostMapping("/search")
+    Page<DeviceTableDto> search(@RequestBody @Valid DeviceSearchParam params);
 }
