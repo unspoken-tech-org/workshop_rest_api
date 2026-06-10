@@ -1,0 +1,55 @@
+{
+    "content": [
+        {
+            "deviceId": 112,
+            "customerId": 12,
+            "customerName": "Pedro Oliveira",
+            "type": "Liquidificador",
+            "brand": "Arno",
+            "model": "Power Mix",
+            "status": "NOVO",
+            "problem": "Liquidificador Arno Pedro",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/12/2024"
+        },
+        {
+            "deviceId": 131,
+            "customerId": 12,
+            "customerName": "Pedro Oliveira",
+            "type": "Lava louças",
+            "brand": "Arno",
+            "model": "Power Flow",
+            "status": "EM_ANDAMENTO",
+            "problem": "Lava louças Arno",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "25/12/2024"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 2,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 2,
+    "empty": false
+}

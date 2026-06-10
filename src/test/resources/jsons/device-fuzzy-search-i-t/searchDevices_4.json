@@ -1,0 +1,42 @@
+{
+    "content": [
+        {
+            "deviceId": 101,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas de embutir",
+            "brand": "Samsung",
+            "model": "Turbo 3000",
+            "status": "EM_ANDAMENTO",
+            "problem": "Micro-ondas embutir",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "15/06/2024"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 1,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 1,
+    "empty": false
+}

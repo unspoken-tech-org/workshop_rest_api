@@ -1,0 +1,42 @@
+{
+    "content": [
+        {
+            "deviceId": 105,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Micro-ondas",
+            "brand": "Sansung",
+            "model": "Smart Cook",
+            "status": "DESCARTADO",
+            "problem": "Micro-ondas Sansung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/12/2023"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 1,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 1,
+    "empty": false
+}
