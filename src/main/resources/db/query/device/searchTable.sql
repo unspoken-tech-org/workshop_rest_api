@@ -70,5 +70,6 @@ ORDER BY
             END
     END DESC,
     -- 3. Fallback
-    d.entry_date DESC
+    d.entry_date DESC,
+    d.id ASC
 LIMIT :PAGE_SIZE OFFSET :OFFSET
