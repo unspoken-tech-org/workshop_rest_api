@@ -66,6 +66,19 @@
             "entryDate": "01/08/2024"
         },
         {
+            "deviceId": 100,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/06/2024"
+        },
+        {
             "deviceId": 133,
             "customerId": 13,
             "customerName": "Adilson Ferreira da Silva",
@@ -87,19 +100,6 @@
             "model": "Smart Cook",
             "status": "NOVO",
             "problem": "Micro-ondas Samsung João Pedro",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/06/2024"
-        },
-        {
-            "deviceId": 100,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Samsung",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/06/2024"
@@ -159,6 +159,7 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 11,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -166,7 +167,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 11,
     "empty": false
 }

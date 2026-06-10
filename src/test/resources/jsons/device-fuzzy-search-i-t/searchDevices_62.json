@@ -1,19 +1,6 @@
 {
     "content": [
         {
-            "deviceId": 120,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Liquidificador",
-            "brand": "Panasonic",
-            "model": "Power Mix",
-            "status": "NOVO",
-            "problem": "Liquidificador Panasonic",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/12/2024"
-        },
-        {
             "deviceId": 112,
             "customerId": 12,
             "customerName": "Pedro Oliveira",
@@ -92,19 +79,6 @@
             "entryDate": "20/11/2024"
         },
         {
-            "deviceId": 117,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Brastenp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastenp",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/11/2024"
-        },
-        {
             "deviceId": 111,
             "customerId": 11,
             "customerName": "Maria Aparecida",
@@ -113,6 +87,19 @@
             "model": "Smart Cook",
             "status": "NOVO",
             "problem": "Micro-ondas Britânia Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/11/2024"
+        },
+        {
+            "deviceId": 117,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Brastenp",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Brastenp",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/11/2024"
@@ -146,6 +133,7 @@
     "last": false,
     "totalPages": 6,
     "totalElements": 55,
+    "first": false,
     "size": 10,
     "number": 1,
     "sort": {
@@ -153,7 +141,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": false,
-    "numberOfElements": 10,
+    "numberOfElements": 9,
     "empty": false
 }

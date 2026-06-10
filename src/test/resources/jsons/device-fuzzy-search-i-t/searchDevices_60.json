@@ -40,19 +40,6 @@
             "entryDate": "20/12/2024"
         },
         {
-            "deviceId": 128,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador de coluna",
-            "brand": "Wallita",
-            "model": "Smart Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Wallita",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/12/2024"
-        },
-        {
             "deviceId": 113,
             "customerId": 12,
             "customerName": "Pedro Oliveira",
@@ -66,17 +53,17 @@
             "entryDate": "15/12/2024"
         },
         {
-            "deviceId": 127,
+            "deviceId": 128,
             "customerId": 11,
             "customerName": "Maria Aparecida",
-            "type": "Liquidificador",
-            "brand": "Panassonic",
-            "model": "Power Mix",
-            "status": "PRONTO",
-            "problem": "Liquidificador Panassonic",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Wallita",
             "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "10/12/2024"
+            "hasRevision": false,
+            "entryDate": "15/12/2024"
         },
         {
             "deviceId": 122,
@@ -92,17 +79,17 @@
             "entryDate": "10/12/2024"
         },
         {
-            "deviceId": 126,
+            "deviceId": 127,
             "customerId": 11,
             "customerName": "Maria Aparecida",
-            "type": "Micro-ondas",
-            "brand": "Brastenp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastenp",
+            "type": "Liquidificador",
+            "brand": "Panassonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panassonic",
             "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "05/12/2024"
+            "hasRevision": true,
+            "entryDate": "10/12/2024"
         },
         {
             "deviceId": 121,
@@ -118,17 +105,17 @@
             "entryDate": "05/12/2024"
         },
         {
-            "deviceId": 125,
+            "deviceId": 126,
             "customerId": 11,
             "customerName": "Maria Aparecida",
-            "type": "Liquidificador",
-            "brand": "Panasonic",
-            "model": "Power Mix",
+            "type": "Micro-ondas",
+            "brand": "Brastenp",
+            "model": "Smart Cook",
             "status": "NOVO",
-            "problem": "Liquidificador Panasonic",
+            "problem": "Micro-ondas Brastenp",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/12/2024"
+            "entryDate": "05/12/2024"
         },
         {
             "deviceId": 112,
@@ -144,9 +131,9 @@
             "entryDate": "01/12/2024"
         },
         {
-            "deviceId": 120,
-            "customerId": 10,
-            "customerName": "João Silva",
+            "deviceId": 125,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
             "type": "Liquidificador",
             "brand": "Panasonic",
             "model": "Power Mix",
@@ -183,16 +170,16 @@
             "entryDate": "25/11/2024"
         },
         {
-            "deviceId": 123,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
+            "deviceId": 118,
+            "customerId": 10,
+            "customerName": "João Silva",
             "type": "Micro-ondas",
-            "brand": "Brastemp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastemp",
+            "brand": "Eletrolux",
+            "model": "Mega Plus",
+            "status": "PRONTO",
+            "problem": "Micro-ondas Eletrolux",
             "hasUrgency": false,
-            "hasRevision": false,
+            "hasRevision": true,
             "entryDate": "20/11/2024"
         }
     ],
@@ -211,6 +198,7 @@
     "last": false,
     "totalPages": 2,
     "totalElements": 24,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -218,7 +206,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
-    "numberOfElements": 15,
+    "numberOfElements": 14,
     "empty": false
 }

@@ -107,6 +107,7 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 7,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -114,7 +115,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 7,
     "empty": false
 }

@@ -211,6 +211,7 @@
     "last": false,
     "totalPages": 2,
     "totalElements": 16,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -218,7 +219,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 15,
     "empty": false
 }
