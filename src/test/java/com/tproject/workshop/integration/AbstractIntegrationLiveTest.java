@@ -21,6 +21,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import com.tproject.workshop.config.TestcontainersConfiguration;
+import org.springframework.context.annotation.Import;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +33,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.platform.commons.function.Try.success;
 
+@Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
 @Tag("integration")
 @TestPropertySource(locations = "classpath:application-test.yml")
