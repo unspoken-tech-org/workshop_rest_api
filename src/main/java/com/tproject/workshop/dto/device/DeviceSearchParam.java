@@ -2,35 +2,48 @@ package com.tproject.workshop.dto.device;
 
 import com.tproject.workshop.utils.filter_utils.Ordenation;
 import com.tproject.workshop.utils.filter_utils.OrderByDirection;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 
 import java.util.List;
 
 public record DeviceSearchParam(
+    @Schema(description = "Full-text search query across type, brand, model, and customer name", example = "samsung")
     String searchQuery,
 
+    @Schema(description = "Device ID filter", example = "1")
     Integer deviceId,
 
+    @Schema(description = "Customer phone number filter", example = "11999887766")
     String customerPhone,
 
+    @Schema(description = "Customer CPF filter", example = "52998224725")
     String customerCpf,
 
+    @Schema(description = "List of device status filters", example = "[\"NOVO\",\"EM_ANDAMENTO\"]")
     List<String> status,
 
+    @Schema(description = "Filter by urgency flag", example = "true")
     Boolean urgency,
 
+    @Schema(description = "Filter by revision flag", example = "false")
     Boolean revision,
 
+    @Schema(description = "Start date for entry date range (yyyy-MM-dd)", example = "2026-01-01")
     String initialEntryDate,
 
+    @Schema(description = "End date for entry date range (yyyy-MM-dd)", example = "2026-06-10")
     String finalEntryDate,
 
+    @Schema(description = "Page number (0-based)", example = "0")
     @Min(value = 0, message = "O número da página deve ser maior ou igual a zero")
     Integer page,
 
+    @Schema(description = "Page size", example = "15")
     @Min(value = 1, message = "O tamanho da página deve ser maior que zero")
     Integer size,
 
+    @Schema(description = "Ordering configuration (field and direction)")
     Ordenation ordenation
 ) {
     public DeviceSearchParam {
