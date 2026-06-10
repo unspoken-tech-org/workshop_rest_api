@@ -79,19 +79,6 @@
             "entryDate": "15/12/2024"
         },
         {
-            "deviceId": 127,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Liquidificador",
-            "brand": "Panassonic",
-            "model": "Power Mix",
-            "status": "PRONTO",
-            "problem": "Liquidificador Panassonic",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "10/12/2024"
-        },
-        {
             "deviceId": 122,
             "customerId": 10,
             "customerName": "João Silva",
@@ -102,6 +89,19 @@
             "problem": "Chaleira Britânia",
             "hasUrgency": false,
             "hasRevision": false,
+            "entryDate": "10/12/2024"
+        },
+        {
+            "deviceId": 127,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Liquidificador",
+            "brand": "Panassonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panassonic",
+            "hasUrgency": false,
+            "hasRevision": true,
             "entryDate": "10/12/2024"
         },
         {
@@ -131,19 +131,6 @@
             "entryDate": "05/12/2024"
         },
         {
-            "deviceId": 120,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Liquidificador",
-            "brand": "Panasonic",
-            "model": "Power Mix",
-            "status": "NOVO",
-            "problem": "Liquidificador Panasonic",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/12/2024"
-        },
-        {
             "deviceId": 112,
             "customerId": 12,
             "customerName": "Pedro Oliveira",
@@ -157,17 +144,17 @@
             "entryDate": "01/12/2024"
         },
         {
-            "deviceId": 124,
+            "deviceId": 125,
             "customerId": 11,
             "customerName": "Maria Aparecida",
-            "type": "Micro-ondas",
-            "brand": "Eletrolux",
-            "model": "Mega Plus",
-            "status": "EM_ANDAMENTO",
-            "problem": "Micro-ondas Eletrolux",
-            "hasUrgency": true,
+            "type": "Liquidificador",
+            "brand": "Panasonic",
+            "model": "Power Mix",
+            "status": "NOVO",
+            "problem": "Liquidificador Panasonic",
+            "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "25/11/2024"
+            "entryDate": "01/12/2024"
         },
         {
             "deviceId": 119,
@@ -183,17 +170,17 @@
             "entryDate": "25/11/2024"
         },
         {
-            "deviceId": 123,
+            "deviceId": 124,
             "customerId": 11,
             "customerName": "Maria Aparecida",
             "type": "Micro-ondas",
-            "brand": "Brastemp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastemp",
-            "hasUrgency": false,
+            "brand": "Eletrolux",
+            "model": "Mega Plus",
+            "status": "EM_ANDAMENTO",
+            "problem": "Micro-ondas Eletrolux",
+            "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "20/11/2024"
+            "entryDate": "25/11/2024"
         },
         {
             "deviceId": 118,
@@ -209,17 +196,17 @@
             "entryDate": "20/11/2024"
         },
         {
-            "deviceId": 117,
-            "customerId": 10,
-            "customerName": "João Silva",
+            "deviceId": 123,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
             "type": "Micro-ondas",
-            "brand": "Brastenp",
+            "brand": "Brastemp",
             "model": "Smart Cook",
             "status": "NOVO",
-            "problem": "Micro-ondas Brastenp",
+            "problem": "Micro-ondas Brastemp",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/11/2024"
+            "entryDate": "20/11/2024"
         },
         {
             "deviceId": 111,
@@ -230,6 +217,19 @@
             "model": "Smart Cook",
             "status": "NOVO",
             "problem": "Micro-ondas Britânia Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/11/2024"
+        },
+        {
+            "deviceId": 117,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Brastenp",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Brastenp",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/11/2024"
@@ -261,19 +261,6 @@
             "entryDate": "05/11/2024"
         },
         {
-            "deviceId": 114,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Brastemp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastemp",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/11/2024"
-        },
-        {
             "deviceId": 110,
             "customerId": 11,
             "customerName": "Maria Aparecida",
@@ -282,6 +269,19 @@
             "model": "Easy Breeze",
             "status": "NOVO",
             "problem": "Ventilador Samsung Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/11/2024"
+        },
+        {
+            "deviceId": 114,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Brastemp",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Brastemp",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/11/2024"
@@ -352,32 +352,6 @@
             "entryDate": "15/08/2024"
         },
         {
-            "deviceId": 135,
-            "customerId": 13,
-            "customerName": "Adilson Ferreira da Silva",
-            "type": "Aspirador robô",
-            "brand": "Samsung",
-            "model": "Silent Pro",
-            "status": "NOVO",
-            "problem": "Aspirador Samsung Adilson",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/08/2024"
-        },
-        {
-            "deviceId": 148,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
-            "type": "Liquidificador",
-            "brand": "Panasonic",
-            "model": "Power Mix",
-            "status": "PRONTO",
-            "problem": "Liquidificador Panasonic João Pedro",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "01/08/2024"
-        },
-        {
             "deviceId": 106,
             "customerId": 10,
             "customerName": "João Silva",
@@ -387,6 +361,19 @@
             "status": "PRONTO",
             "problem": "Micro-ondas Britania",
             "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "01/08/2024"
+        },
+        {
+            "deviceId": 135,
+            "customerId": 13,
+            "customerName": "Adilson Ferreira da Silva",
+            "type": "Aspirador robô",
+            "brand": "Samsung",
+            "model": "Silent Pro",
+            "status": "NOVO",
+            "problem": "Aspirador Samsung Adilson",
+            "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/08/2024"
         },
@@ -401,6 +388,19 @@
             "problem": "Ventilador Consul Paulo",
             "hasUrgency": true,
             "hasRevision": false,
+            "entryDate": "01/08/2024"
+        },
+        {
+            "deviceId": 148,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Liquidificador",
+            "brand": "Panasonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panasonic João Pedro",
+            "hasUrgency": false,
+            "hasRevision": true,
             "entryDate": "01/08/2024"
         },
         {
@@ -456,19 +456,6 @@
             "entryDate": "20/07/2024"
         },
         {
-            "deviceId": 150,
-            "customerId": 20,
-            "customerName": "João Paulo Ferreira",
-            "type": "Ventilador",
-            "brand": "Consul",
-            "model": "Turbo 3000",
-            "status": "AGUARDANDO",
-            "problem": "Ventilador Consul João Paulo",
-            "hasUrgency": true,
-            "hasRevision": true,
-            "entryDate": "15/07/2024"
-        },
-        {
             "deviceId": 137,
             "customerId": 14,
             "customerName": "Alessandro de Paula",
@@ -479,6 +466,19 @@
             "problem": "Secadora Electrolux Alessandro",
             "hasUrgency": true,
             "hasRevision": false,
+            "entryDate": "15/07/2024"
+        },
+        {
+            "deviceId": 150,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Ventilador",
+            "brand": "Consul",
+            "model": "Turbo 3000",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador Consul João Paulo",
+            "hasUrgency": true,
+            "hasRevision": true,
             "entryDate": "15/07/2024"
         },
         {
@@ -599,19 +599,6 @@
             "entryDate": "20/06/2024"
         },
         {
-            "deviceId": 136,
-            "customerId": 14,
-            "customerName": "Alessandro de Paula",
-            "type": "Micro-ondas",
-            "brand": "Electrolux",
-            "model": "Mega Plus",
-            "status": "NOVO",
-            "problem": "Micro-ondas Electrolux Alessandro",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/06/2024"
-        },
-        {
             "deviceId": 101,
             "customerId": 10,
             "customerName": "João Silva",
@@ -621,6 +608,19 @@
             "status": "EM_ANDAMENTO",
             "problem": "Micro-ondas embutir",
             "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "15/06/2024"
+        },
+        {
+            "deviceId": 136,
+            "customerId": 14,
+            "customerName": "Alessandro de Paula",
+            "type": "Micro-ondas",
+            "brand": "Electrolux",
+            "model": "Mega Plus",
+            "status": "NOVO",
+            "problem": "Micro-ondas Electrolux Alessandro",
+            "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/06/2024"
         },
@@ -651,19 +651,6 @@
             "entryDate": "01/06/2024"
         },
         {
-            "deviceId": 146,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
-            "type": "Micro-ondas",
-            "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Samsung João Pedro",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/06/2024"
-        },
-        {
             "deviceId": 133,
             "customerId": 13,
             "customerName": "Adilson Ferreira da Silva",
@@ -672,6 +659,19 @@
             "model": "Smart Cook",
             "status": "NOVO",
             "problem": "Micro-ondas Samsung Adilson",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/06/2024"
+        },
+        {
+            "deviceId": 146,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung João Pedro",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/06/2024"
@@ -718,6 +718,7 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 54,
+    "first": true,
     "size": 100,
     "number": 0,
     "sort": {
@@ -725,7 +726,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 54,
     "empty": false
 }

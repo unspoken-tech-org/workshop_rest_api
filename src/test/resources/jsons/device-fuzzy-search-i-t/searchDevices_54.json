@@ -53,19 +53,6 @@
             "entryDate": "30/07/2024"
         },
         {
-            "deviceId": 153,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Ventilador de mesa",
-            "brand": "Britânia",
-            "model": "Silent Pro",
-            "status": "PRONTO",
-            "problem": "Ventilador Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
-        },
-        {
             "deviceId": 139,
             "customerId": 15,
             "customerName": "Maria Aparecida de Oliveira",
@@ -74,6 +61,19 @@
             "model": "Smart Breeze",
             "status": "PRONTO",
             "problem": "Ventilador Wallita Maria Aparecida",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "20/07/2024"
+        },
+        {
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
             "hasUrgency": false,
             "hasRevision": true,
             "entryDate": "20/07/2024"
@@ -133,6 +133,7 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 9,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -140,7 +141,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 9,
     "empty": false
 }

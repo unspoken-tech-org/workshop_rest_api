@@ -27,19 +27,6 @@
             "entryDate": "25/11/2024"
         },
         {
-            "deviceId": 123,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Micro-ondas",
-            "brand": "Brastemp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastemp",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "20/11/2024"
-        },
-        {
             "deviceId": 118,
             "customerId": 10,
             "customerName": "João Silva",
@@ -50,6 +37,19 @@
             "problem": "Micro-ondas Eletrolux",
             "hasUrgency": false,
             "hasRevision": true,
+            "entryDate": "20/11/2024"
+        },
+        {
+            "deviceId": 123,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Micro-ondas",
+            "brand": "Brastemp",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Brastemp",
+            "hasUrgency": false,
+            "hasRevision": false,
             "entryDate": "20/11/2024"
         },
         {
@@ -183,14 +183,14 @@
             "entryDate": "15/06/2024"
         },
         {
-            "deviceId": 149,
-            "customerId": 20,
-            "customerName": "João Paulo Ferreira",
+            "deviceId": 136,
+            "customerId": 14,
+            "customerName": "Alessandro de Paula",
             "type": "Micro-ondas",
-            "brand": "Brastemp",
-            "model": "Smart Cook",
+            "brand": "Electrolux",
+            "model": "Mega Plus",
             "status": "NOVO",
-            "problem": "Micro-ondas Brastemp João Paulo",
+            "problem": "Micro-ondas Electrolux Alessandro",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/06/2024"
@@ -211,6 +211,7 @@
     "last": false,
     "totalPages": 2,
     "totalElements": 21,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -218,7 +219,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 15,
     "empty": false
 }

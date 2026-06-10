@@ -27,19 +27,6 @@
             "entryDate": "20/12/2024"
         },
         {
-            "deviceId": 128,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador de coluna",
-            "brand": "Wallita",
-            "model": "Smart Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Wallita",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/12/2024"
-        },
-        {
             "deviceId": 113,
             "customerId": 12,
             "customerName": "Pedro Oliveira",
@@ -48,6 +35,19 @@
             "model": "Air Flow",
             "status": "NOVO",
             "problem": "Ventilador Wallita Pedro",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/12/2024"
+        },
+        {
+            "deviceId": 128,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Wallita",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/12/2024"
@@ -79,19 +79,6 @@
             "entryDate": "05/12/2024"
         },
         {
-            "deviceId": 125,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Liquidificador",
-            "brand": "Panasonic",
-            "model": "Power Mix",
-            "status": "NOVO",
-            "problem": "Liquidificador Panasonic",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/12/2024"
-        },
-        {
             "deviceId": 112,
             "customerId": 12,
             "customerName": "Pedro Oliveira",
@@ -105,9 +92,9 @@
             "entryDate": "01/12/2024"
         },
         {
-            "deviceId": 120,
-            "customerId": 10,
-            "customerName": "João Silva",
+            "deviceId": 125,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
             "type": "Liquidificador",
             "brand": "Panasonic",
             "model": "Power Mix",
@@ -144,19 +131,6 @@
             "entryDate": "20/11/2024"
         },
         {
-            "deviceId": 117,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Brastenp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastenp",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/11/2024"
-        },
-        {
             "deviceId": 111,
             "customerId": 11,
             "customerName": "Maria Aparecida",
@@ -165,6 +139,19 @@
             "model": "Smart Cook",
             "status": "NOVO",
             "problem": "Micro-ondas Britânia Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/11/2024"
+        },
+        {
+            "deviceId": 117,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Brastenp",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Brastenp",
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/11/2024"
@@ -211,6 +198,7 @@
     "last": false,
     "totalPages": 3,
     "totalElements": 31,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -218,7 +206,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
-    "numberOfElements": 15,
+    "numberOfElements": 14,
     "empty": false
 }

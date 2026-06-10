@@ -92,19 +92,6 @@
             "entryDate": "01/08/2024"
         },
         {
-            "deviceId": 153,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Ventilador de mesa",
-            "brand": "Britânia",
-            "model": "Silent Pro",
-            "status": "PRONTO",
-            "problem": "Ventilador Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
-        },
-        {
             "deviceId": 139,
             "customerId": 15,
             "customerName": "Maria Aparecida de Oliveira",
@@ -113,6 +100,19 @@
             "model": "Smart Breeze",
             "status": "PRONTO",
             "problem": "Ventilador Wallita Maria Aparecida",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "20/07/2024"
+        },
+        {
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
             "hasUrgency": false,
             "hasRevision": true,
             "entryDate": "20/07/2024"
@@ -144,15 +144,15 @@
             "entryDate": "10/07/2024"
         },
         {
-            "deviceId": 147,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
+            "deviceId": 103,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
             "type": "Ventilador",
             "brand": "Britânia",
             "model": "Easy Breeze",
-            "status": "EM_ANDAMENTO",
-            "problem": "Ventilador Britânia João Pedro",
-            "hasUrgency": true,
+            "status": "NOVO",
+            "problem": "Ventilador Britânia",
+            "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/07/2024"
         },
@@ -170,15 +170,15 @@
             "entryDate": "01/07/2024"
         },
         {
-            "deviceId": 103,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
+            "deviceId": 147,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
             "type": "Ventilador",
             "brand": "Britânia",
             "model": "Easy Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Britânia",
-            "hasUrgency": false,
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Britânia João Pedro",
+            "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "01/07/2024"
         },
@@ -211,6 +211,7 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 15,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -218,7 +219,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 15,
     "empty": false
 }

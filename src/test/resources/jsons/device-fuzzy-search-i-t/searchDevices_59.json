@@ -53,19 +53,6 @@
             "entryDate": "01/08/2024"
         },
         {
-            "deviceId": 148,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
-            "type": "Liquidificador",
-            "brand": "Panasonic",
-            "model": "Power Mix",
-            "status": "PRONTO",
-            "problem": "Liquidificador Panasonic João Pedro",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "01/08/2024"
-        },
-        {
             "deviceId": 145,
             "customerId": 18,
             "customerName": "Paulo Henrique Santos",
@@ -76,6 +63,19 @@
             "problem": "Ventilador Consul Paulo",
             "hasUrgency": true,
             "hasRevision": false,
+            "entryDate": "01/08/2024"
+        },
+        {
+            "deviceId": 148,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Liquidificador",
+            "brand": "Panasonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panasonic João Pedro",
+            "hasUrgency": false,
+            "hasRevision": true,
             "entryDate": "01/08/2024"
         },
         {
@@ -105,19 +105,6 @@
             "entryDate": "25/07/2024"
         },
         {
-            "deviceId": 153,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Ventilador de mesa",
-            "brand": "Britânia",
-            "model": "Silent Pro",
-            "status": "PRONTO",
-            "problem": "Ventilador Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
-        },
-        {
             "deviceId": 139,
             "customerId": 15,
             "customerName": "Maria Aparecida de Oliveira",
@@ -131,17 +118,17 @@
             "entryDate": "20/07/2024"
         },
         {
-            "deviceId": 150,
-            "customerId": 20,
-            "customerName": "João Paulo Ferreira",
-            "type": "Ventilador",
-            "brand": "Consul",
-            "model": "Turbo 3000",
-            "status": "AGUARDANDO",
-            "problem": "Ventilador Consul João Paulo",
-            "hasUrgency": true,
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
+            "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "15/07/2024"
+            "entryDate": "20/07/2024"
         },
         {
             "deviceId": 137,
@@ -154,6 +141,19 @@
             "problem": "Secadora Electrolux Alessandro",
             "hasUrgency": true,
             "hasRevision": false,
+            "entryDate": "15/07/2024"
+        },
+        {
+            "deviceId": 150,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Ventilador",
+            "brand": "Consul",
+            "model": "Turbo 3000",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador Consul João Paulo",
+            "hasUrgency": true,
+            "hasRevision": true,
             "entryDate": "15/07/2024"
         },
         {
@@ -170,15 +170,15 @@
             "entryDate": "10/07/2024"
         },
         {
-            "deviceId": 147,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
+            "deviceId": 103,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
             "type": "Ventilador",
             "brand": "Britânia",
             "model": "Easy Breeze",
-            "status": "EM_ANDAMENTO",
-            "problem": "Ventilador Britânia João Pedro",
-            "hasUrgency": true,
+            "status": "NOVO",
+            "problem": "Ventilador Britânia",
+            "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/07/2024"
         },
@@ -211,6 +211,7 @@
     "last": false,
     "totalPages": 2,
     "totalElements": 27,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -218,7 +219,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 15,
     "empty": false
 }

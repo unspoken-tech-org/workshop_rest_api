@@ -3,9 +3,6 @@ spring:
     time-zone: America/Sao_Paulo
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5445/workshop_db
-    username: workshop_admin
-    password: pass
     hikari:
       minimum-idle: 5
       maximum-pool-size: 50

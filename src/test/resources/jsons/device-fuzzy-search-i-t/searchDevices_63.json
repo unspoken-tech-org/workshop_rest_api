@@ -55,6 +55,7 @@
     "last": false,
     "totalPages": 19,
     "totalElements": 55,
+    "first": true,
     "size": 3,
     "number": 0,
     "sort": {
@@ -62,7 +63,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 3,
     "empty": false
 }
