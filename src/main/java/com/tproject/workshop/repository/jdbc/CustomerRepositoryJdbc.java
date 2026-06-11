@@ -12,5 +12,5 @@ public interface CustomerRepositoryJdbc {
 
     Optional<CustomerOutputDto> findCustomerById(int id);
 
-    Page<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters);
+    Page<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters);
 }

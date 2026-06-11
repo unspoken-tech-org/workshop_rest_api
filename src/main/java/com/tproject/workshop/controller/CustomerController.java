@@ -26,11 +26,11 @@ public interface CustomerController {
 
     @Operation(
             summary = "Search customers",
-            description = "Performs a paginated search combining personal data and phone filters to speed up desk lookup.")
+            description = "Full-text fuzzy search across customer name and email. Supports pagination and auxiliary filters (id, cpf, phone).")
     @ApiGlobalResponses
-    @ApiResponse(responseCode = "200", description = "Customers retrieved successfully")
+    @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     @PostMapping("/search")
-    Page<CustomerListOutputDto> search(@RequestBody(required = false) @Valid CustomerFilterDto filters);
+    Page<CustomerListOutputDto> search(@RequestBody @Valid CustomerFilterDto filters);
 
     @Operation(
             summary = "Find customer by id",
