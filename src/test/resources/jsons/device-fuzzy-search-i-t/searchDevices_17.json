@@ -11,7 +11,7 @@
             "problem": "Micro-ondas Britania",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 147,
@@ -24,7 +24,7 @@
             "problem": "Ventilador Britânia João Pedro",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         },
         {
             "deviceId": 104,
@@ -37,7 +37,7 @@
             "problem": "Ventilador mesa",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "10/07/2024"
+            "entryDate": "2024-07-10T00:00:00"
         },
         {
             "deviceId": 134,
@@ -50,7 +50,7 @@
             "problem": "Ventilador Brastenp Adilson",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         }
     ],
     "pageable": {
@@ -68,7 +68,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 4,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -76,6 +75,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 4,
     "empty": false
 }

@@ -11,7 +11,7 @@
             "problem": "Secadora Electrolux João Victor",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "20/08/2024"
+            "entryDate": "2024-08-20T00:00:00"
         },
         {
             "deviceId": 151,
@@ -24,7 +24,7 @@
             "problem": "Aspirador Samsung João Paulo",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/08/2024"
+            "entryDate": "2024-08-15T00:00:00"
         },
         {
             "deviceId": 106,
@@ -37,7 +37,7 @@
             "problem": "Micro-ondas Britania",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 135,
@@ -50,7 +50,7 @@
             "problem": "Aspirador Samsung Adilson",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 145,
@@ -63,7 +63,7 @@
             "problem": "Ventilador Consul Paulo",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 148,
@@ -76,7 +76,7 @@
             "problem": "Liquidificador Panasonic João Pedro",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 143,
@@ -89,7 +89,7 @@
             "problem": "Chaleira Panasonic Ana",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "30/07/2024"
+            "entryDate": "2024-07-30T00:00:00"
         },
         {
             "deviceId": 141,
@@ -102,7 +102,7 @@
             "problem": "Ferro a vapor Consul José Carlos",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "25/07/2024"
+            "entryDate": "2024-07-25T00:00:00"
         },
         {
             "deviceId": 139,
@@ -115,7 +115,7 @@
             "problem": "Ventilador Wallita Maria Aparecida",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "2024-07-20T00:00:00"
         },
         {
             "deviceId": 153,
@@ -128,7 +128,7 @@
             "problem": "Ventilador Britânia João Victor",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "2024-07-20T00:00:00"
         },
         {
             "deviceId": 137,
@@ -141,7 +141,7 @@
             "problem": "Secadora Electrolux Alessandro",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "15/07/2024"
+            "entryDate": "2024-07-15T00:00:00"
         },
         {
             "deviceId": 150,
@@ -154,7 +154,7 @@
             "problem": "Ventilador Consul João Paulo",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "15/07/2024"
+            "entryDate": "2024-07-15T00:00:00"
         },
         {
             "deviceId": 104,
@@ -167,7 +167,7 @@
             "problem": "Ventilador mesa",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "10/07/2024"
+            "entryDate": "2024-07-10T00:00:00"
         },
         {
             "deviceId": 103,
@@ -180,7 +180,7 @@
             "problem": "Ventilador Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         },
         {
             "deviceId": 134,
@@ -193,7 +193,7 @@
             "problem": "Ventilador Brastenp Adilson",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         }
     ],
     "pageable": {
@@ -211,7 +211,6 @@
     "last": false,
     "totalPages": 2,
     "totalElements": 27,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -219,6 +218,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 15,
     "empty": false
 }

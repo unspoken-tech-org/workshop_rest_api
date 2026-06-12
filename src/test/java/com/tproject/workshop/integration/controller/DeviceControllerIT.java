@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -375,7 +375,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
         if (isResponseOK && isStatusDeliveredOrDiscarded) {
             LocalDate actualDate = LocalDate.now();
             String departureDateString = response.jsonPath().get("departureDate").toString();
-            LocalDate departureDate = LocalDate.parse(departureDateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            LocalDate departureDate = LocalDateTime.parse(departureDateString).toLocalDate();
             Assertions.assertThat(departureDate)
                     .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
                     .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
@@ -598,7 +598,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
         if (isResponseOK && isStatusDeliveredOrDiscarded) {
             LocalDate actualDate = LocalDate.now();
             String departureDateString = response.jsonPath().get("departureDate").toString();
-            LocalDate departureDate = LocalDate.parse(departureDateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            LocalDate departureDate = LocalDateTime.parse(departureDateString).toLocalDate();
             Assertions.assertThat(departureDate)
                     .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
                     .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
@@ -722,7 +722,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
         if (isResponseOK && isStatusDeliveredOrDiscarded && !hasDepartureDateParam) {
             LocalDate actualDate = LocalDate.now();
             String departureDateString = response.jsonPath().get("departureDate").toString();
-            LocalDate departureDate = LocalDate.parse(departureDateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            LocalDate departureDate = LocalDateTime.parse(departureDateString).toLocalDate();
             Assertions.assertThat(departureDate)
                     .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
                     .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));

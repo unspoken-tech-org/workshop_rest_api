@@ -181,14 +181,16 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setBudget(rs.getString("budget"));
             dto.setHasUrgency(rs.getBoolean("has_urgency"));
             dto.setRevision(rs.getBoolean("is_revision"));
-            dto.setEntryDate(rs.getTimestamp("entry_date"));
+            dto.setEntryDate(rs.getTimestamp("entry_date").toLocalDateTime());
             dto.setLaborValue(rs.getBigDecimal("labor_value"));
             dto.setServiceValue(rs.getBigDecimal("service_value"));
             dto.setLaborValueCollected(rs.getBoolean("labor_value_collected"));
             dto.setDepartureDate(
-                    rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date")
+                    rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date").toLocalDateTime()
                             : null);
-            dto.setLastUpdate(rs.getTimestamp("last_update"));
+            dto.setLastUpdate(
+                    rs.getTimestamp("last_update") != null ? rs.getTimestamp("last_update").toLocalDateTime()
+                            : null);
 
             Array colorsArray = rs.getArray("device_colors");
             dto.setDeviceColors(

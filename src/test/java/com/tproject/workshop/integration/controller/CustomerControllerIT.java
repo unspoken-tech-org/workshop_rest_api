@@ -180,7 +180,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                 .extract()
                 .response();
 
-        super.validateResponseIgnoreAttributes(index, response, List.of("insertDate"));
+        super.validateResponseIgnoreAttributes(index, response, List.of("createdAt"));
     }
 
     public static Stream<Arguments> createCustomersArguments() {
@@ -320,7 +320,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                 .extract()
                 .response();
 
-        super.validateResponseIgnoreAttributes(index, response, List.of("insertDate"));
+        super.validateResponseIgnoreAttributes(index, response, List.of("createdAt"));
     }
 
     public static Stream<Arguments> updateCustomersArguments() {

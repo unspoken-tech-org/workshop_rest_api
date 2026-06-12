@@ -1,4 +1,4 @@
-INSERT INTO customers (id, name, insert_date, cpf, gender, email)
+INSERT INTO customers (id, name, created_at, cpf, gender, email)
 VALUES
     (
     1,

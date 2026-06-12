@@ -12,8 +12,8 @@
             "observation": "Observation 10",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "05/01/2023",
-            "departureDate": "07/01/2023"
+            "entryDate": "2023-01-05T14:41:00.968173",
+            "departureDate": "2023-01-07T14:41:00.968173"
         },
         {
             "deviceId": 15,
@@ -27,8 +27,8 @@
             "observation": "Observation 15",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "22/04/2021",
-            "departureDate": "04/05/2021"
+            "entryDate": "2021-04-22T08:41:00.968173",
+            "departureDate": "2021-05-04T08:41:00.968173"
         },
         {
             "deviceId": 5,
@@ -42,8 +42,8 @@
             "observation": "Observation 5",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "28/04/2017",
-            "departureDate": "28/04/2021"
+            "entryDate": "2017-04-28T08:41:00.968173",
+            "departureDate": "2021-04-28T08:41:00.968173"
         }
     ],
     "pageable": {

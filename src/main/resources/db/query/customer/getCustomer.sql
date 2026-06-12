@@ -4,7 +4,7 @@ SELECT
   c.cpf,
   c.email,
   c.gender,
-  c.insert_date,
+  c.created_at,
   customer_phones_data.customer_phones AS phones,
   customer_devices.customer_devices
 FROM customers c

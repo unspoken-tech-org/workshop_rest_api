@@ -12,7 +12,7 @@
             "observation": "Observation 8",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "04/01/2023"
+            "entryDate": "2023-01-04T14:41:00.968173"
         },
         {
             "deviceId": 3,
@@ -26,7 +26,7 @@
             "observation": "Observation 3",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "03/09/2021"
+            "entryDate": "2021-09-03T08:41:00.968173"
         },
         {
             "deviceId": 13,
@@ -40,7 +40,7 @@
             "observation": "Observation 13",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "02/04/2021"
+            "entryDate": "2021-04-02T08:41:00.968173"
         }
     ],
     "pageable": {

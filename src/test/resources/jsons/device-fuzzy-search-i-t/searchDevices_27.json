@@ -11,7 +11,7 @@
             "problem": "Liquidificador Arno Pedro",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/12/2024"
+            "entryDate": "2024-12-01T00:00:00"
         },
         {
             "deviceId": 131,
@@ -24,7 +24,7 @@
             "problem": "Lava louças Arno",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "25/12/2024"
+            "entryDate": "2024-12-25T00:00:00"
         }
     ],
     "pageable": {
@@ -42,7 +42,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 2,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -50,6 +49,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 2,
     "empty": false
 }

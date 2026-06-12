@@ -11,7 +11,7 @@
             "problem": "Ventilador Samsung Maria",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/11/2024"
+            "entryDate": "2024-11-01T00:00:00"
         },
         {
             "deviceId": 103,
@@ -24,7 +24,7 @@
             "problem": "Ventilador Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         },
         {
             "deviceId": 104,
@@ -37,7 +37,7 @@
             "problem": "Ventilador mesa",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "10/07/2024"
+            "entryDate": "2024-07-10T00:00:00"
         },
         {
             "deviceId": 128,
@@ -50,7 +50,7 @@
             "problem": "Ventilador Wallita",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/12/2024"
+            "entryDate": "2024-12-15T00:00:00"
         },
         {
             "deviceId": 139,
@@ -63,7 +63,7 @@
             "problem": "Ventilador Wallita Maria Aparecida",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "2024-07-20T00:00:00"
         }
     ],
     "pageable": {
@@ -81,7 +81,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 5,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -89,6 +88,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 5,
     "empty": false
 }

@@ -4,7 +4,7 @@
     "cpf": "75386544020",
     "gender": "feminino",
     "email": "maria@example.com",
-    "insertDate": "2026-06-11 18:01:13.507146",
+    "createdAt": "2026-06-12T11:15:40.958054",
     "phones": [
         {
             "id": 6,

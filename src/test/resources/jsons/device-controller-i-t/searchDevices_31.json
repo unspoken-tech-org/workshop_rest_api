@@ -12,7 +12,7 @@
             "observation": "Observation 8",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "04/01/2023"
+            "entryDate": "2023-01-04T14:41:00.968173"
         },
         {
             "deviceId": 6,
@@ -26,7 +26,7 @@
             "observation": "Observation 6",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "03/01/2023"
+            "entryDate": "2023-01-03T14:41:00.968173"
         },
         {
             "deviceId": 4,
@@ -40,8 +40,8 @@
             "observation": "Observation 4",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "02/01/2023",
-            "departureDate": "05/01/2023"
+            "entryDate": "2023-01-02T14:41:00.968173",
+            "departureDate": "2023-01-05T14:41:00.968173"
         },
         {
             "deviceId": 2,
@@ -55,7 +55,7 @@
             "observation": "Observation 2",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "01/01/2023"
+            "entryDate": "2023-01-01T14:41:00.968173"
         },
         {
             "deviceId": 3,
@@ -69,7 +69,7 @@
             "observation": "Observation 3",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "03/09/2021"
+            "entryDate": "2021-09-03T08:41:00.968173"
         }
     ],
     "pageable": {

@@ -20,9 +20,9 @@
     ],
     "hasUrgency": false,
     "revision": false,
-    "entryDate": "10/06/2026",
-    "departureDate": "25/06/2026",
-    "lastUpdate": "2026-06-11T18:01:21.179-03:00",
+    "entryDate": "2026-06-10T00:00:00",
+    "departureDate": "2026-06-25T00:00:00",
+    "lastUpdate": "2026-06-12T11:15:48.847235",
     "customerPhones": [
         {
             "id": 1,
@@ -49,8 +49,8 @@
             "problem": "Problem 9",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "04/02/2025",
-            "departureDate": "01/05/2021"
+            "entryDate": "2025-02-04T08:41:00.968173",
+            "departureDate": "2021-05-01T08:41:00.968173"
         },
         {
             "deviceId": 1,
@@ -60,7 +60,7 @@
             "problem": "Problem 1",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "10/04/2023"
+            "entryDate": "2023-04-10T08:41:00.968173"
         },
         {
             "deviceId": 3,
@@ -70,7 +70,7 @@
             "problem": "Problem 3",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "03/09/2021"
+            "entryDate": "2021-09-03T08:41:00.968173"
         },
         {
             "deviceId": 15,
@@ -80,8 +80,8 @@
             "problem": "Problem 15",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "22/04/2021",
-            "departureDate": "04/05/2021"
+            "entryDate": "2021-04-22T08:41:00.968173",
+            "departureDate": "2021-05-04T08:41:00.968173"
         },
         {
             "deviceId": 13,
@@ -91,7 +91,7 @@
             "problem": "Problem 13",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "02/04/2021"
+            "entryDate": "2021-04-02T08:41:00.968173"
         },
         {
             "deviceId": 11,
@@ -101,7 +101,7 @@
             "problem": "Problem 11",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "01/04/2021"
+            "entryDate": "2021-04-01T08:41:00.968173"
         },
         {
             "deviceId": 7,
@@ -111,7 +111,7 @@
             "problem": "Problem 7",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "10/10/2020"
+            "entryDate": "2020-10-10T08:41:00.968173"
         }
     ],
     "payments": [

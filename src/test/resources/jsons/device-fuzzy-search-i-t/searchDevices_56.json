@@ -11,7 +11,7 @@
             "problem": "Chaleira Panasonic Ana",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "30/07/2024"
+            "entryDate": "2024-07-30T00:00:00"
         },
         {
             "deviceId": 150,
@@ -24,7 +24,7 @@
             "problem": "Ventilador Consul João Paulo",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "15/07/2024"
+            "entryDate": "2024-07-15T00:00:00"
         },
         {
             "deviceId": 104,
@@ -37,7 +37,7 @@
             "problem": "Ventilador mesa",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "10/07/2024"
+            "entryDate": "2024-07-10T00:00:00"
         }
     ],
     "pageable": {
@@ -55,7 +55,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 3,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -63,6 +62,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 3,
     "empty": false
 }

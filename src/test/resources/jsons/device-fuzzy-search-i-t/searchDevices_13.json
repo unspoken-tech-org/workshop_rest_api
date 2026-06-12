@@ -11,7 +11,7 @@
             "problem": "Ventilador Consul",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "10/11/2024"
+            "entryDate": "2024-11-10T00:00:00"
         },
         {
             "deviceId": 119,
@@ -24,7 +24,7 @@
             "problem": "Ventilador Consusl",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "25/11/2024"
+            "entryDate": "2024-11-25T00:00:00"
         },
         {
             "deviceId": 108,
@@ -37,7 +37,7 @@
             "problem": "Ventilador Samsung João",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/10/2024"
+            "entryDate": "2024-10-01T00:00:00"
         },
         {
             "deviceId": 107,
@@ -50,7 +50,7 @@
             "problem": "Outro Samsung",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/09/2024"
+            "entryDate": "2024-09-01T00:00:00"
         },
         {
             "deviceId": 106,
@@ -63,7 +63,7 @@
             "problem": "Micro-ondas Britania",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 100,
@@ -76,7 +76,7 @@
             "problem": "Micro-ondas Samsung",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "2024-06-01T00:00:00"
         },
         {
             "deviceId": 102,
@@ -89,7 +89,7 @@
             "problem": "Micro-ondas Britânia",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "01/05/2024"
+            "entryDate": "2024-05-01T00:00:00"
         },
         {
             "deviceId": 118,
@@ -102,7 +102,7 @@
             "problem": "Micro-ondas Eletrolux",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/11/2024"
+            "entryDate": "2024-11-20T00:00:00"
         },
         {
             "deviceId": 117,
@@ -115,7 +115,7 @@
             "problem": "Micro-ondas Brastenp",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/11/2024"
+            "entryDate": "2024-11-15T00:00:00"
         },
         {
             "deviceId": 114,
@@ -128,7 +128,7 @@
             "problem": "Micro-ondas Brastemp",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/11/2024"
+            "entryDate": "2024-11-01T00:00:00"
         },
         {
             "deviceId": 109,
@@ -141,7 +141,7 @@
             "problem": "Micro-ondas Britânia João",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/10/2024"
+            "entryDate": "2024-10-15T00:00:00"
         },
         {
             "deviceId": 115,
@@ -154,7 +154,7 @@
             "problem": "Micro-ondas Electrolux",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "05/11/2024"
+            "entryDate": "2024-11-05T00:00:00"
         },
         {
             "deviceId": 121,
@@ -167,7 +167,7 @@
             "problem": "Aspirador Samsung",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "05/12/2024"
+            "entryDate": "2024-12-05T00:00:00"
         },
         {
             "deviceId": 120,
@@ -180,7 +180,7 @@
             "problem": "Liquidificador Panasonic",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/12/2024"
+            "entryDate": "2024-12-01T00:00:00"
         },
         {
             "deviceId": 122,
@@ -193,7 +193,7 @@
             "problem": "Chaleira Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "10/12/2024"
+            "entryDate": "2024-12-10T00:00:00"
         }
     ],
     "pageable": {
@@ -211,7 +211,6 @@
     "last": false,
     "totalPages": 2,
     "totalElements": 25,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -219,6 +218,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 15,
     "empty": false
 }

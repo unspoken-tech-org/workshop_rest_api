@@ -11,7 +11,7 @@
             "problem": "Micro-ondas embutir",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "15/06/2024"
+            "entryDate": "2024-06-15T00:00:00"
         }
     ],
     "pageable": {
@@ -29,7 +29,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 1,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -37,6 +36,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 1,
     "empty": false
 }

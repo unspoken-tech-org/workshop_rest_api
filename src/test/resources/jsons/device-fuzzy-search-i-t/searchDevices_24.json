@@ -11,7 +11,7 @@
             "problem": "Ventilador Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         },
         {
             "deviceId": 104,
@@ -24,7 +24,7 @@
             "problem": "Ventilador mesa",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "10/07/2024"
+            "entryDate": "2024-07-10T00:00:00"
         }
     ],
     "pageable": {
@@ -42,7 +42,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 2,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -50,6 +49,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 2,
     "empty": false
 }

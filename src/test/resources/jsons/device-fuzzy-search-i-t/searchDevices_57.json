@@ -11,7 +11,7 @@
             "problem": "Aspirador Brastemp",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/01/2025"
+            "entryDate": "2025-01-01T00:00:00"
         },
         {
             "deviceId": 131,
@@ -24,7 +24,7 @@
             "problem": "Lava louças Arno",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "25/12/2024"
+            "entryDate": "2024-12-25T00:00:00"
         },
         {
             "deviceId": 129,
@@ -37,7 +37,7 @@
             "problem": "Secadora Electrolux",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "20/12/2024"
+            "entryDate": "2024-12-20T00:00:00"
         },
         {
             "deviceId": 130,
@@ -50,7 +50,7 @@
             "problem": "Ferro a vapor Mondial",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "20/12/2024"
+            "entryDate": "2024-12-20T00:00:00"
         },
         {
             "deviceId": 113,
@@ -63,7 +63,7 @@
             "problem": "Ventilador Wallita Pedro",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/12/2024"
+            "entryDate": "2024-12-15T00:00:00"
         },
         {
             "deviceId": 128,
@@ -76,7 +76,7 @@
             "problem": "Ventilador Wallita",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/12/2024"
+            "entryDate": "2024-12-15T00:00:00"
         },
         {
             "deviceId": 122,
@@ -89,7 +89,7 @@
             "problem": "Chaleira Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "10/12/2024"
+            "entryDate": "2024-12-10T00:00:00"
         },
         {
             "deviceId": 127,
@@ -102,7 +102,7 @@
             "problem": "Liquidificador Panassonic",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "10/12/2024"
+            "entryDate": "2024-12-10T00:00:00"
         },
         {
             "deviceId": 121,
@@ -115,7 +115,7 @@
             "problem": "Aspirador Samsung",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "05/12/2024"
+            "entryDate": "2024-12-05T00:00:00"
         },
         {
             "deviceId": 126,
@@ -128,7 +128,7 @@
             "problem": "Micro-ondas Brastenp",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "05/12/2024"
+            "entryDate": "2024-12-05T00:00:00"
         },
         {
             "deviceId": 112,
@@ -141,7 +141,7 @@
             "problem": "Liquidificador Arno Pedro",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/12/2024"
+            "entryDate": "2024-12-01T00:00:00"
         },
         {
             "deviceId": 125,
@@ -154,7 +154,7 @@
             "problem": "Liquidificador Panasonic",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/12/2024"
+            "entryDate": "2024-12-01T00:00:00"
         },
         {
             "deviceId": 119,
@@ -167,7 +167,7 @@
             "problem": "Ventilador Consusl",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "25/11/2024"
+            "entryDate": "2024-11-25T00:00:00"
         },
         {
             "deviceId": 124,
@@ -180,7 +180,7 @@
             "problem": "Micro-ondas Eletrolux",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "25/11/2024"
+            "entryDate": "2024-11-25T00:00:00"
         }
     ],
     "pageable": {
@@ -198,7 +198,6 @@
     "last": false,
     "totalPages": 4,
     "totalElements": 53,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -206,6 +205,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 14,
     "empty": false
 }

@@ -46,7 +46,7 @@ public class PaymentControllerIT extends AbstractIntegrationLiveTest {
                 .extract()
                 .response();
 
-        super.validateResponseIgnoreAttributes(index, response, List.of("paymentId", "paymentDate"));
+        super.validateResponseIgnoreAttributes(index, response, List.of("paymentId", "paymentDate", "createdAt"));
     }
 
     private static Stream<Arguments> createPaymentArguments() {
@@ -79,6 +79,13 @@ public class PaymentControllerIT extends AbstractIntegrationLiveTest {
                         "value", 150.00,
                         "category", "parcial"
                 ), "missing deviceId")
+                , Arguments.of(6, HttpStatus.SC_CREATED, Map.of(
+                        "deviceId", 1,
+                        "paymentType", "credito",
+                        "value", 200.00,
+                        "category", "total",
+                        "paymentDate", "2026-06-01T00:00:00.000"
+                ), "create payment with explicit paymentDate")
         );
     }
 }

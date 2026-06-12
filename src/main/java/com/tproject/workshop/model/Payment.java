@@ -19,6 +19,9 @@ public class Payment {
     private Integer id;
 
     @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Timestamp createdAt;
+
     @Column(name = "payment_date", updatable = false)
     private Timestamp paymentDate;
 
