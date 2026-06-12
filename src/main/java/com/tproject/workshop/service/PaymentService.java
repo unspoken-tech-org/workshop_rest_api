@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 @Service
@@ -40,6 +42,11 @@ public class PaymentService {
         paymentModel.setPaymentType(payment.paymentType());
         paymentModel.setCategory(payment.category());
         paymentModel.setDevice(new Device(payment.deviceId()));
+        paymentModel.setPaymentDate(
+                Optional.ofNullable(payment.paymentDate())
+                        .map(Timestamp::valueOf)
+                        .orElse(new Timestamp(System.currentTimeMillis()))
+        );
 
         Payment saved = repository.save(paymentModel);
 

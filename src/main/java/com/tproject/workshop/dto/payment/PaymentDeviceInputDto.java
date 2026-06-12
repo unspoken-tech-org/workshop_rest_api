@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record PaymentDeviceInputDto(
         @Schema(description = "Device identifier receiving the payment", example = "12")
@@ -22,6 +23,9 @@ public record PaymentDeviceInputDto(
         BigDecimal value,
 
         @Schema(description = "Category or purpose of the payment", example = "partial")
-        String category
+        String category,
+
+        @Schema(description = "Date and time of the payment", example = "2026-06-01T00:00:00.000")
+        LocalDateTime paymentDate
 ) {
 }

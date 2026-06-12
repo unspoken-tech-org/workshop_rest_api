@@ -84,7 +84,7 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
             dto.setCpf(rs.getString("cpf"));
             dto.setEmail(rs.getString("email"));
             dto.setGender(rs.getString("gender"));
-            dto.setInsertDate(rs.getTimestamp("insert_date").toLocalDateTime());
+            dto.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
             dto.setMainPhone(rs.getString("main_phone"));
             return dto;
         };
@@ -99,7 +99,7 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
             dto.setCpf(rs.getString("cpf"));
             dto.setGender(rs.getString("gender"));
             dto.setEmail(rs.getString("email"));
-            dto.setInsertDate(rs.getString("insert_date"));
+            dto.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
 
             dto.setPhones(
                     JsonResultSetMapper.readJsonList(rs, "phones", new TypeReference<>() {

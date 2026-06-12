@@ -57,7 +57,7 @@ INSERT INTO models(id, model) VALUES
 -- =============================================
 -- CLIENTES (nomes variados para fuzzy)
 -- =============================================
-INSERT INTO customers(id, name, insert_date, cpf, gender, email) VALUES
+INSERT INTO customers(id, name, created_at, cpf, gender, email) VALUES
 (10, 'João Silva',                '2024-01-01 00:00:00', '11111111111', 'masculino', 'joao@test.com'),
 (11, 'Maria Aparecida',           '2024-01-02 00:00:00', '22222222222', 'feminino',  'maria@test.com'),
 (12, 'Pedro Oliveira',            '2024-01-03 00:00:00', '33333333333', 'masculino', 'pedro@test.com'),

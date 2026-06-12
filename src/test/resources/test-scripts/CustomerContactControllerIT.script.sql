@@ -1,10 +1,10 @@
-INSERT INTO customers (id, name, cpf, gender, insert_date, email) VALUES
+INSERT INTO customers (id, name, cpf, gender, created_at, email) VALUES
 (1, 'Test Customer CContact', '11122233344', 'masculino', NOW(), 'customer.ccontact@example.com')
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     cpf = EXCLUDED.cpf,
     gender = EXCLUDED.gender,
-    insert_date = EXCLUDED.insert_date,
+    created_at = EXCLUDED.created_at,
     email = EXCLUDED.email;
 
 INSERT INTO technicians (id, technician_name, "number") VALUES

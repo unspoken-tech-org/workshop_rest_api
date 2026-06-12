@@ -22,8 +22,8 @@ public class Customer {
     @Column(name = "name", nullable = false)
     String name;
     @CreationTimestamp
-    @Column(name = "insert_date", nullable = false)
-    Timestamp insertDate;
+    @Column(name = "created_at", nullable = false)
+    Timestamp createdAt;
     @CPF
     @Column(name = "cpf", nullable = false)
     String cpf;

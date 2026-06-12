@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldNameConstants;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -22,7 +23,7 @@ public class CustomerOutputDto {
     private String cpf;
     private String gender;
     private String email;
-    private String insertDate;
+    private LocalDateTime createdAt;
     private List<CellPhoneOutputDeviceDto> phones;
     private List<MinifiedDeviceTableOutputDto> customerDevices;
 

@@ -11,6 +11,6 @@ public class CustomerListOutputDto {
     private String cpf;
     private String email;
     private String gender;
-    private LocalDateTime insertDate;
+    private LocalDateTime createdAt;
     private String mainPhone;
 } 
