@@ -1,6 +1,45 @@
 {
     "content": [
         {
+            "deviceId": 106,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britania",
+            "model": "Mega Plus",
+            "status": "PRONTO",
+            "problem": "Micro-ondas Britania",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "01/08/2024"
+        },
+        {
+            "deviceId": 102,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britânia",
+            "model": "Mega Plus",
+            "status": "ENTREGUE",
+            "problem": "Micro-ondas Britânia",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "01/05/2024"
+        },
+        {
+            "deviceId": 109,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britânia",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Britânia João",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/10/2024"
+        },
+        {
             "deviceId": 122,
             "customerId": 10,
             "customerName": "João Silva",
@@ -27,43 +66,30 @@
             "entryDate": "15/11/2024"
         },
         {
-            "deviceId": 109,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
+            "deviceId": 103,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
             "brand": "Britânia",
-            "model": "Smart Cook",
+            "model": "Easy Breeze",
             "status": "NOVO",
-            "problem": "Micro-ondas Britânia João",
+            "problem": "Ventilador Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/10/2024"
+            "entryDate": "01/07/2024"
         },
         {
-            "deviceId": 106,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Britania",
-            "model": "Mega Plus",
-            "status": "PRONTO",
-            "problem": "Micro-ondas Britania",
+            "deviceId": 147,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Britânia João Pedro",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
-        },
-        {
-            "deviceId": 153,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Ventilador de mesa",
-            "brand": "Britânia",
-            "model": "Silent Pro",
-            "status": "PRONTO",
-            "problem": "Ventilador Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "01/07/2024"
         },
         {
             "deviceId": 104,
@@ -79,19 +105,6 @@
             "entryDate": "10/07/2024"
         },
         {
-            "deviceId": 103,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador",
-            "brand": "Britânia",
-            "model": "Easy Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Britânia",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/07/2024"
-        },
-        {
             "deviceId": 134,
             "customerId": 13,
             "customerName": "Adilson Ferreira da Silva",
@@ -100,19 +113,6 @@
             "model": "Easy Breeze",
             "status": "EM_ANDAMENTO",
             "problem": "Ventilador Brastenp Adilson",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "01/07/2024"
-        },
-        {
-            "deviceId": 147,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
-            "type": "Ventilador",
-            "brand": "Britânia",
-            "model": "Easy Breeze",
-            "status": "EM_ANDAMENTO",
-            "problem": "Ventilador Britânia João Pedro",
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "01/07/2024"
@@ -131,17 +131,17 @@
             "entryDate": "20/06/2024"
         },
         {
-            "deviceId": 102,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
             "brand": "Britânia",
-            "model": "Mega Plus",
-            "status": "ENTREGUE",
-            "problem": "Micro-ondas Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "01/05/2024"
+            "entryDate": "20/07/2024"
         }
     ],
     "pageable": {

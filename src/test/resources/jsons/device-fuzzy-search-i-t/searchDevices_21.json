@@ -1,19 +1,6 @@
 {
     "content": [
         {
-            "deviceId": 128,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador de coluna",
-            "brand": "Wallita",
-            "model": "Smart Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Wallita",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/12/2024"
-        },
-        {
             "deviceId": 110,
             "customerId": 11,
             "customerName": "Maria Aparecida",
@@ -27,17 +14,17 @@
             "entryDate": "01/11/2024"
         },
         {
-            "deviceId": 139,
-            "customerId": 15,
-            "customerName": "Maria Aparecida de Oliveira",
-            "type": "Ventilador de coluna",
-            "brand": "Wallita",
-            "model": "Smart Breeze",
-            "status": "PRONTO",
-            "problem": "Ventilador Wallita Maria Aparecida",
+            "deviceId": 103,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Britânia",
             "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "hasRevision": false,
+            "entryDate": "01/07/2024"
         },
         {
             "deviceId": 104,
@@ -53,17 +40,30 @@
             "entryDate": "10/07/2024"
         },
         {
-            "deviceId": 103,
+            "deviceId": 128,
             "customerId": 11,
             "customerName": "Maria Aparecida",
-            "type": "Ventilador",
-            "brand": "Britânia",
-            "model": "Easy Breeze",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
             "status": "NOVO",
-            "problem": "Ventilador Britânia",
+            "problem": "Ventilador Wallita",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "15/12/2024"
+        },
+        {
+            "deviceId": 139,
+            "customerId": 15,
+            "customerName": "Maria Aparecida de Oliveira",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "PRONTO",
+            "problem": "Ventilador Wallita Maria Aparecida",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "20/07/2024"
         }
     ],
     "pageable": {

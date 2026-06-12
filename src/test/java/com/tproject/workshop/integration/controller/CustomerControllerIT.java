@@ -57,7 +57,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
         return Stream.of(
                 // Basic search tests
                 Arguments.of(1, HttpStatus.SC_OK, Map.of(), "get all customers"),
-                Arguments.of(2, HttpStatus.SC_OK, Map.of("name", "Alfonso"), "get customer by name"),
+                Arguments.of(2, HttpStatus.SC_OK, Map.of("searchName", "Alfonso"), "get customer by name"),
                 Arguments.of(3, HttpStatus.SC_OK, Map.of("cpf", "31781477051"), "get customer by cpf"),
                 Arguments.of(4, HttpStatus.SC_OK, Map.of("phone", "4430356678"), "get customer by phone"),
                 Arguments.of(5, HttpStatus.SC_OK, Map.of("id", 1), "get customer by id"),
@@ -69,18 +69,18 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(9, HttpStatus.SC_OK, Map.of("page", 0, "size", 10), "pagination with large page size"),
 
                 // Partial matches and case-insensitive
-                Arguments.of(10, HttpStatus.SC_OK, Map.of("name", "alf"), "partial name search lowercase"),
-                Arguments.of(11, HttpStatus.SC_OK, Map.of("name", "ALF"), "partial name search uppercase"),
-                Arguments.of(12, HttpStatus.SC_OK, Map.of("name", "Zimmer"), "search by last name"),
+                Arguments.of(10, HttpStatus.SC_OK, Map.of("searchName", "alf"), "partial name search lowercase"),
+                Arguments.of(11, HttpStatus.SC_OK, Map.of("searchName", "ALF"), "partial name search uppercase"),
+                Arguments.of(12, HttpStatus.SC_OK, Map.of("searchName", "Zimmer"), "search by last name"),
 
                 // Edge cases - no results
-                Arguments.of(13, HttpStatus.SC_OK, Map.of("name", "NonExistentName"), "search with non-existent name"),
+                Arguments.of(13, HttpStatus.SC_OK, Map.of("searchName", "NonExistentName"), "search with non-existent name"),
                 Arguments.of(14, HttpStatus.SC_OK, Map.of("cpf", "00000000000"), "search with non-existent cpf"),
                 Arguments.of(15, HttpStatus.SC_OK, Map.of("phone", "9999999999"), "search with non-existent phone"),
                 Arguments.of(16, HttpStatus.SC_OK, Map.of("id", 9999), "search with non-existent id"),
 
                 // Empty/null values
-                Arguments.of(17, HttpStatus.SC_OK, Map.of("name", ""), "search with empty name"),
+                Arguments.of(17, HttpStatus.SC_OK, Map.of("searchName", ""), "search with empty name"),
                 Arguments.of(18, HttpStatus.SC_OK, Map.of("cpf", ""), "search with empty cpf"),
                 Arguments.of(19, HttpStatus.SC_OK, Map.of("phone", ""), "search with empty phone"),
 
@@ -93,7 +93,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(24, HttpStatus.SC_OK, Map.of(
                         "phone", "44988098766" //Lucas secondary phone
                 ), "search by secondary phone"),
-                Arguments.of(25, HttpStatus.SC_OK, Map.of("name", "João"), "search with accented characters"),
+                Arguments.of(25, HttpStatus.SC_OK, Map.of("searchName", "João"), "search with accented characters"),
 
 
                 // Complex pagination scenarios
@@ -107,6 +107,42 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
     }
 
     @Order(2)
+    @DisplayName("Search customers - invalid request body scenarios")
+    @MethodSource("searchCustomersInvalidBodyArguments")
+    @ParameterizedTest(name = "{displayName} : {1} reason {2}")
+    public void searchCustomersInvalidBody(String body, Integer statusCode, String reason) {
+        given().spec(getAuthenticatedSpec())
+                .when()
+                .body(body)
+                .post(BASE_PATH + "/search")
+                .then()
+                .statusCode(statusCode);
+
+    }
+
+    private static Stream<Arguments> searchCustomersInvalidBodyArguments() {
+        return Stream.of(
+                Arguments.of("", HttpStatus.SC_BAD_REQUEST, "empty string body"),
+                Arguments.of("null", HttpStatus.SC_BAD_REQUEST, "null literal body"),
+                Arguments.of("{searchName: \"test\"}", HttpStatus.SC_BAD_REQUEST, "malformed JSON (unquoted key)"),
+                Arguments.of("{\"page\": \"abc\"}", HttpStatus.SC_BAD_REQUEST, "invalid type for page (string instead of integer)"),
+                Arguments.of("{\"size\": -1}", HttpStatus.SC_BAD_REQUEST, "negative size fails validation")
+        );
+    }
+
+    @Order(3)
+    @DisplayName("Search customers - missing request body")
+    @Test
+    public void searchCustomersWithoutBody() {
+        given().spec(getAuthenticatedSpec())
+                .when()
+                .contentType("application/json")
+                .post(BASE_PATH + "/search")
+                .then()
+                .statusCode(HttpStatus.SC_BAD_REQUEST);
+    }
+
+    @Order(4)
     @DisplayName("find by Id")
     @MethodSource("findCustomersByIdArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
@@ -129,7 +165,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
         );
     }
 
-    @Order(3)
+    @Order(5)
     @DisplayName("Create Customers")
     @MethodSource("createCustomersArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
@@ -269,7 +305,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
         );
     }
 
-    @Order(4)
+    @Order(6)
     @DisplayName("Update Customers")
     @MethodSource("updateCustomersArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")

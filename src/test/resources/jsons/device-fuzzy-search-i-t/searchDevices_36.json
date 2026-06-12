@@ -1,19 +1,6 @@
 {
     "content": [
         {
-            "deviceId": 151,
-            "customerId": 20,
-            "customerName": "João Paulo Ferreira",
-            "type": "Aspirador robô",
-            "brand": "Samsung",
-            "model": "Silent Pro",
-            "status": "EM_ANDAMENTO",
-            "problem": "Aspirador Samsung João Paulo",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/08/2024"
-        },
-        {
             "deviceId": 150,
             "customerId": 20,
             "customerName": "João Paulo Ferreira",
@@ -38,6 +25,19 @@
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/06/2024"
+        },
+        {
+            "deviceId": 151,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Aspirador robô",
+            "brand": "Samsung",
+            "model": "Silent Pro",
+            "status": "EM_ANDAMENTO",
+            "problem": "Aspirador Samsung João Paulo",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/08/2024"
         }
     ],
     "pageable": {

@@ -14,19 +14,6 @@
             "entryDate": "20/08/2024"
         },
         {
-            "deviceId": 153,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Ventilador de mesa",
-            "brand": "Britânia",
-            "model": "Silent Pro",
-            "status": "PRONTO",
-            "problem": "Ventilador Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
-        },
-        {
             "deviceId": 152,
             "customerId": 21,
             "customerName": "João Victor Almeida Santos",
@@ -38,6 +25,19 @@
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "20/06/2024"
+        },
+        {
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "20/07/2024"
         }
     ],
     "pageable": {

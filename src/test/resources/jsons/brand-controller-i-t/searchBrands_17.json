@@ -1,0 +1,37 @@
+{
+    "content": [
+        {
+            "idBrand": 2,
+            "brand": "LG"
+        },
+        {
+            "idBrand": 8,
+            "brand": "Midea"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 2,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": false,
+    "totalPages": 4,
+    "totalElements": 8,
+    "first": true,
+    "size": 2,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 2,
+    "empty": false
+}

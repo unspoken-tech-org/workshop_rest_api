@@ -1,17 +1,17 @@
 {
     "content": [
         {
-            "deviceId": 148,
+            "deviceId": 146,
             "customerId": 19,
             "customerName": "João Pedro da Silva",
-            "type": "Liquidificador",
-            "brand": "Panasonic",
-            "model": "Power Mix",
-            "status": "PRONTO",
-            "problem": "Liquidificador Panasonic João Pedro",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung João Pedro",
             "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "01/08/2024"
+            "hasRevision": false,
+            "entryDate": "01/06/2024"
         },
         {
             "deviceId": 147,
@@ -27,17 +27,17 @@
             "entryDate": "01/07/2024"
         },
         {
-            "deviceId": 146,
+            "deviceId": 148,
             "customerId": 19,
             "customerName": "João Pedro da Silva",
-            "type": "Micro-ondas",
-            "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Samsung João Pedro",
+            "type": "Liquidificador",
+            "brand": "Panasonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panasonic João Pedro",
             "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "hasRevision": true,
+            "entryDate": "01/08/2024"
         }
     ],
     "pageable": {

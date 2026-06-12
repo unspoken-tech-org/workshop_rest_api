@@ -105,8 +105,9 @@ public class CustomerService {
         return dto;
     }
 
+    @Transactional(readOnly = true)
     public Page<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
-        return customerRepository.findCustomersByFilter(filters);
+        return customerRepository.searchCustomers(filters);
     }
 
     @Transactional

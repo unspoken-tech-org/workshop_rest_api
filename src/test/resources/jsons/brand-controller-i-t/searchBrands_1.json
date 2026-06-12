@@ -1,0 +1,61 @@
+{
+    "content": [
+        {
+            "idBrand": 2,
+            "brand": "LG"
+        },
+        {
+            "idBrand": 8,
+            "brand": "Midea"
+        },
+        {
+            "idBrand": 6,
+            "brand": "Consul"
+        },
+        {
+            "idBrand": 3,
+            "brand": "LG Pro"
+        },
+        {
+            "idBrand": 1,
+            "brand": "Samsung"
+        },
+        {
+            "idBrand": 4,
+            "brand": "Brastemp"
+        },
+        {
+            "idBrand": 7,
+            "brand": "Panasonic"
+        },
+        {
+            "idBrand": 5,
+            "brand": "Electrolux"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 8,
+    "first": true,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 8,
+    "empty": false
+}

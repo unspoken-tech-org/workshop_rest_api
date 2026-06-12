@@ -20,7 +20,7 @@
     "hasUrgency": false,
     "revision": false,
     "entryDate": "10/04/2023",
-    "lastUpdate": "2025-10-19T16:52:10.200+00:00",
+    "lastUpdate": "2026-06-11T18:01:20.238-03:00",
     "customerPhones": [
         {
             "id": 1,
@@ -44,9 +44,9 @@
             "phone": "44988254493",
             "type": "mensagem",
             "hasMadeContact": true,
+            "lastContact": "08/01/2025",
             "conversation": "Avisado que o aparelho está pronto",
-            "deviceStatus": "PRONTO",
-            "lastContact": "08/01/2025"
+            "deviceStatus": "PRONTO"
         },
         {
             "id": 2,
@@ -55,9 +55,9 @@
             "technicianName": "Technician 1",
             "type": "pessoalmente",
             "hasMadeContact": true,
+            "lastContact": "07/01/2025",
             "conversation": "Cliente aceitou o orçamento",
-            "deviceStatus": "EM_ANDAMENTO",
-            "lastContact": "07/01/2025"
+            "deviceStatus": "EM_ANDAMENTO"
         },
         {
             "id": 1,
@@ -67,9 +67,9 @@
             "phone": "44988254493",
             "type": "mensagem",
             "hasMadeContact": false,
+            "lastContact": "06/01/2025",
             "conversation": "Foi passado o orçamento e aguardo resposta",
-            "deviceStatus": "AGUARDANDO",
-            "lastContact": "06/01/2025"
+            "deviceStatus": "AGUARDANDO"
         }
     ],
     "otherDevices": [

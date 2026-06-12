@@ -1,30 +1,17 @@
 {
     "content": [
         {
-            "deviceId": 113,
-            "customerId": 12,
-            "customerName": "Pedro Oliveira",
+            "deviceId": 116,
+            "customerId": 10,
+            "customerName": "João Silva",
             "type": "Ventilador",
-            "brand": "Wallita",
-            "model": "Air Flow",
+            "brand": "Consul",
+            "model": "Turbo 3000",
             "status": "NOVO",
-            "problem": "Ventilador Wallita Pedro",
+            "problem": "Ventilador Consul",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/12/2024"
-        },
-        {
-            "deviceId": 128,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador de coluna",
-            "brand": "Wallita",
-            "model": "Smart Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Wallita",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/12/2024"
+            "entryDate": "10/11/2024"
         },
         {
             "deviceId": 119,
@@ -40,17 +27,30 @@
             "entryDate": "25/11/2024"
         },
         {
-            "deviceId": 116,
+            "deviceId": 108,
             "customerId": 10,
             "customerName": "João Silva",
             "type": "Ventilador",
-            "brand": "Consul",
-            "model": "Turbo 3000",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
             "status": "NOVO",
-            "problem": "Ventilador Consul",
+            "problem": "Ventilador Samsung João",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "10/11/2024"
+            "entryDate": "01/10/2024"
+        },
+        {
+            "deviceId": 113,
+            "customerId": 12,
+            "customerName": "Pedro Oliveira",
+            "type": "Ventilador",
+            "brand": "Wallita",
+            "model": "Air Flow",
+            "status": "NOVO",
+            "problem": "Ventilador Wallita Pedro",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/12/2024"
         },
         {
             "deviceId": 110,
@@ -66,56 +66,17 @@
             "entryDate": "01/11/2024"
         },
         {
-            "deviceId": 108,
-            "customerId": 10,
-            "customerName": "João Silva",
+            "deviceId": 103,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
             "type": "Ventilador",
-            "brand": "Samsung",
+            "brand": "Britânia",
             "model": "Easy Breeze",
             "status": "NOVO",
-            "problem": "Ventilador Samsung João",
+            "problem": "Ventilador Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/10/2024"
-        },
-        {
-            "deviceId": 145,
-            "customerId": 18,
-            "customerName": "Paulo Henrique Santos",
-            "type": "Ventilador",
-            "brand": "Consul",
-            "model": "Turbo 3000",
-            "status": "EM_ANDAMENTO",
-            "problem": "Ventilador Consul Paulo",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "01/08/2024"
-        },
-        {
-            "deviceId": 139,
-            "customerId": 15,
-            "customerName": "Maria Aparecida de Oliveira",
-            "type": "Ventilador de coluna",
-            "brand": "Wallita",
-            "model": "Smart Breeze",
-            "status": "PRONTO",
-            "problem": "Ventilador Wallita Maria Aparecida",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
-        },
-        {
-            "deviceId": 153,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Ventilador de mesa",
-            "brand": "Britânia",
-            "model": "Silent Pro",
-            "status": "PRONTO",
-            "problem": "Ventilador Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "01/07/2024"
         },
         {
             "deviceId": 150,
@@ -131,43 +92,30 @@
             "entryDate": "15/07/2024"
         },
         {
-            "deviceId": 104,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador de mesa",
-            "brand": "Britânia",
-            "model": "Silent Pro",
-            "status": "AGUARDANDO",
-            "problem": "Ventilador mesa",
+            "deviceId": 145,
+            "customerId": 18,
+            "customerName": "Paulo Henrique Santos",
+            "type": "Ventilador",
+            "brand": "Consul",
+            "model": "Turbo 3000",
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Consul Paulo",
             "hasUrgency": true,
-            "hasRevision": true,
-            "entryDate": "10/07/2024"
+            "hasRevision": false,
+            "entryDate": "01/08/2024"
         },
         {
-            "deviceId": 103,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
+            "deviceId": 140,
+            "customerId": 16,
+            "customerName": "José Carlos da Silva",
             "type": "Ventilador",
-            "brand": "Britânia",
-            "model": "Easy Breeze",
+            "brand": "Consusl",
+            "model": "Turbo 3000",
             "status": "NOVO",
-            "problem": "Ventilador Britânia",
+            "problem": "Ventilador Consusl José Carlos",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
-        },
-        {
-            "deviceId": 134,
-            "customerId": 13,
-            "customerName": "Adilson Ferreira da Silva",
-            "type": "Ventilador",
-            "brand": "Britânia",
-            "model": "Easy Breeze",
-            "status": "EM_ANDAMENTO",
-            "problem": "Ventilador Brastenp Adilson",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "25/06/2024"
         },
         {
             "deviceId": 147,
@@ -183,17 +131,69 @@
             "entryDate": "01/07/2024"
         },
         {
-            "deviceId": 140,
-            "customerId": 16,
-            "customerName": "José Carlos da Silva",
-            "type": "Ventilador",
-            "brand": "Consusl",
-            "model": "Turbo 3000",
+            "deviceId": 104,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador mesa",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "10/07/2024"
+        },
+        {
+            "deviceId": 128,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
             "status": "NOVO",
-            "problem": "Ventilador Consusl José Carlos",
+            "problem": "Ventilador Wallita",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "25/06/2024"
+            "entryDate": "15/12/2024"
+        },
+        {
+            "deviceId": 134,
+            "customerId": 13,
+            "customerName": "Adilson Ferreira da Silva",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Brastenp Adilson",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "01/07/2024"
+        },
+        {
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "20/07/2024"
+        },
+        {
+            "deviceId": 139,
+            "customerId": 15,
+            "customerName": "Maria Aparecida de Oliveira",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "PRONTO",
+            "problem": "Ventilador Wallita Maria Aparecida",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "20/07/2024"
         }
     ],
     "pageable": {
