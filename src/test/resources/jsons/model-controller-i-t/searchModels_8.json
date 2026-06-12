@@ -1,0 +1,41 @@
+{
+    "content": [
+        {
+            "idModel": 7,
+            "model": "NN-SD45"
+        },
+        {
+            "idModel": 6,
+            "model": "NN-ST25"
+        },
+        {
+            "idModel": 8,
+            "model": "MS-TRL52"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 3,
+    "first": true,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 3,
+    "empty": false
+}

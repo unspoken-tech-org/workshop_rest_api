@@ -1,0 +1,37 @@
+{
+    "content": [
+        {
+            "idModel": 3,
+            "model": "WT500X"
+        },
+        {
+            "idModel": 2,
+            "model": "WT12300"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 2,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": false,
+    "totalPages": 2,
+    "totalElements": 3,
+    "first": true,
+    "size": 2,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 2,
+    "empty": false
+}

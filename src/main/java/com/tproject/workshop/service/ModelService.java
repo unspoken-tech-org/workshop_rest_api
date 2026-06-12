@@ -1,10 +1,13 @@
 package com.tproject.workshop.service;
 
+import com.tproject.workshop.dto.model.ModelResponseDto;
+import com.tproject.workshop.dto.model.ModelSearchParam;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Model;
 import com.tproject.workshop.repository.ModelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,12 +30,13 @@ public class ModelService {
 
     @Transactional
     public Model createOrReturnExistentModel(String model) {
-        var modelFound = modelRepository.findByModelIgnoreCase(model);
+        var modelName = model.toLowerCase().trim().replaceAll("\\s+", " ");
+        var modelFound = modelRepository.findByModelIgnoreCase(modelName);
+
         if (modelFound.isPresent()) {
             return modelFound.get();
         }
-        var modelName = model.toLowerCase().trim().replaceAll("\\s+", " ");
-        
+
         try {
             var newModel = new Model();
             newModel.setModel(modelName);
@@ -46,6 +50,17 @@ public class ModelService {
     private Model findModelOnCreate(String modelName, String originalModel) {
         return modelRepository.findByModelIgnoreCase(modelName)
                 .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar modelo: " + originalModel));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ModelResponseDto> searchModels(ModelSearchParam params) {
+        return modelRepository.searchModels(params);
+    }
+
+    @Transactional
+    public ModelResponseDto createModel(String modelName) {
+        Model model = createOrReturnExistentModel(modelName);
+        return new ModelResponseDto(model.getIdModel(), model.getModel());
     }
 
 }
