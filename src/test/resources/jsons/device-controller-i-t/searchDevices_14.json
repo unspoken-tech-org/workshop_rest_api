@@ -12,7 +12,7 @@
             "observation": "Observation 1",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/04/2023"
+            "entryDate": "2023-04-10T08:41:00.968173"
         },
         {
             "deviceId": 12,
@@ -26,7 +26,7 @@
             "observation": "Observation 12",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "06/01/2023"
+            "entryDate": "2023-01-06T14:41:00.968173"
         },
         {
             "deviceId": 6,
@@ -40,7 +40,7 @@
             "observation": "Observation 6",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "03/01/2023"
+            "entryDate": "2023-01-03T14:41:00.968173"
         },
         {
             "deviceId": 2,
@@ -54,7 +54,7 @@
             "observation": "Observation 2",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "01/01/2023"
+            "entryDate": "2023-01-01T14:41:00.968173"
         },
         {
             "deviceId": 11,
@@ -68,7 +68,7 @@
             "observation": "Observation 11",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/04/2021"
+            "entryDate": "2021-04-01T08:41:00.968173"
         },
         {
             "deviceId": 7,
@@ -82,7 +82,7 @@
             "observation": "Observation 7",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/10/2020"
+            "entryDate": "2020-10-10T08:41:00.968173"
         }
     ],
     "pageable": {

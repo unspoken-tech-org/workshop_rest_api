@@ -11,7 +11,7 @@
             "problem": "Ventilador Consul",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "10/11/2024"
+            "entryDate": "2024-11-10T00:00:00"
         },
         {
             "deviceId": 119,
@@ -24,7 +24,7 @@
             "problem": "Ventilador Consusl",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "25/11/2024"
+            "entryDate": "2024-11-25T00:00:00"
         },
         {
             "deviceId": 108,
@@ -37,7 +37,7 @@
             "problem": "Ventilador Samsung João",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/10/2024"
+            "entryDate": "2024-10-01T00:00:00"
         },
         {
             "deviceId": 113,
@@ -50,7 +50,7 @@
             "problem": "Ventilador Wallita Pedro",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/12/2024"
+            "entryDate": "2024-12-15T00:00:00"
         },
         {
             "deviceId": 110,
@@ -63,7 +63,7 @@
             "problem": "Ventilador Samsung Maria",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/11/2024"
+            "entryDate": "2024-11-01T00:00:00"
         },
         {
             "deviceId": 103,
@@ -76,7 +76,7 @@
             "problem": "Ventilador Britânia",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         },
         {
             "deviceId": 150,
@@ -89,7 +89,7 @@
             "problem": "Ventilador Consul João Paulo",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "15/07/2024"
+            "entryDate": "2024-07-15T00:00:00"
         },
         {
             "deviceId": 145,
@@ -102,7 +102,7 @@
             "problem": "Ventilador Consul Paulo",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 140,
@@ -115,7 +115,7 @@
             "problem": "Ventilador Consusl José Carlos",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "25/06/2024"
+            "entryDate": "2024-06-25T00:00:00"
         },
         {
             "deviceId": 147,
@@ -128,7 +128,7 @@
             "problem": "Ventilador Britânia João Pedro",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         },
         {
             "deviceId": 104,
@@ -141,7 +141,7 @@
             "problem": "Ventilador mesa",
             "hasUrgency": true,
             "hasRevision": true,
-            "entryDate": "10/07/2024"
+            "entryDate": "2024-07-10T00:00:00"
         },
         {
             "deviceId": 128,
@@ -154,7 +154,7 @@
             "problem": "Ventilador Wallita",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/12/2024"
+            "entryDate": "2024-12-15T00:00:00"
         },
         {
             "deviceId": 134,
@@ -167,7 +167,7 @@
             "problem": "Ventilador Brastenp Adilson",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/07/2024"
+            "entryDate": "2024-07-01T00:00:00"
         },
         {
             "deviceId": 153,
@@ -180,7 +180,7 @@
             "problem": "Ventilador Britânia João Victor",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "2024-07-20T00:00:00"
         },
         {
             "deviceId": 139,
@@ -193,7 +193,7 @@
             "problem": "Ventilador Wallita Maria Aparecida",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "2024-07-20T00:00:00"
         }
     ],
     "pageable": {
@@ -211,7 +211,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 15,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -219,6 +218,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 15,
     "empty": false
 }

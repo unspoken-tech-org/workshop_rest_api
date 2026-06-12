@@ -11,7 +11,7 @@
             "problem": "Liquidificador Panassonic",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "10/12/2024"
+            "entryDate": "2024-12-10T00:00:00"
         },
         {
             "deviceId": 118,
@@ -24,7 +24,7 @@
             "problem": "Micro-ondas Eletrolux",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/11/2024"
+            "entryDate": "2024-11-20T00:00:00"
         },
         {
             "deviceId": 106,
@@ -37,7 +37,7 @@
             "problem": "Micro-ondas Britania",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 148,
@@ -50,7 +50,7 @@
             "problem": "Liquidificador Panasonic João Pedro",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 139,
@@ -63,7 +63,7 @@
             "problem": "Ventilador Wallita Maria Aparecida",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "2024-07-20T00:00:00"
         },
         {
             "deviceId": 153,
@@ -76,7 +76,7 @@
             "problem": "Ventilador Britânia João Victor",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "20/07/2024"
+            "entryDate": "2024-07-20T00:00:00"
         }
     ],
     "pageable": {
@@ -94,7 +94,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 6,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -102,6 +101,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 6,
     "empty": false
 }

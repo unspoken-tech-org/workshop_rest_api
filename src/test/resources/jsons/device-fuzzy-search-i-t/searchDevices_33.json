@@ -11,7 +11,7 @@
             "problem": "Outro Samsung",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/09/2024"
+            "entryDate": "2024-09-01T00:00:00"
         },
         {
             "deviceId": 100,
@@ -24,7 +24,7 @@
             "problem": "Micro-ondas Samsung",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "2024-06-01T00:00:00"
         },
         {
             "deviceId": 146,
@@ -37,7 +37,7 @@
             "problem": "Micro-ondas Samsung João Pedro",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "2024-06-01T00:00:00"
         },
         {
             "deviceId": 101,
@@ -50,7 +50,7 @@
             "problem": "Micro-ondas embutir",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "15/06/2024"
+            "entryDate": "2024-06-15T00:00:00"
         }
     ],
     "pageable": {
@@ -68,7 +68,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 4,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -76,6 +75,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 4,
     "empty": false
 }

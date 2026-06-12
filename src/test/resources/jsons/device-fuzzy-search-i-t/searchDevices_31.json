@@ -11,7 +11,7 @@
             "problem": "Ventilador Samsung João",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/10/2024"
+            "entryDate": "2024-10-01T00:00:00"
         },
         {
             "deviceId": 107,
@@ -24,7 +24,7 @@
             "problem": "Outro Samsung",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/09/2024"
+            "entryDate": "2024-09-01T00:00:00"
         },
         {
             "deviceId": 100,
@@ -37,7 +37,7 @@
             "problem": "Micro-ondas Samsung",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "2024-06-01T00:00:00"
         },
         {
             "deviceId": 121,
@@ -50,7 +50,7 @@
             "problem": "Aspirador Samsung",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "05/12/2024"
+            "entryDate": "2024-12-05T00:00:00"
         },
         {
             "deviceId": 110,
@@ -63,7 +63,7 @@
             "problem": "Ventilador Samsung Maria",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/11/2024"
+            "entryDate": "2024-11-01T00:00:00"
         },
         {
             "deviceId": 146,
@@ -76,7 +76,7 @@
             "problem": "Micro-ondas Samsung João Pedro",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "2024-06-01T00:00:00"
         },
         {
             "deviceId": 101,
@@ -89,7 +89,7 @@
             "problem": "Micro-ondas embutir",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "15/06/2024"
+            "entryDate": "2024-06-15T00:00:00"
         },
         {
             "deviceId": 151,
@@ -102,7 +102,7 @@
             "problem": "Aspirador Samsung João Paulo",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/08/2024"
+            "entryDate": "2024-08-15T00:00:00"
         },
         {
             "deviceId": 133,
@@ -115,7 +115,7 @@
             "problem": "Micro-ondas Samsung Adilson",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "2024-06-01T00:00:00"
         },
         {
             "deviceId": 135,
@@ -128,7 +128,7 @@
             "problem": "Aspirador Samsung Adilson",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/08/2024"
+            "entryDate": "2024-08-01T00:00:00"
         },
         {
             "deviceId": 105,
@@ -141,7 +141,7 @@
             "problem": "Micro-ondas Sansung",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/12/2023"
+            "entryDate": "2023-12-01T00:00:00"
         }
     ],
     "pageable": {
@@ -159,7 +159,6 @@
     "last": true,
     "totalPages": 1,
     "totalElements": 11,
-    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -167,6 +166,7 @@
         "sorted": false,
         "unsorted": true
     },
+    "first": true,
     "numberOfElements": 11,
     "empty": false
 }
