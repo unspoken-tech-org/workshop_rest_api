@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -99,6 +100,26 @@ public class BrandControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(22, Map.of("brand", "Samsung"), "existing brand returns same"),
                 Arguments.of(23, Map.of("brand", "samsung"), "existing brand case insensitive"),
                 Arguments.of(24, Map.of("brand", "LG"), "existing brand another")
+        );
+    }
+
+    @DisplayName("Create brand - validation")
+    @MethodSource("createBrandValidationArguments")
+    @ParameterizedTest(name = "{displayName} : status {0} {1}")
+    public void createBrandValidation(Integer statusCode, Map<String, Object> body, String reason) {
+        given().spec(getAuthenticatedSpec())
+                .when()
+                .body(body)
+                .post(BASE_PATH)
+                .then()
+                .statusCode(statusCode);
+    }
+
+    private static Stream<Arguments> createBrandValidationArguments() {
+        return Stream.of(
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, new HashMap<>(), "empty body"),
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, Map.of("brand", ""), "blank brand"),
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, Map.of("brand", "  "), "whitespace-only brand")
         );
     }
 }

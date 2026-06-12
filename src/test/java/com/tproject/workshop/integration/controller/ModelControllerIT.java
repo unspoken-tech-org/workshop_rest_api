@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -111,6 +112,26 @@ public class ModelControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(19, Map.of("model", "WT12345"), "existing model returns same"),
                 Arguments.of(20, Map.of("model", "wt12345"), "existing model case insensitive"),
                 Arguments.of(21, Map.of("model", "NN-ST25"), "existing model another")
+        );
+    }
+
+    @DisplayName("Create model - validation")
+    @MethodSource("createModelValidationArguments")
+    @ParameterizedTest(name = "{displayName} : status {0} {1}")
+    public void createModelValidation(Integer statusCode, Map<String, Object> body, String reason) {
+        given().spec(getAuthenticatedSpec())
+                .when()
+                .body(body)
+                .post(BASE_PATH)
+                .then()
+                .statusCode(statusCode);
+    }
+
+    private static Stream<Arguments> createModelValidationArguments() {
+        return Stream.of(
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, new HashMap<>(), "empty body"),
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, Map.of("model", ""), "blank model"),
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, Map.of("model", "  "), "whitespace-only model")
         );
     }
 }

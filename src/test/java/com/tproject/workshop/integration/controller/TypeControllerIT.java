@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -99,6 +100,26 @@ public class TypeControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(18, Map.of("type", "lavadora"), "existing type case insensitive"),
                 Arguments.of(19, Map.of("type", "LAVADORA"), "existing type all uppercase"),
                 Arguments.of(20, Map.of("type", "  Lavadora  "), "existing type with whitespace")
+        );
+    }
+
+    @DisplayName("Create type - validation")
+    @MethodSource("createTypeValidationArguments")
+    @ParameterizedTest(name = "{displayName} : status {0} {1}")
+    public void createTypeValidation(Integer statusCode, Map<String, Object> body, String reason) {
+        given().spec(getAuthenticatedSpec())
+                .when()
+                .body(body)
+                .post(BASE_PATH)
+                .then()
+                .statusCode(statusCode);
+    }
+
+    private static Stream<Arguments> createTypeValidationArguments() {
+        return Stream.of(
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, new HashMap<>(), "empty body"),
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, Map.of("type", ""), "blank type"),
+                Arguments.of(HttpStatus.SC_BAD_REQUEST, Map.of("type", "  "), "whitespace-only type")
         );
     }
 }
