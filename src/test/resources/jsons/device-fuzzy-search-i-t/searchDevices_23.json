@@ -1,19 +1,6 @@
 {
     "content": [
         {
-            "deviceId": 109,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Britânia",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Britânia João",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/10/2024"
-        },
-        {
             "deviceId": 106,
             "customerId": 10,
             "customerName": "João Silva",
@@ -27,19 +14,6 @@
             "entryDate": "01/08/2024"
         },
         {
-            "deviceId": 152,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Micro-ondas",
-            "brand": "Britânia",
-            "model": "Mega Plus",
-            "status": "NOVO",
-            "problem": "Micro-ondas Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "20/06/2024"
-        },
-        {
             "deviceId": 102,
             "customerId": 10,
             "customerName": "João Silva",
@@ -51,6 +25,32 @@
             "hasUrgency": false,
             "hasRevision": true,
             "entryDate": "01/05/2024"
+        },
+        {
+            "deviceId": 109,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britânia",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Britânia João",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/10/2024"
+        },
+        {
+            "deviceId": 152,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Micro-ondas",
+            "brand": "Britânia",
+            "model": "Mega Plus",
+            "status": "NOVO",
+            "problem": "Micro-ondas Britânia João Victor",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "20/06/2024"
         }
     ],
     "pageable": {

@@ -1,6 +1,58 @@
 {
     "content": [
         {
+            "deviceId": 107,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Outro Samsung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/09/2024"
+        },
+        {
+            "deviceId": 106,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britania",
+            "model": "Mega Plus",
+            "status": "PRONTO",
+            "problem": "Micro-ondas Britania",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "01/08/2024"
+        },
+        {
+            "deviceId": 100,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/06/2024"
+        },
+        {
+            "deviceId": 102,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britânia",
+            "model": "Mega Plus",
+            "status": "ENTREGUE",
+            "problem": "Micro-ondas Britânia",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "01/05/2024"
+        },
+        {
             "deviceId": 118,
             "customerId": 10,
             "customerName": "João Silva",
@@ -25,19 +77,6 @@
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "15/11/2024"
-        },
-        {
-            "deviceId": 115,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Electrolux",
-            "model": "Mega Plus",
-            "status": "EM_ANDAMENTO",
-            "problem": "Micro-ondas Electrolux",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "05/11/2024"
         },
         {
             "deviceId": 114,
@@ -66,82 +105,17 @@
             "entryDate": "15/10/2024"
         },
         {
-            "deviceId": 107,
+            "deviceId": 115,
             "customerId": 10,
             "customerName": "João Silva",
             "type": "Micro-ondas",
-            "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Outro Samsung",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/09/2024"
-        },
-        {
-            "deviceId": 106,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Britania",
+            "brand": "Electrolux",
             "model": "Mega Plus",
-            "status": "PRONTO",
-            "problem": "Micro-ondas Britania",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "01/08/2024"
-        },
-        {
-            "deviceId": 152,
-            "customerId": 21,
-            "customerName": "João Victor Almeida Santos",
-            "type": "Micro-ondas",
-            "brand": "Britânia",
-            "model": "Mega Plus",
-            "status": "NOVO",
-            "problem": "Micro-ondas Britânia João Victor",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "20/06/2024"
-        },
-        {
-            "deviceId": 101,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas de embutir",
-            "brand": "Samsung",
-            "model": "Turbo 3000",
             "status": "EM_ANDAMENTO",
-            "problem": "Micro-ondas embutir",
+            "problem": "Micro-ondas Electrolux",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "15/06/2024"
-        },
-        {
-            "deviceId": 149,
-            "customerId": 20,
-            "customerName": "João Paulo Ferreira",
-            "type": "Micro-ondas",
-            "brand": "Brastemp",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Brastemp João Paulo",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/06/2024"
-        },
-        {
-            "deviceId": 100,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
-            "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Samsung",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "05/11/2024"
         },
         {
             "deviceId": 146,
@@ -157,17 +131,43 @@
             "entryDate": "01/06/2024"
         },
         {
-            "deviceId": 102,
+            "deviceId": 149,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Micro-ondas",
+            "brand": "Brastemp",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Brastemp João Paulo",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "15/06/2024"
+        },
+        {
+            "deviceId": 101,
             "customerId": 10,
             "customerName": "João Silva",
+            "type": "Micro-ondas de embutir",
+            "brand": "Samsung",
+            "model": "Turbo 3000",
+            "status": "EM_ANDAMENTO",
+            "problem": "Micro-ondas embutir",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "15/06/2024"
+        },
+        {
+            "deviceId": 152,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
             "type": "Micro-ondas",
             "brand": "Britânia",
             "model": "Mega Plus",
-            "status": "ENTREGUE",
-            "problem": "Micro-ondas Britânia",
+            "status": "NOVO",
+            "problem": "Micro-ondas Britânia João Victor",
             "hasUrgency": false,
-            "hasRevision": true,
-            "entryDate": "01/05/2024"
+            "hasRevision": false,
+            "entryDate": "20/06/2024"
         }
     ],
     "pageable": {

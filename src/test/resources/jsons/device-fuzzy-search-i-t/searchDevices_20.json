@@ -1,19 +1,6 @@
 {
     "content": [
         {
-            "deviceId": 121,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Aspirador robô",
-            "brand": "Samsung",
-            "model": "Silent Pro",
-            "status": "EM_ANDAMENTO",
-            "problem": "Aspirador Samsung",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "05/12/2024"
-        },
-        {
             "deviceId": 108,
             "customerId": 10,
             "customerName": "João Silva",
@@ -40,17 +27,43 @@
             "entryDate": "01/09/2024"
         },
         {
-            "deviceId": 151,
-            "customerId": 20,
-            "customerName": "João Paulo Ferreira",
+            "deviceId": 100,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/06/2024"
+        },
+        {
+            "deviceId": 121,
+            "customerId": 10,
+            "customerName": "João Silva",
             "type": "Aspirador robô",
             "brand": "Samsung",
             "model": "Silent Pro",
             "status": "EM_ANDAMENTO",
-            "problem": "Aspirador Samsung João Paulo",
+            "problem": "Aspirador Samsung",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "05/12/2024"
+        },
+        {
+            "deviceId": 146,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung João Pedro",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "15/08/2024"
+            "entryDate": "01/06/2024"
         },
         {
             "deviceId": 101,
@@ -66,30 +79,17 @@
             "entryDate": "15/06/2024"
         },
         {
-            "deviceId": 100,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Micro-ondas",
+            "deviceId": 151,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Aspirador robô",
             "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Samsung",
+            "model": "Silent Pro",
+            "status": "EM_ANDAMENTO",
+            "problem": "Aspirador Samsung João Paulo",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
-        },
-        {
-            "deviceId": 146,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
-            "type": "Micro-ondas",
-            "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Samsung João Pedro",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "15/08/2024"
         }
     ],
     "pageable": {

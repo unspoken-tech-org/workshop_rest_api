@@ -44,7 +44,19 @@ where
         )
     )
 ORDER BY
-    -- 1. Relevância (só quando query presente)
+    -- 1. Prefixo exato primeiro (type, brand, model ou customer name)
+    CASE
+        WHEN :SEARCH_QUERY IS NOT NULL AND :SEARCH_QUERY != ''
+        AND (
+            LOWER(unaccent(t.type)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
+            OR LOWER(unaccent(b.brand)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
+            OR LOWER(unaccent(m.model)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
+            OR LOWER(unaccent(c.name)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
+        )
+        THEN 0
+        ELSE 1
+    END,
+    -- 2. Relevância (só quando query presente)
     CASE
         WHEN :SEARCH_QUERY IS NOT NULL AND :SEARCH_QUERY != ''
         THEN word_similarity(
@@ -52,7 +64,12 @@ ORDER BY
                 LOWER(CONCAT_WS(' ', unaccent(t.type), unaccent(b.brand), unaccent(m.model), unaccent(c.name)))
              )
     END DESC NULLS LAST,
-    -- 2. Ordenação do usuário (sempre aplicada, field + direction)
+    -- 2.1 Tiebreaker: preferir strings mais curtas
+    CASE
+        WHEN :SEARCH_QUERY IS NOT NULL AND :SEARCH_QUERY != ''
+        THEN LENGTH(CONCAT_WS(' ', t.type, b.brand, m.model, c.name))
+    END ASC NULLS LAST,
+    -- 3. Ordenação do usuário (sempre aplicada, field + direction)
     CASE
         WHEN :ORDER_BY_DIRECTION = 'ASC' THEN
             CASE :ORDER_BY_FIELD

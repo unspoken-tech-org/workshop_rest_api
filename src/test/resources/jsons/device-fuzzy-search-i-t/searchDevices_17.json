@@ -14,6 +14,19 @@
             "entryDate": "01/08/2024"
         },
         {
+            "deviceId": 147,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Britânia João Pedro",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "01/07/2024"
+        },
+        {
             "deviceId": 104,
             "customerId": 11,
             "customerName": "Maria Aparecida",
@@ -35,19 +48,6 @@
             "model": "Easy Breeze",
             "status": "EM_ANDAMENTO",
             "problem": "Ventilador Brastenp Adilson",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "01/07/2024"
-        },
-        {
-            "deviceId": 147,
-            "customerId": 19,
-            "customerName": "João Pedro da Silva",
-            "type": "Ventilador",
-            "brand": "Britânia",
-            "model": "Easy Breeze",
-            "status": "EM_ANDAMENTO",
-            "problem": "Ventilador Britânia João Pedro",
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "01/07/2024"

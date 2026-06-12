@@ -14,19 +14,6 @@
             "entryDate": "01/12/2023"
         },
         {
-            "deviceId": 121,
-            "customerId": 10,
-            "customerName": "João Silva",
-            "type": "Aspirador robô",
-            "brand": "Samsung",
-            "model": "Silent Pro",
-            "status": "EM_ANDAMENTO",
-            "problem": "Aspirador Samsung",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "05/12/2024"
-        },
-        {
             "deviceId": 107,
             "customerId": 10,
             "customerName": "João Silva",
@@ -38,32 +25,6 @@
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/09/2024"
-        },
-        {
-            "deviceId": 151,
-            "customerId": 20,
-            "customerName": "João Paulo Ferreira",
-            "type": "Aspirador robô",
-            "brand": "Samsung",
-            "model": "Silent Pro",
-            "status": "EM_ANDAMENTO",
-            "problem": "Aspirador Samsung João Paulo",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "15/08/2024"
-        },
-        {
-            "deviceId": 135,
-            "customerId": 13,
-            "customerName": "Adilson Ferreira da Silva",
-            "type": "Aspirador robô",
-            "brand": "Samsung",
-            "model": "Silent Pro",
-            "status": "NOVO",
-            "problem": "Aspirador Samsung Adilson",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/08/2024"
         },
         {
             "deviceId": 100,
@@ -79,17 +40,17 @@
             "entryDate": "01/06/2024"
         },
         {
-            "deviceId": 133,
-            "customerId": 13,
-            "customerName": "Adilson Ferreira da Silva",
-            "type": "Micro-ondas",
+            "deviceId": 121,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Aspirador robô",
             "brand": "Samsung",
-            "model": "Smart Cook",
-            "status": "NOVO",
-            "problem": "Micro-ondas Samsung Adilson",
-            "hasUrgency": false,
+            "model": "Silent Pro",
+            "status": "EM_ANDAMENTO",
+            "problem": "Aspirador Samsung",
+            "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "01/06/2024"
+            "entryDate": "05/12/2024"
         },
         {
             "deviceId": 146,
@@ -105,17 +66,43 @@
             "entryDate": "01/06/2024"
         },
         {
-            "deviceId": 110,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador",
+            "deviceId": 151,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Aspirador robô",
             "brand": "Samsung",
-            "model": "Easy Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Samsung Maria",
+            "model": "Silent Pro",
+            "status": "EM_ANDAMENTO",
+            "problem": "Aspirador Samsung João Paulo",
             "hasUrgency": false,
             "hasRevision": false,
-            "entryDate": "01/11/2024"
+            "entryDate": "15/08/2024"
+        },
+        {
+            "deviceId": 133,
+            "customerId": 13,
+            "customerName": "Adilson Ferreira da Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung Adilson",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/06/2024"
+        },
+        {
+            "deviceId": 135,
+            "customerId": 13,
+            "customerName": "Adilson Ferreira da Silva",
+            "type": "Aspirador robô",
+            "brand": "Samsung",
+            "model": "Silent Pro",
+            "status": "NOVO",
+            "problem": "Aspirador Samsung Adilson",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/08/2024"
         },
         {
             "deviceId": 108,
@@ -129,6 +116,19 @@
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/10/2024"
+        },
+        {
+            "deviceId": 110,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Samsung Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/11/2024"
         },
         {
             "deviceId": 101,

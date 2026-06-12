@@ -1,19 +1,6 @@
 {
     "content": [
         {
-            "deviceId": 110,
-            "customerId": 11,
-            "customerName": "Maria Aparecida",
-            "type": "Ventilador",
-            "brand": "Samsung",
-            "model": "Easy Breeze",
-            "status": "NOVO",
-            "problem": "Ventilador Samsung Maria",
-            "hasUrgency": false,
-            "hasRevision": false,
-            "entryDate": "01/11/2024"
-        },
-        {
             "deviceId": 108,
             "customerId": 10,
             "customerName": "João Silva",
@@ -25,6 +12,19 @@
             "hasUrgency": false,
             "hasRevision": false,
             "entryDate": "01/10/2024"
+        },
+        {
+            "deviceId": 110,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Samsung Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "01/11/2024"
         }
     ],
     "pageable": {

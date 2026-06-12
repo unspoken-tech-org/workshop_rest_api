@@ -47,11 +47,27 @@ WHERE
 ORDER BY
     CASE
         WHEN :SEARCH_NAME IS NOT NULL AND :SEARCH_NAME != ''
+        AND LOWER(unaccent(c.name)) LIKE LOWER(unaccent(:SEARCH_NAME)) || '%'
+        THEN 0
+        ELSE 1
+    END,
+    CASE
+        WHEN :SEARCH_NAME IS NOT NULL AND :SEARCH_NAME != ''
         THEN word_similarity(
             LOWER(unaccent(:SEARCH_NAME)),
             LOWER(unaccent(c.name))
         )
     END DESC NULLS LAST,
+    CASE
+        WHEN :SEARCH_NAME IS NOT NULL AND :SEARCH_NAME != ''
+        THEN LENGTH(c.name)
+    END ASC NULLS LAST,
+    CASE
+        WHEN :SEARCH_EMAIL IS NOT NULL AND :SEARCH_EMAIL != ''
+        AND LOWER(unaccent(c.email)) LIKE LOWER(unaccent(:SEARCH_EMAIL)) || '%'
+        THEN 0
+        ELSE 1
+    END,
     CASE
         WHEN :SEARCH_EMAIL IS NOT NULL AND :SEARCH_EMAIL != ''
         THEN word_similarity(
@@ -59,6 +75,10 @@ ORDER BY
             LOWER(unaccent(c.email))
         )
     END DESC NULLS LAST,
+    CASE
+        WHEN :SEARCH_EMAIL IS NOT NULL AND :SEARCH_EMAIL != ''
+        THEN LENGTH(c.email)
+    END ASC NULLS LAST,
     CASE WHEN :ORDER_BY_DIRECTION = 'ASC' THEN
         CASE :ORDER_BY_FIELD
             WHEN 'name'  THEN c.name
