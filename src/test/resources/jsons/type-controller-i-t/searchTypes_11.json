@@ -1,0 +1,37 @@
+{
+    "content": [
+        {
+            "idType": 1,
+            "type": "Lavadora"
+        },
+        {
+            "idType": 8,
+            "type": "Air Fryer"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 1,
+        "pageSize": 2,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 2,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": false,
+    "totalPages": 5,
+    "totalElements": 10,
+    "first": false,
+    "size": 2,
+    "number": 1,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 2,
+    "empty": false
+}

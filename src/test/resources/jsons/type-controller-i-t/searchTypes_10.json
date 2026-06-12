@@ -1,0 +1,37 @@
+{
+    "content": [
+        {
+            "idType": 7,
+            "type": "Fogão"
+        },
+        {
+            "idType": 6,
+            "type": "Freezer"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 2,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": false,
+    "totalPages": 5,
+    "totalElements": 10,
+    "first": true,
+    "size": 2,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 2,
+    "empty": false
+}

@@ -1,0 +1,69 @@
+{
+    "content": [
+        {
+            "idType": 7,
+            "type": "Fogão"
+        },
+        {
+            "idType": 6,
+            "type": "Freezer"
+        },
+        {
+            "idType": 1,
+            "type": "Lavadora"
+        },
+        {
+            "idType": 8,
+            "type": "Air Fryer"
+        },
+        {
+            "idType": 9,
+            "type": "Aspirador"
+        },
+        {
+            "idType": 2,
+            "type": "Lava e Seca"
+        },
+        {
+            "idType": 4,
+            "type": "Micro-ondas"
+        },
+        {
+            "idType": 5,
+            "type": "Refrigerador"
+        },
+        {
+            "idType": 10,
+            "type": "Chuveiro Elétrico"
+        },
+        {
+            "idType": 3,
+            "type": "Lavadora Industrial"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 10,
+    "first": true,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 10,
+    "empty": false
+}
