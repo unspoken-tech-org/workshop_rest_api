@@ -19,8 +19,8 @@
     ],
     "hasUrgency": false,
     "revision": false,
-    "entryDate": "10/04/2023",
-    "lastUpdate": "2026-06-11T18:01:20.238-03:00",
+    "entryDate": "2023-04-10T08:41:00.968173",
+    "lastUpdate": "2026-06-12T11:15:47.854371",
     "customerPhones": [
         {
             "id": 1,
@@ -44,7 +44,7 @@
             "phone": "44988254493",
             "type": "mensagem",
             "hasMadeContact": true,
-            "lastContact": "08/01/2025",
+            "lastContact": "2025-01-08T14:41:00.968173",
             "conversation": "Avisado que o aparelho está pronto",
             "deviceStatus": "PRONTO"
         },
@@ -55,7 +55,7 @@
             "technicianName": "Technician 1",
             "type": "pessoalmente",
             "hasMadeContact": true,
-            "lastContact": "07/01/2025",
+            "lastContact": "2025-01-07T14:41:00.968173",
             "conversation": "Cliente aceitou o orçamento",
             "deviceStatus": "EM_ANDAMENTO"
         },
@@ -67,7 +67,7 @@
             "phone": "44988254493",
             "type": "mensagem",
             "hasMadeContact": false,
-            "lastContact": "06/01/2025",
+            "lastContact": "2025-01-06T14:41:00.968173",
             "conversation": "Foi passado o orçamento e aguardo resposta",
             "deviceStatus": "AGUARDANDO"
         }
@@ -81,8 +81,8 @@
             "problem": "Problem 9",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "04/02/2025",
-            "departureDate": "01/05/2021"
+            "entryDate": "2025-02-04T08:41:00.968173",
+            "departureDate": "2021-05-01T08:41:00.968173"
         },
         {
             "deviceId": 3,
@@ -92,7 +92,7 @@
             "problem": "Problem 3",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "03/09/2021"
+            "entryDate": "2021-09-03T08:41:00.968173"
         },
         {
             "deviceId": 15,
@@ -102,8 +102,8 @@
             "problem": "Problem 15",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "22/04/2021",
-            "departureDate": "04/05/2021"
+            "entryDate": "2021-04-22T08:41:00.968173",
+            "departureDate": "2021-05-04T08:41:00.968173"
         },
         {
             "deviceId": 13,
@@ -113,7 +113,7 @@
             "problem": "Problem 13",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "02/04/2021"
+            "entryDate": "2021-04-02T08:41:00.968173"
         },
         {
             "deviceId": 11,
@@ -123,7 +123,7 @@
             "problem": "Problem 11",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "01/04/2021"
+            "entryDate": "2021-04-01T08:41:00.968173"
         },
         {
             "deviceId": 7,
@@ -133,7 +133,7 @@
             "problem": "Problem 7",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "10/10/2020"
+            "entryDate": "2020-10-10T08:41:00.968173"
         },
         {
             "deviceId": 5,
@@ -143,21 +143,21 @@
             "problem": "Problem 5",
             "hasUrgency": true,
             "revision": false,
-            "entryDate": "28/04/2017",
-            "departureDate": "28/04/2021"
+            "entryDate": "2017-04-28T08:41:00.968173",
+            "departureDate": "2021-04-28T08:41:00.968173"
         }
     ],
     "payments": [
         {
             "paymentId": 2,
-            "paymentDate": "29/04/2023",
+            "paymentDate": "2023-04-29T08:41:00.968173",
             "paymentType": "credito",
             "paymentValue": 100.00,
             "category": "parcial"
         },
         {
             "paymentId": 1,
-            "paymentDate": "22/04/2023",
+            "paymentDate": "2023-04-22T08:41:00.968173",
             "paymentType": "credito",
             "paymentValue": 100.00,
             "category": "parcial"

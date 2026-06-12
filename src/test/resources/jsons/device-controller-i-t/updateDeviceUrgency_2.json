@@ -19,9 +19,9 @@
     ],
     "hasUrgency": true,
     "revision": true,
-    "entryDate": "02/01/2023",
-    "departureDate": "05/01/2023",
-    "lastUpdate": "2026-06-11T18:01:20.728-03:00",
+    "entryDate": "2023-01-02T14:41:00.968173",
+    "departureDate": "2023-01-05T14:41:00.968173",
+    "lastUpdate": "2026-06-12T11:15:48.366491",
     "customerPhones": [
         {
             "id": 3,
@@ -42,8 +42,8 @@
             "problem": "Problem 14",
             "hasUrgency": false,
             "revision": true,
-            "entryDate": "07/01/2023",
-            "departureDate": "06/01/2023"
+            "entryDate": "2023-01-07T14:41:00.968173",
+            "departureDate": "2023-01-06T14:41:00.968173"
         },
         {
             "deviceId": 12,
@@ -53,7 +53,7 @@
             "problem": "Problem 12",
             "hasUrgency": false,
             "revision": true,
-            "entryDate": "06/01/2023"
+            "entryDate": "2023-01-06T14:41:00.968173"
         },
         {
             "deviceId": 10,
@@ -63,8 +63,8 @@
             "problem": "Problem 10",
             "hasUrgency": false,
             "revision": true,
-            "entryDate": "05/01/2023",
-            "departureDate": "07/01/2023"
+            "entryDate": "2023-01-05T14:41:00.968173",
+            "departureDate": "2023-01-07T14:41:00.968173"
         },
         {
             "deviceId": 8,
@@ -74,7 +74,7 @@
             "problem": "Problem 8",
             "hasUrgency": false,
             "revision": true,
-            "entryDate": "04/01/2023"
+            "entryDate": "2023-01-04T14:41:00.968173"
         },
         {
             "deviceId": 6,
@@ -84,7 +84,7 @@
             "problem": "Problem 6",
             "hasUrgency": false,
             "revision": true,
-            "entryDate": "03/01/2023"
+            "entryDate": "2023-01-03T14:41:00.968173"
         },
         {
             "deviceId": 2,
@@ -94,7 +94,7 @@
             "problem": "Problem 2",
             "hasUrgency": false,
             "revision": true,
-            "entryDate": "01/01/2023"
+            "entryDate": "2023-01-01T14:41:00.968173"
         }
     ],
     "payments": [
