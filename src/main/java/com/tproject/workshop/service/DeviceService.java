@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -168,6 +169,7 @@ public class DeviceService {
         oldDevice.setBudget(device.budget());
         oldDevice.setLaborValue(device.laborValue());
         oldDevice.setServiceValue(device.serviceValue());
+        oldDevice.setDiscount(device.discount());
         oldDevice.setLaborValueCollected(device.laborValueCollected());
         oldDevice.setUrgency(device.hasUrgency());
         oldDevice.setRevision(device.revision());
@@ -183,6 +185,15 @@ public class DeviceService {
                     "A data de saída (%s) deve ser posterior à data de entrada (%s)",
                     device.departureDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                     device.entryDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        }
+
+        if (device.discount() != null && device.serviceValue() != null && device.laborValue() != null) {
+            BigDecimal remaining = device.serviceValue().subtract(device.laborValue());
+            if (device.discount().compareTo(remaining) > 0) {
+                throw new BadRequestException(
+                        "O desconto (%s) não pode exceder o valor restante (%s)",
+                        device.discount(), remaining);
+            }
         }
 
         if (device.entryDate() != null) {

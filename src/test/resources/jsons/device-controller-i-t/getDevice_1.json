@@ -13,6 +13,7 @@
     "budget": "Budget 1",
     "laborValue": 50.00,
     "serviceValue": 100.00,
+    "discount": 0.00,
     "laborValueCollected": false,
     "deviceColors": [
         "preto"
@@ -20,7 +21,7 @@
     "hasUrgency": true,
     "revision": false,
     "entryDate": "2023-04-10T08:41:00.968173",
-    "lastUpdate": "2026-06-12T11:15:46.248321",
+    "lastUpdate": "2026-06-12T15:17:04.954806",
     "customerPhones": [
         {
             "id": 1,

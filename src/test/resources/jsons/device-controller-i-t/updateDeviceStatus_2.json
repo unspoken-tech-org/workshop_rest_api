@@ -13,6 +13,7 @@
     "budget": "Budget 5",
     "laborValue": 50.00,
     "serviceValue": 500.00,
+    "discount": 0.00,
     "laborValueCollected": false,
     "deviceColors": [
         "branco",
@@ -21,8 +22,8 @@
     "hasUrgency": false,
     "revision": false,
     "entryDate": "2017-04-28T08:41:00.968173",
-    "departureDate": "2026-06-12T11:16:55.870183",
-    "lastUpdate": "2026-06-12T11:16:55.872488",
+    "departureDate": "2026-06-12T15:17:06.985653",
+    "lastUpdate": "2026-06-12T15:17:06.987456",
     "customerPhones": [
         {
             "id": 1,

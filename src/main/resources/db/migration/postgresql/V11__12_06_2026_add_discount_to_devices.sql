@@ -1,0 +1,1 @@
+ALTER TABLE devices ADD COLUMN discount DECIMAL(10,2) DEFAULT 0;

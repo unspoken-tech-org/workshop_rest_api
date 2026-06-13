@@ -13,6 +13,7 @@
     "budget": "Budget 4",
     "laborValue": 50.00,
     "serviceValue": 400.00,
+    "discount": 0.00,
     "laborValueCollected": false,
     "deviceColors": [
         "azul"
@@ -21,7 +22,7 @@
     "revision": true,
     "entryDate": "2023-01-02T14:41:00.968173",
     "departureDate": "2023-01-05T14:41:00.968173",
-    "lastUpdate": "2026-06-12T11:15:48.366491",
+    "lastUpdate": "2026-06-12T15:17:07.251847",
     "customerPhones": [
         {
             "id": 3,

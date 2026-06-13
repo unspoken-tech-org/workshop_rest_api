@@ -13,6 +13,7 @@
     "budget": "Orçamento simples",
     "laborValue": 50.00,
     "serviceValue": 100.00,
+    "discount": 10.00,
     "laborValueCollected": false,
     "deviceColors": [
         "cinza"
@@ -20,7 +21,7 @@
     "hasUrgency": true,
     "revision": false,
     "entryDate": "2023-01-01T14:41:00.968173",
-    "lastUpdate": "2026-06-12T11:15:47.208018",
+    "lastUpdate": "2026-06-12T15:17:05.970774",
     "customerPhones": [
         {
             "id": 3,

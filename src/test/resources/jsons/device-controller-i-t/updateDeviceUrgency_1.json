@@ -13,6 +13,7 @@
     "budget": "Budget 2",
     "laborValue": 50.00,
     "serviceValue": 200.00,
+    "discount": 0.00,
     "laborValueCollected": false,
     "deviceColors": [
         "cinza"
@@ -20,7 +21,7 @@
     "hasUrgency": true,
     "revision": true,
     "entryDate": "2023-01-01T14:41:00.968173",
-    "lastUpdate": "2026-06-12T11:15:48.304506",
+    "lastUpdate": "2026-06-12T15:17:07.185793",
     "customerPhones": [
         {
             "id": 3,

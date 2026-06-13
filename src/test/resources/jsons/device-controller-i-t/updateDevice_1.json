@@ -13,6 +13,7 @@
     "budget": "Orçamento atualizado",
     "laborValue": 75.00,
     "serviceValue": 150.00,
+    "discount": 30.00,
     "laborValueCollected": true,
     "deviceColors": [
         "preto"
@@ -20,7 +21,7 @@
     "hasUrgency": false,
     "revision": true,
     "entryDate": "2023-04-10T08:41:00.968173",
-    "lastUpdate": "2026-06-12T11:15:47.137046",
+    "lastUpdate": "2026-06-12T15:17:05.895614",
     "customerPhones": [
         {
             "id": 1,

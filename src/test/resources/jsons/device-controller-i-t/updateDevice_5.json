@@ -13,6 +13,7 @@
     "budget": "Orçamento final",
     "laborValue": 80.00,
     "serviceValue": 160.00,
+    "discount": 15.00,
     "laborValueCollected": false,
     "deviceColors": [
         "branco",
@@ -22,7 +23,7 @@
     "revision": true,
     "entryDate": "2017-04-28T08:41:00.968173",
     "departureDate": "2021-04-28T08:41:00.968173",
-    "lastUpdate": "2026-06-12T11:15:47.443771",
+    "lastUpdate": "2026-06-12T15:17:06.234728",
     "customerPhones": [
         {
             "id": 1,

@@ -31,6 +31,9 @@ public record DeviceUpdateInputDtoRecord(
         @Schema(description = "Service cost estimate or charged amount", example = "220.00")
         @DecimalMin(value = "0.00", message = "O valor do serviço não pode ser negativo")
         BigDecimal serviceValue,
+        @Schema(description = "Discount applied to the device", example = "30.00")
+        @DecimalMin(value = "0.00", message = "O desconto não pode ser negativo")
+        BigDecimal discount,
         @Schema(description = "Indicates if labor value was collected", example = "false")
         boolean laborValueCollected,
         @Schema(description = "Flags if the device is urgent", example = "true")

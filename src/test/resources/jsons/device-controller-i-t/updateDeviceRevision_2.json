@@ -13,6 +13,7 @@
     "budget": "Budget 4",
     "laborValue": 50.00,
     "serviceValue": 400.00,
+    "discount": 0.00,
     "laborValueCollected": false,
     "deviceColors": [
         "azul"

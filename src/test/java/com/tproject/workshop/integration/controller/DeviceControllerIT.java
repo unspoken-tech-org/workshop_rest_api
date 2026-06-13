@@ -395,6 +395,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("budget", "Orçamento atualizado");
                     put("laborValue", 75.0);
                     put("serviceValue", 150.0);
+                    put("discount", 30.0);
                     put("laborValueCollected", true);
                     put("hasUrgency", false);
                     put("revision", true);
@@ -409,6 +410,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("budget", "Orçamento simples");
                     put("laborValue", 50.0);
                     put("serviceValue", 100.0);
+                    put("discount", 10.0);
                     put("laborValueCollected", false);
                     put("hasUrgency", true);
                     put("revision", false);
@@ -422,6 +424,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("budget", "Orçamento final");
                     put("laborValue", 100.0);
                     put("serviceValue", 200.0);
+                    put("discount", 20.0);
                     put("laborValueCollected", true);
                     put("hasUrgency", false);
                     put("revision", false);
@@ -449,6 +452,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("budget", "Orçamento final");
                     put("laborValue", 80.0);
                     put("serviceValue", 160.0);
+                    put("discount", 15.0);
                     put("laborValueCollected", false);
                     put("hasUrgency", false);
                     put("revision", true);
@@ -573,7 +577,21 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
-                ), "update serviceValue with negative value")
+                ), "update serviceValue with negative value"),
+
+                Arguments.of(15, HttpStatus.SC_BAD_REQUEST, new HashMap<String, Object>() {{
+                    put("deviceId", 1);
+                    put("deviceStatus", "EM_ANDAMENTO");
+                    put("problem", "Problema teste");
+                    put("observation", "Observação teste");
+                    put("budget", "Orçamento teste");
+                    put("laborValue", 50.0);
+                    put("serviceValue", 100.0);
+                    put("discount", 60.0);
+                    put("laborValueCollected", false);
+                    put("hasUrgency", false);
+                    put("revision", false);
+                }}, "update device with discount exceeding remaining value")
         );
     }
 

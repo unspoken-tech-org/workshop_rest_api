@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Requisição Inválida",
+    "error": {
+        "code": "requisicao.invalida",
+        "message": "O desconto (60.0) não pode exceder o valor restante (50.0)"
+    }
+}
