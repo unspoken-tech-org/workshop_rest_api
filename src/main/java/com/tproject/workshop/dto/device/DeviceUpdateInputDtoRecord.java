@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record DeviceUpdateInputDtoRecord(
         @Schema(description = "Identifier of the device being updated", example = "42")
@@ -36,10 +37,10 @@ public record DeviceUpdateInputDtoRecord(
         boolean revision,
         @Schema(description = "Technician responsible for the update", example = "7")
         Integer technicianId,
-        @Schema(description = "Entry date (yyyy-MM-dd)", example = "2026-06-15")
-        LocalDate entryDate,
-        @Schema(description = "Departure date (yyyy-MM-dd)", example = "2026-06-20")
-        LocalDate departureDate
+        @Schema(description = "Entry date (yyyy-MM-dd'T'HH:mm:ss)", example = "2026-06-15T00:00:00")
+        LocalDateTime entryDate,
+        @Schema(description = "Departure date (yyyy-MM-dd'T'HH:mm:ss)", example = "2026-06-20T00:00:00")
+        LocalDateTime departureDate
 ) {
 
 }

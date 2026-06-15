@@ -26,6 +26,9 @@ public class Device {
     private int id;
 
     @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Timestamp createdAt;
+
     @Column(name = "entry_date", nullable = false)
     private Timestamp entryDate;
 

@@ -187,11 +187,11 @@ public class DeviceService {
         }
 
         if (device.entryDate() != null) {
-            oldDevice.setEntryDate(Timestamp.valueOf(device.entryDate().atStartOfDay()));
+            oldDevice.setEntryDate(Timestamp.valueOf(device.entryDate()));
         }
 
         if (device.departureDate() != null) {
-            oldDevice.setDepartureDate(Timestamp.valueOf(device.departureDate().atStartOfDay()));
+            oldDevice.setDepartureDate(Timestamp.valueOf(device.departureDate()));
         } else if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
             oldDevice.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
         }
@@ -222,6 +222,7 @@ public class DeviceService {
         newDevice.setBudgetFee(Optional.ofNullable(device.budgetFee()).orElse(BigDecimal.ZERO));
         newDevice.setUrgency(device.hasUrgency());
         newDevice.setDeviceStatus(DeviceStatusEnum.NOVO);
+        newDevice.setEntryDate(Timestamp.valueOf(LocalDateTime.now()));
         Optional.ofNullable(device.technicianId()).ifPresent(id -> {
             Technician technician = technicianService.findById(id);
             newDevice.setTechnician(technician);

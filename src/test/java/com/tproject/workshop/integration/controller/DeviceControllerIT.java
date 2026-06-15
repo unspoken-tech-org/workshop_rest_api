@@ -729,7 +729,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("serviceValue", 100.0);
                     put("hasUrgency", false);
                     put("revision", false);
-                    put("entryDate", "2026-06-15");
+                    put("entryDate", "2026-06-15T00:00:00");
                 }}, "update device with entryDate only"),
                 Arguments.of(2, HttpStatus.SC_OK, new HashMap<String, Object>() {{
                     put("deviceId", 2);
@@ -741,7 +741,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("serviceValue", 100.0);
                     put("hasUrgency", false);
                     put("revision", false);
-                    put("departureDate", "2026-06-20");
+                    put("departureDate", "2026-06-20T00:00:00");
                 }}, "update device with departureDate only"),
                 Arguments.of(3, HttpStatus.SC_OK, new HashMap<String, Object>() {{
                     put("deviceId", 5);
@@ -753,8 +753,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("serviceValue", 160.0);
                     put("hasUrgency", false);
                     put("revision", false);
-                    put("entryDate", "2026-06-10");
-                    put("departureDate", "2026-06-25");
+                    put("entryDate", "2026-06-10T00:00:00");
+                    put("departureDate", "2026-06-25T00:00:00");
                 }}, "update device with both dates and status ENTREGUE")
         );
     }
