@@ -1,103 +1,113 @@
 {
-    "deviceId": 4,
-    "customerId": 2,
-    "customerName": "Lucas Ribeiro Naga",
-    "deviceStatus": "NOVO",
-    "brandName": "Philco",
-    "modelName": "Model 4",
-    "typeName": "Ferro de passar",
-    "technicianId": 2,
-    "technicianName": "Technician 2",
-    "problem": "Problem 4",
-    "observation": "Observation 4",
-    "budget": "Budget 4",
-    "laborValue": 50.00,
-    "serviceValue": 400.00,
-    "laborValueCollected": false,
-    "deviceColors": [
-        "azul"
-    ],
-    "hasUrgency": true,
-    "revision": true,
-    "entryDate": "2023-01-02T14:41:00.968173",
-    "departureDate": "2023-01-05T14:41:00.968173",
-    "lastUpdate": "2026-06-12T11:15:48.366491",
-    "customerPhones": [
-        {
-            "id": 3,
-            "number": "44988255540",
-            "name": "Lucas Principal",
-            "main": true
-        }
-    ],
-    "customerContacts": [
-        
-    ],
-    "otherDevices": [
-        {
-            "deviceId": 14,
-            "customerId": 2,
-            "typeBrandModel": "Ferro de passar Philco | Model 4",
-            "deviceStatus": "ENTREGUE",
-            "problem": "Problem 14",
-            "hasUrgency": false,
-            "revision": true,
-            "entryDate": "2023-01-07T14:41:00.968173",
-            "departureDate": "2023-01-06T14:41:00.968173"
-        },
-        {
-            "deviceId": 12,
-            "customerId": 2,
-            "typeBrandModel": "Liquidificador Wallita | Model 2",
-            "deviceStatus": "EM_ANDAMENTO",
-            "problem": "Problem 12",
-            "hasUrgency": false,
-            "revision": true,
-            "entryDate": "2023-01-06T14:41:00.968173"
-        },
-        {
-            "deviceId": 10,
-            "customerId": 2,
-            "typeBrandModel": "Aspirador Electrolux | Model 5",
-            "deviceStatus": "DESCARTADO",
-            "problem": "Problem 10",
-            "hasUrgency": false,
-            "revision": true,
-            "entryDate": "2023-01-05T14:41:00.968173",
-            "departureDate": "2023-01-07T14:41:00.968173"
-        },
-        {
-            "deviceId": 8,
-            "customerId": 2,
-            "typeBrandModel": "Batedeira Britania | Model 3",
-            "deviceStatus": "AGUARDANDO",
-            "problem": "Problem 8",
-            "hasUrgency": false,
-            "revision": true,
-            "entryDate": "2023-01-04T14:41:00.968173"
-        },
-        {
-            "deviceId": 6,
-            "customerId": 2,
-            "typeBrandModel": "Ventilador Arno | Model 1",
-            "deviceStatus": "EM_ANDAMENTO",
-            "problem": "Problem 6",
-            "hasUrgency": false,
-            "revision": true,
-            "entryDate": "2023-01-03T14:41:00.968173"
-        },
-        {
-            "deviceId": 2,
-            "customerId": 2,
-            "typeBrandModel": "Liquidificador Wallita | Model 2",
-            "deviceStatus": "EM_ANDAMENTO",
-            "problem": "Problem 2",
-            "hasUrgency": false,
-            "revision": true,
-            "entryDate": "2023-01-01T14:41:00.968173"
-        }
-    ],
-    "payments": [
-        
-    ]
+  "deviceId": 4,
+  "customerId": 2,
+  "customerName": "Lucas Ribeiro Naga",
+  "deviceStatus": "NOVO",
+  "brandName": "Philco",
+  "modelName": "Model 4",
+  "typeName": "Ferro de passar",
+  "technicianId": 2,
+  "technicianName": "Technician 2",
+  "problem": "Problem 4",
+  "observation": "Observation 4",
+  "budget": "Budget 4",
+  "budgetFee": 50.00,
+  "serviceValue": 400.00,
+  "deviceColors": [
+    "azul"
+  ],
+  "hasUrgency": true,
+  "revision": true,
+  "entryDate": "2023-01-02T14:41:00.968173",
+  "departureDate": "2023-01-05T14:41:00.968173",
+  "lastUpdate": "2026-06-13T18:51:49.22219",
+  "customerPhones": [
+    {
+      "id": 3,
+      "number": "44988255540",
+      "name": "Lucas Principal",
+      "main": true
+    }
+  ],
+  "customerContacts": [],
+  "otherDevices": [
+    {
+      "deviceId": 14,
+      "customerId": 2,
+      "typeBrandModel": "Ferro de passar Philco | Model 4",
+      "deviceStatus": "ENTREGUE",
+      "problem": "Problem 14",
+      "hasUrgency": false,
+      "revision": true,
+      "entryDate": "2023-01-07T14:41:00.968173",
+      "departureDate": "2023-01-06T14:41:00.968173"
+    },
+    {
+      "deviceId": 12,
+      "customerId": 2,
+      "typeBrandModel": "Liquidificador Wallita | Model 2",
+      "deviceStatus": "EM_ANDAMENTO",
+      "problem": "Problem 12",
+      "hasUrgency": false,
+      "revision": true,
+      "entryDate": "2023-01-06T14:41:00.968173"
+    },
+    {
+      "deviceId": 10,
+      "customerId": 2,
+      "typeBrandModel": "Aspirador Electrolux | Model 5",
+      "deviceStatus": "DESCARTADO",
+      "problem": "Problem 10",
+      "hasUrgency": false,
+      "revision": true,
+      "entryDate": "2023-01-05T14:41:00.968173",
+      "departureDate": "2023-01-07T14:41:00.968173"
+    },
+    {
+      "deviceId": 8,
+      "customerId": 2,
+      "typeBrandModel": "Batedeira Britania | Model 3",
+      "deviceStatus": "AGUARDANDO",
+      "problem": "Problem 8",
+      "hasUrgency": false,
+      "revision": true,
+      "entryDate": "2023-01-04T14:41:00.968173"
+    },
+    {
+      "deviceId": 6,
+      "customerId": 2,
+      "typeBrandModel": "Ventilador Arno | Model 1",
+      "deviceStatus": "EM_ANDAMENTO",
+      "problem": "Problem 6",
+      "hasUrgency": false,
+      "revision": true,
+      "entryDate": "2023-01-03T14:41:00.968173"
+    },
+    {
+      "deviceId": 2,
+      "customerId": 2,
+      "typeBrandModel": "Liquidificador Wallita | Model 2",
+      "deviceStatus": "EM_ANDAMENTO",
+      "problem": "Problem 2",
+      "hasUrgency": false,
+      "revision": true,
+      "entryDate": "2023-01-01T14:41:00.968173"
+    }
+  ],
+  "payments": [
+    {
+      "paymentId": 4,
+      "paymentDate": "2023-01-05T14:41:00.968173",
+      "paymentType": "credito",
+      "paymentValue": 350.00,
+      "category": "servicos"
+    },
+    {
+      "paymentId": 3,
+      "paymentDate": "2023-01-03T14:41:00.968173",
+      "paymentType": "pix",
+      "paymentValue": 50.00,
+      "category": "taxa_orcamento"
+    }
+  ]
 }

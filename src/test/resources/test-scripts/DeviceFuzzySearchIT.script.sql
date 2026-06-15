@@ -112,7 +112,7 @@ INSERT INTO brands_models_types(id, id_brand, id_model, id_type) VALUES
 -- DEVICES - João (10)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (100, 10, 10, 'NOVO',         '2024-06-01', 'Micro-ondas Samsung',       50.00, false, false, '{1}'),
 (101, 10, 14, 'EM_ANDAMENTO', '2024-06-15', 'Micro-ondas embutir',       60.00, true,  false, '{1}'),
 (102, 10, 12, 'ENTREGUE',     '2024-05-01', 'Micro-ondas Britânia',      70.00, false, true,  '{2}'),
@@ -137,7 +137,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - Maria (11)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (103, 11, 15, 'NOVO',         '2024-07-01', 'Ventilador Britânia',       30.00, false, false, '{3}'),
 (104, 11, 16, 'AGUARDANDO',   '2024-07-10', 'Ventilador mesa',           35.00, true,  true,  '{3}'),
 (105, 11, 11, 'DESCARTADO',   '2023-12-01', 'Micro-ondas Sansung',       40.00, false, false, '{1}'),
@@ -158,7 +158,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - Pedro (12)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (112, 12, 18, 'NOVO',         '2024-12-01', 'Liquidificador Arno Pedro',    32.00, false, false, '{2}'),
 (113, 12, 19, 'NOVO',         '2024-12-15', 'Ventilador Wallita Pedro',     27.00, false, false, '{3}'),
 -- Pedro: devices com tipos novos
@@ -170,7 +170,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - Adilson Ferreira da Silva (13)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (133, 13, 10, 'NOVO',         '2024-06-01', 'Micro-ondas Samsung Adilson',     51.00, false, false, '{1}'),
 (134, 13, 15, 'EM_ANDAMENTO', '2024-07-01', 'Ventilador Brastenp Adilson',     31.00, true,  false, '{2}'),
 (135, 13, 31, 'NOVO',         '2024-08-01', 'Aspirador Samsung Adilson',       39.00, false, false, '{3}');
@@ -179,7 +179,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - Alessandro de Paula (14)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (136, 14, 23, 'NOVO',         '2024-06-15', 'Micro-ondas Electrolux Alessandro', 56.00, false, false, '{1}'),
 (137, 14, 35, 'EM_ANDAMENTO', '2024-07-15', 'Secadora Electrolux Alessandro',    68.00, true,  false, '{2}');
 
@@ -187,7 +187,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - Maria Aparecida de Oliveira (15)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (138, 15, 25, 'NOVO',         '2024-06-20', 'Micro-ondas Brastenp Maria Aparecida', 57.00, false, false, '{1}'),
 (139, 15, 34, 'PRONTO',       '2024-07-20', 'Ventilador Wallita Maria Aparecida',    29.00, false, true,  '{3}');
 
@@ -195,7 +195,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - José Carlos da Silva (16)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (140, 16, 27, 'NOVO',         '2024-06-25', 'Ventilador Consusl José Carlos',     35.00, false, false, '{3}'),
 (141, 16, 37, 'EM_ANDAMENTO', '2024-07-25', 'Ferro a vapor Consul José Carlos',   40.00, true,  false, '{1}');
 
@@ -203,7 +203,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - Ana Beatriz Souza (17)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (142, 17, 28, 'NOVO',         '2024-06-30', 'Liquidificador Panasonic Ana',   44.00, false, false, '{2}'),
 (143, 17, 38, 'AGUARDANDO',   '2024-07-30', 'Chaleira Panasonic Ana',         30.00, true,  true,  '{3}');
 
@@ -211,7 +211,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - Paulo Henrique Santos (18)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (144, 18, 30, 'NOVO',         '2024-07-01', 'Ferro a vapor Mondial Paulo',    37.00, false, false, '{1}'),
 (145, 18, 24, 'EM_ANDAMENTO', '2024-08-01', 'Ventilador Consul Paulo',        34.00, true,  false, '{2}');
 
@@ -219,7 +219,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - João Pedro da Silva (19)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (146, 19, 10, 'NOVO',         '2024-06-01', 'Micro-ondas Samsung João Pedro',       50.00, false, false, '{1}'),
 (147, 19, 15, 'EM_ANDAMENTO', '2024-07-01', 'Ventilador Britânia João Pedro',       30.00, true,  false, '{3}'),
 (148, 19, 28, 'PRONTO',       '2024-08-01', 'Liquidificador Panasonic João Pedro',  42.00, false, true,  '{2}');
@@ -228,7 +228,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - João Paulo Ferreira (20)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (149, 20, 22, 'NOVO',         '2024-06-15', 'Micro-ondas Brastemp João Paulo',      52.00, false, false, '{1}'),
 (150, 20, 24, 'AGUARDANDO',   '2024-07-15', 'Ventilador Consul João Paulo',         33.00, true,  true,  '{3}'),
 (151, 20, 31, 'EM_ANDAMENTO', '2024-08-15', 'Aspirador Samsung João Paulo',         38.00, false, false, '{2}');
@@ -237,7 +237,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- DEVICES - João Victor Almeida Santos (21)
 -- =============================================
 INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
-    entry_date, problem, labor_value, has_urgency, is_revision, color_ids) VALUES
+    entry_date, problem, budget_fee, has_urgency, is_revision, color_ids) VALUES
 (152, 21, 12, 'NOVO',         '2024-06-20', 'Micro-ondas Britânia João Victor',     55.00, false, false, '{1}'),
 (153, 21, 16, 'PRONTO',       '2024-07-20', 'Ventilador Britânia João Victor',      35.00, false, true,  '{3}'),
 (154, 21, 35, 'EM_ANDAMENTO', '2024-08-20', 'Secadora Electrolux João Victor',      67.00, true,  false, '{2}');

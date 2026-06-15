@@ -1,5 +1,7 @@
 package com.tproject.workshop.model;
 
+import com.tproject.workshop.enums.PaymentCategoryEnum;
+import com.tproject.workshop.enums.PaymentMethodEnum;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,14 +27,16 @@ public class Payment {
     @Column(name = "payment_date", updatable = false)
     private Timestamp paymentDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_type", updatable = false)
-    private String paymentType;
+    private PaymentMethodEnum paymentType;
 
     @Column(name = "payment_value", updatable = false)
     private BigDecimal paymentValue;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "category", updatable = false)
-    private String category;
+    private PaymentCategoryEnum category;
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_device")

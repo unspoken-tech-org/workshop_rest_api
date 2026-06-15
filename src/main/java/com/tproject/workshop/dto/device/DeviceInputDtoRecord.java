@@ -24,8 +24,8 @@ public record DeviceInputDtoRecord(
         String problem,
         @Schema(description = "Additional notes about the device", example = "Customer requests OEM parts only")
         String observation,
-        @Schema(description = "Initial budget estimation", example = "350.00")
-        BigDecimal budgetValue,
+        @Schema(description = "Budget fee charged at intake", example = "350.00")
+        BigDecimal budgetFee,
         @Schema(description = "Selected colors for the device", example = "[\"black\",\"blue\"]")
         @NotEmpty(message = "A lista de cores é obrigatória")
         List<String> colors,
