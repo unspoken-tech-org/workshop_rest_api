@@ -14,4 +14,5 @@ public class PaymentDeviceOutputDto {
   private PaymentMethodEnum paymentType;
   private BigDecimal paymentValue;
   private PaymentCategoryEnum category;
+  private String receivedBy;
 }
