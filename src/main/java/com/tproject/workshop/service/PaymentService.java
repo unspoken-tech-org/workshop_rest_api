@@ -3,50 +3,44 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.dto.payment.PaymentDeviceInputDto;
 import com.tproject.workshop.dto.payment.PaymentResponseDto;
 import com.tproject.workshop.exception.BadRequestException;
-import com.tproject.workshop.model.Device;
+import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Payment;
+import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
-import com.tproject.workshop.utils.UtilsString;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
     private final PaymentRepository repository;
-    private final DeviceService deviceService;
+    private final DeviceRepository deviceRepository;
 
     @Transactional
-    public PaymentResponseDto save(PaymentDeviceInputDto payment) {
-        String normalizedPaymentType = UtilsString.normalizeString(payment.paymentType()).toLowerCase();
+    public PaymentResponseDto create(PaymentDeviceInputDto inputPayment) {
 
-        boolean hasInvalidPaymentType = Stream.of(
-                normalizedPaymentType.equals("credito"),
-                normalizedPaymentType.equals("debito"),
-                normalizedPaymentType.equals("dinheiro"),
-                normalizedPaymentType.equals("pix"),
-                normalizedPaymentType.equals("outro")
-        ).allMatch(value -> value.equals(false));
+        final var device = deviceRepository.findById(inputPayment.deviceId())
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Aparelho com id %d não encontrado", inputPayment.deviceId()))
+                );
 
-        if (hasInvalidPaymentType) {
-            throw new BadRequestException(String.format("O tipo de pagamento \"%s\" não é válido. O tipo de pagamento deve ser um dos seguintes: credito, debito, dinheiro ou pix.", payment.paymentType()));
+        final var paymentDate = Optional.ofNullable(inputPayment.paymentDate()).orElse(LocalDateTime.now());
+
+        if (paymentDate.isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("A data do pagamento não pode ser maior que a data atual");
         }
 
         Payment paymentModel = new Payment();
-        paymentModel.setPaymentValue(payment.value());
-        paymentModel.setPaymentType(payment.paymentType());
-        paymentModel.setCategory(payment.category());
-        paymentModel.setDevice(new Device(payment.deviceId()));
-        paymentModel.setPaymentDate(
-                Optional.ofNullable(payment.paymentDate())
-                        .map(Timestamp::valueOf)
-                        .orElse(new Timestamp(System.currentTimeMillis()))
-        );
+        paymentModel.setPaymentValue(inputPayment.value());
+        paymentModel.setPaymentType(inputPayment.paymentType());
+        paymentModel.setCategory(inputPayment.category());
+        paymentModel.setDevice(device);
+        paymentModel.setPaymentDate(Timestamp.valueOf(paymentDate));
 
         Payment saved = repository.save(paymentModel);
 

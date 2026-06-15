@@ -1,5 +1,7 @@
 package com.tproject.workshop.dto.payment;
 
+import com.tproject.workshop.enums.PaymentCategoryEnum;
+import com.tproject.workshop.enums.PaymentMethodEnum;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -9,7 +11,7 @@ public class PaymentDeviceOutputDto {
 
   private int paymentId;
   private LocalDateTime paymentDate;
-  private String paymentType;
+  private PaymentMethodEnum paymentType;
   private BigDecimal paymentValue;
-  private String category;
+  private PaymentCategoryEnum category;
 }

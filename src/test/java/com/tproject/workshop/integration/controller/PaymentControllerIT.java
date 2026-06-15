@@ -55,37 +55,50 @@ public class PaymentControllerIT extends AbstractIntegrationLiveTest {
                         "deviceId", 1,
                         "paymentType", "credito",
                         "value", 150.00,
-                        "category", "parcial"
+                        "category", "servicos"
                 ), "create valid payment")
                 , Arguments.of(2, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "deviceId", 2,
                         "paymentType", "invalid_type",
                         "value", 150.00,
-                        "category", "parcial"
+                        "category", "servicos"
                 ), "create payment with invalid type")
                 , Arguments.of(3, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "deviceId", 1,
                         "paymentType", "credito",
                         "value", 0,
-                        "category", "parcial"
+                        "category", "servicos"
                 ), "create payment with value equals zero")
                 , Arguments.of(4, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "deviceId", 1,
                         "value", 150,
-                        "category", "parcial"
+                        "category", "servicos"
                 ), "missing paymentType")
                 , Arguments.of(5, HttpStatus.SC_BAD_REQUEST, Map.of(
                         "paymentType", "credito",
                         "value", 150.00,
-                        "category", "parcial"
+                        "category", "servicos"
                 ), "missing deviceId")
                 , Arguments.of(6, HttpStatus.SC_CREATED, Map.of(
                         "deviceId", 1,
                         "paymentType", "credito",
                         "value", 200.00,
-                        "category", "total",
+                        "category", "servicos",
                         "paymentDate", "2026-06-01T00:00:00.000"
                 ), "create payment with explicit paymentDate")
+                , Arguments.of(7, HttpStatus.SC_BAD_REQUEST, Map.of(
+                        "deviceId", 1,
+                        "paymentType", "credito",
+                        "value", 100.00,
+                        "category", "servicos",
+                        "paymentDate", "2099-01-01T00:00:00.000"
+                ), "create payment with future date")
+                , Arguments.of(8, HttpStatus.SC_NOT_FOUND, Map.of(
+                        "deviceId", 9999,
+                        "paymentType", "credito",
+                        "value", 100.00,
+                        "category", "servicos"
+                ), "create payment for non-existent device")
         );
     }
 }
