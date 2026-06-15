@@ -77,7 +77,7 @@ INSERT INTO colors(id, color) VALUES
 (7, 'verde')
 ;
 
-INSERT INTO devices (id, id_customer, id_brand_model_type, device_status, id_technician, entry_date, departure_date, problem, observation, budget, labor_value, service_value, has_urgency, is_revision, last_update, color_ids)
+INSERT INTO devices (id, id_customer, id_brand_model_type, device_status, id_technician, entry_date, departure_date, problem, observation, budget, budget_fee, service_value, has_urgency, is_revision, last_update, color_ids)
 VALUES
 (1, 1, 1, 'NOVO', 1, '2023-04-10 08:41:00.968173', null, 'Problem 1', 'Observation 1', 'Budget 1', 50.00, 100.00, true, false, '2023-01-06 14:41:00.968173', ('{1}')),
 (2, 2, 2, 'EM_ANDAMENTO', 2, '2023-01-01 14:41:00.968173', null, 'Problem 2', 'Observation 2', 'Budget 2', 50.00, 200.00, false, true, '2023-01-06 14:41:00.968173',('{2}')),
@@ -119,8 +119,12 @@ VALUES
 
 INSERT INTO payments(id, id_device, payment_date, payment_type, payment_value, category)
 VALUES
-(1, 1, '2023-04-22 08:41:00.968173', 'credito', 100, 'parcial'),
-(2, 1, '2023-04-29 08:41:00.968173', 'credito', 100, 'parcial')
+(1, 1, '2023-04-22 08:41:00.968173', 'credito', 100, 'servicos'),
+(2, 1, '2023-04-29 08:41:00.968173', 'credito', 100, 'servicos'),
+(3, 4, '2023-01-03 14:41:00.968173', 'pix', 50, 'taxa_orcamento'),
+(4, 4, '2023-01-05 14:41:00.968173', 'credito', 350, 'servicos'),
+(5, 5, '2017-04-28 08:41:00.968173', 'dinheiro', 50, 'taxa_orcamento'),
+(6, 5, '2021-04-26 08:41:00.968173', 'debito', 450, 'servicos')
 ;
 
 

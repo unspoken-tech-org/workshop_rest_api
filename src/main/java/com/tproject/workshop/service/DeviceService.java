@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -97,10 +98,11 @@ public class DeviceService {
     }
 
     @Transactional(readOnly = true)
-    public DeviceOutputDto findDeviceById(int deviceId) {
+    public DeviceOutputDto findDeviceByIdOrThrow(int deviceId) {
         return deviceRepository.findByDeviceId(deviceId)
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Aparelho com id %d não encontrado", deviceId)));
+
     }
 
     @Transactional
@@ -112,7 +114,7 @@ public class DeviceService {
     public DeviceOutputDto updateDeviceStatus(int deviceId, DeviceStatusInputRecord dto) {
         DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(dto.deviceStatus());
         deviceRepository.saveAndFlush(changeStatus(deviceId, newStatus));
-        return findDeviceById(deviceId);
+        return findDeviceByIdOrThrow(deviceId);
     }
 
     @Transactional
@@ -132,7 +134,7 @@ public class DeviceService {
 
         device.setUrgency(newUrgency);
         deviceRepository.saveAndFlush(device);
-        return findDeviceById(device.getId());
+        return findDeviceByIdOrThrow(device.getId());
     }
 
     @Transactional
@@ -152,7 +154,7 @@ public class DeviceService {
 
         device.setRevision(newRevision);
         deviceRepository.saveAndFlush(device);
-        return findDeviceById(device.getId());
+        return findDeviceByIdOrThrow(device.getId());
     }
 
     @Transactional
@@ -166,9 +168,8 @@ public class DeviceService {
         oldDevice.setProblem(device.problem());
         oldDevice.setObservation(device.observation());
         oldDevice.setBudget(device.budget());
-        oldDevice.setLaborValue(device.laborValue());
+        oldDevice.setBudgetFee(device.budgetFee());
         oldDevice.setServiceValue(device.serviceValue());
-        oldDevice.setLaborValueCollected(device.laborValueCollected());
         oldDevice.setUrgency(device.hasUrgency());
         oldDevice.setRevision(device.revision());
         oldDevice.setDeviceStatus(newStatus);
@@ -196,7 +197,7 @@ public class DeviceService {
         }
 
         deviceRepository.saveAndFlush(oldDevice);
-        return findDeviceById(oldDevice.getId());
+        return findDeviceByIdOrThrow(oldDevice.getId());
     }
 
     @Transactional
@@ -218,7 +219,7 @@ public class DeviceService {
         newDevice.setColorIds(colorIds);
         newDevice.setProblem(device.problem());
         newDevice.setObservation(device.observation());
-        newDevice.setLaborValue(device.budgetValue());
+        newDevice.setBudgetFee(Optional.ofNullable(device.budgetFee()).orElse(BigDecimal.ZERO));
         newDevice.setUrgency(device.hasUrgency());
         newDevice.setDeviceStatus(DeviceStatusEnum.NOVO);
         Optional.ofNullable(device.technicianId()).ifPresent(id -> {

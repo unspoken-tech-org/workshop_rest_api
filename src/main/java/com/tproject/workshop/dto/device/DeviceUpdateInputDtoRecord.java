@@ -1,6 +1,5 @@
 package com.tproject.workshop.dto.device;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tproject.workshop.validation.ValidDeviceStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
@@ -25,25 +24,21 @@ public record DeviceUpdateInputDtoRecord(
         String observation,
         @Schema(description = "Optional budget notes", example = "Initial budget approved")
         String budget,
-        @Schema(description = "Labor cost estimate or charged amount", example = "120.00")
+        @Schema(description = "Budget fee charged at intake", example = "120.00")
         @DecimalMin(value = "0.00", message = "O valor do orçamento não pode ser negativo")
-        BigDecimal laborValue,
+        BigDecimal budgetFee,
         @Schema(description = "Service cost estimate or charged amount", example = "220.00")
         @DecimalMin(value = "0.00", message = "O valor do serviço não pode ser negativo")
         BigDecimal serviceValue,
-        @Schema(description = "Indicates if labor value was collected", example = "false")
-        boolean laborValueCollected,
         @Schema(description = "Flags if the device is urgent", example = "true")
         boolean hasUrgency,
         @Schema(description = "Indicates if the device is under revision", example = "false")
         boolean revision,
         @Schema(description = "Technician responsible for the update", example = "7")
         Integer technicianId,
-        @Schema(description = "Entry date (dd/MM/yyyy)", example = "15/06/2026")
-        @JsonFormat(pattern = "dd/MM/yyyy")
+        @Schema(description = "Entry date (yyyy-MM-dd)", example = "2026-06-15")
         LocalDate entryDate,
-        @Schema(description = "Departure date (dd/MM/yyyy)", example = "20/06/2026")
-        @JsonFormat(pattern = "dd/MM/yyyy")
+        @Schema(description = "Departure date (yyyy-MM-dd)", example = "2026-06-20")
         LocalDate departureDate
 ) {
 

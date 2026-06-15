@@ -3,6 +3,7 @@ package com.tproject.workshop.dto.device;
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.payment.PaymentDeviceOutputDto;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,9 +30,8 @@ public class DeviceOutputDto {
     private String problem;
     private String observation;
     private String budget;
-    private BigDecimal laborValue;
+    private BigDecimal budgetFee;
     private BigDecimal serviceValue;
-    private boolean laborValueCollected;
     private List<String> deviceColors;
     private boolean hasUrgency;
     private boolean revision;

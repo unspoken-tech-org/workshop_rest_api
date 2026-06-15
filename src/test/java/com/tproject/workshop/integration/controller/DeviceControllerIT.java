@@ -212,7 +212,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Teste de cor"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with new type, brand and model"),
                 Arguments.of(2, HttpStatus.SC_CREATED, Map.of(
@@ -225,7 +225,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with existing type, brand, model and color"),
                 Arguments.of(3, HttpStatus.SC_CREATED, Map.of(
@@ -239,7 +239,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with existing technician"),
                 Arguments.of(4, HttpStatus.SC_NOT_FOUND, Map.of(
@@ -252,7 +252,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with inexistent customer"),
                 Arguments.of(5, HttpStatus.SC_NOT_FOUND, Map.of(
@@ -266,7 +266,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with inexistent technician"),
                 Arguments.of(6, HttpStatus.SC_BAD_REQUEST, Map.of(
@@ -278,7 +278,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with null customer"),
                 Arguments.of(7, HttpStatus.SC_BAD_REQUEST, Map.of(
@@ -286,7 +286,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with null typeBrandModel"),
                 Arguments.of(8, HttpStatus.SC_BAD_REQUEST, Map.of(
@@ -298,7 +298,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with type null"),
                 Arguments.of(9, HttpStatus.SC_BAD_REQUEST, Map.of(
@@ -310,7 +310,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with model null"),
                 Arguments.of(10, HttpStatus.SC_BAD_REQUEST, Map.of(
@@ -322,7 +322,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "colors", List.of("Azul"),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with brand null"),
                 Arguments.of(11, HttpStatus.SC_BAD_REQUEST, Map.of(
@@ -334,7 +334,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         ),
                         "colors", List.of("Azul"),
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with null problem"),
                 Arguments.of(12, HttpStatus.SC_BAD_REQUEST, Map.of(
@@ -346,7 +346,7 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         ),
                         "problem", "Teste de problema",
                         "observation", "Teste de observação",
-                        "budgetValue", 100.0,
+                        "budgetFee", 100.0,
                         "hasUrgency", true
                 ), "create device with colors null")
 
@@ -393,9 +393,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Problema atualizado");
                     put("observation", "Observação atualizada");
                     put("budget", "Orçamento atualizado");
-                    put("laborValue", 75.0);
+                    put("budgetFee", 75.0);
                     put("serviceValue", 150.0);
-                    put("laborValueCollected", true);
                     put("hasUrgency", false);
                     put("revision", true);
                     put("technicianId", 2);
@@ -407,9 +406,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Problema simples");
                     put("observation", "Observação simples");
                     put("budget", "Orçamento simples");
-                    put("laborValue", 50.0);
+                    put("budgetFee", 50.0);
                     put("serviceValue", 100.0);
-                    put("laborValueCollected", false);
                     put("hasUrgency", true);
                     put("revision", false);
                 }}, "update device without technicianId"),
@@ -420,9 +418,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Problema resolvido");
                     put("observation", "Aparelho entregue");
                     put("budget", "Orçamento final");
-                    put("laborValue", 100.0);
+                    put("budgetFee", 100.0);
                     put("serviceValue", 200.0);
-                    put("laborValueCollected", true);
                     put("hasUrgency", false);
                     put("revision", false);
                     put("technicianId", 1);
@@ -434,9 +431,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Aparelho descartado",
                         "observation", "Não foi possível consertar",
                         "budget", "Orçamento descartado",
-                        "laborValue", 50.0,
+                        "budgetFee", 50.0,
                         "serviceValue", 100.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update device to status DESCARTADO"),
@@ -447,9 +443,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Aparelho pronto");
                     put("observation", "Aguardando retirada");
                     put("budget", "Orçamento final");
-                    put("laborValue", 80.0);
+                    put("budgetFee", 80.0);
                     put("serviceValue", 160.0);
-                    put("laborValueCollected", false);
                     put("hasUrgency", false);
                     put("revision", true);
                     put("technicianId", 2);
@@ -461,9 +456,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Problema teste",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", 50.0,
+                        "budgetFee", 50.0,
                         "serviceValue", 100.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update device without deviceId"),
@@ -473,9 +467,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Problema teste",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", 50.0,
+                        "budgetFee", 50.0,
                         "serviceValue", 100.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update device without deviceStatus"),
@@ -485,9 +478,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "deviceStatus", "EM_ANDAMENTO",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", 50.0,
+                        "budgetFee", 50.0,
                         "serviceValue", 100.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update device without problem"),
@@ -499,9 +491,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Problema teste",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", 50.0,
+                        "budgetFee", 50.0,
                         "serviceValue", 100.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update non-existent device"),
@@ -513,9 +504,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Problema teste");
                     put("observation", "Observação teste");
                     put("budget", "Orçamento teste");
-                    put("laborValue", 50.0);
+                    put("budgetFee", 50.0);
                     put("serviceValue", 100.0);
-                    put("laborValueCollected", false);
                     put("hasUrgency", false);
                     put("revision", false);
                     put("technicianId", 9999);
@@ -528,9 +518,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Problema teste",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", 50.0,
+                        "budgetFee", 50.0,
                         "serviceValue", 100.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update device with invalid status"),
@@ -542,9 +531,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Problema teste",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", 0.0,
+                        "budgetFee", 0.0,
                         "serviceValue", 0.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update device with zero values"),
@@ -555,9 +543,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Problema teste",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", -10.0,
+                        "budgetFee", -10.0,
                         "serviceValue", 20.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update laborValue with negative value"),
@@ -568,9 +555,8 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         "problem", "Problema teste",
                         "observation", "Observação teste",
                         "budget", "Orçamento teste",
-                        "laborValue", 10.0,
+                        "budgetFee", 10.0,
                         "serviceValue", -20.0,
-                        "laborValueCollected", false,
                         "hasUrgency", false,
                         "revision", false
                 ), "update serviceValue with negative value")
@@ -739,12 +725,11 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Teste com entryDate");
                     put("observation", "Observação");
                     put("budget", "Orçamento");
-                    put("laborValue", 50.0);
+                    put("budgetFee", 50.0);
                     put("serviceValue", 100.0);
-                    put("laborValueCollected", false);
                     put("hasUrgency", false);
                     put("revision", false);
-                    put("entryDate", "15/06/2026");
+                    put("entryDate", "2026-06-15");
                 }}, "update device with entryDate only"),
                 Arguments.of(2, HttpStatus.SC_OK, new HashMap<String, Object>() {{
                     put("deviceId", 2);
@@ -752,12 +737,11 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Teste com departureDate");
                     put("observation", "Observação");
                     put("budget", "Orçamento");
-                    put("laborValue", 50.0);
+                    put("budgetFee", 50.0);
                     put("serviceValue", 100.0);
-                    put("laborValueCollected", false);
                     put("hasUrgency", false);
                     put("revision", false);
-                    put("departureDate", "20/06/2026");
+                    put("departureDate", "2026-06-20");
                 }}, "update device with departureDate only"),
                 Arguments.of(3, HttpStatus.SC_OK, new HashMap<String, Object>() {{
                     put("deviceId", 5);
@@ -765,13 +749,12 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                     put("problem", "Teste com ambas as datas");
                     put("observation", "Observação");
                     put("budget", "Orçamento");
-                    put("laborValue", 80.0);
+                    put("budgetFee", 80.0);
                     put("serviceValue", 160.0);
-                    put("laborValueCollected", false);
                     put("hasUrgency", false);
                     put("revision", false);
-                    put("entryDate", "10/06/2026");
-                    put("departureDate", "25/06/2026");
+                    put("entryDate", "2026-06-10");
+                    put("departureDate", "2026-06-25");
                 }}, "update device with both dates and status ENTREGUE")
         );
     }

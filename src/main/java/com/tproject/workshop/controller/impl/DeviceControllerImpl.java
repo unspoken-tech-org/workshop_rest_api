@@ -31,7 +31,7 @@ public class DeviceControllerImpl implements DeviceController {
     @Override
     public DeviceOutputDto findOne(int deviceId) {
         eventPublisher.publishEvent(new DeviceViewedEvent(this, deviceId));
-        return deviceService.findDeviceById(deviceId);
+        return deviceService.findDeviceByIdOrThrow(deviceId);
     }
 
     @Override

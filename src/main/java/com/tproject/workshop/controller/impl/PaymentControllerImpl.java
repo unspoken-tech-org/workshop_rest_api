@@ -16,7 +16,7 @@ public class PaymentControllerImpl implements PaymentController {
     private final PaymentService service;
 
     @Override
-    public PaymentResponseDto save(@Valid PaymentDeviceInputDto payment) {
-        return service.save(payment);
+    public PaymentResponseDto create(@Valid PaymentDeviceInputDto payment) {
+        return service.create(payment);
     }
 }

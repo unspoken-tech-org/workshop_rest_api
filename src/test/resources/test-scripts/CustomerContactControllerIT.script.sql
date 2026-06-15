@@ -42,16 +42,16 @@ INSERT INTO colors (id, color) VALUES (1, 'Black'), (2, 'White')
 ON CONFLICT (id) DO UPDATE SET color = EXCLUDED.color;
 
 
-INSERT INTO devices (id, entry_date, problem, observation, budget, labor_value, service_value, labor_value_collected, has_urgency, is_revision, color_ids, last_update, id_customer, device_status, id_technician, id_brand_model_type) VALUES
+INSERT INTO devices (id, entry_date, problem, observation, budget, budget_fee, service_value, budget_fee_collected, has_urgency, is_revision, color_ids, last_update, id_customer, device_status, id_technician, id_brand_model_type) VALUES
 (1, NOW(), 'Initial problem statement', 'No specific observations.', '150.00', 100.00, 50.00, false, false, false, ARRAY[1], NOW(), 1, 'EM_ANDAMENTO', 1, 1)
 ON CONFLICT (id) DO UPDATE SET
     entry_date = EXCLUDED.entry_date,
     problem = EXCLUDED.problem,
     observation = EXCLUDED.observation,
     budget = EXCLUDED.budget,
-    labor_value = EXCLUDED.labor_value,
+    budget_fee = EXCLUDED.budget_fee,
     service_value = EXCLUDED.service_value,
-    labor_value_collected = EXCLUDED.labor_value_collected,
+    budget_fee_collected = EXCLUDED.budget_fee_collected,
     has_urgency = EXCLUDED.has_urgency,
     is_revision = EXCLUDED.is_revision,
     color_ids = EXCLUDED.color_ids,

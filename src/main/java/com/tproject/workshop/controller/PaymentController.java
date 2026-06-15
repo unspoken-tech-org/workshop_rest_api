@@ -21,5 +21,5 @@ public interface PaymentController {
     @ApiResponse(responseCode = "201", description = "Payment registered successfully")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    PaymentResponseDto save(@RequestBody PaymentDeviceInputDto payment);
+    PaymentResponseDto create(@RequestBody PaymentDeviceInputDto payment);
 }
