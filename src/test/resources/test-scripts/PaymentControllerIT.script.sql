@@ -96,11 +96,11 @@ VALUES
 (15, 1, 5, 'DESCARTADO', 1, '2021-04-22 08:41:00.968173', '2021-04-26 08:41:00.968173', 'Problem 15', 'Observation 15', 'Budget 15', 50.00, 1500.00, true, false, '2021-04-26 08:41:00.968173', ('{3, 2}'))
 ;
 
-INSERT INTO payments (id, id_device, payment_date, payment_type, payment_value, category)
+INSERT INTO payments (id, id_device, payment_date, payment_type, payment_value, category, received_by)
 VALUES
-(1, 1, '2023-04-22 10:00:00', 'credito', 100.00, 'servicos'),
-(2, 1, '2023-04-29 10:00:00', 'credito', 100.00, 'servicos'),
-(3, 2, '2023-01-06 14:00:00', 'debito', 200.00, 'servicos'),
-(4, 3, '2021-09-03 08:00:00', 'dinheiro', 50.00, 'servicos'),
-(5, 4, '2023-01-06 14:00:00', 'pix', 400.00, 'servicos')
+(1, 1, '2023-04-22 10:00:00', 'credito', 100.00, 'servicos', 'João da Silva'),
+(2, 1, '2023-04-29 10:00:00', 'credito', 100.00, 'servicos', NULL),
+(3, 2, '2023-01-06 14:00:00', 'debito', 200.00, 'servicos', 'Maria Souza'),
+(4, 3, '2021-09-03 08:00:00', 'dinheiro', 50.00, 'servicos', NULL),
+(5, 4, '2023-01-06 14:00:00', 'pix', 400.00, 'servicos', 'Carlos Lima')
 ;

@@ -38,6 +38,9 @@ public class Payment {
     @Column(name = "category", updatable = false)
     private PaymentCategoryEnum category;
 
+    @Column(name = "received_by", updatable = false)
+    private String receivedBy;
+
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_device")
     private Device device;

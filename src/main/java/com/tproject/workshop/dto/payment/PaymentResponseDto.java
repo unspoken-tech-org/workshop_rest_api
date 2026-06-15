@@ -24,6 +24,9 @@ public record PaymentResponseDto(
     PaymentCategoryEnum category,
     
     @Schema(example = "10")
-    Integer deviceId
+    Integer deviceId,
+
+    @Schema(description = "Name of the person who received the payment", example = "João da Silva")
+    String receivedBy
 ) {
 }

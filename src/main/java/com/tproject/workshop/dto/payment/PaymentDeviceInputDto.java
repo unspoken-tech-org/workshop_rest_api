@@ -28,6 +28,9 @@ public record PaymentDeviceInputDto(
         PaymentCategoryEnum category,
 
         @Schema(description = "Date and time of the payment", example = "2026-06-01T00:00:00.000")
-        LocalDateTime paymentDate
+        LocalDateTime paymentDate,
+
+        @Schema(description = "Name of the person who received the payment", example = "João da Silva")
+        String receivedBy
 ) {
 }

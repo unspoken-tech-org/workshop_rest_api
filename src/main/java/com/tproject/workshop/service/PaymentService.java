@@ -41,6 +41,7 @@ public class PaymentService {
         paymentModel.setCategory(inputPayment.category());
         paymentModel.setDevice(device);
         paymentModel.setPaymentDate(Timestamp.valueOf(paymentDate));
+        paymentModel.setReceivedBy(inputPayment.receivedBy());
 
         Payment saved = repository.save(paymentModel);
 
@@ -54,7 +55,8 @@ public class PaymentService {
                 model.getPaymentType(),
                 model.getPaymentValue(),
                 model.getCategory(),
-                model.getDevice().getId()
+                model.getDevice().getId(),
+                model.getReceivedBy()
         );
     }
 }
