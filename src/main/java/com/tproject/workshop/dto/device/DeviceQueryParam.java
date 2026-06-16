@@ -2,6 +2,7 @@ package com.tproject.workshop.dto.device;
 
 import com.tproject.workshop.utils.filter_utils.Ordenation;
 import com.tproject.workshop.utils.filter_utils.OrderByDirection;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
@@ -38,6 +39,7 @@ public class DeviceQueryParam {
     int page = 0;
 
     @Min(value = 1, message = "O tamanho da página deve ser maior que zero")
+    @Max(value = 100, message = "O tamanho da página deve ser no máximo 100")
     int size = 15;
 
     Ordenation ordenation = new Ordenation("entry_date", OrderByDirection.DESC);

@@ -102,7 +102,7 @@ public class CustomerControllerIT extends AbstractIntegrationLiveTest {
                 Arguments.of(28, HttpStatus.SC_BAD_REQUEST, Map.of("page", -1, "size", 5), "pagination with negative page"),
 
                 // Large page size edge case
-                Arguments.of(29, HttpStatus.SC_OK, Map.of("page", 0, "size", 1000), "pagination with very large page size")
+                Arguments.of(29, HttpStatus.SC_BAD_REQUEST, Map.of("page", 0, "size", 1000), "pagination with very large page size")
         );
     }
 
