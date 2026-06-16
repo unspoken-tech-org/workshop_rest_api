@@ -71,18 +71,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleHttpMessageNotReadable(
             HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 
-        Throwable cause = ex.getCause();
-        if (cause instanceof BadRequestException badRequestEx) {
-            return (ResponseEntity<Object>) (ResponseEntity<?>) handleBadRequestException(badRequestEx, request);
+        Throwable rootCause = ex.getMostSpecificCause();
+        if (rootCause instanceof BadRequestException badRequestEx) {
+            return buildBadRequestResponse(badRequestEx.getMessage());
         }
 
         EXCEPTION_LOGGER.warn("Message not readable for request: {} | Message: {}",
                 request.getDescription(false), ex.getMessage());
 
-        ErrorMetadata.Error error = new ErrorMetadata.Error("requisicao.invalida", ex.getMostSpecificCause().getMessage());
+        return buildBadRequestResponse("Payload inválido ou malformado. Verifique o JSON enviado.");
+    }
 
-        return new ResponseEntity<>(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Requisição Inválida",
-                error), HttpStatus.BAD_REQUEST);
+    private ResponseEntity<Object> buildBadRequestResponse(String message) {
+        ErrorMetadata.Error error = new ErrorMetadata.Error("requisicao.invalida", message);
+        return new ResponseEntity<>(
+                new ResponseError(HttpStatus.BAD_REQUEST.value(), "Requisição Inválida", error),
+                HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(EntityAlreadyExistsException.class)
