@@ -7,7 +7,10 @@
 -- (e) INSERT taxa_orcamento for devices with no payments
 -- (f) RECATEGORIZE servicos → taxa_orcamento
 -- (g) SPLIT single payment
--- (h) CORRECT payment 5557 (5.00 → 45.00)
+--
+-- PASSOS 8 E 9 (correcoes pontuais devices 5557/5222) MOVIDOS PARA:
+-- src/main/resources/db/scripts/remediation-correcoes-manuais-V11.sql
+-- Executar manualmente APOS validacao da migration em QA.
 -- ============================================================
 
 -- ============================================================
@@ -219,35 +222,3 @@ WHERE payments.id_device = d.id
         AND p2.category = 'taxa_orcamento'
         AND p2.payment_value = d.budget_fee
   );
-
--- ============================================================
--- STEP 8: CORRECT payment 5557
--- Device 5557: sv=0, lv=45, paid=5.00 (typo error).
--- Corrects payment_value from 5.00 to 45.00 (= budget_fee) and category to taxa_orcamento.
--- Idempotent: WHERE payment_value = 5.00 ensures only the
--- incorrect payment is affected.
--- ============================================================
-UPDATE payments
-SET payment_value = 45.00,
-    category = 'taxa_orcamento',
-    updated_at = NOW()
-WHERE id_device = 5557
-  AND payment_value = 5.00
-  AND category = 'servicos';
-
--- ============================================================
--- STEP 9: CORRECT payment 5222
--- Device 5222: sv=149.90, lv=45.00, servicos=102.90 (should be sv-fee=104.90).
--- Partial service payment with a 2.00 difference.
--- Updates payment_value to service_value - budget_fee.
--- Idempotent: WHERE payment_value = 102.90 ensures only the
--- incorrect payment is affected.
--- ============================================================
-UPDATE payments
-SET payment_value = d.service_value - d.budget_fee,
-    updated_at = NOW()
-FROM devices d
-WHERE payments.id_device = d.id
-  AND d.id = 5222
-  AND payments.category = 'servicos'
-  AND payments.payment_value = 102.90;
