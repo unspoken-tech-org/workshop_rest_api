@@ -11,7 +11,7 @@ public record PaymentResponseDto(
     @Schema(example = "1")
     Integer id,
     
-    @Schema(hidden = true)
+    @Schema(description = "Date and time of the payment", example = "2026-06-01T00:00:00")
     LocalDateTime paymentDate,
     
     @Schema(example = "credito")

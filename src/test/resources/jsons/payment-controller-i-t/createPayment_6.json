@@ -4,5 +4,6 @@
     "paymentType": "credito",
     "paymentValue": 200.0,
     "category": "servicos",
-    "deviceId": 1
+    "deviceId": 1,
+    "receivedBy": "Maria Souza"
 }

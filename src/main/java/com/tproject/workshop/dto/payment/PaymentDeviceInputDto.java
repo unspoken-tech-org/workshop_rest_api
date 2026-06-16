@@ -4,7 +4,9 @@ import com.tproject.workshop.enums.PaymentCategoryEnum;
 import com.tproject.workshop.enums.PaymentMethodEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -31,6 +33,8 @@ public record PaymentDeviceInputDto(
         LocalDateTime paymentDate,
 
         @Schema(description = "Name of the person who received the payment", example = "João da Silva")
+        @NotBlank(message = "O nome de quem recebeu o pagamento é obrigatório")
+        @Size(max = 100, message = "O nome de quem recebeu deve ter no máximo 100 caracteres")
         String receivedBy
 ) {
 }
