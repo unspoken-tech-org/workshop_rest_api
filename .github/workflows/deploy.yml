@@ -108,32 +108,10 @@ jobs:
           echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
           chmod +x /tmp/cloudflared
 
-      - name: Start cloudflared access listener
+      - name: Deploy via SSH (with cloudflared tunnel)
         env:
           CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: |
-          nohup /tmp/cloudflared access ssh \
-            --hostname ssh.eletroluk.com \
-            --listener 127.0.0.1:2222 \
-            --service-token-id "$CFID" \
-            --service-token-secret "$CFSEC" \
-            > /tmp/cloudflared-access.log 2>&1 &
-
-          for i in $(seq 1 30); do
-            if nc -z 127.0.0.1 2222 2>/dev/null; then
-              echo "Cloudflared listener ready on 127.0.0.1:2222"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "Cloudflared listener failed to start"
-          cat /tmp/cloudflared-access.log
-          exit 1
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        env:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -142,88 +120,126 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JWT_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
           JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
-        with:
-          host: 127.0.0.1
-          port: 2222
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 30m
-          script: |
-            set -e
-            cd /home/workshop/deploy/workshop_rest_api
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          set -e
 
-            # Login GHCR (token expira em 1h; suficiente para deploy)
-            echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
+          # Start cloudflared in background
+          nohup /tmp/cloudflared access ssh \
+            --hostname ssh.eletroluk.com \
+            --listener 127.0.0.1:2222 \
+            --service-token-id "$CFID" \
+            --service-token-secret "$CFSEC" \
+            > /tmp/cloudflared-access.log 2>&1 &
 
-            # Escrever .env
-            cat > .env <<EOF
-            DB_NAME=$DB_NAME
-            DB_USERNAME=$DB_USERNAME
-            DB_PASSWORD=$DB_PASSWORD
-            ADMIN_EMAIL=$ADMIN_EMAIL
-            EOF
-            chmod 600 .env
-
-            # Escrever chaves JWT
-            mkdir -p config/keys && chmod 700 config/keys
-            echo "$JWT_PRIVATE_KEY" | base64 -d > config/keys/private-pkcs8.pem
-            echo "$JWT_PUBLIC_KEY" | base64 -d > config/keys/public.pem
-            chmod 600 config/keys/private-pkcs8.pem
-            chmod 644 config/keys/public.pem
-
-            # Pull da nova imagem
-            docker compose -f "$COMPOSE_FILE" pull workshop_spring_app
-
-            # Backup da imagem atual
-            if docker image inspect $API_IMAGE:latest >/dev/null 2>&1; then
-              docker tag $API_IMAGE:latest $API_IMAGE:backup
-              echo "Backup created: $API_IMAGE:backup"
-            else
-              echo "No previous image found, skipping backup"
+          # Wait for listener
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/2222) 2>/dev/null; then
+              echo "Cloudflared listener ready on 127.0.0.1:2222"
+              break
             fi
+            sleep 1
+          done
 
-            # Restart do servico
-            docker compose -f "$COMPOSE_FILE" up -d --remove-orphans workshop_spring_app
-            docker compose -f "$COMPOSE_FILE" ps
+          # Write SSH key
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
 
-            # Health check
-            ATTEMPTS=90
-            SLEEP=5
-            for i in $(seq 1 $ATTEMPTS); do
-              STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
-              echo "[$i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
-              if [ "$STATUS" = "healthy" ]; then
-                echo "API is healthy"
-                exit 0
-              fi
-              sleep $SLEEP
-            done
-            echo "API did not become healthy"
-            docker logs --tail=200 workshop-api || true
-            exit 1
+          # Deploy script
+          DEPLOY_SCRIPT=$(cat << 'DEPLOY_EOF'
+          set -e
+          cd /home/workshop/deploy/workshop_rest_api
+
+          # Login GHCR
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
+
+          # Escrever .env
+          cat > .env <<EOF
+          DB_NAME=$DB_NAME
+          DB_USERNAME=$DB_USERNAME
+          DB_PASSWORD=$DB_PASSWORD
+          ADMIN_EMAIL=$ADMIN_EMAIL
+          EOF
+          chmod 600 .env
+
+          # Escrever chaves JWT
+          mkdir -p config/keys && chmod 700 config/keys
+          echo "$JWT_PRIVATE_KEY" | base64 -d > config/keys/private-pkcs8.pem
+          echo "$JWT_PUBLIC_KEY" | base64 -d > config/keys/public.pem
+          chmod 600 config/keys/private-pkcs8.pem
+          chmod 644 config/keys/public.pem
+
+          # Pull da nova imagem
+          docker compose -f "$COMPOSE_FILE" pull workshop_spring_app
+
+          # Backup da imagem atual
+          if docker image inspect $API_IMAGE:latest >/dev/null 2>&1; then
+            docker tag $API_IMAGE:latest $API_IMAGE:backup
+            echo "Backup created: $API_IMAGE:backup"
+          else
+            echo "No previous image found, skipping backup"
+          fi
+
+          # Restart do servico
+          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans workshop_spring_app
+          docker compose -f "$COMPOSE_FILE" ps
+
+          # Health check
+          ATTEMPTS=90
+          SLEEP=5
+          for i in $(seq 1 $ATTEMPTS); do
+            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
+            echo "[$i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "API is healthy"
+              exit 0
+            fi
+            sleep $SLEEP
+          done
+          echo "API did not become healthy"
+          docker logs --tail=200 workshop-api || true
+          exit 1
+          DEPLOY_EOF
+          )
+
+          # Execute deploy via SSH
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            -i ~/.ssh/deploy_key -p 2222 \
+            "$SSH_USER@127.0.0.1" "$DEPLOY_SCRIPT"
+
+          # Cleanup
+          kill %1 2>/dev/null || true
 
       - name: Rollback on failure
         if: failure()
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        with:
-          host: 127.0.0.1
-          port: 2222
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 20m
-          script: |
-            set -e
-            cd /home/workshop/deploy/workshop_rest_api
+        env:
+          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          # Restart cloudflared if needed
+          if ! (echo > /dev/tcp/127.0.0.1/2222) 2>/dev/null; then
+            nohup /tmp/cloudflared access ssh \
+              --hostname ssh.eletroluk.com \
+              --listener 127.0.0.1:2222 \
+              --service-token-id "$CFID" \
+              --service-token-secret "$CFSEC" \
+              > /tmp/cloudflared-access.log 2>&1 &
+            sleep 5
+          fi
 
-            if docker image inspect $API_IMAGE:backup >/dev/null 2>&1; then
-              echo "Restoring backup image..."
-              docker tag $API_IMAGE:backup $API_IMAGE:latest
-              docker compose -f "$COMPOSE_FILE" up -d --force-recreate workshop_spring_app
-              echo "Rollback executed"
-            else
-              echo "No backup image found"
-              exit 1
-            fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
+            "$SSH_USER@127.0.0.1" \
+            'set -e; cd /home/workshop/deploy/workshop_rest_api; if docker image inspect workshop_rest_api-workshop_spring_app:backup >/dev/null 2>&1; then docker tag workshop_rest_api-workshop_spring_app:backup workshop_rest_api-workshop_spring_app:latest; docker compose -f docker-compose-production.yml up -d --force-recreate workshop_spring_app; echo "Rollback executed"; else echo "No backup image found"; exit 1; fi'
+
+          kill %1 2>/dev/null || true
 
   # ===========================================
   # JOB 3: VERIFY
@@ -236,46 +252,34 @@ jobs:
       contents: read
 
     steps:
-      - name: Verify via SSH
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+      - name: Verify via SSH (with cloudflared tunnel)
         env:
+          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        with:
-          host: 127.0.0.1
-          port: 2222
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 15m
-          script: |
-            set -e
-            cd /home/workshop/deploy/workshop_rest_api
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          set -e
 
-            # pgBackRest check
-            PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
-            if [ -z "$PG_CID" ]; then
-              echo "Postgres container not found"; exit 1
-            fi
+          # Start cloudflared
+          nohup /tmp/cloudflared access ssh \
+            --hostname ssh.eletroluk.com \
+            --listener 127.0.0.1:2222 \
+            --service-token-id "$CFID" \
+            --service-token-secret "$CFSEC" \
+            > /tmp/cloudflared-access.log 2>&1 &
+          sleep 5
 
-            echo ">>> Checking stanza..."
-            if docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check; then
-              echo "stanza OK"
-            else
-              echo "stanza missing, creating..."
-              docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create
-              docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check
-              echo "stanza created and OK"
-            fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
 
-            echo ">>> Backup status:"
-            docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest info || true
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
+            "$SSH_USER@127.0.0.1" \
+            'set -e; cd /home/workshop/deploy/workshop_rest_api; PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db); if [ -z "$PG_CID" ]; then echo "Postgres container not found"; exit 1; fi; echo ">>> Checking stanza..."; docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza OK" || (docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create && docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza created and OK"); docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest info || true; STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d "\""); echo "PostgreSQL health: ${STATUS:-unknown}"; echo "=== FINAL CONTAINERS STATUS ==="; docker compose -f docker-compose-production.yml ps'
 
-            # PostgreSQL health
-            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' "$PG_CID" 2>/dev/null | tr -d '"')
-            echo "PostgreSQL health: ${STATUS:-unknown}"
-
-            # Final containers status
-            echo "=== FINAL CONTAINERS STATUS ==="
-            docker compose -f "$COMPOSE_FILE" ps
+          kill %1 2>/dev/null || true
 
   # ===========================================
   # JOB 4: CLEANUP
@@ -289,18 +293,33 @@ jobs:
       contents: read
 
     steps:
-      - name: Cleanup via SSH
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        with:
-          host: 127.0.0.1
-          port: 2222
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 10m
-          script: |
-            docker image prune -f
-            docker system df
-            echo "Cleanup done"
+      - name: Cleanup via SSH (with cloudflared tunnel)
+        env:
+          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          set -e
+
+          # Start cloudflared
+          nohup /tmp/cloudflared access ssh \
+            --hostname ssh.eletroluk.com \
+            --listener 127.0.0.1:2222 \
+            --service-token-id "$CFID" \
+            --service-token-secret "$CFSEC" \
+            > /tmp/cloudflared-access.log 2>&1 &
+          sleep 5
+
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
+            "$SSH_USER@127.0.0.1" \
+            'docker image prune -f && docker system df && echo "Cleanup done"'
+
+          kill %1 2>/dev/null || true
 
       - name: Summary
         if: success()
