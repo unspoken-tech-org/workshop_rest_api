@@ -1,12 +1,13 @@
-name: Deploy Spring Boot App v2 (Improved)
+name: Deploy Spring Boot App v3 (Hosted)
 
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'      # v1.0.0, v2.1.3
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'    # v1.0.0-hotfix, v1.0.0-rc1
-  
-  # Manual deploy for emergencies
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+    branches:
+      - 'release/*'
+
   workflow_dispatch:
     inputs:
       ref:
@@ -14,22 +15,69 @@ on:
         required: false
         default: 'main'
 
+permissions:
+  contents: read
+
 env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: unspoken-tech-org/workshop_rest_api
+  CLOUDFLARED_VERSION: "2026.5.2"
+  CLOUDFLARED_SHA256: "5286698547f03df745adb2355f04c12dde52ef425491e81f433642d695521886"
   COMPOSE_FILE: docker-compose-production.yml
   DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
   API_IMAGE: workshop_rest_api-workshop_spring_app
 
 jobs:
   # ===========================================
-  # JOB 1: BUILD
+  # JOB 1: BUILD + PUSH GHCR
   # ===========================================
   build:
-    name: Build Application
-    runs-on: self-hosted
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Setup Java 21
+        uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Cache Gradle
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build with Gradle (skip tests)
+        run: ./gradlew build -x test
+
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Show build info
         run: |
@@ -38,217 +86,226 @@ jobs:
           echo "Commit:  ${{ github.sha }}"
           echo "Actor:   ${{ github.actor }}"
           echo "Trigger: ${{ github.event_name }}"
+          echo "Image:   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
           echo "=================="
 
-      - name: Prepare deploy directory
-        run: |
-          mkdir -p "${DEPLOY_DIR}"
-
-      - name: Copy repo files to deploy dir
-        run: |
-          rsync -a --delete \
-            --exclude '.git' \
-            ./ "${DEPLOY_DIR}/"
-
-      - name: Write .env with secrets
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          set -e
-          cat > .env <<'EOF'
-          DB_NAME=${{ secrets.DB_NAME }}
-          DB_USERNAME=${{ secrets.DB_USERNAME }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
-          EOF
-          chmod 600 .env
-          echo ".env created ✅"
-
-      - name: Create JWT keys directory
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          mkdir -p config/keys
-          chmod 700 config/keys
-          echo "JWT keys directory created ✅"
-
-      - name: Inject RSA Private Key
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo "${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}" | base64 -d > config/keys/private-pkcs8.pem
-          chmod 600 config/keys/private-pkcs8.pem
-          echo "RSA private key injected ✅"
-
-      - name: Inject RSA Public Key
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo "${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}" | base64 -d > config/keys/public.pem
-          chmod 644 config/keys/public.pem
-          echo "RSA public key injected ✅"
-
-      - name: Backup current API image
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo ">>> Creating backup of the current image..."
-          if docker image inspect ${{ env.API_IMAGE }}:latest >/dev/null 2>&1; then
-            docker tag ${{ env.API_IMAGE }}:latest ${{ env.API_IMAGE }}:backup
-            echo "Backup created: ${{ env.API_IMAGE }}:backup ✅"
-          else
-            echo "No previous image found, skipping backup"
-          fi
-
-      - name: Build application image
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo ">>> Building application (no-cache)..."
-          docker compose -f "$COMPOSE_FILE" build --no-cache workshop_spring_app
-          echo "Build completed ✅"
-
   # ===========================================
-  # JOB 2: DEPLOY
+  # JOB 2: DEPLOY (GATE HUMANA + SSH VIA CF ACCESS)
   # ===========================================
   deploy:
-    name: Deploy Application
-    runs-on: self-hosted
+    name: Deploy to Production
+    runs-on: ubuntu-latest
     needs: build
+    environment:
+      name: production
+      url: https://api.eletroluk.com/actuator/health
+    permissions:
+      contents: read
 
     steps:
-      - name: Deploy containers
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo ">>> Deploying containers..."
-          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
-          echo "=== SERVICES ==="
-          docker compose -f "$COMPOSE_FILE" ps
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Wait for API health
-        id: wait-api
+      - name: Install cloudflared (pinned)
         run: |
-          set -e
-          ATTEMPTS=90
-          SLEEP=5
-          for i in $(seq 1 $ATTEMPTS); do
-            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
-            echo "[$i/${ATTEMPTS}] workshop-api health: ${STATUS:-unknown}"
-            if [ "$STATUS" = "healthy" ]; then
-              echo "API is healthy ✅"
+          curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
+            -o /tmp/cloudflared
+          echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
+          chmod +x /tmp/cloudflared
+
+      - name: Start cloudflared access listener
+        env:
+          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          nohup /tmp/cloudflared access ssh \
+            --hostname ssh.eletroluk.com \
+            --listener localhost:2222 \
+            --service-token-id "$CFID" \
+            --service-token-secret "$CFSEC" \
+            > /tmp/cloudflared-access.log 2>&1 &
+
+          for i in $(seq 1 30); do
+            if nc -z localhost 2222 2>/dev/null; then
+              echo "Cloudflared listener ready on localhost:2222"
               exit 0
             fi
-            sleep $SLEEP
+            sleep 1
           done
-          echo "API did not become healthy in time ❌"
-          echo "Recent logs:"
-          docker logs --tail=200 workshop-api || true
+          echo "Cloudflared listener failed to start"
+          cat /tmp/cloudflared-access.log
           exit 1
 
-      - name: Rollback on API failure
-        if: failure() && steps.wait-api.outcome == 'failure'
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo "⚠️ API failed the health check, attempting rollback..."
-          
-          if docker image inspect ${{ env.API_IMAGE }}:backup >/dev/null 2>&1; then
-            echo ">>> Restoring backup image..."
-            docker tag ${{ env.API_IMAGE }}:backup ${{ env.API_IMAGE }}:latest
-          
-            echo ">>> Recreating container with previous image..."
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate workshop_spring_app
-          
-            echo ">>> Waiting for API after rollback..."
-            ATTEMPTS=60
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        env:
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          GH_USER: ${{ github.actor }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JWT_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
+          JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
+        with:
+          host: localhost
+          port: 2222
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 30m
+          script: |
+            set -e
+            cd /home/workshop/deploy/workshop_rest_api
+
+            # Login GHCR (token expira em 1h; suficiente para deploy)
+            echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
+
+            # Escrever .env
+            cat > .env <<EOF
+            DB_NAME=$DB_NAME
+            DB_USERNAME=$DB_USERNAME
+            DB_PASSWORD=$DB_PASSWORD
+            ADMIN_EMAIL=$ADMIN_EMAIL
+            EOF
+            chmod 600 .env
+
+            # Escrever chaves JWT
+            mkdir -p config/keys && chmod 700 config/keys
+            echo "$JWT_PRIVATE_KEY" | base64 -d > config/keys/private-pkcs8.pem
+            echo "$JWT_PUBLIC_KEY" | base64 -d > config/keys/public.pem
+            chmod 600 config/keys/private-pkcs8.pem
+            chmod 644 config/keys/public.pem
+
+            # Pull da nova imagem
+            docker compose -f "$COMPOSE_FILE" pull workshop_spring_app
+
+            # Backup da imagem atual
+            if docker image inspect $API_IMAGE:latest >/dev/null 2>&1; then
+              docker tag $API_IMAGE:latest $API_IMAGE:backup
+              echo "Backup created: $API_IMAGE:backup"
+            else
+              echo "No previous image found, skipping backup"
+            fi
+
+            # Restart do servico
+            docker compose -f "$COMPOSE_FILE" up -d --remove-orphans workshop_spring_app
+            docker compose -f "$COMPOSE_FILE" ps
+
+            # Health check
+            ATTEMPTS=90
             SLEEP=5
             for i in $(seq 1 $ATTEMPTS); do
               STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
-              echo "[Rollback $i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
+              echo "[$i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
               if [ "$STATUS" = "healthy" ]; then
-                echo "Rollback successful! API restored ✅"
+                echo "API is healthy"
                 exit 0
               fi
               sleep $SLEEP
             done
-            echo "Rollback failed - API is still not healthy ❌"
-            docker logs --tail=100 workshop-api || true
+            echo "API did not become healthy"
+            docker logs --tail=200 workshop-api || true
             exit 1
-          else
-            echo "No backup image found for rollback ❌"
-            echo "This is probably the first deploy."
-            exit 1
-          fi
+
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        with:
+          host: localhost
+          port: 2222
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 20m
+          script: |
+            set -e
+            cd /home/workshop/deploy/workshop_rest_api
+
+            if docker image inspect $API_IMAGE:backup >/dev/null 2>&1; then
+              echo "Restoring backup image..."
+              docker tag $API_IMAGE:backup $API_IMAGE:latest
+              docker compose -f "$COMPOSE_FILE" up -d --force-recreate workshop_spring_app
+              echo "Rollback executed"
+            else
+              echo "No backup image found"
+              exit 1
+            fi
 
   # ===========================================
   # JOB 3: VERIFY
   # ===========================================
   verify:
     name: Verify Deployment
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: deploy
+    permissions:
+      contents: read
 
     steps:
-      - name: Bootstrap pgBackRest
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          set -e
+      - name: Verify via SSH
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        with:
+          host: localhost
+          port: 2222
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 15m
+          script: |
+            set -e
+            cd /home/workshop/deploy/workshop_rest_api
 
-          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
-          if [ -z "$PG_CID" ]; then
-            echo "Postgres container not found"; exit 1
-          fi
+            # pgBackRest check
+            PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
+            if [ -z "$PG_CID" ]; then
+              echo "Postgres container not found"; exit 1
+            fi
 
-          echo ">>> Checking stanza..."
-          if docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check; then
-            echo "stanza OK ✅"
-          else
-            echo "stanza missing, creating..."
-            docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create
-            docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check
-            echo "stanza created and OK ✅"
-          fi
-          
-          echo ">>> Backup status:"
-          docker exec -u postgres -e PGPASSWORD="${DB_PASSWORD}" "$PG_CID" pgbackrest info || true
+            echo ">>> Checking stanza..."
+            if docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check; then
+              echo "stanza OK"
+            else
+              echo "stanza missing, creating..."
+              docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create
+              docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check
+              echo "stanza created and OK"
+            fi
 
-      - name: Verify PostgreSQL health
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          PG_CID=$(docker compose -f "$COMPOSE_FILE" ps -q workshop_db)
-          STATUS=$(docker inspect --format='{{json .State.Health.Status}}' "$PG_CID" 2>/dev/null | tr -d '"')
-          echo "PostgreSQL health: ${STATUS:-unknown}"
-          if [ "$STATUS" = "healthy" ]; then
-            echo "PostgreSQL is healthy ✅"
-          else
-            echo "PostgreSQL health check: ${STATUS} ⚠️"
-          fi
+            echo ">>> Backup status:"
+            docker exec -u postgres -e PGPASSWORD="$DB_PASSWORD" "$PG_CID" pgbackrest info || true
 
-      - name: Final containers status
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo "=== FINAL CONTAINERS STATUS ==="
-          docker compose -f "$COMPOSE_FILE" ps
-          echo ""
-          echo "=== CONTAINERS LOGS (Last 30 lines) ==="
-          for service in $(docker compose -f "$COMPOSE_FILE" ps --services); do
-            echo ""
-            echo "----- Logs: $service -----"
-            docker compose -f "$COMPOSE_FILE" logs --tail=30 "$service" || true
-          done
+            # PostgreSQL health
+            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' "$PG_CID" 2>/dev/null | tr -d '"')
+            echo "PostgreSQL health: ${STATUS:-unknown}"
+
+            # Final containers status
+            echo "=== FINAL CONTAINERS STATUS ==="
+            docker compose -f "$COMPOSE_FILE" ps
 
   # ===========================================
   # JOB 4: CLEANUP
   # ===========================================
   cleanup:
     name: Cleanup
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: verify
     if: always()
+    permissions:
+      contents: read
 
     steps:
-      - name: Cleanup dangling images
-        run: |
-          echo ">>> Cleaning dangling images..."
-          docker image prune -f
-          echo ""
-          echo ">>> Docker disk usage:"
-          docker system df
-          echo ""
-          echo "Cleanup completed ✅"
+      - name: Cleanup via SSH
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        with:
+          host: localhost
+          port: 2222
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            docker image prune -f
+            docker system df
+            echo "Cleanup done"
 
       - name: Summary
         if: success()
@@ -262,6 +319,6 @@ jobs:
           echo "  Commit:  ${{ github.sha }}"
           echo "  Actor:   ${{ github.actor }}"
           echo "  Trigger: ${{ github.event_name }}"
+          echo "  Image:   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
           echo ""
           echo "============================================="
-
