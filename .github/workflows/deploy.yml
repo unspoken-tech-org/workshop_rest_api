@@ -122,6 +122,9 @@ jobs:
           JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
           SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+          COMPOSE_FILE: ${{ env.COMPOSE_FILE }}
+          API_IMAGE: ${{ env.API_IMAGE }}
         run: |
           set -e
 
@@ -147,67 +150,85 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Deploy script
-          DEPLOY_SCRIPT=$(cat << 'DEPLOY_EOF'
+          # Write .env file on runner (unquoted heredoc: expands runner vars)
+          cat > /tmp/.env <<ENVFILE
+          DB_NAME=${DB_NAME}
+          DB_USERNAME=${DB_USERNAME}
+          DB_PASSWORD=${DB_PASSWORD}
+          ADMIN_EMAIL=${ADMIN_EMAIL}
+          ENVFILE
+          sed -i 's/^          //' /tmp/.env
+          chmod 600 /tmp/.env
+
+          # Write JWT keys on runner
+          echo "${JWT_PRIVATE_KEY}" | base64 -d > /tmp/private-pkcs8.pem
+          echo "${JWT_PUBLIC_KEY}" | base64 -d > /tmp/public.pem
+          chmod 600 /tmp/private-pkcs8.pem
+          chmod 644 /tmp/public.pem
+
+          # Write deploy script on runner
+          # Unquoted heredoc: expands ${DEPLOY_DIR}, ${COMPOSE_FILE}, etc. on runner
+          # Escaped \$ vars: written literally, expanded on server
+          cat > /tmp/deploy.sh <<DEPLOYSCRIPT
+          #!/bin/bash
           set -e
-          cd /home/workshop/deploy/workshop_rest_api
+          cd ${DEPLOY_DIR}
 
           # Login GHCR
-          echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
-
-          # Escrever .env
-          cat > .env <<EOF
-          DB_NAME=$DB_NAME
-          DB_USERNAME=$DB_USERNAME
-          DB_PASSWORD=$DB_PASSWORD
-          ADMIN_EMAIL=$ADMIN_EMAIL
-          EOF
-          chmod 600 .env
-
-          # Escrever chaves JWT
-          mkdir -p config/keys && chmod 700 config/keys
-          echo "$JWT_PRIVATE_KEY" | base64 -d > config/keys/private-pkcs8.pem
-          echo "$JWT_PUBLIC_KEY" | base64 -d > config/keys/public.pem
-          chmod 600 config/keys/private-pkcs8.pem
-          chmod 644 config/keys/public.pem
+          echo "\${GH_TOKEN}" | docker login ghcr.io -u "\${GH_USER}" --password-stdin
 
           # Pull da nova imagem
-          docker compose -f "$COMPOSE_FILE" pull workshop_spring_app
+          docker compose -f ${COMPOSE_FILE} pull workshop_spring_app
 
           # Backup da imagem atual
-          if docker image inspect $API_IMAGE:latest >/dev/null 2>&1; then
-            docker tag $API_IMAGE:latest $API_IMAGE:backup
-            echo "Backup created: $API_IMAGE:backup"
+          if docker image inspect ${API_IMAGE}:latest >/dev/null 2>&1; then
+            docker tag ${API_IMAGE}:latest ${API_IMAGE}:backup
+            echo "Backup created: ${API_IMAGE}:backup"
           else
             echo "No previous image found, skipping backup"
           fi
 
           # Restart do servico
-          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans workshop_spring_app
-          docker compose -f "$COMPOSE_FILE" ps
+          docker compose -f ${COMPOSE_FILE} up -d --remove-orphans workshop_spring_app
+          docker compose -f ${COMPOSE_FILE} ps
 
           # Health check
           ATTEMPTS=90
           SLEEP=5
-          for i in $(seq 1 $ATTEMPTS); do
-            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
-            echo "[$i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
-            if [ "$STATUS" = "healthy" ]; then
+          for i in \$(seq 1 \$ATTEMPTS); do
+            STATUS=\$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
+            echo "[\$i/\$ATTEMPTS] workshop-api health: \${STATUS:-unknown}"
+            if [ "\$STATUS" = "healthy" ]; then
               echo "API is healthy"
               exit 0
             fi
-            sleep $SLEEP
+            sleep \$SLEEP
           done
           echo "API did not become healthy"
           docker logs --tail=200 workshop-api || true
           exit 1
-          DEPLOY_EOF
-          )
+          DEPLOYSCRIPT
+          sed -i 's/^          //' /tmp/deploy.sh
+          chmod +x /tmp/deploy.sh
 
-          # Execute deploy via SSH
+          # SCP files to server
+          scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            -i ~/.ssh/deploy_key -P 2222 \
+            /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/deploy.sh \
+            "$SSH_USER@127.0.0.1:/tmp/"
+
+          # Execute deploy on server (move files to correct location, then run script)
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             -i ~/.ssh/deploy_key -p 2222 \
-            "$SSH_USER@127.0.0.1" "$DEPLOY_SCRIPT"
+            "$SSH_USER@127.0.0.1" "\
+              set -e && \
+              cd ${DEPLOY_DIR} && \
+              mv /tmp/.env ./ && chmod 600 .env && \
+              mkdir -p config/keys && \
+              mv /tmp/private-pkcs8.pem config/keys/ && chmod 600 config/keys/private-pkcs8.pem && \
+              mv /tmp/public.pem config/keys/ && chmod 644 config/keys/public.pem && \
+              bash /tmp/deploy.sh \
+            "
 
           # Cleanup
           kill %1 2>/dev/null || true
