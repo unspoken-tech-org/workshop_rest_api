@@ -94,9 +94,6 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: production
-      url: https://api.eletroluk.com/actuator/health
     permissions:
       contents: read
 
