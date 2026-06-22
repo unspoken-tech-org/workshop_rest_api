@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.ObjectError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -64,6 +65,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Requisição Inválida",
                 error), HttpStatus.BAD_REQUEST);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+
+        Throwable rootCause = ex.getMostSpecificCause();
+        if (rootCause instanceof BadRequestException badRequestEx) {
+            return buildBadRequestResponse(badRequestEx.getMessage());
+        }
+
+        EXCEPTION_LOGGER.warn("Message not readable for request: {} | Message: {}",
+                request.getDescription(false), ex.getMessage());
+
+        return buildBadRequestResponse("Payload inválido ou malformado. Verifique o JSON enviado.");
+    }
+
+    private ResponseEntity<Object> buildBadRequestResponse(String message) {
+        ErrorMetadata.Error error = new ErrorMetadata.Error("requisicao.invalida", message);
+        return new ResponseEntity<>(
+                new ResponseError(HttpStatus.BAD_REQUEST.value(), "Requisição Inválida", error),
+                HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(EntityAlreadyExistsException.class)

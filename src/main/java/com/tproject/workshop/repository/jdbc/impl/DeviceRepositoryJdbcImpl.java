@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tproject.workshop.dto.device.DeviceOutputDto;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
+import com.tproject.workshop.dto.device.DeviceSearchParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
 import com.tproject.workshop.repository.jdbc.DeviceRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
@@ -43,6 +44,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
     public static final String CUSTOMER_NAME = "CUSTOMER_NAME";
     public static final String HAS_URGENCY = "HAS_URGENCY";
     public static final String HAS_REVISION = "HAS_REVISION";
+    public static final String SEARCH_QUERY = "SEARCH_QUERY";
     public static final String ORDER_BY_FIELD = "ORDER_BY_FIELD";
     public static final String ORDER_BY_DIRECTION = "ORDER_BY_DIRECTION";
     public static final String PAGE_SIZE = "PAGE_SIZE";
@@ -68,7 +70,7 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                 .addValue(ORDER_BY_FIELD, deviceParams.getOrdenation().orderByField(), Types.VARCHAR)
                 .addValue(ORDER_BY_DIRECTION, deviceParams.getOrdenation().orderByDirection().toString(), Types.VARCHAR)
                 .addValue(PAGE_SIZE, deviceParams.getSize())
-                .addValue(OFFSET, deviceParams.getPage());
+                .addValue(OFFSET, deviceParams.getPage() * deviceParams.getSize());
 
         List<DeviceTableDto> devices = jdbcTemplate
                 .query(
@@ -88,7 +90,6 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                                         DeviceTableDto.Fields.observation.name(),
                                         DeviceTableDto.Fields.problem.name(),
                                         DeviceTableDto.Fields.hasUrgency.name(),
-                                        DeviceTableDto.Fields.hasUrgency.name(),
                                         DeviceTableDto.Fields.hasRevision.name()
                                 )
                                 .newResultSetExtractor(DeviceTableDto.class)
@@ -97,6 +98,52 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
         Long total = jdbcTemplate.queryForObject(UtilsSql.getQuery("device/listTable.count"), params, Long.class);
 
         return new PageImpl<>(devices, PageRequest.of(deviceParams.getPage(), deviceParams.getSize()), total != null ? total : 0);
+    }
+
+    @Override
+    public Page<DeviceTableDto> searchTable(DeviceSearchParam params) {
+        MapSqlParameterSource sqlParams = new MapSqlParameterSource()
+                .addValue(SEARCH_QUERY, params.searchQuery(), Types.VARCHAR)
+                .addValue(DEVICE_ID, params.deviceId(), Types.INTEGER)
+                .addValue(CUSTOMER_PHONE, params.customerPhone(), Types.VARCHAR)
+                .addValue(CUSTOMER_CPF, UtilsString.onlyDigits(params.customerCpf()), Types.VARCHAR)
+                .addValue(STATUS, UtilsSql.toLiteralArray(params.status()))
+                .addValue(INITIAL_ENTRY_DATE, params.initialEntryDate(), Types.VARCHAR)
+                .addValue(FINAL_ENTRY_DATE, params.finalEntryDate(), Types.VARCHAR)
+                .addValue(HAS_URGENCY, params.urgency(), Types.BOOLEAN)
+                .addValue(HAS_REVISION, params.revision(), Types.BOOLEAN)
+                .addValue(ORDER_BY_FIELD, params.ordenation().orderByField(), Types.VARCHAR)
+                .addValue(ORDER_BY_DIRECTION, params.ordenation().orderByDirection().toString(), Types.VARCHAR)
+                .addValue(PAGE_SIZE, params.size())
+                .addValue(OFFSET, params.page() * params.size());
+
+        List<DeviceTableDto> devices = jdbcTemplate.query(
+                UtilsSql.getQuery("device/searchTable"), sqlParams,
+                JdbcTemplateMapperFactory
+                        .newInstance()
+                        .addKeys(DeviceTableDto.Fields.deviceId.name(),
+                                DeviceTableDto.Fields.customerId.name(),
+                                DeviceTableDto.Fields.type.name(),
+                                DeviceTableDto.Fields.brand.name(),
+                                DeviceTableDto.Fields.model.name(),
+                                DeviceTableDto.Fields.customerName.name(),
+                                DeviceTableDto.Fields.entryDate.name(),
+                                DeviceTableDto.Fields.departureDate.name(),
+                                DeviceTableDto.Fields.status.name(),
+                                DeviceTableDto.Fields.observation.name(),
+                                DeviceTableDto.Fields.problem.name(),
+                                DeviceTableDto.Fields.hasUrgency.name(),
+                                DeviceTableDto.Fields.hasRevision.name()
+                        )
+                        .newResultSetExtractor(DeviceTableDto.class)
+        );
+
+        Long total = jdbcTemplate.queryForObject(
+                UtilsSql.getQuery("device/searchTable.count"), sqlParams, Long.class);
+
+        return new PageImpl<>(devices,
+                PageRequest.of(params.page(), params.size()),
+                total != null ? total : 0);
     }
 
     @Override
@@ -134,14 +181,15 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setBudget(rs.getString("budget"));
             dto.setHasUrgency(rs.getBoolean("has_urgency"));
             dto.setRevision(rs.getBoolean("is_revision"));
-            dto.setEntryDate(rs.getTimestamp("entry_date"));
-            dto.setLaborValue(rs.getBigDecimal("labor_value"));
+            dto.setEntryDate(rs.getTimestamp("entry_date").toLocalDateTime());
+            dto.setBudgetFee(rs.getBigDecimal("budget_fee"));
             dto.setServiceValue(rs.getBigDecimal("service_value"));
-            dto.setLaborValueCollected(rs.getBoolean("labor_value_collected"));
             dto.setDepartureDate(
-                    rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date")
+                    rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date").toLocalDateTime()
                             : null);
-            dto.setLastUpdate(rs.getTimestamp("last_update"));
+            dto.setLastUpdate(
+                    rs.getTimestamp("last_update") != null ? rs.getTimestamp("last_update").toLocalDateTime()
+                            : null);
 
             Array colorsArray = rs.getArray("device_colors");
             dto.setDeviceColors(

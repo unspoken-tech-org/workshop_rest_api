@@ -1,0 +1,68 @@
+{
+    "content": [
+        {
+            "deviceId": 154,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Secadora",
+            "brand": "Electrolux",
+            "model": "Turbo Eco",
+            "status": "EM_ANDAMENTO",
+            "problem": "Secadora Electrolux João Victor",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-08-20T00:00:00"
+        },
+        {
+            "deviceId": 152,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Micro-ondas",
+            "brand": "Britânia",
+            "model": "Mega Plus",
+            "status": "NOVO",
+            "problem": "Micro-ondas Britânia João Victor",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-06-20T00:00:00"
+        },
+        {
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-07-20T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 3,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 3,
+    "empty": false
+}

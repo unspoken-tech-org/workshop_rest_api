@@ -1,0 +1,33 @@
+{
+    "content": [
+        {
+            "idBrand": 2,
+            "brand": "LG"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 1,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": false,
+    "totalPages": 2,
+    "totalElements": 2,
+    "first": true,
+    "size": 1,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 1,
+    "empty": false
+}

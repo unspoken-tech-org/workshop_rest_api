@@ -1,0 +1,94 @@
+{
+    "content": [
+        {
+            "deviceId": 110,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Samsung Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-11-01T00:00:00"
+        },
+        {
+            "deviceId": 103,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Britânia",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-07-01T00:00:00"
+        },
+        {
+            "deviceId": 104,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador mesa",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "2024-07-10T00:00:00"
+        },
+        {
+            "deviceId": 128,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Wallita",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-12-15T00:00:00"
+        },
+        {
+            "deviceId": 139,
+            "customerId": 15,
+            "customerName": "Maria Aparecida de Oliveira",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "PRONTO",
+            "problem": "Ventilador Wallita Maria Aparecida",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-07-20T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 5,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 5,
+    "empty": false
+}

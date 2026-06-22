@@ -1,0 +1,9 @@
+{
+    "id": 6,
+    "paymentDate": "2026-06-01T00:00:00",
+    "paymentType": "credito",
+    "paymentValue": 200.0,
+    "category": "servicos",
+    "deviceId": 1,
+    "receivedBy": "Maria Souza"
+}

@@ -5,8 +5,10 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @Data
 @Entity(name = "customer_contact")
@@ -31,7 +33,6 @@ public class CustomerContact {
     @Column(name = "has_made_contact")
     private boolean hasMadeContact;
 
-    @CreationTimestamp
     @Column(name = "last_contact", nullable = false)
     private Timestamp lastContact;
 
@@ -42,4 +43,12 @@ public class CustomerContact {
     @Enumerated(EnumType.STRING)
     @Column(name = "device_status")
     private DeviceStatusEnum deviceStatus;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

@@ -1,0 +1,55 @@
+{
+    "content": [
+        {
+            "deviceId": 103,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Britânia",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-07-01T00:00:00"
+        },
+        {
+            "deviceId": 104,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador mesa",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "2024-07-10T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 2,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 2,
+    "empty": false
+}

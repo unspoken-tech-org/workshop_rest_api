@@ -12,7 +12,7 @@
             "observation": "Observation 1",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "10/04/2023"
+            "entryDate": "2023-04-10T08:41:00.968173"
         }
     ],
     "pageable": {
@@ -24,12 +24,13 @@
             "unsorted": true
         },
         "offset": 0,
-        "unpaged": false,
-        "paged": true
+        "paged": true,
+        "unpaged": false
     },
     "last": true,
-    "totalElements": 1,
     "totalPages": 1,
+    "totalElements": 1,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -37,7 +38,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 1,
     "empty": false
 }

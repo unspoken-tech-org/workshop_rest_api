@@ -1,0 +1,68 @@
+{
+    "content": [
+        {
+            "deviceId": 132,
+            "customerId": 12,
+            "customerName": "Pedro Oliveira",
+            "type": "Aspirador robô",
+            "brand": "Brastemp",
+            "model": "Easy Flow",
+            "status": "NOVO",
+            "problem": "Aspirador Brastemp",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2025-01-01T00:00:00"
+        },
+        {
+            "deviceId": 131,
+            "customerId": 12,
+            "customerName": "Pedro Oliveira",
+            "type": "Lava louças",
+            "brand": "Arno",
+            "model": "Power Flow",
+            "status": "EM_ANDAMENTO",
+            "problem": "Lava louças Arno",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-12-25T00:00:00"
+        },
+        {
+            "deviceId": 129,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Secadora",
+            "brand": "Electrolux",
+            "model": "Turbo Eco",
+            "status": "EM_ANDAMENTO",
+            "problem": "Secadora Electrolux",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-12-20T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 3,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": false,
+    "totalPages": 19,
+    "totalElements": 55,
+    "size": 3,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 3,
+    "empty": false
+}

@@ -1,0 +1,8 @@
+{
+    "status": 400,
+    "title": "Requisição Inválida",
+    "error": {
+        "code": "requisicao.invalida",
+        "message": "O numero de telefone deve ser fornecido para os tipos de contato: ligacao, mensagem"
+    }
+}

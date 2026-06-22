@@ -7,9 +7,7 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.CustomerContact;
-import com.tproject.workshop.model.Device;
 import com.tproject.workshop.repository.CustomerContactRepository;
-import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.utils.UtilsString;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @Service
@@ -24,7 +23,7 @@ import java.util.List;
 public class CustomerContactService {
 
     private final CustomerContactRepository customerContactRepository;
-    private final DeviceRepository deviceRepository;
+    private final DeviceService deviceService;
     private final TechnicianService technicianService;
     private final PhoneService phoneService;
 
@@ -32,51 +31,62 @@ public class CustomerContactService {
 
     @Transactional
     public CustomerContactOutputDto save(CustomerContactInputDto contact) {
-        Device device = deviceRepository.findById(contact.deviceId()).orElseThrow(() ->
-                new NotFoundException(String.format("Aparelho com id %d não encontrado", contact.deviceId()))
-        );
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
         DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
+        validatePhoneIfNeeded(contact.contactType(), contact.phoneNumber());
+        deviceService.updateDeviceStatus(contact.deviceId(), status);
 
-        if (contactTypesThatNeedPhone.contains(UtilsString.normalizeString(contact.contactType()))) {
-            if (contact.phoneNumber() == null || contact.phoneNumber().isEmpty()) {
+        CustomerContact newContact = new CustomerContact();
+        mapContactFields(newContact, contact, status);
+        CustomerContact saved = customerContactRepository.save(newContact);
+
+        return toDto(saved, technician.name());
+    }
+
+    @Transactional
+    public CustomerContactOutputDto update(int id, CustomerContactInputDto contact) {
+        CustomerContact existingContact = customerContactRepository.findById(id).orElseThrow(() ->
+                new NotFoundException(String.format("Contato com id %d não encontrado", id))
+        );
+
+        TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
+        DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
+        validatePhoneIfNeeded(contact.contactType(), contact.phoneNumber());
+        deviceService.updateDeviceStatus(contact.deviceId(), status);
+
+        mapContactFields(existingContact, contact, status);
+        CustomerContact saved = customerContactRepository.save(existingContact);
+
+        return toDto(saved, technician.name());
+    }
+
+    private void validatePhoneIfNeeded(String contactType, String phoneNumber) {
+        if (contactTypesThatNeedPhone.contains(UtilsString.normalizeString(contactType))) {
+            if (phoneNumber == null || phoneNumber.isEmpty()) {
                 String joinedNeededContactTypes = String.join(", ", contactTypesThatNeedPhone);
                 throw new BadRequestException(
                         String.format("O numero de telefone deve ser fornecido para os tipos de contato: %s", joinedNeededContactTypes)
                 );
             }
-
-            phoneService.findByNumber(contact.phoneNumber());
+            phoneService.findByNumber(phoneNumber);
         }
+    }
 
-        boolean resetUrgencyRevision = List.of(
-                DeviceStatusEnum.PRONTO,
-                DeviceStatusEnum.APROVADO,
-                DeviceStatusEnum.NAO_APROVADO,
-                DeviceStatusEnum.ENTREGUE,
-                DeviceStatusEnum.DESCARTADO
-        ).contains(status);
-
-        device.setDeviceStatus(status);
-        if (resetUrgencyRevision) {
-            device.setUrgency(false);
-            device.setRevision(false);
+    private void mapContactFields(CustomerContact contact, CustomerContactInputDto dto, DeviceStatusEnum status) {
+        contact.setDeviceId(dto.deviceId());
+        contact.setTechnicianId(dto.technicianId());
+        contact.setHasMadeContact(dto.contactStatus());
+        contact.setConversation(dto.message());
+        contact.setType(dto.contactType());
+        contact.setPhone(dto.phoneNumber());
+        try {
+            contact.setLastContact(Timestamp.valueOf(LocalDateTime.parse(dto.contactDate())));
+        } catch (DateTimeParseException e) {
+            throw new BadRequestException(
+                    String.format("Formato de data inválido: '%s'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)", dto.contactDate())
+            );
         }
-        deviceRepository.save(device);
-
-        CustomerContact newContact = new CustomerContact();
-        newContact.setDeviceId(contact.deviceId());
-        newContact.setTechnicianId(contact.technicianId());
-        newContact.setHasMadeContact(contact.contactStatus());
-        newContact.setConversation(contact.message());
-        newContact.setType(contact.contactType());
-        newContact.setPhone(contact.phoneNumber());
-        newContact.setLastContact(Timestamp.valueOf(LocalDateTime.parse(contact.contactDate())));
-        newContact.setDeviceStatus(status);
-
-        CustomerContact saved = customerContactRepository.save(newContact);
-
-        return toDto(saved, technician.name());
+        contact.setDeviceStatus(status);
     }
 
     private CustomerContactOutputDto toDto(CustomerContact model, String technicianName) {
@@ -88,7 +98,7 @@ public class CustomerContactService {
                 model.getPhone(),
                 model.getType(),
                 model.isHasMadeContact(),
-                model.getLastContact().toLocalDateTime(),
+                model.getLastContact() != null ? model.getLastContact().toLocalDateTime() : null,
                 model.getConversation(),
                 model.getDeviceStatus().name()
         );

@@ -26,6 +26,9 @@ public class Device {
     private int id;
 
     @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Timestamp createdAt;
+
     @Column(name = "entry_date", nullable = false)
     private Timestamp entryDate;
 
@@ -41,14 +44,14 @@ public class Device {
     @Column(name = "budget")
     private String budget;
 
-    @Column(name = "labor_value", nullable = false)
-    private BigDecimal laborValue;
+    @Column(name = "budget_fee", nullable = false)
+    private BigDecimal budgetFee;
 
     @Column(name = "service_value")
     private BigDecimal serviceValue;
 
-    @Column(name = "labor_value_collected", nullable = false)
-    private boolean laborValueCollected;
+    @Column(name = "budget_fee_collected", nullable = false)
+    private boolean budgetFeeCollected;
 
     @Column(name = "has_urgency", nullable = false)
     private boolean urgency;

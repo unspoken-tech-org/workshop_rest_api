@@ -1,0 +1,81 @@
+{
+    "content": [
+        {
+            "deviceId": 106,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britania",
+            "model": "Mega Plus",
+            "status": "PRONTO",
+            "problem": "Micro-ondas Britania",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-08-01T00:00:00"
+        },
+        {
+            "deviceId": 147,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Britânia João Pedro",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-07-01T00:00:00"
+        },
+        {
+            "deviceId": 104,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador mesa",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "2024-07-10T00:00:00"
+        },
+        {
+            "deviceId": 134,
+            "customerId": 13,
+            "customerName": "Adilson Ferreira da Silva",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Brastenp Adilson",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-07-01T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 4,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 4,
+    "empty": false
+}

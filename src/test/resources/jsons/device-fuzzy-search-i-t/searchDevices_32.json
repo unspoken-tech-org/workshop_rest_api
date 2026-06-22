@@ -1,0 +1,55 @@
+{
+    "content": [
+        {
+            "deviceId": 108,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Ventilador",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Samsung João",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-10-01T00:00:00"
+        },
+        {
+            "deviceId": 110,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Samsung Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-11-01T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 2,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 2,
+    "empty": false
+}

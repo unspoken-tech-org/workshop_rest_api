@@ -1,34 +1,32 @@
 package com.tproject.workshop.dto.payment;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tproject.workshop.enums.PaymentCategoryEnum;
+import com.tproject.workshop.enums.PaymentMethodEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Schema(description = "Payment details response")
 public record PaymentResponseDto(
     @Schema(example = "1")
     Integer id,
     
-    @Schema(hidden = true)
+    @Schema(description = "Date and time of the payment", example = "2026-06-01T00:00:00")
     LocalDateTime paymentDate,
     
     @Schema(example = "credito")
-    String paymentType,
+    PaymentMethodEnum paymentType,
     
     @Schema(example = "150.00")
     BigDecimal paymentValue,
     
-    @Schema(example = "repair")
-    String category,
+    @Schema(example = "servicos")
+    PaymentCategoryEnum category,
     
     @Schema(example = "10")
-    Integer deviceId
+    Integer deviceId,
+
+    @Schema(description = "Name of the person who received the payment", example = "João da Silva")
+    String receivedBy
 ) {
-    @JsonProperty("paymentDate")
-    @Schema(name = "paymentDate", example = "16/01/2024")
-    public String getFormattedPaymentDate() {
-        return paymentDate != null ? paymentDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null;
-    }
 }

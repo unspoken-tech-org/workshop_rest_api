@@ -1,8 +1,9 @@
 {
     "id": 6,
-    "paymentDate": "16/01/2026",
+    "paymentDate": "2026-06-13T18:51:23.972",
     "paymentType": "credito",
     "paymentValue": 150.0,
-    "category": "parcial",
-    "deviceId": 1
+    "category": "servicos",
+    "deviceId": 1,
+    "receivedBy": "João da Silva"
 }

@@ -1,7 +1,5 @@
 package com.tproject.workshop.controller.impl;
 
-import java.util.Objects;
-
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,8 +23,7 @@ public class CustomerControllerImpl implements CustomerController {
 
     @Override
     public Page<CustomerListOutputDto> search(@Valid CustomerFilterDto filters) {
-        CustomerFilterDto nonNullFilters = Objects.requireNonNullElseGet(filters, CustomerFilterDto::new);
-        return customerService.searchCustomers(nonNullFilters);
+        return customerService.searchCustomers(filters);
     }
 
     @Override

@@ -49,24 +49,30 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
     }
 
     @Override
-    public Page<CustomerListOutputDto> findCustomersByFilter(CustomerFilterDto filters) {
+    public Page<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
         MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("CUSTOMER_ID", filters.getId(), Types.INTEGER)
-                .addValue("NAME", filters.getName(), Types.VARCHAR)
-                .addValue("CPF", UtilsString.onlyDigits((filters.getCpf())), Types.VARCHAR)
-                .addValue("PHONE", filters.getPhone(), Types.VARCHAR)
-                .addValue("PAGE_SIZE", filters.getSize(), Types.INTEGER)
-                .addValue("OFFSET", filters.getPage(), Types.INTEGER);
+                .addValue("ID", filters.id(), Types.INTEGER)
+                .addValue("CPF", UtilsString.onlyDigits(filters.cpf()), Types.VARCHAR)
+                .addValue("PHONE", filters.phone(), Types.VARCHAR)
+                .addValue("SEARCH_NAME", filters.searchName(), Types.VARCHAR)
+                .addValue("SEARCH_EMAIL", filters.searchEmail(), Types.VARCHAR)
+                .addValue("ORDER_BY_FIELD", filters.ordenation().orderByField(), Types.VARCHAR)
+                .addValue("ORDER_BY_DIRECTION", filters.ordenation().orderByDirection().toString(), Types.VARCHAR)
+                .addValue("PAGE_SIZE", filters.size(), Types.INTEGER)
+                .addValue("OFFSET", filters.page() * filters.size(), Types.INTEGER);
 
         List<CustomerListOutputDto> customers = jdbcTemplate.query(
-                UtilsSql.getQuery("customer/listCustomers"),
+                UtilsSql.getQuery("customer/searchCustomers"),
                 params,
                 getCustomerListOutputDtoMapper()
         );
 
-        Long total = jdbcTemplate.queryForObject(UtilsSql.getQuery("customer/listCustomers.count"), params, Long.class);
+        Long total = jdbcTemplate.queryForObject(
+                UtilsSql.getQuery("customer/searchCustomers.count"), params, Long.class);
 
-        return new PageImpl<>(customers, PageRequest.of(filters.getPage(), filters.getSize()), total != null ? total : 0);
+        return new PageImpl<>(customers,
+                PageRequest.of(filters.page(), filters.size()),
+                total != null ? total : 0);
     }
 
 
@@ -78,7 +84,7 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
             dto.setCpf(rs.getString("cpf"));
             dto.setEmail(rs.getString("email"));
             dto.setGender(rs.getString("gender"));
-            dto.setInsertDate(rs.getTimestamp("insert_date").toLocalDateTime());
+            dto.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
             dto.setMainPhone(rs.getString("main_phone"));
             return dto;
         };
@@ -93,7 +99,7 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
             dto.setCpf(rs.getString("cpf"));
             dto.setGender(rs.getString("gender"));
             dto.setEmail(rs.getString("email"));
-            dto.setInsertDate(rs.getString("insert_date"));
+            dto.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
 
             dto.setPhones(
                     JsonResultSetMapper.readJsonList(rs, "phones", new TypeReference<>() {

@@ -1,0 +1,68 @@
+{
+    "content": [
+        {
+            "deviceId": 150,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Ventilador",
+            "brand": "Consul",
+            "model": "Turbo 3000",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador Consul João Paulo",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "2024-07-15T00:00:00"
+        },
+        {
+            "deviceId": 149,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Micro-ondas",
+            "brand": "Brastemp",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Brastemp João Paulo",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-06-15T00:00:00"
+        },
+        {
+            "deviceId": 151,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Aspirador robô",
+            "brand": "Samsung",
+            "model": "Silent Pro",
+            "status": "EM_ANDAMENTO",
+            "problem": "Aspirador Samsung João Paulo",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-08-15T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 3,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 3,
+    "empty": false
+}

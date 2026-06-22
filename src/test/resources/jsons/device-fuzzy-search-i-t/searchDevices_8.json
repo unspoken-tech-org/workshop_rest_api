@@ -1,0 +1,172 @@
+{
+    "content": [
+        {
+            "deviceId": 108,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Ventilador",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Samsung João",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-10-01T00:00:00"
+        },
+        {
+            "deviceId": 107,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Outro Samsung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-09-01T00:00:00"
+        },
+        {
+            "deviceId": 100,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-06-01T00:00:00"
+        },
+        {
+            "deviceId": 121,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Aspirador robô",
+            "brand": "Samsung",
+            "model": "Silent Pro",
+            "status": "EM_ANDAMENTO",
+            "problem": "Aspirador Samsung",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-12-05T00:00:00"
+        },
+        {
+            "deviceId": 110,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador",
+            "brand": "Samsung",
+            "model": "Easy Breeze",
+            "status": "NOVO",
+            "problem": "Ventilador Samsung Maria",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-11-01T00:00:00"
+        },
+        {
+            "deviceId": 146,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung João Pedro",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-06-01T00:00:00"
+        },
+        {
+            "deviceId": 101,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas de embutir",
+            "brand": "Samsung",
+            "model": "Turbo 3000",
+            "status": "EM_ANDAMENTO",
+            "problem": "Micro-ondas embutir",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-06-15T00:00:00"
+        },
+        {
+            "deviceId": 151,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Aspirador robô",
+            "brand": "Samsung",
+            "model": "Silent Pro",
+            "status": "EM_ANDAMENTO",
+            "problem": "Aspirador Samsung João Paulo",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-08-15T00:00:00"
+        },
+        {
+            "deviceId": 133,
+            "customerId": 13,
+            "customerName": "Adilson Ferreira da Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung Adilson",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-06-01T00:00:00"
+        },
+        {
+            "deviceId": 135,
+            "customerId": 13,
+            "customerName": "Adilson Ferreira da Silva",
+            "type": "Aspirador robô",
+            "brand": "Samsung",
+            "model": "Silent Pro",
+            "status": "NOVO",
+            "problem": "Aspirador Samsung Adilson",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-08-01T00:00:00"
+        },
+        {
+            "deviceId": 105,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Micro-ondas",
+            "brand": "Sansung",
+            "model": "Smart Cook",
+            "status": "DESCARTADO",
+            "problem": "Micro-ondas Sansung",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2023-12-01T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 11,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 11,
+    "empty": false
+}

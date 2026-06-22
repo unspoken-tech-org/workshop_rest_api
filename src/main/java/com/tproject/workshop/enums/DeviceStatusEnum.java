@@ -1,6 +1,6 @@
 package com.tproject.workshop.enums;
 
-import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.BadRequestException;
 
 public enum DeviceStatusEnum {
     NOVO,
@@ -16,7 +16,7 @@ public enum DeviceStatusEnum {
         try {
             return DeviceStatusEnum.valueOf(status.toUpperCase());
         } catch (Exception e) {
-            throw new NotFoundException("Não foi encontrado o status: " + status);
+            throw new BadRequestException("Não foi encontrado o status: " + status);
         }
     }
 } 

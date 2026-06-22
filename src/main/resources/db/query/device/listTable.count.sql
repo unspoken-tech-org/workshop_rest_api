@@ -24,13 +24,13 @@ where
     AND (COALESCE(array_length(:DEVICE_BRANDS::int[], 1), 0) = 0 OR b.id = ANY(:DEVICE_BRANDS::int[]))
     AND ((:INITIAL_ENTRY_DATE IS NULL AND :FINAL_ENTRY_DATE IS NULL) 
         OR ((:INITIAL_ENTRY_DATE IS NOT NULL AND :FINAL_ENTRY_DATE IS NOT NULL)
-            AND d.entry_date BETWEEN :INITIAL_ENTRY_DATE::timestamp AND :FINAL_ENTRY_DATE::timestamp
+            AND d.entry_date >= :INITIAL_ENTRY_DATE::timestamp AND d.entry_date < :FINAL_ENTRY_DATE::timestamp + INTERVAL '1 day'
         )
         OR ((:INITIAL_ENTRY_DATE IS NOT NULL AND :FINAL_ENTRY_DATE IS NULL)
             AND d.entry_date >= :INITIAL_ENTRY_DATE::timestamp
         )
         OR ((:INITIAL_ENTRY_DATE IS NULL AND :FINAL_ENTRY_DATE IS NOT NULL)
-            AND d.entry_date <= :FINAL_ENTRY_DATE::timestamp
+            AND d.entry_date < :FINAL_ENTRY_DATE::timestamp + INTERVAL '1 day'
         )
     )
         

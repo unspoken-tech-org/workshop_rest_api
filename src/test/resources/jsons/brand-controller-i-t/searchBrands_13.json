@@ -1,0 +1,37 @@
+{
+    "content": [
+        {
+            "idBrand": 1,
+            "brand": "Samsung"
+        },
+        {
+            "idBrand": 5,
+            "brand": "Electrolux"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 2,
+    "first": true,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "numberOfElements": 2,
+    "empty": false
+}

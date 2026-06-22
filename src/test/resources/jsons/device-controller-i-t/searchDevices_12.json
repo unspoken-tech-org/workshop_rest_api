@@ -12,8 +12,8 @@
             "observation": "Observation 9",
             "hasUrgency": true,
             "hasRevision": false,
-            "entryDate": "04/02/2025",
-            "departureDate": "01/05/2021"
+            "entryDate": "2025-02-04T08:41:00.968173",
+            "departureDate": "2021-05-01T08:41:00.968173"
         },
         {
             "deviceId": 14,
@@ -27,8 +27,8 @@
             "observation": "Observation 14",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "07/01/2023",
-            "departureDate": "06/01/2023"
+            "entryDate": "2023-01-07T14:41:00.968173",
+            "departureDate": "2023-01-06T14:41:00.968173"
         },
         {
             "deviceId": 4,
@@ -42,8 +42,8 @@
             "observation": "Observation 4",
             "hasUrgency": false,
             "hasRevision": true,
-            "entryDate": "02/01/2023",
-            "departureDate": "05/01/2023"
+            "entryDate": "2023-01-02T14:41:00.968173",
+            "departureDate": "2023-01-05T14:41:00.968173"
         }
     ],
     "pageable": {
@@ -55,12 +55,13 @@
             "unsorted": true
         },
         "offset": 0,
-        "unpaged": false,
-        "paged": true
+        "paged": true,
+        "unpaged": false
     },
     "last": true,
-    "totalElements": 3,
     "totalPages": 1,
+    "totalElements": 3,
+    "first": true,
     "size": 15,
     "number": 0,
     "sort": {
@@ -68,7 +69,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": true,
     "numberOfElements": 3,
     "empty": false
 }

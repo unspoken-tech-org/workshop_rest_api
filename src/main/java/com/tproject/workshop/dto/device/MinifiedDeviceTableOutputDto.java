@@ -1,8 +1,6 @@
 package com.tproject.workshop.dto.device;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 
@@ -19,13 +17,4 @@ public class MinifiedDeviceTableOutputDto {
   private boolean revision;
   private LocalDateTime entryDate;
   private LocalDateTime departureDate;
-
-  @JsonProperty("entryDate")
-  public String getEntryDate() {
-    return entryDate != null ? entryDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null;
-  }
-  @JsonProperty("departureDate")
-  public String getDepartureDate() {
-    return departureDate != null ? departureDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null;
-  }
 }

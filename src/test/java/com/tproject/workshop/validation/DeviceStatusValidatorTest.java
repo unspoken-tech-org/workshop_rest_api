@@ -34,10 +34,11 @@ class DeviceStatusValidatorTest {
                 "Orçamento",
                 BigDecimal.valueOf(100.0),
                 BigDecimal.valueOf(50.0),
-                true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -58,10 +59,11 @@ class DeviceStatusValidatorTest {
                 "Orçamento",
                 BigDecimal.valueOf(100.0),
                 BigDecimal.valueOf(50.0),
-                true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -82,10 +84,11 @@ class DeviceStatusValidatorTest {
                 "Orçamento",
                 BigDecimal.valueOf(100.0),
                 BigDecimal.valueOf(50.0),
-                true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -109,10 +112,11 @@ class DeviceStatusValidatorTest {
                 "Orçamento",
                 BigDecimal.valueOf(100.0),
                 BigDecimal.valueOf(50.0),
-                true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act
@@ -137,10 +141,11 @@ class DeviceStatusValidatorTest {
                 "Orçamento",
                 BigDecimal.valueOf(100.0),
                 BigDecimal.valueOf(50.0),
-                true,
                 false,
                 false,
-                1
+                1,
+                null,
+                null
         );
 
         // Act

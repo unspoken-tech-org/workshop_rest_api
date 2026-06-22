@@ -3,6 +3,7 @@ package com.tproject.workshop.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -62,4 +63,8 @@ public class ApiKey {
 
     @Column(name = "bound_at")
     private Instant boundAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }

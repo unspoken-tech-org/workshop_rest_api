@@ -4,7 +4,7 @@ SELECT
     c.cpf,
     c.email,
     c.gender,
-    c.insert_date,
+    c.created_at,
     (SELECT p.number 
      FROM customer_phones cp 
      INNER JOIN phones p ON p.id = cp.id_phone 

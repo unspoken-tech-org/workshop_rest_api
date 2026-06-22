@@ -1,0 +1,146 @@
+{
+    "content": [
+        {
+            "deviceId": 127,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Liquidificador",
+            "brand": "Panassonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panassonic",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-12-10T00:00:00"
+        },
+        {
+            "deviceId": 118,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Eletrolux",
+            "model": "Mega Plus",
+            "status": "PRONTO",
+            "problem": "Micro-ondas Eletrolux",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-11-20T00:00:00"
+        },
+        {
+            "deviceId": 148,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Liquidificador",
+            "brand": "Panasonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panasonic João Pedro",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-08-01T00:00:00"
+        },
+        {
+            "deviceId": 143,
+            "customerId": 17,
+            "customerName": "Ana Beatriz Souza",
+            "type": "Chaleira elétrica",
+            "brand": "Panasonic",
+            "model": "Silent Air",
+            "status": "AGUARDANDO",
+            "problem": "Chaleira Panasonic Ana",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "2024-07-30T00:00:00"
+        },
+        {
+            "deviceId": 139,
+            "customerId": 15,
+            "customerName": "Maria Aparecida de Oliveira",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "PRONTO",
+            "problem": "Ventilador Wallita Maria Aparecida",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-07-20T00:00:00"
+        },
+        {
+            "deviceId": 153,
+            "customerId": 21,
+            "customerName": "João Victor Almeida Santos",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "PRONTO",
+            "problem": "Ventilador Britânia João Victor",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-07-20T00:00:00"
+        },
+        {
+            "deviceId": 150,
+            "customerId": 20,
+            "customerName": "João Paulo Ferreira",
+            "type": "Ventilador",
+            "brand": "Consul",
+            "model": "Turbo 3000",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador Consul João Paulo",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "2024-07-15T00:00:00"
+        },
+        {
+            "deviceId": 104,
+            "customerId": 11,
+            "customerName": "Maria Aparecida",
+            "type": "Ventilador de mesa",
+            "brand": "Britânia",
+            "model": "Silent Pro",
+            "status": "AGUARDANDO",
+            "problem": "Ventilador mesa",
+            "hasUrgency": true,
+            "hasRevision": true,
+            "entryDate": "2024-07-10T00:00:00"
+        },
+        {
+            "deviceId": 102,
+            "customerId": 10,
+            "customerName": "João Silva",
+            "type": "Micro-ondas",
+            "brand": "Britânia",
+            "model": "Mega Plus",
+            "status": "ENTREGUE",
+            "problem": "Micro-ondas Britânia",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-05-01T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 9,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 9,
+    "empty": false
+}

@@ -1,0 +1,55 @@
+{
+    "content": [
+        {
+            "deviceId": 113,
+            "customerId": 12,
+            "customerName": "Pedro Oliveira",
+            "type": "Ventilador",
+            "brand": "Wallita",
+            "model": "Air Flow",
+            "status": "NOVO",
+            "problem": "Ventilador Wallita Pedro",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-12-15T00:00:00"
+        },
+        {
+            "deviceId": 139,
+            "customerId": 15,
+            "customerName": "Maria Aparecida de Oliveira",
+            "type": "Ventilador de coluna",
+            "brand": "Wallita",
+            "model": "Smart Breeze",
+            "status": "PRONTO",
+            "problem": "Ventilador Wallita Maria Aparecida",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-07-20T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 2,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 2,
+    "empty": false
+}

@@ -45,14 +45,14 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
                 .response();
 
         super.validateResponseIgnoreAttributes("list", response, List.of(
-                "[0].id", "[0].createdAt", "[0].lastUsedAt", "[0].expiresAt",
-                "[1].id", "[1].createdAt", "[1].lastUsedAt", "[1].expiresAt",
-                "[2].id", "[2].createdAt", "[2].lastUsedAt", "[2].expiresAt",
-                "[3].id", "[3].createdAt", "[3].lastUsedAt", "[3].expiresAt",
-                "[4].id", "[4].createdAt", "[4].lastUsedAt", "[4].expiresAt",
-                "[5].id", "[5].createdAt", "[5].lastUsedAt", "[5].expiresAt",
-                "[6].id", "[6].createdAt", "[6].lastUsedAt", "[6].expiresAt",
-                "[7].id", "[7].createdAt", "[7].lastUsedAt", "[7].expiresAt"
+                "[0].id", "[0].createdAt", "[0].updatedAt", "[0].lastUsedAt", "[0].expiresAt",
+                "[1].id", "[1].createdAt", "[1].updatedAt", "[1].lastUsedAt", "[1].expiresAt",
+                "[2].id", "[2].createdAt", "[2].updatedAt", "[2].lastUsedAt", "[2].expiresAt",
+                "[3].id", "[3].createdAt", "[3].updatedAt", "[3].lastUsedAt", "[3].expiresAt",
+                "[4].id", "[4].createdAt", "[4].updatedAt", "[4].lastUsedAt", "[4].expiresAt",
+                "[5].id", "[5].createdAt", "[5].updatedAt", "[5].lastUsedAt", "[5].expiresAt",
+                "[6].id", "[6].createdAt", "[6].updatedAt", "[6].lastUsedAt", "[6].expiresAt",
+                "[7].id", "[7].createdAt", "[7].updatedAt", "[7].lastUsedAt", "[7].expiresAt"
 
         ));
     }
@@ -86,7 +86,7 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
 
         if (statusCode == HttpStatus.SC_CREATED) {
             super.validateResponseIgnoreAttributes(index, response, List.of(
-                    "id", "keyValue", "createdAt"
+                    "id", "keyValue", "createdAt", "updatedAt"
             ));
         } else {
             super.validateResponse(index, response);

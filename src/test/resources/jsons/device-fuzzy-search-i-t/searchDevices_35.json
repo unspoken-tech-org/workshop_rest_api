@@ -1,0 +1,68 @@
+{
+    "content": [
+        {
+            "deviceId": 146,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Micro-ondas",
+            "brand": "Samsung",
+            "model": "Smart Cook",
+            "status": "NOVO",
+            "problem": "Micro-ondas Samsung João Pedro",
+            "hasUrgency": false,
+            "hasRevision": false,
+            "entryDate": "2024-06-01T00:00:00"
+        },
+        {
+            "deviceId": 147,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Ventilador",
+            "brand": "Britânia",
+            "model": "Easy Breeze",
+            "status": "EM_ANDAMENTO",
+            "problem": "Ventilador Britânia João Pedro",
+            "hasUrgency": true,
+            "hasRevision": false,
+            "entryDate": "2024-07-01T00:00:00"
+        },
+        {
+            "deviceId": 148,
+            "customerId": 19,
+            "customerName": "João Pedro da Silva",
+            "type": "Liquidificador",
+            "brand": "Panasonic",
+            "model": "Power Mix",
+            "status": "PRONTO",
+            "problem": "Liquidificador Panasonic João Pedro",
+            "hasUrgency": false,
+            "hasRevision": true,
+            "entryDate": "2024-08-01T00:00:00"
+        }
+    ],
+    "pageable": {
+        "pageNumber": 0,
+        "pageSize": 15,
+        "sort": {
+            "empty": true,
+            "sorted": false,
+            "unsorted": true
+        },
+        "offset": 0,
+        "paged": true,
+        "unpaged": false
+    },
+    "last": true,
+    "totalPages": 1,
+    "totalElements": 3,
+    "size": 15,
+    "number": 0,
+    "sort": {
+        "empty": true,
+        "sorted": false,
+        "unsorted": true
+    },
+    "first": true,
+    "numberOfElements": 3,
+    "empty": false
+}

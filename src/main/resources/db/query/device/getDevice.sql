@@ -11,9 +11,8 @@ SELECT
   d.problem,
   d.observation,
   d.budget,
-  d.labor_value,
+  d.budget_fee,
   d.service_value,
-  d.labor_value_collected,
   d.has_urgency,
   d.is_revision,
   d.entry_date,
@@ -90,7 +89,8 @@ LEFT JOIN LATERAL(
 		'paymentDate', p.payment_date,
 		'paymentType', p.payment_type,
 		'paymentValue', p.payment_value,
-		'category', p.category
+		'category', p.category,
+		'receivedBy', p.received_by
 	) ORDER BY p.payment_date DESC), '[]'::json) as payments
 	FROM payments p
 	WHERE p.id_device = d.id

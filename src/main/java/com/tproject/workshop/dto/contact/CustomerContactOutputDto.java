@@ -1,10 +1,8 @@
 package com.tproject.workshop.dto.contact;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Schema(description = "Customer contact details response")
 public record CustomerContactOutputDto(
@@ -38,9 +36,4 @@ public record CustomerContactOutputDto(
         @Schema(example = "NOVO, PRONTO, APROVADO")
         String deviceStatus
 ) {
-    @JsonProperty("lastContact")
-    @Schema(name = "lastContact", example = "16/01/2024")
-    public String getFormattedLastContact() {
-        return lastContact != null ? lastContact.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null;
-    }
 }

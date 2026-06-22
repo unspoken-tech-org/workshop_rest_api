@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface TypesBrandsModelsRepository
         extends JpaRepository<BrandsModelsTypes, Integer>, TypesBrandsModelsRepositoryJdbc {
 
-    @Query(value = "SELECT id, id_brand, id_model, id_type FROM brands_models_types WHERE id_brand = :idBrand AND id_model = :idModel  AND id_type = :idType", nativeQuery = true)
+    @Query("SELECT b FROM brands_models_types b WHERE b.idBrand.idBrand = :idBrand AND b.idModel.idModel = :idModel AND b.idType.idType = :idType")
     Optional<BrandsModelsTypes> findByIdBrandAndIdModelAndIdType(@Param("idType") int idType,
                                                                  @Param("idBrand") int idBrand, @Param("idModel") int idModel);
 }

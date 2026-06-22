@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "laborValue: O valor do orçamento não pode ser negativo"
+        "message": "budgetFee: O valor do orçamento não pode ser negativo"
     }
 }

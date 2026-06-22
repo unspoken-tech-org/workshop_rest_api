@@ -1,77 +1,6 @@
 {
     "content": [
-        {
-            "deviceId": 15,
-            "customerId": 1,
-            "customerName": "Alfonso Zimmer",
-            "type": "Aspirador",
-            "brand": "Electrolux",
-            "model": "Model 5",
-            "status": "DESCARTADO",
-            "problem": "Problem 15",
-            "observation": "Observation 15",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "22/04/2021",
-            "departureDate": "04/05/2021"
-        },
-        {
-            "deviceId": 13,
-            "customerId": 1,
-            "customerName": "Alfonso Zimmer",
-            "type": "Batedeira",
-            "brand": "Britania",
-            "model": "Model 3",
-            "status": "AGUARDANDO",
-            "problem": "Problem 13",
-            "observation": "Observation 13",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "02/04/2021"
-        },
-        {
-            "deviceId": 11,
-            "customerId": 1,
-            "customerName": "Alfonso Zimmer",
-            "type": "Ventilador",
-            "brand": "Arno",
-            "model": "Model 1",
-            "status": "NOVO",
-            "problem": "Problem 11",
-            "observation": "Observation 11",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "01/04/2021"
-        },
-        {
-            "deviceId": 7,
-            "customerId": 1,
-            "customerName": "Alfonso Zimmer",
-            "type": "Liquidificador",
-            "brand": "Wallita",
-            "model": "Model 2",
-            "status": "EM_ANDAMENTO",
-            "problem": "Problem 7",
-            "observation": "Observation 7",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "10/10/2020"
-        },
-        {
-            "deviceId": 5,
-            "customerId": 1,
-            "customerName": "Alfonso Zimmer",
-            "type": "Aspirador",
-            "brand": "Electrolux",
-            "model": "Model 5",
-            "status": "DESCARTADO",
-            "problem": "Problem 5",
-            "observation": "Observation 5",
-            "hasUrgency": true,
-            "hasRevision": false,
-            "entryDate": "28/04/2017",
-            "departureDate": "28/04/2021"
-        }
+        
     ],
     "pageable": {
         "pageNumber": 10,
@@ -82,12 +11,13 @@
             "unsorted": true
         },
         "offset": 50,
-        "unpaged": false,
-        "paged": true
+        "paged": true,
+        "unpaged": false
     },
     "last": true,
-    "totalElements": 55,
-    "totalPages": 11,
+    "totalPages": 3,
+    "totalElements": 15,
+    "first": false,
     "size": 5,
     "number": 10,
     "sort": {
@@ -95,7 +25,6 @@
         "sorted": false,
         "unsorted": true
     },
-    "first": false,
-    "numberOfElements": 5,
-    "empty": false
+    "numberOfElements": 0,
+    "empty": true
 }

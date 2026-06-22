@@ -76,7 +76,7 @@ public class CustomerService {
                 .cpf(customer.getCpf())
                 .gender(customer.getGender())
                 .email(customer.getEmail())
-                .insertDate(customer.getInsertDate() != null ? customer.getInsertDate().toString() : null)
+                .createdAt(customer.getCreatedAt().toLocalDateTime())
                 .phones(phones)
                 .customerDevices(customerDevices)
                 .build();
@@ -105,8 +105,9 @@ public class CustomerService {
         return dto;
     }
 
+    @Transactional(readOnly = true)
     public Page<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
-        return customerRepository.findCustomersByFilter(filters);
+        return customerRepository.searchCustomers(filters);
     }
 
     @Transactional
