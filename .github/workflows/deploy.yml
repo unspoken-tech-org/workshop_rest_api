@@ -150,22 +150,18 @@ jobs:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          GH_USER: ${{ github.actor }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JWT_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
           JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
-          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           set -e
 
           # Write .env file on runner
-          cat > /tmp/.env <<ENVFILE
-          DB_NAME=${DB_NAME}
-          DB_USERNAME=${DB_USERNAME}
-          DB_PASSWORD=${DB_PASSWORD}
-          ADMIN_EMAIL=${ADMIN_EMAIL}
-          ENVFILE
-          sed -i 's/^          //' /tmp/.env
+          {
+            echo "DB_NAME=${DB_NAME}"
+            echo "DB_USERNAME=${DB_USERNAME}"
+            echo "DB_PASSWORD=${DB_PASSWORD}"
+            echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
+          } > /tmp/.env
           chmod 600 /tmp/.env
 
           # Write JWT keys on runner
@@ -174,52 +170,8 @@ jobs:
           chmod 600 /tmp/private-pkcs8.pem
           chmod 644 /tmp/public.pem
 
-          # Write deploy script on runner
-          cat > /tmp/deploy.sh <<DEPLOYSCRIPT
-          #!/bin/bash
-          set -e
-          cd ${DEPLOY_DIR}
-
-          # Login GHCR
-          echo "\${GH_TOKEN}" | docker login ghcr.io -u "\${GH_USER}" --password-stdin
-
-          # Pull da nova imagem do GHCR e retag para nome local do compose
-          docker pull ${REGISTRY}/${IMAGE_NAME}:\${IMAGE_TAG}
-          docker tag ${REGISTRY}/${IMAGE_NAME}:\${IMAGE_TAG} ${API_IMAGE}:latest
-
-          # Backup da imagem atual
-          if docker image inspect ${API_IMAGE}:latest >/dev/null 2>&1; then
-            docker tag ${API_IMAGE}:latest ${API_IMAGE}:backup
-            echo "Backup created: ${API_IMAGE}:backup"
-          else
-            echo "No previous image found, skipping backup"
-          fi
-
-          # Restart do servico
-          docker compose -f ${COMPOSE_FILE} up -d --remove-orphans workshop_spring_app
-          docker compose -f ${COMPOSE_FILE} ps
-
-          # Health check
-          ATTEMPTS=90
-          SLEEP=5
-          for i in \$(seq 1 \$ATTEMPTS); do
-            STATUS=\$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
-            echo "[\$i/\$ATTEMPTS] workshop-api health: \${STATUS:-unknown}"
-            if [ "\$STATUS" = "healthy" ]; then
-              echo "API is healthy"
-              exit 0
-            fi
-            sleep \$SLEEP
-          done
-          echo "API did not become healthy"
-          docker logs --tail=200 workshop-api || true
-          exit 1
-          DEPLOYSCRIPT
-          sed -i 's/^          //' /tmp/deploy.sh
-          chmod +x /tmp/deploy.sh
-
           echo "Deploy files prepared:"
-          ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/deploy.sh
+          ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem
 
       - name: Upload to server
         env:
@@ -231,7 +183,8 @@ jobs:
 
           scp -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
-            /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/deploy.sh \
+            /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
+            .github/scripts/deploy.sh \
             "${SSH_TARGET}:/tmp/"
 
           echo "Files uploaded to ${SSH_TARGET}:/tmp/"
