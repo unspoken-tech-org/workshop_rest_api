@@ -51,6 +51,7 @@ runs:
   using: composite
   steps:
     - name: Prepare deploy files on runner
+      shell: bash
       env:
         DB_NAME: ${{ inputs.db-name }}
         DB_USERNAME: ${{ inputs.db-username }}
@@ -78,6 +79,7 @@ runs:
         ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem
 
     - name: Upload files to server
+      shell: bash
       env:
         SSH_TARGET: ${{ inputs.ssh-target }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
@@ -101,6 +103,7 @@ runs:
         echo "Files uploaded to ${SSH_TARGET}:/tmp/"
 
     - name: Execute deploy on server
+      shell: bash
       env:
         SSH_TARGET: ${{ inputs.ssh-target }}
         DEPLOY_DIR: ${{ inputs.deploy-dir }}

@@ -15,6 +15,7 @@ runs:
   using: composite
   steps:
     - name: Print banner
+      shell: bash
       env:
         PREFIX: ${{ inputs.prefix }}
         IMAGE_TAG: ${{ inputs.image-tag }}
