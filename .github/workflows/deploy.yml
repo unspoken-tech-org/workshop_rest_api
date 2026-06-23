@@ -153,7 +153,7 @@ jobs:
 
           # Write SSH key
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
           # Debug SSH key
@@ -268,7 +268,7 @@ jobs:
           fi
 
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
@@ -308,7 +308,7 @@ jobs:
           sleep 5
 
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
@@ -348,7 +348,7 @@ jobs:
           sleep 5
 
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
