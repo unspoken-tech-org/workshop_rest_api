@@ -4,7 +4,7 @@
 **Repositório:** `unspoken-tech-org/workshop_rest_api` (público)
 **Data:** 20/06/2026
 **Autor:** Time de Engenharia
-**Status:** Em implementação — Fases 0.3, 0.11 e 0.13 (produção) concluídas; auditoria de SHAs concluída (versão v1.12); migração para Tailscale (v1.13); `deploy.yml` reescrito com Tailscale (v1.14); adendo sobre usuário dedicado CI/CD (v1.15); cloudflared-ssh removido do servidor (v1.16); Tailscale SSH habilitado, deploy-wrapper.sh e chaves SSH removidos (v1.17)
+**Status:** Em implementação — Fases 0.3, 0.11 e 0.13 (produção) concluídas; auditoria de SHAs concluída (versão v1.12); migração para Tailscale (v1.13); `deploy.yml` reescrito com Tailscale (v1.14); adendo sobre usuário dedicado CI/CD (v1.15); cloudflared-ssh removido do servidor (v1.16); Tailscale SSH habilitado, deploy-wrapper.sh e chaves SSH removidos (v1.17); deploy.yml validado end-to-end com GHCR pull+retag, concurrency e timeouts (v1.18)
 **Relacionado:** `SECURITY_ASSESSMENT.md` (item 2 — CI/CD)
 
 ---
@@ -102,15 +102,15 @@ tailscale up --ssh
 
 **Nota v1.16:** A Fase 0.7 (Cloudflare tunnel SSH) foi **descontinuada** — o `cloudflared-ssh.service` foi removido do servidor. O CI/CD e o acesso SSH manual agora utilizam **Tailscale**. Os containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`) permanecem ativos como proxy reverso para os endpoints web.
 
-### Próximos Passos (Pendentes — v1.17)
+### Próximos Passos (Pendentes — v1.18)
 
 1. **Remover secrets obsoletos do GitHub** — `PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_KEY`, `QA_SSH_HOST`, `QA_SSH_PORT`, `QA_SSH_KEY` (6 secrets obsoletos desde v1.17).
 
 2. **Remover chaves SSH órfãos** — `SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `SERVER_PASSPHRASE` (4 secrets antigos, Fase 0.5).
 
-3. **Corrigir bugs no `deploy.yml`** — GHCR login no deploy (problema CRÍTICO: `docker login` falha porque `$GH_TOKEN` não existe no servidor); `workflow_dispatch` ignora input `ref`.
+3. ~~**Corrigir bugs no `deploy.yml`**~~ ✅ **CONCLUÍDO (v1.18)** — GHCR login via `export` no SSH (Padrão 1); `workflow_dispatch` ref corrigido; `packages:read` adicionado ao deploy job; pull por `sha-<full-commit>` + retag.
 
-4. **Testar `deploy.yml` end-to-end** — Criar tag de homologação (`v1.3.0-rc-test`) e validar build → Tailscale → deploy → health check.
+4. ~~**Testar `deploy.yml` end-to-end**~~ ✅ **CONCLUÍDO (v1.18)** — Tag `v1.3.0-rc-test` validada com sucesso (build 1m45s, deploy 1m4s, verify 19s, cleanup 16s).
 
 5. **Migrar workflows restantes** — `deploy-qa.yml`, `deploy-gateway.yml`, `deploy-observability.yml` para hosted runner + Tailscale.
 
@@ -336,10 +336,10 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | Instalação do Tailscale no servidor | Script oficial (`tailscale.com/install.sh`) + `tailscale up --ssh` | Instalação simplificada; `--ssh` habilita SSH via Tailscale (alternative auth) |
 | Build de imagem | `docker/build-push-action@v6` (Buildx) | Constrói em buildkit isolado do runner hosted (sem expor o Docker socket do servidor de produção) |
 | Registry | GHCR (GitHub Container Registry) | Incluso no GitHub, sem custo extra, suporta tags imutáveis |
-| Deploy | SSH direto via `ssh`/`scp` (sem action de terceiros) | Conexão via Tailscale SSH (IP Tailscale + porta 22); autenticação feita pelo Tailscale (OIDC), sem precisar de `-i key`. Destino: `TS_TAILSCALE_IP:22` |
+| Deploy | **SSH direto via `ssh`/`scp`** (sem action de terceiros) | Conexão via Tailscale SSH (`TS_TAILSCALE_IP:22`); autenticação feita pelo Tailscale (OIDC) — sem precisar de `-i key`. Segue o Padrão 1 da indústria: `GITHUB_TOKEN` passado via `export` no SSH para `docker login` no servidor (v1.18) |
 | Versões de Actions | Pinned por SHA completo | Mitiga supply chain attack (tj-actions/changed-files, Mar/2025) |
 | **Triggers de deploy** | `push: tags v*` (prod, gateway, observability) + `workflow_dispatch` (todos) | `branches` removido — deploys disparam apenas na criação de tags, não em commits em branches |
-| **Secrets** | Migrados do self-hosted para GitHub Secrets (inalterados) + novos (4 SSH + 1 Tailscale Auth Key, sem CF Access) | **Tailscale Auth Key** (`TS_AUTH_KEY`) compartilhado prod+QA; `TS_TAILSCALE_IP` é o IP do servidor na mesh; chaves SSH continuam separadas por ambiente |
+| **Secrets** | Migrados do self-hosted para GitHub Secrets (inalterados) + novos (2 SSH user + 1 Tailscale Auth Key, sem CF Access) | **Tailscale Auth Key** (`TS_AUTH_KEY`) compartilhado prod+QA (auth key, não OAuth client — v1.18); `TS_TAILSCALE_IP` é o IP do servidor na mesh; `GITHUB_TOKEN` usado para GHCR pull no servidor (export via SSH — Padrão 1 da indústria) |
 
 ### 3.3 Mapeamento Workflow por Workflow
 
@@ -363,19 +363,24 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | build | `echo $JWT_RSA_PRIVATE_KEY_B64 | base64 -d > key` | **Remover** |
 | build | `docker compose build --no-cache` | **Substituir por** `docker/build-push-action@v6` (Buildx) → GHCR |
 | build | `docker tag API_IMAGE:latest API_IMAGE:backup` | **Mover para step no servidor** (via SSH) |
-| build | — | **Novo:** `docker/login-action` + push GHCR com tags `<git-tag>`, `sha-<7>`, `latest` |
-| deploy | `docker compose up -d` no host | **Substituir por** `appleboy/ssh-action@v1` (destino `TS_TAILSCALE_IP:22` — IP Tailscale do servidor, v1.13) |
+| build | — | **Novo:** `docker/login-action` + push GHCR com tags `<git-tag>`, `sha-<full-commit>`, `latest` |
+| deploy | `docker compose up -d` no host | **Substituir por** `ssh`/`scp` direto via Tailscale SSH (`TS_TAILSCALE_IP:22`) — sem action de terceiros (v1.18) |
 | deploy | `docker inspect ... health check` | **Mover para step SSH no servidor** |
 | deploy | Rollback com backup image | **Mover para step SSH no servidor** — rollback via tag `:backup` retida localmente no servidor (a tag `latest` no GHCR é sobrescrita a cada push e **não pode** ser usada para reversão) |
 | deploy | — | **Gate humana:** env `production` com required reviewers (aplicada já na Fase 1) |
-| deploy | — | **v1.13 — NEW:** step de setup Tailscale: `tailscale/github-action@v4` com `authkey` (TS_AUTH_KEY), `tags: tag:ci`, `ping: TS_TAILSCALE_IP` — cria nó efêmero na rede mesh antes do `appleboy/ssh-action` |
+| deploy | — | **v1.13:** step de setup Tailscale: `tailscale/github-action@v4` com `authkey` (TS_AUTH_KEY), `tags: tag:ci`, `ping: TS_TAILSCALE_IP` — cria nó efêmero na rede mesh |
+| deploy | — | **v1.18:** GHCR login no servidor via `export GH_USER/GH_TOKEN` no SSH (Padrão 1 da indústria). Imagem puxada por `sha-<full-commit>` + retag para nome local do compose (Opção B). `packages: read` necessário no deploy job |
 | verify | `pgbackrest check` | **Mover para step SSH no servidor** |
 | verify | `docker compose ps` | **Mover para step SSH no servidor** |
 | cleanup | `docker image prune -f` | **Mover para step SSH no servidor** |
 
-**Imagem GHCR:** `ghcr.io/unspoken-tech-org/workshop_rest_api` com tags `<git-tag>`, `sha-<7>`, `latest`.
+**Imagem GHCR:** `ghcr.io/unspoken-tech-org/workshop_rest_api` com tags `<git-tag>`, `sha-<full-commit>`, `latest`.
+
+**Pull no servidor (v1.18 — Opção B):** o deploy script puxa a imagem do GHCR por `sha-<full-commit>` (tag imutável) e retag para o nome local do compose (`workshop_rest_api-workshop_spring_app:latest`). O `docker compose up` usa a imagem local. Isso evita alterar o `docker-compose-production.yml` e funciona tanto para deploy remoto quanto para build local.
 
 **Testes no CI release:** **não** roda `./gradlew test` por enquanto (paridade com workflow atual; CI em PRs roda testes via `ci.yml` da Fase 0.6). Meta futura: adicionar `./gradlew test` no job `build` da release.
+
+**Validação (v1.18):** deploy end-to-end validado com tag `v1.3.0-rc-test` em 23/06/2026. Jobs `build` (1m45s), `deploy` (1m4s), `verify` (19s), `cleanup` (16s) — todos concluídos com sucesso. GHCR login, pull por SHA, retag, health check e pgBackRest check funcionando.
 
 #### 3.3.2 `deploy-gateway.yml` (Deploy Gateway Stack)
 
@@ -397,7 +402,7 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | `docker ps | grep caddy-gateway` (health check) | **Mover para step SSH no servidor** |
 | — | **Gate humana:** env `production` com required reviewers (igual deploy prod) |
 | — | **Backup:** `docker tag caddy-gateway:latest caddy-gateway:backup` (sem rollback automático; uso manual) |
-| — | **v1.13 — NEW:** step `tailscale/github-action@v4` cria nó efêmero na rede mesh antes do `appleboy/ssh-action` (mesmo Tailscale do deploy prod) |
+| — | **v1.13:** step `tailscale/github-action@v4` cria nó efêmero na rede mesh antes do `ssh`/`scp` (mesmo Tailscale do deploy prod) |
 
 **Imagem GHCR:** `ghcr.io/unspoken-tech-org/workshop_rest_api-caddy-gateway` (subpacote do owner) com tags `<git-tag>`, `sha-<7>`, `latest`.
 
@@ -411,13 +416,13 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 
 **Mudanças:**
 
-- Mesma reestruturação do `deploy.yml` (hosted + GHCR + `appleboy/ssh-action` via Tailscale).
+- Mesma reestruturação do `deploy.yml` (hosted + GHCR + `ssh`/`scp` via Tailscale).
 - Sem rollback automático (decisão mantida do workflow atual).
 - Sem pgBackRest (QA é ambiente descartável).
 - Chave SSH **separada** da prod (`QA_SSH_KEY`).
 - Imagem GHCR: tag `qa-<sha-7>` apenas (**sem `latest`**); reaproveita a imagem da prod (configuração vem de `.env` + compose).
 - Sem gate humana de env (deploy manual via `workflow_dispatch` já exige clique).
-- **Step de setup Tailscale (v1.13)**: `tailscale/github-action@v4` cria nó efêmero na rede mesh antes do `appleboy/ssh-action` (mesmo Tailscale do prod).
+- **Step de setup Tailscale (v1.13)**: `tailscale/github-action@v4` cria nó efêmero na rede mesh antes do `ssh`/`scp` (mesmo Tailscale do prod).
 - **Concurrency (v1.7)**: `concurrency: { group: qa-deploy, cancel-in-progress: true }` — QA é descartável; cancels em curso liberam o servidor.
 - Smoke test: `curl https://api-qa.eletroluk.com/api/health` retorna 200; `./gradlew integrationTests --args='--spring.profiles.active=qa'` passa localmente.
 
@@ -431,12 +436,12 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 
 **Mudanças:**
 
-- Mesma reestruturação do `deploy-gateway.yml` (hosted + `appleboy/ssh-action` via Tailscale).
+- Mesma reestruturação do `deploy-gateway.yml` (hosted + `ssh`/`scp` via Tailscale).
 - **Sem build de imagem no GHCR** — Loki/Grafana/Promtail são imagens Docker Hub oficiais. Não requer `packages: write` no `GITHUB_TOKEN`.
 - Gate humana do env `production` com required reviewers (igual prod/gateway).
 - Reusa `PROD_SSH_*` (mesmo servidor).
 - Sem rollback automático.
-- **v1.13 — NEW:** step `tailscale/github-action@v4` cria nó efêmero na rede mesh antes do `appleboy/ssh-action` (mesmo Tailscale dos deploys prod/gateway — observability está no mesmo host de prod).
+- **v1.13:** step `tailscale/github-action@v4` cria nó efêmero na rede mesh antes do `ssh`/`scp` (mesmo Tailscale dos deploys prod/gateway — observability está no mesmo host de prod).
 - Validação simplificada (item 4 da Fase 4):
   - **Gate de falha:** Promtail rodando (3 instâncias: prod, qa, gateway); labels em Loki (campo `environment`); datasource Loki no Grafana.
   - **Warning apenas:** ingestão de logs (pode dar falso negativo em janelas de manutenção).
@@ -461,10 +466,10 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | **`QA_SSH_PORT`** | ~~deploy-qa.yml~~ | ⚠️ **OBSOLETO (v1.17)** — idem `PROD_SSH_PORT`. |
 | **`QA_SSH_USER`** | deploy-qa.yml | `workshop` (ainda necessário) |
 | **`QA_SSH_KEY`** | ~~deploy-qa.yml~~ | ⚠️ **OBSOLETO (v1.17)** — idem `PROD_SSH_KEY`. Nunca foi adicionada ao servidor. |
-| **`TS_AUTH_KEY` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | Auth key do Tailscale (usado pela `tailscale/github-action@v4` para autenticar nós efêmeros na rede mesh; expira em 90 dias — renovação manual) |
-| **`TS_TAILSCALE_IP` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | IP Tailscale do servidor na rede mesh (ex.: `100.x.x.x`) — destino do `appleboy/ssh-action` |
+| **`TS_AUTH_KEY` (NOVO, v1.13, revisado v1.18)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | Auth key do Tailscale (usado pela `tailscale/github-action@v4` para autenticar nós efêmeros na rede mesh; expira em 90 dias — renovação manual). **Nota v1.18:** era documentado como OAuth Client (v1.13); agora é auth key (revisado após migração de OAuth para auth key no Tailscale Admin) |
+| **`TS_TAILSCALE_IP` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | IP Tailscale do servidor na rede mesh (ex.: `100.x.x.x`) — destino do `ssh`/`scp` |
 
-> **Total de secrets novos (v1.13, revisado v1.17):** Originalmente **5** (4 SSH prod + 3 Tailscale − 2 CF Access antigos). Com v1.17, os 4 secrets SSH (`PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_KEY`, `QA_SSH_HOST`, `QA_SSH_PORT`, `QA_SSH_KEY`) são **obsoletos** — Tailscale SSH autentica via OIDC, sem chaves SSH. Secret efetivamente necessário: **`PROD_SSH_USER`** (1) + **`QA_SSH_USER`** (1) + **`TS_AUTH_KEY`** (1) + **`TS_TAILSCALE_IP`** (1) = **4 secrets novos**. Os secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` foram **removidos** (Service Token do Cloudflare Zero Trust não é mais necessário — o cloudflared-ssh.service foi descontinuado). Os secrets `CF_API_TOKEN`, `CF_API_TOKEN_QA`, `CLOUDFLARE_TUNNEL_TOKEN` e `CLOUDFLARE_TUNNEL_TOKEN_QA` permanecem para os containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`).
+> **Total de secrets novos (v1.13, revisado v1.18):** Originalmente **5** (4 SSH prod + 3 Tailscale − 2 CF Access antigos). Com v1.17, os 4 secrets SSH são **obsoletos**. Com v1.18, `TS_AUTH_KEY` é auth key (não OAuth). Secret efetivamente necessário: **`PROD_SSH_USER`** (1) + **`QA_SSH_USER`** (1) + **`TS_AUTH_KEY`** (1) + **`TS_TAILSCALE_IP`** (1) = **4 secrets novos**. `GITHUB_TOKEN` (secreto automático) é usado para GHCR pull no servidor via `export` no SSH (Padrão 1 da indústria) — não requer secret extra. Os secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` foram **removidos** (Service Token do Cloudflare Zero Trust não é mais necessário — o cloudflared-ssh.service foi descontinuado). Os secrets `CF_API_TOKEN`, `CF_API_TOKEN_QA`, `CLOUDFLARE_TUNNEL_TOKEN` e `CLOUDFLARE_TUNNEL_TOKEN_QA` permanecem para os containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`).
 
 > **Decisão sobre `PROD_SSH_HOST` (v1.13 → obsoleto v1.17):** originalmente, `PROD_SSH_HOST` mudou de `localhost` (antigo, para listener do `cloudflared access ssh`) para o **IP Tailscale do servidor** (`TS_TAILSCALE_IP`). Com Tailscale SSH habilitado (v1.17), o runner conecta diretamente em `TS_TAILSCALE_IP:22` — não há need de `PROD_SSH_HOST` ou `PROD_SSH_PORT` separados.
 
@@ -482,7 +487,7 @@ permissions:
   contents: read   # Para checkout
 ```
 
-**Exceção (revisada v1.5):** os jobs `build` que fazem push para o GHCR (`deploy.yml` e `deploy-gateway.yml`) requerem `packages: write`. Esses jobs declaram permissões elevadas **apenas no escopo do próprio job**, mantendo o restante do workflow com `contents: read` apenas:
+**Exceção (revisada v1.18):** os jobs `build` que fazem push para o GHCR (`deploy.yml` e `deploy-gateway.yml`) requerem `packages: write`. Os jobs `deploy` que fazem pull do GHCR requerem `packages: read` (v1.18 — necessário para `docker pull` no servidor via `GITHUB_TOKEN`). Esses jobs declaram permissões elevadas **apenas no escopo do próprio job**, mantendo o restante do workflow com `contents: read` apenas:
 
 ```yaml
 jobs:
@@ -496,7 +501,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read    # Default — sem packages: write
+      contents: read
+      packages: read    # Necessário para pull no GHCR (v1.18)
     steps: ...
 ```
 
@@ -525,9 +531,9 @@ Actions a pinar (com SHA da última release estável conhecida em 16/06/2026):
 | `actions/cache` | `1bd1e32a3bdc45362d1e726936510720a7c30a57` | v4.2.0 |
 | `docker/build-push-action` | `c382f710d39a5bb4e430307530a720f50c2d3318` | v6.0.0 |
 | `docker/login-action` | `0d4c9c5ea7693da7b068278f7b52bda2a190a446` | v3.2.0 |
-| `appleboy/ssh-action` | `029f5b4aeeeb58fdfe1410a5d17f967dacf36262` | v1.0.3 |
+| `tailscale/github-action` | `306e68a486fd2350f2bfc3b19fcd143891a4a2d8` | v4.1.2 |
 
-> **Nota sobre `appleboy/ssh-action`:** esta action é de terceiros, amplamente auditada e usada pela comunidade. Pinada por SHA imutável na v1.12. Alternativa: implementar step `run:` que invoca `ssh` via `apt-get install openssh-client` + `ssh -i` (sem dependência de terceiros).
+> **Nota sobre SSH (v1.18):** o deploy usa `ssh`/`scp` direto (sem action de terceiros). O `tailscale/github-action` cria o nó efêmero na rede mesh; o `ssh`/`scp` conecta diretamente via Tailscale SSH (OIDC). Não há dependência de `appleboy/ssh-action` ou qualquer action de SSH.
 
 #### 3.6.1 Como Encontrar e Validar SHAs de Actions (v1.12)
 
@@ -585,7 +591,7 @@ O projeto inclui o script `scripts/audit-action-shas.sh` (Tarefa 0.6.1) que audi
 
 ### Fase 0 — Preparação (30 min)
 
-**Objetivo:** Mapear o estado atual e gerar SSH keys dedicadas com isolamento por comando.
+**Objetivo (revisado v1.18):** Mapear o estado atual e preparar o repositório para a migração. ~~Gerar SSH keys dedicadas~~ (obsoleto v1.17 — Tailscale SSH autentica via OIDC).
 
 | # | Tarefa (revisada v1.7) | Owner | Entregável |
 |---|--------|-------|------------|
@@ -780,7 +786,7 @@ ingress:
 
 | # | Tarefa (revisada v1.13) | Dependência |
 |---|--------|-------------|
-| 1.1 | Reescrever `.github/workflows/deploy.yml` com `runs-on: ubuntu-latest`. Job `build`: `actions/checkout` + `actions/setup-java` (JDK 21) + `actions/cache` (Gradle) + `./gradlew build -x test` + `docker/login-action` + `docker/build-push-action@v6` → GHCR com tags `<git-tag>`, `sha-<7>`, `latest` (permissões elevadas: `contents: read` + `packages: write`). Job `deploy`: **`tailscale/github-action@v4`** (step 1 — nó efêmero na rede mesh) + `appleboy/ssh-action` para materializar `.env`/chaves JWT, `docker compose pull` + `up -d`, health check (90 * 5s), rollback (tag `:backup` no servidor), pgBackRest check, `docker image prune` | Fase 0.7 |
+| 1.1 | Reescrever `.github/workflows/deploy.yml` com `runs-on: ubuntu-latest`. Job `build`: `actions/checkout` + `actions/setup-java` (JDK 21) + `actions/cache` (Gradle) + `./gradlew build -x test` + `docker/login-action` + `docker/build-push-action@v6` → GHCR com tags `<git-tag>`, `sha-<full-commit>`, `latest` (permissões elevadas: `contents: read` + `packages: write`). Job `deploy`: **`tailscale/github-action@v4`** (step 1 — nó efêmero na rede mesh) + `ssh`/`scp` direto via Tailscale SSH para materializar `.env`/chaves JWT, GHCR pull por SHA + retag, `docker compose up -d`, health check (90 * 5s), rollback (tag `:backup` no servidor), pgBackRest check, `docker image prune`. **packages: read** necessário no deploy job para GHCR pull (v1.18) | Fase 0.7 |
 | 1.1b | Configurar env `production` no GitHub com **required reviewers** (mantenedor como reviewer inicial) — gate humana aplicada **já na Fase 1**, não na Fase 5 | 1.1 |
 | 1.2 | Adicionar **5 secrets novos** ao GitHub (`PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_USER`, `PROD_SSH_KEY`, `TS_AUTH_KEY`, `TS_TAILSCALE_IP`) | 1.1 |
 | 1.3 | Testar em tag de homologação: criar tag `v1.3.0-rc1` em branch de release (`release/1.3.0`) | 1.2 |
@@ -1209,7 +1215,7 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 | Build no hosted runner falha por diferença de ambiente (locale, timezone, etc.) | Média | Médio | Usar `ubuntu-latest` (mesmo OS); `actions/setup-java@v4` padroniza JDK 21; **camada L2 (`build-image.yml` da Fase 0.6.1) exercita build + smoke efêmero a cada push em `release/*`, falhando cedo antes de envolver SSH** |
 | SSH para o servidor falha por firewall/porta bloqueada | Baixa | Alto | Tailscale usa **WireGuard (UDP)** — funciona atrás de NAT sem port mapping; nenhuma porta pública necessária no servidor |
 | Tempo de deploy aumenta (cold start do hosted runner) | Média | Baixo | ~30-60s extras por deploy (cold start + pull de imagem GHCR); aceitável para cadência de release atual; `timeout-minutes: 45` no `deploy` (Fase 6) |
-| Secrets de SSH vazam em logs | Baixa | Alto | `appleboy/ssh-action` não loga conteúdo de comandos por padrão; `TS_AUTH_KEY` passado como **env var** (não CLI arg) para não aparecer em `ps aux` |
+| Secrets de SSH vazam em logs | Baixa | Alto | `ssh`/`scp` direto não loga conteúdo de comandos por padrão; `TS_AUTH_KEY` passado como **env var** (não CLI arg) para não aparecer em `ps aux` |
 | `packages: write` no job `build` amplia blast radius do `GITHUB_TOKEN` | Baixa | Médio | Permissão declarada **apenas no escopo do job** (não no workflow inteiro); `contents: read` em todos os demais jobs; **follow-up (v1.7):** considerar `attestations: write` (Fase 6) para build provenance SLSA |
 | Trivy scan bloqueia deploy por falso positivo (modo fail desde o início) | Média | Médio | **v1.7 — endurecimento gradual:** iniciar com `trivy fs --exit-code 0 --severity HIGH,CRITICAL` (relatório, não-bloqueante) por 2 semanas para gerar baseline; endurecer para `--exit-code 1` apenas após findings conhecidos serem mitigados ou aceitos. Build roda em jobs separados para fácil rollback do scan |
 | **Limite do plano Tailscale Personal (1.000 min efêmeros/mês)** | Média | Alto | Monitorar uso mensal via dashboard Tailscale; upgrade para Standard ($8/mês) se necessário; a taxa atual (~200 deploys/mês) cabe no limite; deploys rápidos (<5 min) consomem pouco |
@@ -1297,7 +1303,7 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 - [actions/setup-java](https://github.com/actions/setup-java) — Setup JDK
 - [actions/cache](https://github.com/actions/cache) — Cache Gradle dependencies
 - [docker/build-push-action](https://github.com/docker/build-push-action) — Build & push Docker image
-- [appleboy/ssh-action](https://github.com/appleboy/ssh-action) — SSH remote commands
+- [tailscale/github-action](https://github.com/tailscale/github-action) — Tailscale mesh network setup
 
 ### 10.4 Referências de Segurança Citadas no `SECURITY_ASSESSMENT.md`
 - Sysdig: [Self-hosted runners como backdoors (Shai-Hulud)](https://www.sysdig.com/blog/how-threat-actors-are-using-self-hosted-github-actions-runners-as-backdoors)
@@ -1419,3 +1425,4 @@ gh secret set PROD_SSH_USER --body "ci-deploy"
 | 1.15 | 23/06/2026 | Eng. | **Adendo v1.15 — Usuário dedicado para CI/CD via Tailscale SSH.** (1) Justificativa: `workshop` é usado para acesso manual e CI/CD, misturando audit logs e blast radius. (2) Solução: criar usuário `ci-deploy` dedicado ao CI/CD, mantendo `workshop` para acesso manual. (3) Tarefas: criar `ci-deploy` no servidor, adicionar ao grupo `workshop`, ajustar ACL Tailscale (`users: ["ci-deploy"]`), atualizar `PROD_SSH_USER` no GitHub, testar com `test-tailscale-ssh.yml`. (4) Risco: se Tailscale cair, CI/CD não funciona — mitigado mantendo `workshop` + Cloudflare tunnel para acesso manual. (5) Checklist de validação adicionado no adendo. |
 | 1.16 | 23/06/2026 | Eng. | **Remoção do cloudflared-ssh do servidor.** (1) `cloudflared-ssh.service` removido — tunnel SSH nativo não é mais necessário (CI/CD e acesso manual usam Tailscale). (2) Fase 0.7 marcada como "descontinuada" no PRD. (3) Containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`) permanecem ativos como proxy reverso para endpoints web. (4) Secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` removidos (Service Token obsoleto). (5) Diagrama de arquitetura atualizado — bloco Cloudflare tunnel SSH removido. (6) Riscos do cloudflared-ssh removidos; novo risco "Tailscale não reconecta após reboot" adicionado. (7) `deploy.yml` — trigger corrigido (apenas tags, sem `branches`); step "Deploy via SSH" separado em 3 steps (Prepare, Upload, Execute). (8) Tailscale resiliente a reboot: módulo `tun` configurado em `/etc/modules-load.d/tun.conf`; `tailscaled` habilitado no systemd. |
 | 1.17 | 23/06/2026 | Eng. | **Tailscale SSH habilitado — chaves SSH e deploy-wrapper.sh removidos.** (1) `tailscale up --ssh` habilitado no servidor — autenticação SSH via identidade Tailscale (OIDC), não via `authorized_keys`. (2) `deploy-wrapper.sh` removido do servidor — sem `command=` no `authorized_keys`, o wrapper nunca é invocado. (3) Linhas das chaves públicas (`deploy_key_prod.pub`, `deploy_key_qa.pub`) removidas do `authorized_keys`. (4) Secrets `PROD_SSH_KEY`, `QA_SSH_KEY`, `PROD_SSH_HOST`, `PROD_SSH_PORT`, `QA_SSH_HOST`, `QA_SSH_PORT` marcados como **obsoletos** — podem ser removidos do GitHub. (5) Apenas `PROD_SSH_USER` e `QA_SSH_USER` continuam necessários. (6) Fase 0.3 marcada como "descontinuada" no PRD. (7) Fase 0.11 revisada — 6 de 8 secrets SSH obsoletos. (8) Segurança do CI/CD agora depende 100% do Tailscale ACL (sem segunda camada de autenticação SSH). (9) Configuração atual do servidor atualizada (seção 0). (10) Próximos passos atualizados com lista de pendências. |
+| 1.18 | 23/06/2026 | Eng. | **Deploy.yml validado end-to-end com GHCR pull+retag, concurrency e timeouts.** (1) **GHCR login no servidor** via `export GH_USER/GH_TOKEN` no SSH — Padrão 1 da indústria (não requer PAT separado; `GITHUB_TOKEN` de curta duração). (2) **GHCR pull por SHA tag** — imagem puxada por `sha-<full-commit>` (tag imutável) + retag para nome local do compose (Opção B — não altera `docker-compose-production.yml`). (3) **`packages: read`** adicionado ao deploy job — necessário para `docker pull` via `GITHUB_TOKEN`. (4) **`workflow_dispatch` ref** — checkout e image tag usam `github.event.inputs.ref || github.ref`. (5) **Concurrency** — `group: production, cancel-in-progress: false` (deploys em fila). (6) **Timeouts** — build: 20min, deploy: 45min, verify: 30min, cleanup: 10min. (7) **Teste end-to-end** — tag `v1.3.0-rc-test` validada com sucesso: build (1m45s), deploy (1m4s), verify (19s), cleanup (16s). (8) **appleboy/ssh-action removido** — deploy usa `ssh`/`scp` direto (sem dependência de terceiros). (9) **tailscale/github-action** adicionado à tabela de SHAs (seção 3.6). (10) Seções 3.2, 3.3.1, 3.4, 3.5, 3.6 atualizadas. (11) Próximos passos: itens 3 e 4 marcados como concluídos. |
