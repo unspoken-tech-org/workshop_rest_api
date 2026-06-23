@@ -1,7 +1,7 @@
 name: Print Deploy Banner
 description: >
   Imprime banner padronizado com informações do deploy (versão, commit, ator, trigger, imagem).
-  Usa ${{ github.* }} internamente para evitar duplicação entre jobs.
+  Usa o contexto github internamente para evitar duplicação entre jobs.
 
 inputs:
   prefix:
