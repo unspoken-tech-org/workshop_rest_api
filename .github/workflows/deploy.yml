@@ -156,6 +156,15 @@ jobs:
           printf '%s' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
+          # Debug SSH key
+          echo "=== SSH KEY DEBUG ==="
+          ssh-keygen -l -f ~/.ssh/deploy_key || echo "KEY INVALID"
+          echo "First line: $(head -1 ~/.ssh/deploy_key)"
+          echo "Last line: $(tail -1 ~/.ssh/deploy_key)"
+          echo "File size: $(wc -c < ~/.ssh/deploy_key) bytes"
+          echo "Line count: $(wc -l < ~/.ssh/deploy_key)"
+          echo "====================="
+
           # Write .env file on runner (unquoted heredoc: expands runner vars)
           cat > /tmp/.env <<ENVFILE
           DB_NAME=${DB_NAME}
