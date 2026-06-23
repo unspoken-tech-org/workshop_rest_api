@@ -1,0 +1,123 @@
+name: Deploy via SSH
+description: >
+  Prepara .env + JWT keys no runner, faz scp para o servidor e executa deploy.sh.
+  Requer Setup Tailscale executado previamente no job (depende de túnel WireGuard).
+
+inputs:
+  ssh-target:
+    description: 'Destino SSH no formato user@host'
+    required: true
+  deploy-dir:
+    description: 'Diretório de deploy no servidor'
+    required: true
+  registry:
+    description: 'Registry Docker (ex: ghcr.io)'
+    required: true
+  image-name:
+    description: 'Nome completo da imagem no registry (ex: org/repo)'
+    required: true
+  local-image-name:
+    description: 'Nome local da imagem gerado pelo docker compose'
+    required: true
+  compose-file:
+    description: 'Nome do arquivo docker-compose no servidor'
+    required: true
+  image-tag:
+    description: 'Tag da imagem a ser deployada'
+    required: true
+  deploy-script:
+    description: 'Caminho do deploy.sh no repositório'
+    required: true
+  db-name:
+    description: 'Nome do banco PostgreSQL'
+    required: true
+  db-username:
+    description: 'Usuário do banco'
+    required: true
+  db-password:
+    description: 'Senha do banco'
+    required: true
+  admin-email:
+    description: 'Email do admin da aplicação'
+    required: true
+  jwt-private-b64:
+    description: 'Chave privada RSA em base64'
+    required: true
+  jwt-public-b64:
+    description: 'Chave pública RSA em base64'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare deploy files on runner
+      env:
+        DB_NAME: ${{ inputs.db-name }}
+        DB_USERNAME: ${{ inputs.db-username }}
+        DB_PASSWORD: ${{ inputs.db-password }}
+        ADMIN_EMAIL: ${{ inputs.admin-email }}
+        JWT_PRIVATE_KEY: ${{ inputs.jwt-private-b64 }}
+        JWT_PUBLIC_KEY: ${{ inputs.jwt-public-b64 }}
+      run: |
+        set -e
+
+        {
+          echo "DB_NAME=${DB_NAME}"
+          echo "DB_USERNAME=${DB_USERNAME}"
+          echo "DB_PASSWORD=${DB_PASSWORD}"
+          echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
+        } > /tmp/.env
+        chmod 600 /tmp/.env
+
+        echo "${JWT_PRIVATE_KEY}" | base64 -d > /tmp/private-pkcs8.pem
+        echo "${JWT_PUBLIC_KEY}" | base64 -d > /tmp/public.pem
+        chmod 600 /tmp/private-pkcs8.pem
+        chmod 644 /tmp/public.pem
+
+        echo "Deploy files prepared:"
+        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem
+
+    - name: Upload files to server
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
+      run: |
+        set -e
+
+        mkdir -p ~/.docker
+        chmod 700 ~/.docker
+
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
+          "${DEPLOY_SCRIPT}" \
+          "${SSH_TARGET}:/tmp/"
+
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          "${HOME}/.docker/config.json" \
+          "${SSH_TARGET}:~/.docker/config.json.tmp"
+
+        echo "Files uploaded to ${SSH_TARGET}:/tmp/"
+
+    - name: Execute deploy on server
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        REGISTRY: ${{ inputs.registry }}
+        IMAGE_NAME: ${{ inputs.image-name }}
+        LOCAL_IMAGE_NAME: ${{ inputs.local-image-name }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+      run: |
+        set -e
+
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+          "${SSH_TARGET}" \
+          env DEPLOY_DIR="${DEPLOY_DIR}" \
+              REGISTRY="${REGISTRY}" \
+              IMAGE_NAME="${IMAGE_NAME}" \
+              LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME}" \
+              COMPOSE_FILE="${COMPOSE_FILE}" \
+              IMAGE_TAG="${IMAGE_TAG}" \
+              bash /tmp/deploy.sh

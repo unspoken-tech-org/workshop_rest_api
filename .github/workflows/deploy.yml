@@ -1,3 +1,18 @@
+# ===========================================================
+# Workflow: Deploy Spring Boot App to Production
+# ===========================================================
+# Orquestra: build GHCR → deploy via SSH → verify → cleanup
+# Dependências locais:
+#   .github/actions/deploy-via-ssh  → upload + execução deploy.sh
+#   .github/actions/print-banner    → log padronizado de status
+#   .github/actions/setup-tailscale → túnel WireGuard para SSH
+# Scripts remotos (executados no servidor):
+#   .github/scripts/deploy.sh       → pull, retag, restart, healthcheck
+#   .github/scripts/rollback.sh     → restaura imagem :backup
+#   .github/scripts/verify.sh       → pgbackrest + status containers
+#   .github/scripts/cleanup.sh      → prune de imagens Docker
+# ===========================================================
+
 name: Deploy Spring Boot App v10 (Hosted + Tailscale)
 
 on:
@@ -25,7 +40,14 @@ env:
   IMAGE_NAME: unspoken-tech-org/workshop_rest_api
   COMPOSE_FILE: docker-compose-production.yml
   DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
-  API_IMAGE: workshop_rest_api-workshop_spring_app
+  LOCAL_IMAGE_NAME: workshop_rest_api-workshop_spring_app
+  SSH_USER: ${{ secrets.PROD_SSH_USER }}
+  TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
+  SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
+  DEPLOY_SCRIPT: .github/scripts/deploy.sh
+  ROLLBACK_SCRIPT: .github/scripts/rollback.sh
+  VERIFY_SCRIPT: .github/scripts/verify.sh
+  CLEANUP_SCRIPT: .github/scripts/cleanup.sh
 
 jobs:
   # ===========================================
@@ -39,7 +61,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image-tag: ${{ steps.prep.outputs.tag }}
+      deployed-image-tag: ${{ steps.prep.outputs.tag }}
 
     steps:
       - name: Harden Runner
@@ -57,15 +79,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-
-      - name: Cache Gradle
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: ${{ runner.os }}-gradle-
+          cache: 'gradle'
 
       - name: Build with Gradle (skip tests)
         run: ./gradlew build -x test
@@ -100,21 +114,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Show build info
-        env:
-          GIT_REF_NAME: ${{ github.ref_name }}
-          GIT_SHA: ${{ github.sha }}
-          GIT_ACTOR: ${{ github.actor }}
-          GIT_EVENT: ${{ github.event_name }}
-          IMAGE_TAG: ${{ steps.prep.outputs.tag }}
-        run: |
-          echo "=== BUILD INFO ==="
-          echo "Version: ${GIT_REF_NAME}"
-          echo "Commit:  ${GIT_SHA}"
-          echo "Actor:   ${GIT_ACTOR}"
-          echo "Trigger: ${GIT_EVENT}"
-          echo "Image:   ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-          echo "=================="
+      - name: Print build banner
+        uses: ./.github/actions/print-banner
+        with:
+          prefix: BUILD
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
 
   # ===========================================
   # JOB 2: DEPLOY
@@ -140,92 +144,34 @@ jobs:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Setup Tailscale
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: ./.github/actions/setup-tailscale
         with:
           authkey: ${{ secrets.TS_AUTH_KEY }}
-          tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
-      - name: Prepare deploy files
-        env:
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          JWT_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
-          JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
-        run: |
-          set -e
-
-          # Write .env file on runner
-          {
-            echo "DB_NAME=${DB_NAME}"
-            echo "DB_USERNAME=${DB_USERNAME}"
-            echo "DB_PASSWORD=${DB_PASSWORD}"
-            echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
-          } > /tmp/.env
-          chmod 600 /tmp/.env
-
-          # Write JWT keys on runner
-          echo "${JWT_PRIVATE_KEY}" | base64 -d > /tmp/private-pkcs8.pem
-          echo "${JWT_PUBLIC_KEY}" | base64 -d > /tmp/public.pem
-          chmod 600 /tmp/private-pkcs8.pem
-          chmod 644 /tmp/public.pem
-
-          echo "Deploy files prepared:"
-          ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem
-
-      - name: Upload to server
-        env:
-          SSH_USER: ${{ secrets.PROD_SSH_USER }}
-          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
-        run: |
-          set -e
-          SSH_TARGET="${SSH_USER}@${TS_IP}"
-
-          scp -o ConnectTimeout=30 \
-            -o StrictHostKeyChecking=no \
-            /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
-            .github/scripts/deploy.sh \
-            "${SSH_TARGET}:/tmp/"
-
-          echo "Files uploaded to ${SSH_TARGET}:/tmp/"
-
-      - name: Execute deploy on server
-        env:
-          SSH_USER: ${{ secrets.PROD_SSH_USER }}
-          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
-          GH_USER: ${{ github.actor }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
-        run: |
-          set -e
-          SSH_TARGET="${SSH_USER}@${TS_IP}"
-
-          ssh -o ConnectTimeout=30 \
-            -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" "\
-              export GH_USER='${GH_USER}' && \
-              export GH_TOKEN='${GH_TOKEN}' && \
-              export IMAGE_TAG='${IMAGE_TAG}' && \
-              set -e && \
-              cd ${DEPLOY_DIR} && \
-              mv /tmp/.env ./ && chmod 600 .env && \
-              mkdir -p config/keys && \
-              mv /tmp/private-pkcs8.pem config/keys/ && chmod 600 config/keys/private-pkcs8.pem && \
-              mv /tmp/public.pem config/keys/ && chmod 644 config/keys/public.pem && \
-              bash /tmp/deploy.sh \
-            "
+      - name: Deploy via SSH
+        uses: ./.github/actions/deploy-via-ssh
+        with:
+          ssh-target: ${{ env.SSH_TARGET }}
+          deploy-dir: ${{ env.DEPLOY_DIR }}
+          registry: ${{ env.REGISTRY }}
+          image-name: ${{ env.IMAGE_NAME }}
+          local-image-name: ${{ env.LOCAL_IMAGE_NAME }}
+          compose-file: ${{ env.COMPOSE_FILE }}
+          image-tag: ${{ needs.build.outputs.deployed-image-tag }}
+          deploy-script: ${{ env.DEPLOY_SCRIPT }}
+          db-name: ${{ secrets.DB_NAME }}
+          db-username: ${{ secrets.DB_USERNAME }}
+          db-password: ${{ secrets.DB_PASSWORD }}
+          admin-email: ${{ secrets.ADMIN_EMAIL }}
+          jwt-private-b64: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
+          jwt-public-b64: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
 
       - name: Rollback on failure
         if: failure()
-        env:
-          SSH_USER: ${{ secrets.PROD_SSH_USER }}
-          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
-          SSH_TARGET="${SSH_USER}@${TS_IP}"
           scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            .github/scripts/rollback.sh "${SSH_TARGET}:/tmp/"
+            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
           ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
             "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && /tmp/rollback.sh"
 
@@ -247,21 +193,17 @@ jobs:
           egress-policy: audit
 
       - name: Setup Tailscale
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: ./.github/actions/setup-tailscale
         with:
           authkey: ${{ secrets.TS_AUTH_KEY }}
-          tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
       - name: Verify via SSH
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          SSH_USER: ${{ secrets.PROD_SSH_USER }}
-          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
-          SSH_TARGET="${SSH_USER}@${TS_IP}"
           scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            .github/scripts/verify.sh "${SSH_TARGET}:/tmp/"
+            "${VERIFY_SCRIPT}" "${SSH_TARGET}:/tmp/"
           ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
             "${SSH_TARGET}" "chmod +x /tmp/verify.sh && DB_PASSWORD='${DB_PASSWORD}' /tmp/verify.sh"
 
@@ -284,41 +226,23 @@ jobs:
           egress-policy: audit
 
       - name: Setup Tailscale
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: ./.github/actions/setup-tailscale
         with:
           authkey: ${{ secrets.TS_AUTH_KEY }}
-          tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
       - name: Cleanup via SSH
-        env:
-          SSH_USER: ${{ secrets.PROD_SSH_USER }}
-          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
-          SSH_TARGET="${SSH_USER}@${TS_IP}"
+          scp -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            "${CLEANUP_SCRIPT}" "${SSH_TARGET}:/tmp/"
           ssh -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" \
-            'docker image prune -f && docker system df && echo "Cleanup done"'
+            "${SSH_TARGET}" "chmod +x /tmp/cleanup.sh && /tmp/cleanup.sh"
 
-      - name: Summary
+      - name: Print final banner
         if: success()
-        env:
-          GIT_REF_NAME: ${{ github.ref_name }}
-          GIT_SHA: ${{ github.sha }}
-          GIT_ACTOR: ${{ github.actor }}
-          GIT_EVENT: ${{ github.event_name }}
-          IMAGE_TAG: ${{ github.ref_name }}
-        run: |
-          echo ""
-          echo "============================================="
-          echo "  DEPLOY COMPLETED SUCCESSFULLY"
-          echo "============================================="
-          echo ""
-          echo "  Version: ${GIT_REF_NAME}"
-          echo "  Commit:  ${GIT_SHA}"
-          echo "  Actor:   ${GIT_ACTOR}"
-          echo "  Trigger: ${GIT_EVENT}"
-          echo "  Image:   ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-          echo ""
-          echo "============================================="
+        uses: ./.github/actions/print-banner
+        with:
+          prefix: DEPLOY
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}

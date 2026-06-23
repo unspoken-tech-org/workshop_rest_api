@@ -2,17 +2,33 @@
 set -e
 cd "${DEPLOY_DIR}"
 
-# Login GHCR
-echo "${GH_TOKEN}" | docker login ghcr.io -u "${GH_USER}" --password-stdin
+# Cleanup config.json do GHCR ao sair (preserva config existente do usuário)
+trap 'rm -f ~/.docker/config.json' EXIT
+
+# Setup GHCR auth
+mkdir -p ~/.docker
+mv ~/.docker/config.json.tmp ~/.docker/config.json 2>/dev/null || true
+chmod 600 ~/.docker/config.json
+
+# Setup .env
+mv /tmp/.env ./ 2>/dev/null || true
+chmod 600 .env
+
+# Setup JWT keys
+mkdir -p config/keys
+mv /tmp/private-pkcs8.pem config/keys/ 2>/dev/null || true
+chmod 600 config/keys/private-pkcs8.pem
+mv /tmp/public.pem config/keys/ 2>/dev/null || true
+chmod 644 config/keys/public.pem
 
 # Pull da nova imagem do GHCR e retag para nome local do compose
 docker pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${API_IMAGE}:latest"
+docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
 
 # Backup da imagem atual
-if docker image inspect "${API_IMAGE}:latest" >/dev/null 2>&1; then
-  docker tag "${API_IMAGE}:latest" "${API_IMAGE}:backup"
-  echo "Backup created: ${API_IMAGE}:backup"
+if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
+  docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"
+  echo "Backup created: ${LOCAL_IMAGE_NAME}:backup"
 else
   echo "No previous image found, skipping backup"
 fi
