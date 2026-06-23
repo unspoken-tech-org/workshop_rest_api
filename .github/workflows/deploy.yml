@@ -112,13 +112,6 @@ jobs:
           tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keygen -l -f ~/.ssh/deploy_key
-
       - name: Deploy via SSH
         env:
           DB_NAME: ${{ secrets.DB_NAME }}
@@ -197,14 +190,12 @@ jobs:
           # SCP files to server via Tailscale
           scp -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
-            -i ~/.ssh/deploy_key \
             /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/deploy.sh \
             "${SSH_TARGET}:/tmp/"
 
           # Execute deploy on server via Tailscale
           ssh -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
-            -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" "\
               set -e && \
               cd ${DEPLOY_DIR} && \
@@ -224,7 +215,6 @@ jobs:
           SSH_TARGET="${SSH_USER}@${TS_IP}"
           ssh -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
-            -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" \
             'set -e; cd /home/workshop/deploy/workshop_rest_api; if docker image inspect workshop_rest_api-workshop_spring_app:backup >/dev/null 2>&1; then docker tag workshop_rest_api-workshop_spring_app:backup workshop_rest_api-workshop_spring_app:latest; docker compose -f docker-compose-production.yml up -d --force-recreate workshop_spring_app; echo "Rollback executed"; else echo "No backup image found"; exit 1; fi'
 
@@ -246,12 +236,6 @@ jobs:
           tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
       - name: Verify via SSH
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -261,7 +245,6 @@ jobs:
           SSH_TARGET="${SSH_USER}@${TS_IP}"
           ssh -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
-            -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" \
             'set -e; cd /home/workshop/deploy/workshop_rest_api; PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db); if [ -z "$PG_CID" ]; then echo "Postgres container not found"; exit 1; fi; echo ">>> Checking stanza..."; docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza OK" || (docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create && docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza created and OK"); docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest info || true; STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d "\""); echo "PostgreSQL health: ${STATUS:-unknown}"; echo "=== FINAL CONTAINERS STATUS ==="; docker compose -f docker-compose-production.yml ps'
 
@@ -284,12 +267,6 @@ jobs:
           tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
       - name: Cleanup via SSH
         env:
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
@@ -298,7 +275,6 @@ jobs:
           SSH_TARGET="${SSH_USER}@${TS_IP}"
           ssh -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
-            -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" \
             'docker image prune -f && docker system df && echo "Cleanup done"'
 

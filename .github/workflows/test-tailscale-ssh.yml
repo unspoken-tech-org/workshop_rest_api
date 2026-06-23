@@ -1,0 +1,53 @@
+name: Test Tailscale SSH
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ssh:
+    name: Test SSH via Tailscale
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Test SSH - hello world
+        run: |
+          ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            workshop@${{ secrets.TS_TAILSCALE_IP }} \
+            'echo "hello world" && hostname && date'
+
+      - name: Test SCP - upload file
+        run: |
+          echo "test file content" > /tmp/test.txt
+          scp -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            /tmp/test.txt \
+            workshop@${{ secrets.TS_TAILSCALE_IP }}:/tmp/scp-test.txt
+
+      - name: Test SCP - verify uploaded file
+        run: |
+          ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            workshop@${{ secrets.TS_TAILSCALE_IP }} \
+            'cat /tmp/scp-test.txt && rm /tmp/scp-test.txt'
+
+      - name: Summary
+        if: success()
+        run: |
+          echo ""
+          echo "============================================="
+          echo "  TAILSCALE SSH TEST PASSED"
+          echo "============================================="
+          echo ""
+          echo "  SSH:      OK"
+          echo "  SCP:      OK"
+          echo "  Server:   ${{ secrets.TS_TAILSCALE_IP }}"
+          echo "  User:     workshop"
+          echo ""
+          echo "============================================="
