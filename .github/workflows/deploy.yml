@@ -131,6 +131,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JWT_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
           JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
+          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           set -e
 
@@ -159,8 +160,9 @@ jobs:
           # Login GHCR
           echo "\${GH_TOKEN}" | docker login ghcr.io -u "\${GH_USER}" --password-stdin
 
-          # Pull da nova imagem
-          docker compose -f ${COMPOSE_FILE} pull workshop_spring_app
+          # Pull da nova imagem do GHCR e retag para nome local do compose
+          docker pull ${REGISTRY}/${IMAGE_NAME}:\${IMAGE_TAG}
+          docker tag ${REGISTRY}/${IMAGE_NAME}:\${IMAGE_TAG} ${API_IMAGE}:latest
 
           # Backup da imagem atual
           if docker image inspect ${API_IMAGE}:latest >/dev/null 2>&1; then
@@ -217,6 +219,7 @@ jobs:
           TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
           GH_USER: ${{ github.actor }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           set -e
           SSH_TARGET="${SSH_USER}@${TS_IP}"
@@ -226,6 +229,7 @@ jobs:
             "${SSH_TARGET}" "\
               export GH_USER='${GH_USER}' && \
               export GH_TOKEN='${GH_TOKEN}' && \
+              export IMAGE_TAG='${IMAGE_TAG}' && \
               set -e && \
               cd ${DEPLOY_DIR} && \
               mv /tmp/.env ./ && chmod 600 .env && \
