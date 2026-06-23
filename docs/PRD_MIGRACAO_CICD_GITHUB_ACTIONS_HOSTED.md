@@ -4,7 +4,7 @@
 **Repositório:** `unspoken-tech-org/workshop_rest_api` (público)
 **Data:** 20/06/2026
 **Autor:** Time de Engenharia
-**Status:** Em implementação — Fases 0.3, 0.11 e 0.13 (produção) concluídas; auditoria de SHAs concluída (versão v1.12); migração para Tailscale (v1.13); `deploy.yml` reescrito com Tailscale (v1.14); adendo sobre usuário dedicado CI/CD (v1.15); cloudflared-ssh removido do servidor (v1.16); Tailscale SSH habilitado, deploy-wrapper.sh e chaves SSH removidos (v1.17); deploy.yml validado end-to-end com GHCR pull+retag, concurrency e timeouts (v1.18); Docker layer cache (setup-buildx + type=gha) e correção de script injection (v1.19); harden-runner (StepSecurity) em modo audit (v1.20); deploy.sh extraído para script externo (v1.21); verify.sh e rollback.sh extraídos para scripts externos (v1.22); build→deploy output sharing (v1.23)
+**Status:** Em implementação — Fases 0.3, 0.11 e 0.13 (produção) concluídas; auditoria de SHAs concluída (versão v1.12); migração para Tailscale (v1.13); `deploy.yml` reescrito com Tailscale (v1.14); adendo sobre usuário dedicado CI/CD (v1.15); cloudflared-ssh removido do servidor (v1.16); Tailscale SSH habilitado, deploy-wrapper.sh e chaves SSH removidos (v1.17); deploy.yml validado end-to-end com GHCR pull+retag, concurrency e timeouts (v1.18); Docker layer cache (setup-buildx + type=gha) e correção de script injection (v1.19); harden-runner (StepSecurity) em modo audit (v1.20); deploy.sh extraído para script externo (v1.21); verify.sh e rollback.sh extraídos para scripts externos (v1.22); build→deploy output sharing (v1.23); GHCR auth via docker config.json removendo GH_TOKEN do SSH (v1.24); adendo provenance e SBOM documentado (v1.25); composite action setup-tailscale (v1.26); cache Gradle nativo do setup-java (v1.27); SSH_TARGET centralizado em env de job (v1.28); decisão de segurança `StrictHostKeyChecking=no` documentada (v1.30); heredoc SSH inline substituído por env no SSH (v1.31); scripts externos centralizados em env vars (v1.32); config.json strategy corrigida com docker/login-action no job deploy (v1.33)
 **Relacionado:** `SECURITY_ASSESSMENT.md` (item 2 — CI/CD)
 
 ---
@@ -336,7 +336,7 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | Instalação do Tailscale no servidor | Script oficial (`tailscale.com/install.sh`) + `tailscale up --ssh` | Instalação simplificada; `--ssh` habilita SSH via Tailscale (alternative auth) |
 | Build de imagem | `docker/setup-buildx-action@v3.11.0` + `docker/build-push-action@v6` (Buildx + GHA cache) | Constrói em buildkit isolado do runner hosted (sem expor o Docker socket do servidor de produção); cache GHA (`type=gha,mode=max`) reutiliza layers entre builds (v1.19) |
 | Registry | GHCR (GitHub Container Registry) | Incluso no GitHub, sem custo extra, suporta tags imutáveis |
-| Deploy | **SSH direto via `ssh`/`scp`** (sem action de terceiros) | Conexão via Tailscale SSH (`TS_TAILSCALE_IP:22`); autenticação feita pelo Tailscale (OIDC) — sem precisar de `-i key`. Segue o Padrão 1 da indústria: `GITHUB_TOKEN` passado via `export` no SSH para `docker login` no servidor (v1.18) |
+| Deploy | **SSH direto via `ssh`/`scp`** (sem action de terceiros) | Conexão via Tailscale SSH (`TS_TAILSCALE_IP:22`); autenticação feita pelo Tailscale (OIDC) — sem precisar de `-i key`. GHCR auth via `docker config.json` copiado do runner para o servidor (v1.24) — token nunca em env remoto |
 | Versões de Actions | Pinned por SHA completo | Mitiga supply chain attack (tj-actions/changed-files, Mar/2025) |
 | **Triggers de deploy** | `push: tags v*` (prod, gateway, observability) + `workflow_dispatch` (todos) | `branches` removido — deploys disparam apenas na criação de tags, não em commits em branches |
 | **Secrets** | Migrados do self-hosted para GitHub Secrets (inalterados) + novos (2 SSH user + 1 Tailscale Auth Key, sem CF Access) | **Tailscale Auth Key** (`TS_AUTH_KEY`) compartilhado prod+QA (auth key, não OAuth client — v1.18); `TS_TAILSCALE_IP` é o IP do servidor na mesh; `GITHUB_TOKEN` usado para GHCR pull no servidor (export via SSH — Padrão 1 da indústria) |
@@ -373,14 +373,15 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | deploy | Rollback com backup image | **Mover para step SSH no servidor** — rollback via tag `:backup` retida localmente no servidor (a tag `latest` no GHCR é sobrescrita a cada push e **não pode** ser usada para reversão) |
 | deploy | — | **Gate humana:** env `production` com required reviewers (aplicada já na Fase 1) |
 | deploy | — | **v1.13:** step de setup Tailscale: `tailscale/github-action@v4` com `authkey` (TS_AUTH_KEY), `tags: tag:ci`, `ping: TS_TAILSCALE_IP` — cria nó efêmero na rede mesh |
-| deploy | — | **v1.18:** GHCR login no servidor via `export GH_USER/GH_TOKEN` no SSH (Padrão 1 da indústria). Imagem puxada por `sha-<full-commit>` + retag para nome local do compose (Opção B). `packages: read` necessário no deploy job |
+| deploy | — | **v1.18:** GHCR login no servidor via `docker config.json` copiado do runner (v1.24 — substituiu `export GH_TOKEN` no SSH). Imagem puxada por `sha-<full-commit>` + retag para nome local do compose (Opção B). `packages: read` necessário no deploy job |
+| deploy | — | **v1.33:** `docker/login-action` adicionado como step no job `deploy` para criar `config.json` com `GITHUB_TOKEN` válido no runner do deploy — necessário para a estratégia do v1.24 funcionar |
 | verify | `pgbackrest check` | **Mover para step SSH no servidor** |
 | verify | `docker compose ps` | **Mover para step SSH no servidor** |
 | cleanup | `docker image prune -f` | **Mover para step SSH no servidor** |
 
 **Imagem GHCR:** `ghcr.io/unspoken-tech-org/workshop_rest_api` com tags `<git-tag>`, `sha-<full-commit>`, `latest`.
 
-**Pull no servidor (v1.18 — Opção B):** o deploy script puxa a imagem do GHCR por `sha-<full-commit>` (tag imutável) e retag para o nome local do compose (`workshop_rest_api-workshop_spring_app:latest`). O `docker compose up` usa a imagem local. Isso evita alterar o `docker-compose-production.yml` e funciona tanto para deploy remoto quanto para build local.
+**Pull no servidor (v1.18, revisado v1.33):** o deploy script puxa a imagem do GHCR por `sha-<full-commit>` (tag imutável) e retag para o nome local do compose (`workshop_rest_api-workshop_spring_app:latest`). O `docker compose up` usa a imagem local. Isso evita alterar o `docker-compose-production.yml` e funciona tanto para deploy remoto quanto para build local. **Autenticação GHCR** é feita via `docker config.json` copiado do runner para o servidor (v1.24) — token nunca em env remoto. **Para que o `config.json` tenha credenciais válidas, o job `deploy` executa `docker/login-action` (v1.33)** com `GITHUB_TOKEN` — o login cria o `config.json` no runner do deploy, que é copiado para o servidor via scp.
 
 **Testes no CI release:** **não** roda `./gradlew test` por enquanto (paridade com workflow atual; CI em PRs roda testes via `ci.yml` da Fase 0.6). Meta futura: adicionar `./gradlew test` no job `build` da release.
 
@@ -473,7 +474,7 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | **`TS_AUTH_KEY` (NOVO, v1.13, revisado v1.18)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | Auth key do Tailscale (usado pela `tailscale/github-action@v4` para autenticar nós efêmeros na rede mesh; expira em 90 dias — renovação manual). **Nota v1.18:** era documentado como OAuth Client (v1.13); agora é auth key (revisado após migração de OAuth para auth key no Tailscale Admin) |
 | **`TS_TAILSCALE_IP` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | IP Tailscale do servidor na rede mesh (ex.: `100.x.x.x`) — destino do `ssh`/`scp` |
 
-> **Total de secrets novos (v1.13, revisado v1.18):** Originalmente **5** (4 SSH prod + 3 Tailscale − 2 CF Access antigos). Com v1.17, os 4 secrets SSH são **obsoletos**. Com v1.18, `TS_AUTH_KEY` é auth key (não OAuth). Secret efetivamente necessário: **`PROD_SSH_USER`** (1) + **`QA_SSH_USER`** (1) + **`TS_AUTH_KEY`** (1) + **`TS_TAILSCALE_IP`** (1) = **4 secrets novos**. `GITHUB_TOKEN` (secreto automático) é usado para GHCR pull no servidor via `export` no SSH (Padrão 1 da indústria) — não requer secret extra. Os secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` foram **removidos** (Service Token do Cloudflare Zero Trust não é mais necessário — o cloudflared-ssh.service foi descontinuado). Os secrets `CF_API_TOKEN`, `CF_API_TOKEN_QA`, `CLOUDFLARE_TUNNEL_TOKEN` e `CLOUDFLARE_TUNNEL_TOKEN_QA` permanecem para os containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`).
+> **Total de secrets novos (v1.13, revisado v1.24):** Originalmente **5** (4 SSH prod + 3 Tailscale − 2 CF Access antigos). Com v1.17, os 4 secrets SSH são **obsoletos**. Com v1.18, `TS_AUTH_KEY` é auth key (não OAuth). Secret efetivamente necessário: **`PROD_SSH_USER`** (1) + **`QA_SSH_USER`** (1) + **`TS_AUTH_KEY`** (1) + **`TS_TAILSCALE_IP`** (1) = **4 secrets novos**. `GITHUB_TOKEN` (secreto automático) é usado para `docker login` local no runner e `docker pull` no servidor via `config.json` copiado (v1.24) — não requer secret extra. Os secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` foram **removidos** (Service Token do Cloudflare Zero Trust não é mais necessário — o cloudflared-ssh.service foi descontinuado). Os secrets `CF_API_TOKEN`, `CF_API_TOKEN_QA`, `CLOUDFLARE_TUNNEL_TOKEN` e `CLOUDFLARE_TUNNEL_TOKEN_QA` permanecem para os containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`).
 
 > **Decisão sobre `PROD_SSH_HOST` (v1.13 → obsoleto v1.17):** originalmente, `PROD_SSH_HOST` mudou de `localhost` (antigo, para listener do `cloudflared access ssh`) para o **IP Tailscale do servidor** (`TS_TAILSCALE_IP`). Com Tailscale SSH habilitado (v1.17), o runner conecta diretamente em `TS_TAILSCALE_IP:22` — não há need de `PROD_SSH_HOST` ou `PROD_SSH_PORT` separados.
 
@@ -1249,6 +1250,48 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 | Runner self-hosted é esquecido e cobra $0.002/min após mar/2026 | Média | Baixo | Fase 5 remove o runner completamente (opção B — sem backup) |
 | Downtime do GitHub bloqueia deploys | Muito baixa | Médio | GitHub SLA 99.9%; plano de contingência: registrar novo runner self-hosted (~5min via token de registro) **mas apenas como contingência, não como rotina** |
 
+### 7.4 Decisão de Segurança: `StrictHostKeyChecking=no` (v1.30)
+
+> **Status:** ✅ Aceito. Decisão documentada em v1.30.
+
+**Contexto:** O flag `-o StrictHostKeyChecking=no` é usado em 11 comandos `ssh`/`scp` no `deploy.yml` (8 ocorrências) e no `test-tailscale-ssh.yml` (3 ocorrências). Essa flag desabilita a verificação de host key, permitindo que qualquer host key seja aceita.
+
+**Por que é aceitável neste projeto:**
+
+1. **Transporte Tailscale WireGuard:** o runner se conecta ao servidor via WireGuard (UDP), com criptografia ponta-a-ponta. A rede Tailscale é privada e isolada — nenhum nó externo pode interceptar o tráfego.
+2. **Autenticação via Tailscale SSH (OIDC):** o servidor autentica conexões SSH via identidade Tailscale, não via `known_hosts`. A verificação de host key é redundante com a verificação de identidade Tailscale.
+3. **Servidor atrás de NAT:** o servidor não tem IP público e só é alcançável via mesh Tailscale. MITM externo é impossível.
+4. **ACL Tailscale restritiva:** apenas nós com a tag `tag:ci` podem acessar o servidor. Auth keys expiram a cada 90 dias (renovação manual).
+5. **Plano Personal (single-operator):** superfície de ataque limitada a 1 operador + auth keys rotacionadas.
+
+**Riscos residuais aceitos:**
+
+| Risco residual | Vetor | Mitigação |
+|----------------|-------|-----------|
+| MITM dentro da tailnet | Atacante controla outro nó na mesma mesh Tailscale | ACL restritiva; monitoramento de nós no dashboard Tailscale |
+| Comprometimento do auth key | Auth key vaza ou é roubada | Auth keys expiram em 90 dias; revogáveis no admin console; monitoramento de uso anômalo |
+| Workflow malicious usa SSH | Runner comprometido envia dados via SSH | `harden-runner` em modo `audit` (monitora tráfego e processos); `timeout-minutes` limita duração |
+
+**Alternativas avaliadas e descartadas:**
+
+| Alternativa | Por que descartada |
+|-------------|-------------------|
+| `tailscale ssh` nativo | Limitações com `scp` nativo; adiciona dependência de CLI; sintaxe diferente; requer `which tailscale` no runner |
+| `known_hosts` dinâmico do Tailscale | Complexidade alta; depende de `tailscale debug` que pode mudar; benefício baixo dado o transporte já criptografado |
+| `UserKnownHostsFile=/dev/null` | Cosmético — resolve sintaxe mas não segurança; aceita qualquer host key igualmente |
+
+**Comparação com alternativa de `known_hosts` dinâmico:**
+
+| Aspecto | `StrictHostKeyChecking=no` (atual) | `known_hosts` dinâmico |
+|---------|-------------------------------------|------------------------|
+| Proteção contra MITM externo | ✅ WireGuard (já protege) | ✅ WireGuard (já protege) |
+| Proteção contra MITM interno | ❌ Não verificada | ✅ Verificada |
+| Complexidade | 🟢 Nenhuma | 🔴 Alta (extract key → parse → write) |
+| Manutenção | 🟢 Nenhuma | 🟡 Dependente de formato `tailscale debug` |
+| **Decisão** | **✅ Aceito** | ❌ Descartado |
+
+**Referência:** v1.30 (PRD v1.30, seção 7.4).
+
 ---
 
 ## 8. Métricas de Sucesso
@@ -1438,3 +1481,131 @@ gh secret set PROD_SSH_USER --body "ci-deploy"
 | 1.21 | 23/06/2026 | Eng. | **Deploy.sh extraído para script externo.** (1) **`.github/scripts/deploy.sh`** criado — script de deploy extraído de heredoc inline para arquivo externo, eliminando `sed -i` strip de indentação e heredocs frágeis no YAML. (2) **`.env` reescrito** com `echo` statements (sem heredoc + sed) — mais legível e sem risco de quebra YAML. (3) **Step "Prepare deploy files" simplificado** — não gera mais deploy.sh inline; copia script externo via `scp`. (4) **Herdança de variáveis:** `GH_USER`, `GH_TOKEN`, `IMAGE_TAG` continuam passados via `export` no SSH (Padrão 1 da indústria); variáveis do compose (`DEPLOY_DIR`, `REGISTRY`, `IMAGE_NAME`, `API_IMAGE`, `COMPOSE_FILE`) são resolvidas no servidor. (5) Seção 3.3.1 atualizada. |
 | 1.22 | 23/06/2026 | Eng. | **Verify.sh e rollback.sh extraídos para scripts externos.** (1) **`.github/scripts/verify.sh`** criado — pgBackRest check + health check PostgreSQL extraído de one-liner SSH de ~800 caracteres; lógica condicional (stanza create fallback) agora em linhas separadas. (2) **`.github/scripts/rollback.sh`** criado — backup tag restore + docker compose up extraído de one-liner condicional. (3) **Steps "Verify via SSH" e "Rollback on failure"** simplificados — cada um copia script via `scp` e executa via `ssh`; `DB_PASSWORD` passado via env var (não mais com quoting complexo `"'"$DB_PASSWORD"'"`). (4) Seção 3.3.1 atualizada. |
 | 1.23 | 23/06/2026 | Eng. | **Build→deploy output sharing.** (1) **Build job** exporta `image-tag` como job output (`outputs.image-tag: ${{ steps.prep.outputs.tag }}`). (2) **Deploy job** referencia `needs.build.outputs.image-tag` em vez de calcular `sha-${{ github.sha }}` independentemente. (3) Remove cálculo duplicado de IMAGE_TAG em dois places —Single Source of Truth para tag da imagem. |
+| 1.24 | 23/06/2026 | Eng. | **GHCR auth via docker config.json — remoção de GH_TOKEN do SSH.** (1) **Problema:** `GH_TOKEN` (GITHUB_TOKEN) era exportado via `export GH_TOKEN=...` dentro de comando SSH remoto no `deploy.yml` — token ficava em env no servidor durante todo o deploy, acessível a sub-processos e passível de logging acidental com `set -x`. (2) **Solução:** runner faz `docker login ghcr.io` local (gera `~/.docker/config.json`); arquivo é copiado para o servidor via `scp` como `config.json.tmp`; `deploy.sh` move para `~/.docker/config.json` com `chmod 600` e usa `trap ... EXIT` para cleanup automático pós-deploy. (3) **`deploy.yml`** — step "Upload to server" copia `config.json` via `scp`; step "Execute deploy" configura permissões no servidor; env vars `GH_TOKEN` e `GH_USER` removidas do SSH. (4) **`deploy.sh`** — removida linha `docker login` (agora o daemon já está autenticado); adicionado `trap 'rm -f ~/.docker/config.json' EXIT`. (5) **Segurança:** token nunca chega ao servidor em env ou arquivo plain text; config.json existe apenas durante o deploy e é removido automaticamente; padrão usado por Kubernetes (imagePullSecrets), AWS CodeBuild e ArgoCD. (6) **Nota:** `GITHUB_TOKEN` permanece necessário no deploy job para o `docker login` local no runner e para `packages: read`. |
+| 1.25 | 23/06/2026 | Eng. | **Adendo: Provenance e SBOM — documentação para futura implementação.** (1) Adendo (Apêndice A) adicionado ao PRD documentando `provenance: mode=max` e `sbom: true` no `docker/build-push-action` — o que são, para que servem, como implementar e trade-offs. (2) **Status:** ⏳ pendente de implementação; não altera comportamento atual do pipeline. (3) **Mudança:** 4 linhas no `deploy.yml` (1 permissão `attestations: write` + 2 inputs `provenance`/`sbom`). (4) **Vantagens:** SLSA Build Level 2+ compliance, SBOM para Trivy scan, verificação ponta-a-ponta, detecção de adulteração. (5) **Riscos:** SBOM expõe dependências publicamente (repo é público — aceitável). (6) **Referência:** Apêndice A neste PRD. |
+| 1.26 | 23/06/2026 | Eng. | **Composite action `setup-tailscale` — DRY para setup de Tailscale.** (1) **Problema:** step "Setup Tailscale" (`tailscale/github-action@<SHA>`) estava duplicado 4× no repo (3× em `deploy.yml`: jobs deploy, verify, cleanup; 1× em `test-tailscale-ssh.yml`). Configuração idêntica em todos: `authkey`, `tags: tag:ci`, `ping`. (2) **Solução:** criada composite action `.github/actions/setup-tailscale/action.yml` que encapsula o `tailscale/github-action@<SHA>` com inputs parametrizáveis (`authkey`, `tags` default `tag:ci`, `ping`). (3) **`deploy.yml`** — 3 substituições diretas: jobs deploy, verify e cleanup agora chamam `uses: ./.github/actions/setup-tailscale` com `authkey` e `ping` explícitos. (4) **`test-tailscale-ssh.yml`** — 1 substituição idêntica. (5) **SHA pinnado** mantido no `action.yml` (`tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8` v4.1.2) — 1 ponto de auditoria em vez de 4. (6) **Resultado:** 3 ocorrências de SHA do Tailscale removidas do repo; 1 arquivo novo; configuração centralizada para futuros workflows (deploy-gateway, deploy-qa, deploy-observability). |
+| 1.27 | 23/06/2026 | Eng. | **Cache Gradle nativo do `setup-java` — remoção de `actions/cache` manual.** (1) **Problema:** step "Cache Gradle" (`actions/cache@<SHA>` v4.2.0) duplicava a funcionalidade de cache do `actions/setup-java` (v4+) que suporta nativamente `cache: 'gradle'`. Dois steps para fazer o que um faz. (2) **Solução:** adicionado `cache: 'gradle'` ao `actions/setup-java@<SHA>` v4.1.0; step "Cache Gradle" (`actions/cache`) removido. (3) **`deploy.yml`** — linha `cache: 'gradle'` adicionada ao step "Setup Java 21"; step "Cache Gradle" (linhas 61-68) removido — de 2 steps para 1. (4) **Resultado:** 1 step a menos; 1 SHA (`actions/cache@1bd1e32...`) removido do repo; configuração de cache centralizada no `setup-java`. (5) **Nota:** `actions/cache` não é mais usado em nenhum workflow; se necessário para outros casos futuros, pode ser reintroduzido. |
+| 1.28 | 23/06/2026 | Eng. | **SSH_TARGET centralizado em env de job — eliminação de duplicação de `SSH_TARGET`.** (1) **Problema:** padrão `SSH_USER="${{ secrets.PROD_SSH_USER }}"` + `TS_IP="${{ secrets.TS_TAILSCALE_IP }}"` + `SSH_TARGET="${SSH_USER}@${TS_IP}"` estava duplicado 5× em `deploy.yml` (steps "Upload to server", "Execute deploy", "Rollback on failure" no job `deploy`; "Verify via SSH" no job `verify`; "Cleanup via SSH" no job `cleanup`). Cada step declarava as mesmas 3 env vars e calculava o mesmo `SSH_TARGET`. (2) **Solução:** mover `SSH_USER`, `TS_IP` e `SSH_TARGET` para `env` no nível de cada job (`deploy`, `verify`, `cleanup`). Cada step herda automaticamente; `SSH_TARGET="${SSH_USER}@${TS_IP}"` removido de todos os steps. (3) **`deploy.yml`** — 3 jobs com `env:` no nível do job; 5 steps simplificados (remoção de `env:` de step + remoção de `SSH_TARGET=` de `run:`). (4) **Resultado:** 5 ocorrências de `SSH_TARGET=` em `run:` blocks eliminadas; `SSH_TARGET` definido em 3 lugares (1 por job) em vez de 8 (3 por job + 5 em steps). (5) **Nota:** `SSH_TARGET` ainda é usado em `${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}` — sem espaços na expressão, funciona sem quoting. |
+| 1.30 | 23/06/2026 | Eng. | **Documentação: decisão de segurança — `StrictHostKeyChecking=no`.** (1) **Contexto:** flag `-o StrictHostKeyChecking=no` usado em 11 comandos `ssh`/`scp` no `deploy.yml` e `test-tailscale-ssh.yml`. (2) **Decisão:** manter como está (Alternativa D — status quo + documentação). (3) **Justificativa:** (a) Tailscale WireGuard fornece criptografia ponta-a-ponta; (b) autenticação via Tailscale SSH (OIDC) torna `known_hosts` redundante; (c) servidor atrás de NAT — sem IP público, sem possibilidade de interceptação externa; (d) ACL Tailscale restritiva — apenas nós com tag `tag:ci` acessam o servidor; (e) plano Personal single-operator — superfície de ataque limitada. (4) **Riscos residuais aceitos:** MITM dentro da tailnet (requer comprometimento de outro nó Tailscale), comprometimento do auth key (mitigado por rotação a cada 90 dias), workflow malicioso usando SSH (mitigado por `harden-runner` em modo `audit`). (5) **Alternativas avaliadas e descartadas:** `tailscale ssh` (limitações com `scp`), `known_hosts` dinâmico (complexidade alta), `UserKnownHostsFile=/dev/null` (cosmético). (6) **Referência:** Seção 7.4 neste PRD. |
+| 1.31 | 23/06/2026 | Eng. | **Heredoc SSH inline substituído por `env VAR=val cmd` no SSH.** (1) **Problema:** step "Execute deploy on server" do `deploy.yml` tinha ~15 linhas de heredoc inline com 3 níveis de quoting (aspas duplas dentro de aspas duplas), lógica de mover arquivos (`.env`, chaves JWT, config.json) misturada com invocação do `deploy.sh`. Difícil de manter, debugar e reutilizar. (2) **Solução:** lógica de mover arquivos movida para `deploy.sh` no servidor (setup de `.env`, chaves JWT e config.json). Step "Execute deploy on server" simplificado para `env DEPLOY_DIR=... REGISTRY=... IMAGE_NAME=... API_IMAGE=... COMPOSE_FILE=... IMAGE_TAG=... bash /tmp/deploy.sh` via SSH. (3) **`deploy.sh`** — adicionado setup de `.env`, chaves JWT (`config/keys/*.pem`) e config.json antes do `docker pull`; `trap ... EXIT` mantido para cleanup. (4) **`deploy.yml`** — heredoc de 15 linhas substituído por 10 linhas com `env VAR=val cmd`. (5) **Variáveis passadas:** `DEPLOY_DIR`, `REGISTRY`, `IMAGE_NAME`, `API_IMAGE`, `COMPOSE_FILE`, `IMAGE_TAG` (6 vars explícitas). (6) **Resultado:** heredoc com 3 níveis de aspas eliminado; lógica de setup centralizada no `deploy.sh` (pode ser chamado manualmente); step mais legível. |
+| 1.32 | 23/06/2026 | Eng. | **Scripts externos centralizados em env vars — visibilidade de `.github/scripts/`.** (1) **Problema:** caminhos de scripts externos (`.github/scripts/deploy.sh`, `rollback.sh`, `verify.sh`) estavam inline em comandos `scp`, diluídos entre outros arquivos e flags SSH. Difícil de identificar à primeira glance que o step depende de um script versionado. (2) **Solução:** adicionar env vars dedicadas por job: `DEPLOY_SCRIPT: .github/scripts/deploy.sh`, `ROLLBACK_SCRIPT: .github/scripts/rollback.sh` (job `deploy`); `VERIFY_SCRIPT: .github/scripts/verify.sh` (job `verify`). Substituir 3 ocorrências inline por `"${DEPLOY_SCRIPT}"`, `"${ROLLBACK_SCRIPT}"`, `"${VERIFY_SCRIPT}"`. (3) **`deploy.yml`** — 3 env vars adicionadas (1 por script); 3 substituições inline. (4) **Resultado:** caminhos de scripts são variáveis declaradas, não strings inline; renomear/mover script requer alteração em 1 lugar; mais legível e rastreável. |
+
+---
+
+## Apêndice A — Provenance e SBOM no Build de Imagem (v1.25)
+
+> **Status:** ⏳ Pendente de implementação. Este adendo documenta a funcionalidade para futura adoção.
+
+### A.1 O que são
+
+#### Provenance (Atestado SLSA de Procedência)
+
+Atestado criptográfico que prova **como** a imagem foi construída. Registra:
+
+- Qual workflow gerou a imagem (URL do repo + `run_id`)
+- Qual commit foi usado
+- Qual builder (GitHub Actions hosted)
+- Materiais de entrada (base image, source code)
+
+Segue o padrão [SLSA Build Level 2+](https://slsa.dev). Permite que consumidores verifiquem se a imagem realmente veio do pipeline e não foi adulterada.
+
+#### SBOM (Software Bill of Materials)
+
+Inventário completo de tudo que está dentro da imagem:
+
+- Dependências do sistema operacional (ex.: `glibc 2.39`)
+- Bibliotecas da aplicação (ex.: `spring-boot 3.x`, `postgresql-driver`)
+- Versões exatas + licenças
+- Formato padrão: **SPDX** (compatível com scanners de vulnerabilidade)
+
+Permite que ferramentas como **Trivy**, **Grype** ou **Snyk** façam scan de vulnerabilidades sem precisar "desmontar" a imagem.
+
+### A.2 Por que importa para este projeto
+
+| Benefício | Detalhe |
+|-----------|---------|
+| **Verificação ponta-a-ponta** | Qualquer pessoa pode rodar `docker buildx imagetools inspect` e ver o atestado |
+| **Detecção de adulteração** | Se alguém fizer push manual no GHCR (roubo de credencial), o atestado mostra `workflow/run_id` diferente |
+| **Trivy + SBOM** | Trivy consome o SBOM direto, sem precisar varrer layers — scan mais rápido |
+| **Auditoria** | GitHub UI do GHCR mostra aba "Attestations" com histórico |
+| **SLSA Build Level 2** | Nível mínimo para supply chain robusto — exige provenance |
+| **LGPD/GDPR** | SBOM ajuda em gestão de dependências e conformidade |
+
+### A.3 Mudança proposta
+
+Adicionar 2 linhas + 1 permissão no job `build` do `deploy.yml`:
+
+```yaml
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write
+      attestations: write    # NOVO — necessário para criar attestations
+    steps:
+      ...
+      - name: Build and push image
+        uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max    # NOVO — atesto SLSA completo
+          sbom: true              # NOVO — SBOM em SPDX
+```
+
+**Arquivos afetados:**
+
+| Arquivo | Mudança |
+|---------|---------|
+| `.github/workflows/deploy.yml` | ~4 linhas: 1 permissão `attestations: write` + 2 inputs no `build-push-action` |
+| `docs/PRD_MIGRACAO_CICD_GITHUB_ACTIONS_HOSTED.md` | Entrada v1.25 no histórico + este apêndice |
+
+### A.4 Trade-offs
+
+| Aspecto | Impacto |
+|---------|---------|
+| Tempo de build | +5-15s (gera metadata + assina) — negligível |
+| Tamanho da imagem | Sem impacto (attestations ficam fora da imagem) |
+| Visibilidade do código | ⚠️ SBOM **expõe todas as dependências** publicamente (repo é público) |
+| Permissões | Precisa adicionar `attestations: write` ao job `build` |
+| Compatibilidade | GHCR suporta nativamente; outras registries podem não suportar |
+| Rollback | Sem impacto — `docker pull` ignora attestations |
+
+### A.5 Onde os attestations aparecem
+
+- **GitHub UI**: repo → Packages → `workshop_rest_api` → versão específica → aba "Attestations"
+- **CLI**: `docker buildx imagetools inspect ghcr.io/unspoken-tech-org/workshop_rest_api:sha-<sha> --raw`
+- **Verificação**: `cosign verify-attestation` (Sigstore) ou `gh attestation verify`
+
+### A.6 Riscos e mitigações
+
+| Risco | Mitigação |
+|-------|-----------|
+| SBOM revela dependências internas | Repo é público — dependências Spring Boot já estão no `build.gradle`. Sem risco novo |
+| Build falha por falta de permissão | Adicionar `attestations: write` na declaração de permissions |
+| `provenance: mode=max` expõe source completo | É o default para imagens públicas em GHCR; aceitável para projeto open-source-style |
+| Quebra em registries que não suportam | GHCR suporta; sem impacto atual |
+
+### A.7 Próximos passos para implementação
+
+1. Adicionar `attestations: write` ao job `build` em `deploy.yml`
+2. Adicionar `provenance: mode=max` e `sbom: true` ao `build-push-action`
+3. Testar com tag `v1.3.0-rc-test`
+4. Verificar aba "Attestations" no GHCR
+5. Validar com `docker buildx imagetools inspect`
+6. Atualizar PRD (v1.26) com status "concluído"
+
+### A.8 Referências
+
+- [SLSA — Supply-chain Levels for Software Artifacts](https://slsa.dev)
+- [Docker build-push-action — provenance](https://github.com/docker/build-push-action#provenance)
+- [Docker build-push-action — sbom](https://github.com/docker/build-push-action#sbom)
+- [GHCR — Viewing attestations](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#viewing-the-provenance-or-attestation-for-an-image)
+- [Trivy — SBOM scanning](https://aquasecurity.github.io/trivy/latest/docs/target/sbom/)
+- [Sigstore cosign — verify attestation](https://docs.sigstore.dev/cosign/verifying/attestation/)

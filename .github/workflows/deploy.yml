@@ -151,6 +151,13 @@ jobs:
           authkey: ${{ secrets.TS_AUTH_KEY }}
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Deploy via SSH
         uses: ./.github/actions/deploy-via-ssh
         with:
