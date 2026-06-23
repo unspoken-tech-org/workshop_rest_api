@@ -38,6 +38,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image-tag: ${{ steps.prep.outputs.tag }}
 
     steps:
       - name: Harden Runner
@@ -195,7 +197,7 @@ jobs:
           TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
           GH_USER: ${{ github.actor }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IMAGE_TAG: sha-${{ github.sha }}
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
         run: |
           set -e
           SSH_TARGET="${SSH_USER}@${TS_IP}"
