@@ -5,7 +5,7 @@
 # Dependências locais:
 #   .github/actions/deploy-via-ssh  → upload + execução deploy.sh
 #   .github/actions/print-banner    → log padronizado de status
-#   .github/actions/setup-tailscale → túnel WireGuard para SSH
+#   tailscale/github-action       → túnel WireGuard para SSH
 # Scripts remotos (executados no servidor):
 #   .github/scripts/deploy.sh       → pull, retag, restart, healthcheck
 #   .github/scripts/rollback.sh     → restaura imagem :backup
@@ -146,9 +146,10 @@ jobs:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Setup Tailscale
-        uses: ./.github/actions/setup-tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
       - name: Login to GHCR
@@ -202,9 +203,10 @@ jobs:
           egress-policy: audit
 
       - name: Setup Tailscale
-        uses: ./.github/actions/setup-tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
       - name: Verify via SSH
@@ -235,9 +237,10 @@ jobs:
           egress-policy: audit
 
       - name: Setup Tailscale
-        uses: ./.github/actions/setup-tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
       - name: Cleanup via SSH
