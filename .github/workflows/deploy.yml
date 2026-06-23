@@ -1,4 +1,4 @@
-name: Deploy Spring Boot App v7 (Hosted)
+name: Deploy Spring Boot App v8 (Hosted + Tailscale)
 
 on:
   push:
@@ -21,12 +21,9 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: unspoken-tech-org/workshop_rest_api
-  CLOUDFLARED_VERSION: "2026.5.2"
-  CLOUDFLARED_SHA256: "5286698547f03df745adb2355f04c12dde52ef425491e81f433642d695521886"
   COMPOSE_FILE: docker-compose-production.yml
   DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
   API_IMAGE: workshop_rest_api-workshop_spring_app
-  SSH_HOST: ssh.eletroluk.com
 
 jobs:
   # ===========================================
@@ -108,48 +105,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Setup cloudflared + SSH
-        env:
-          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Setup SSH key
         run: |
-          set -e
-
-          # Install cloudflared
-          curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
-            -o /tmp/cloudflared
-          echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
-          chmod +x /tmp/cloudflared
-
-          # Write SSH key
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
-          # Create cloudflared wrapper script
-          cat > ~/.cloudflared-ssh <<WRAPPER
-          #!/bin/bash
-          export TUNNEL_SERVICE_TOKEN_ID="${CFID}"
-          export TUNNEL_SERVICE_TOKEN_SECRET="${CFSEC}"
-          exec /tmp/cloudflared access ssh "\$@"
-          WRAPPER
-          sed -i 's/^          //' ~/.cloudflared-ssh
-          chmod 700 ~/.cloudflared-ssh
-
-          # Configure SSH
-          cat >> ~/.ssh/config <<SSHCONFIG
-          Host ${{ env.SSH_HOST }}
-            StrictHostKeyChecking no
-            ConnectTimeout 30
-            ServerAliveInterval 30
-            ServerAliveCountMax 4
-            ProxyCommand ~/.cloudflared-ssh --hostname %h
-          SSHCONFIG
-          sed -i 's/^          //' ~/.ssh/config
-          chmod 600 ~/.ssh/config
-
-          echo "SSH setup complete"
           ssh-keygen -l -f ~/.ssh/deploy_key
 
       - name: Deploy via SSH
@@ -163,9 +131,10 @@ jobs:
           JWT_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
           JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
           set -e
-          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
+          SSH_TARGET="${SSH_USER}@${TS_IP}"
 
           # Write .env file on runner
           cat > /tmp/.env <<ENVFILE
@@ -228,12 +197,14 @@ jobs:
 
           # SCP files to server
           scp -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
             -i ~/.ssh/deploy_key \
             /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/deploy.sh \
             "${SSH_TARGET}:/tmp/"
 
           # Execute deploy on server
           ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
             -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" "\
               set -e && \
@@ -249,9 +220,11 @@ jobs:
         if: failure()
         env:
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
-          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
+          SSH_TARGET="${SSH_USER}@${TS_IP}"
           ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
             -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" \
             'set -e; cd /home/workshop/deploy/workshop_rest_api; if docker image inspect workshop_rest_api-workshop_spring_app:backup >/dev/null 2>&1; then docker tag workshop_rest_api-workshop_spring_app:backup workshop_rest_api-workshop_spring_app:latest; docker compose -f docker-compose-production.yml up -d --force-recreate workshop_spring_app; echo "Rollback executed"; else echo "No backup image found"; exit 1; fi'
@@ -267,54 +240,29 @@ jobs:
       contents: read
 
     steps:
-      - name: Setup cloudflared + SSH
-        env:
-          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Setup SSH key
         run: |
-          set -e
-
-          # Install cloudflared
-          curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
-            -o /tmp/cloudflared
-          echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
-          chmod +x /tmp/cloudflared
-
-          # Write SSH key
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
-          # Create cloudflared wrapper script
-          cat > ~/.cloudflared-ssh <<WRAPPER
-          #!/bin/bash
-          export TUNNEL_SERVICE_TOKEN_ID="${CFID}"
-          export TUNNEL_SERVICE_TOKEN_SECRET="${CFSEC}"
-          exec /tmp/cloudflared access ssh "\$@"
-          WRAPPER
-          sed -i 's/^          //' ~/.cloudflared-ssh
-          chmod 700 ~/.cloudflared-ssh
-
-          # Configure SSH
-          cat >> ~/.ssh/config <<SSHCONFIG
-          Host ${{ env.SSH_HOST }}
-            StrictHostKeyChecking no
-            ConnectTimeout 30
-            ServerAliveInterval 30
-            ServerAliveCountMax 4
-            ProxyCommand ~/.cloudflared-ssh --hostname %h
-          SSHCONFIG
-          sed -i 's/^          //' ~/.ssh/config
-          chmod 600 ~/.ssh/config
 
       - name: Verify via SSH
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
-          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
+          SSH_TARGET="${SSH_USER}@${TS_IP}"
           ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
             -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" \
             'set -e; cd /home/workshop/deploy/workshop_rest_api; PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db); if [ -z "$PG_CID" ]; then echo "Postgres container not found"; exit 1; fi; echo ">>> Checking stanza..."; docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza OK" || (docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create && docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza created and OK"); docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest info || true; STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d "\""); echo "PostgreSQL health: ${STATUS:-unknown}"; echo "=== FINAL CONTAINERS STATUS ==="; docker compose -f docker-compose-production.yml ps'
@@ -331,53 +279,28 @@ jobs:
       contents: read
 
     steps:
-      - name: Setup cloudflared + SSH
-        env:
-          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Setup SSH key
         run: |
-          set -e
-
-          # Install cloudflared
-          curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
-            -o /tmp/cloudflared
-          echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
-          chmod +x /tmp/cloudflared
-
-          # Write SSH key
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
-          # Create cloudflared wrapper script
-          cat > ~/.cloudflared-ssh <<WRAPPER
-          #!/bin/bash
-          export TUNNEL_SERVICE_TOKEN_ID="${CFID}"
-          export TUNNEL_SERVICE_TOKEN_SECRET="${CFSEC}"
-          exec /tmp/cloudflared access ssh "\$@"
-          WRAPPER
-          sed -i 's/^          //' ~/.cloudflared-ssh
-          chmod 700 ~/.cloudflared-ssh
-
-          # Configure SSH
-          cat >> ~/.ssh/config <<SSHCONFIG
-          Host ${{ env.SSH_HOST }}
-            StrictHostKeyChecking no
-            ConnectTimeout 30
-            ServerAliveInterval 30
-            ServerAliveCountMax 4
-            ProxyCommand ~/.cloudflared-ssh --hostname %h
-          SSHCONFIG
-          sed -i 's/^          //' ~/.ssh/config
-          chmod 600 ~/.ssh/config
 
       - name: Cleanup via SSH
         env:
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
-          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
+          SSH_TARGET="${SSH_USER}@${TS_IP}"
           ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
             -i ~/.ssh/deploy_key \
             "${SSH_TARGET}" \
             'docker image prune -f && docker system df && echo "Cleanup done"'
