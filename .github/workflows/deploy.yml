@@ -1,4 +1,4 @@
-name: Deploy Spring Boot App v5 (Hosted)
+name: Deploy Spring Boot App v7 (Hosted)
 
 on:
   push:
@@ -26,6 +26,7 @@ env:
   COMPOSE_FILE: docker-compose-production.yml
   DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
   API_IMAGE: workshop_rest_api-workshop_spring_app
+  SSH_HOST: ssh.eletroluk.com
 
 jobs:
   # ===========================================
@@ -90,11 +91,11 @@ jobs:
           echo "Commit:  ${{ github.sha }}"
           echo "Actor:   ${{ github.actor }}"
           echo "Trigger: ${{ github.event_name }}"
-          echo "Image:   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+          echo "Image:   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}"
           echo "=================="
 
   # ===========================================
-  # JOB 2: DEPLOY (GATE HUMANA + SSH VIA CF ACCESS)
+  # JOB 2: DEPLOY
   # ===========================================
   deploy:
     name: Deploy to Production
@@ -107,17 +108,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Install cloudflared (pinned)
+      - name: Setup cloudflared + SSH
+        env:
+          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
         run: |
+          set -e
+
+          # Install cloudflared
           curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
             -o /tmp/cloudflared
           echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
           chmod +x /tmp/cloudflared
 
-      - name: Deploy via SSH (with cloudflared tunnel)
+          # Write SSH key
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Create cloudflared wrapper script
+          cat > ~/.cloudflared-ssh <<WRAPPER
+          #!/bin/bash
+          export TUNNEL_SERVICE_TOKEN_ID="${CFID}"
+          export TUNNEL_SERVICE_TOKEN_SECRET="${CFSEC}"
+          exec /tmp/cloudflared access ssh "\$@"
+          WRAPPER
+          sed -i 's/^          //' ~/.cloudflared-ssh
+          chmod 700 ~/.cloudflared-ssh
+
+          # Configure SSH
+          cat >> ~/.ssh/config <<SSHCONFIG
+          Host ${{ env.SSH_HOST }}
+            StrictHostKeyChecking no
+            ConnectTimeout 30
+            ServerAliveInterval 30
+            ServerAliveCountMax 4
+            ProxyCommand ~/.cloudflared-ssh --hostname %h
+          SSHCONFIG
+          sed -i 's/^          //' ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+          echo "SSH setup complete"
+          ssh-keygen -l -f ~/.ssh/deploy_key
+
+      - name: Deploy via SSH
         env:
-          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -126,46 +162,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JWT_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
           JWT_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
-          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
-          COMPOSE_FILE: ${{ env.COMPOSE_FILE }}
-          API_IMAGE: ${{ env.API_IMAGE }}
         run: |
           set -e
+          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
 
-          # Start cloudflared in background
-          nohup /tmp/cloudflared access ssh \
-            --hostname ssh.eletroluk.com \
-            --listener 127.0.0.1:2222 \
-            --service-token-id "$CFID" \
-            --service-token-secret "$CFSEC" \
-            > /tmp/cloudflared-access.log 2>&1 &
-
-          # Wait for listener
-          for i in $(seq 1 30); do
-            if (echo > /dev/tcp/127.0.0.1/2222) 2>/dev/null; then
-              echo "Cloudflared listener ready on 127.0.0.1:2222"
-              break
-            fi
-            sleep 1
-          done
-
-          # Write SSH key
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          # Debug SSH key
-          echo "=== SSH KEY DEBUG ==="
-          ssh-keygen -l -f ~/.ssh/deploy_key || echo "KEY INVALID"
-          echo "First line: $(head -1 ~/.ssh/deploy_key)"
-          echo "Last line: $(tail -1 ~/.ssh/deploy_key)"
-          echo "File size: $(wc -c < ~/.ssh/deploy_key) bytes"
-          echo "Line count: $(wc -l < ~/.ssh/deploy_key)"
-          echo "====================="
-
-          # Write .env file on runner (unquoted heredoc: expands runner vars)
+          # Write .env file on runner
           cat > /tmp/.env <<ENVFILE
           DB_NAME=${DB_NAME}
           DB_USERNAME=${DB_USERNAME}
@@ -182,8 +184,6 @@ jobs:
           chmod 644 /tmp/public.pem
 
           # Write deploy script on runner
-          # Unquoted heredoc: expands ${DEPLOY_DIR}, ${COMPOSE_FILE}, etc. on runner
-          # Escaped \$ vars: written literally, expanded on server
           cat > /tmp/deploy.sh <<DEPLOYSCRIPT
           #!/bin/bash
           set -e
@@ -227,15 +227,15 @@ jobs:
           chmod +x /tmp/deploy.sh
 
           # SCP files to server
-          scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            -i ~/.ssh/deploy_key -P 2222 \
+          scp -o ConnectTimeout=30 \
+            -i ~/.ssh/deploy_key \
             /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/deploy.sh \
-            "$SSH_USER@127.0.0.1:/tmp/"
+            "${SSH_TARGET}:/tmp/"
 
-          # Execute deploy on server (move files to correct location, then run script)
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            -i ~/.ssh/deploy_key -p 2222 \
-            "$SSH_USER@127.0.0.1" "\
+          # Execute deploy on server
+          ssh -o ConnectTimeout=30 \
+            -i ~/.ssh/deploy_key \
+            "${SSH_TARGET}" "\
               set -e && \
               cd ${DEPLOY_DIR} && \
               mv /tmp/.env ./ && chmod 600 .env && \
@@ -245,37 +245,16 @@ jobs:
               bash /tmp/deploy.sh \
             "
 
-          # Cleanup
-          kill %1 2>/dev/null || true
-
       - name: Rollback on failure
         if: failure()
         env:
-          CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
           SSH_USER: ${{ secrets.PROD_SSH_USER }}
         run: |
-          # Restart cloudflared if needed
-          if ! (echo > /dev/tcp/127.0.0.1/2222) 2>/dev/null; then
-            nohup /tmp/cloudflared access ssh \
-              --hostname ssh.eletroluk.com \
-              --listener 127.0.0.1:2222 \
-              --service-token-id "$CFID" \
-              --service-token-secret "$CFSEC" \
-              > /tmp/cloudflared-access.log 2>&1 &
-            sleep 5
-          fi
-
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
-            "$SSH_USER@127.0.0.1" \
+          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
+          ssh -o ConnectTimeout=30 \
+            -i ~/.ssh/deploy_key \
+            "${SSH_TARGET}" \
             'set -e; cd /home/workshop/deploy/workshop_rest_api; if docker image inspect workshop_rest_api-workshop_spring_app:backup >/dev/null 2>&1; then docker tag workshop_rest_api-workshop_spring_app:backup workshop_rest_api-workshop_spring_app:latest; docker compose -f docker-compose-production.yml up -d --force-recreate workshop_spring_app; echo "Rollback executed"; else echo "No backup image found"; exit 1; fi'
-
-          kill %1 2>/dev/null || true
 
   # ===========================================
   # JOB 3: VERIFY
@@ -288,34 +267,57 @@ jobs:
       contents: read
 
     steps:
-      - name: Verify via SSH (with cloudflared tunnel)
+      - name: Setup cloudflared + SSH
         env:
           CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
-          SSH_USER: ${{ secrets.PROD_SSH_USER }}
         run: |
           set -e
 
-          # Start cloudflared
-          nohup /tmp/cloudflared access ssh \
-            --hostname ssh.eletroluk.com \
-            --listener 127.0.0.1:2222 \
-            --service-token-id "$CFID" \
-            --service-token-secret "$CFSEC" \
-            > /tmp/cloudflared-access.log 2>&1 &
-          sleep 5
+          # Install cloudflared
+          curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
+            -o /tmp/cloudflared
+          echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
+          chmod +x /tmp/cloudflared
 
+          # Write SSH key
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
-            "$SSH_USER@127.0.0.1" \
-            'set -e; cd /home/workshop/deploy/workshop_rest_api; PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db); if [ -z "$PG_CID" ]; then echo "Postgres container not found"; exit 1; fi; echo ">>> Checking stanza..."; docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza OK" || (docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create && docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza created and OK"); docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest info || true; STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d "\""); echo "PostgreSQL health: ${STATUS:-unknown}"; echo "=== FINAL CONTAINERS STATUS ==="; docker compose -f docker-compose-production.yml ps'
+          # Create cloudflared wrapper script
+          cat > ~/.cloudflared-ssh <<WRAPPER
+          #!/bin/bash
+          export TUNNEL_SERVICE_TOKEN_ID="${CFID}"
+          export TUNNEL_SERVICE_TOKEN_SECRET="${CFSEC}"
+          exec /tmp/cloudflared access ssh "\$@"
+          WRAPPER
+          sed -i 's/^          //' ~/.cloudflared-ssh
+          chmod 700 ~/.cloudflared-ssh
 
-          kill %1 2>/dev/null || true
+          # Configure SSH
+          cat >> ~/.ssh/config <<SSHCONFIG
+          Host ${{ env.SSH_HOST }}
+            StrictHostKeyChecking no
+            ConnectTimeout 30
+            ServerAliveInterval 30
+            ServerAliveCountMax 4
+            ProxyCommand ~/.cloudflared-ssh --hostname %h
+          SSHCONFIG
+          sed -i 's/^          //' ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Verify via SSH
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
+          ssh -o ConnectTimeout=30 \
+            -i ~/.ssh/deploy_key \
+            "${SSH_TARGET}" \
+            'set -e; cd /home/workshop/deploy/workshop_rest_api; PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db); if [ -z "$PG_CID" ]; then echo "Postgres container not found"; exit 1; fi; echo ">>> Checking stanza..."; docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza OK" || (docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create && docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza created and OK"); docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest info || true; STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d "\""); echo "PostgreSQL health: ${STATUS:-unknown}"; echo "=== FINAL CONTAINERS STATUS ==="; docker compose -f docker-compose-production.yml ps'
 
   # ===========================================
   # JOB 4: CLEANUP
@@ -329,33 +331,56 @@ jobs:
       contents: read
 
     steps:
-      - name: Cleanup via SSH (with cloudflared tunnel)
+      - name: Setup cloudflared + SSH
         env:
           CFID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CFSEC: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
-          SSH_USER: ${{ secrets.PROD_SSH_USER }}
         run: |
           set -e
 
-          # Start cloudflared
-          nohup /tmp/cloudflared access ssh \
-            --hostname ssh.eletroluk.com \
-            --listener 127.0.0.1:2222 \
-            --service-token-id "$CFID" \
-            --service-token-secret "$CFSEC" \
-            > /tmp/cloudflared-access.log 2>&1 &
-          sleep 5
+          # Install cloudflared
+          curl -fsSL "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64" \
+            -o /tmp/cloudflared
+          echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
+          chmod +x /tmp/cloudflared
 
+          # Write SSH key
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p 2222 \
-            "$SSH_USER@127.0.0.1" \
-            'docker image prune -f && docker system df && echo "Cleanup done"'
+          # Create cloudflared wrapper script
+          cat > ~/.cloudflared-ssh <<WRAPPER
+          #!/bin/bash
+          export TUNNEL_SERVICE_TOKEN_ID="${CFID}"
+          export TUNNEL_SERVICE_TOKEN_SECRET="${CFSEC}"
+          exec /tmp/cloudflared access ssh "\$@"
+          WRAPPER
+          sed -i 's/^          //' ~/.cloudflared-ssh
+          chmod 700 ~/.cloudflared-ssh
 
-          kill %1 2>/dev/null || true
+          # Configure SSH
+          cat >> ~/.ssh/config <<SSHCONFIG
+          Host ${{ env.SSH_HOST }}
+            StrictHostKeyChecking no
+            ConnectTimeout 30
+            ServerAliveInterval 30
+            ServerAliveCountMax 4
+            ProxyCommand ~/.cloudflared-ssh --hostname %h
+          SSHCONFIG
+          sed -i 's/^          //' ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Cleanup via SSH
+        env:
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        run: |
+          SSH_TARGET="${SSH_USER}@${{ env.SSH_HOST }}"
+          ssh -o ConnectTimeout=30 \
+            -i ~/.ssh/deploy_key \
+            "${SSH_TARGET}" \
+            'docker image prune -f && docker system df && echo "Cleanup done"'
 
       - name: Summary
         if: success()
