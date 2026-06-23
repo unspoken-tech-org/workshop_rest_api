@@ -33,7 +33,7 @@ jobs:
   # ===========================================
   build:
     name: Build & Push Image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
@@ -114,7 +114,7 @@ jobs:
   # ===========================================
   deploy:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     needs: build
     permissions:
@@ -269,7 +269,7 @@ jobs:
   # ===========================================
   verify:
     name: Verify Deployment
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     needs: deploy
     permissions:
@@ -300,7 +300,7 @@ jobs:
   # ===========================================
   cleanup:
     name: Cleanup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     needs: verify
     if: always()
