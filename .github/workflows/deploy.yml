@@ -222,10 +222,10 @@ jobs:
           TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
           SSH_TARGET="${SSH_USER}@${TS_IP}"
-          ssh -o ConnectTimeout=30 \
-            -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" \
-            'set -e; cd /home/workshop/deploy/workshop_rest_api; if docker image inspect workshop_rest_api-workshop_spring_app:backup >/dev/null 2>&1; then docker tag workshop_rest_api-workshop_spring_app:backup workshop_rest_api-workshop_spring_app:latest; docker compose -f docker-compose-production.yml up -d --force-recreate workshop_spring_app; echo "Rollback executed"; else echo "No backup image found"; exit 1; fi'
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            .github/scripts/rollback.sh "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && /tmp/rollback.sh"
 
   # ===========================================
   # JOB 3: VERIFY
@@ -258,10 +258,10 @@ jobs:
           TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
         run: |
           SSH_TARGET="${SSH_USER}@${TS_IP}"
-          ssh -o ConnectTimeout=30 \
-            -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" \
-            'set -e; cd /home/workshop/deploy/workshop_rest_api; PG_CID=$(docker compose -f docker-compose-production.yml ps -q workshop_db); if [ -z "$PG_CID" ]; then echo "Postgres container not found"; exit 1; fi; echo ">>> Checking stanza..."; docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza OK" || (docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info stanza-create && docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest --stanza=workshop --log-level-console=info check && echo "stanza created and OK"); docker exec -u postgres -e PGPASSWORD="'"$DB_PASSWORD"'" "$PG_CID" pgbackrest info || true; STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d "\""); echo "PostgreSQL health: ${STATUS:-unknown}"; echo "=== FINAL CONTAINERS STATUS ==="; docker compose -f docker-compose-production.yml ps'
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            .github/scripts/verify.sh "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/verify.sh && DB_PASSWORD='${DB_PASSWORD}' /tmp/verify.sh"
 
   # ===========================================
   # JOB 4: CLEANUP
