@@ -72,10 +72,14 @@ jobs:
 
       - name: Prepare image tag
         id: prep
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
         run: |
-          REF="${{ github.event.inputs.ref || github.ref_name }}"
-          TAG="${REF//\//-}"
+          TAG="${INPUT_REF//\//-}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
 
       - name: Build and push image
         uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
@@ -86,15 +90,23 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Show build info
+        env:
+          GIT_REF_NAME: ${{ github.ref_name }}
+          GIT_SHA: ${{ github.sha }}
+          GIT_ACTOR: ${{ github.actor }}
+          GIT_EVENT: ${{ github.event_name }}
+          IMAGE_TAG: ${{ steps.prep.outputs.tag }}
         run: |
           echo "=== BUILD INFO ==="
-          echo "Version: ${{ github.ref_name }}"
-          echo "Commit:  ${{ github.sha }}"
-          echo "Actor:   ${{ github.actor }}"
-          echo "Trigger: ${{ github.event_name }}"
-          echo "Image:   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}"
+          echo "Version: ${GIT_REF_NAME}"
+          echo "Commit:  ${GIT_SHA}"
+          echo "Actor:   ${GIT_ACTOR}"
+          echo "Trigger: ${GIT_EVENT}"
+          echo "Image:   ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
           echo "=================="
 
   # ===========================================
@@ -316,16 +328,22 @@ jobs:
 
       - name: Summary
         if: success()
+        env:
+          GIT_REF_NAME: ${{ github.ref_name }}
+          GIT_SHA: ${{ github.sha }}
+          GIT_ACTOR: ${{ github.actor }}
+          GIT_EVENT: ${{ github.event_name }}
+          IMAGE_TAG: ${{ github.ref_name }}
         run: |
           echo ""
           echo "============================================="
           echo "  DEPLOY COMPLETED SUCCESSFULLY"
           echo "============================================="
           echo ""
-          echo "  Version: ${{ github.ref_name }}"
-          echo "  Commit:  ${{ github.sha }}"
-          echo "  Actor:   ${{ github.actor }}"
-          echo "  Trigger: ${{ github.event_name }}"
-          echo "  Image:   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+          echo "  Version: ${GIT_REF_NAME}"
+          echo "  Commit:  ${GIT_SHA}"
+          echo "  Actor:   ${GIT_ACTOR}"
+          echo "  Trigger: ${GIT_EVENT}"
+          echo "  Image:   ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
           echo ""
           echo "============================================="
