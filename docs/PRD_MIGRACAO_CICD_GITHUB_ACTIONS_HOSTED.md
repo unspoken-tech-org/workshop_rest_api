@@ -4,16 +4,16 @@
 **Repositório:** `unspoken-tech-org/workshop_rest_api` (público)
 **Data:** 20/06/2026
 **Autor:** Time de Engenharia
-**Status:** Em implementação — Fases 0.7, 0.3, 0.11 e 0.13 (produção) concluídas; auditoria de SHAs concluída (versão v1.12); migração para Tailscale (v1.13); `deploy.yml` reescrito com Tailscale (v1.14)
+**Status:** Em implementação — Fases 0.3, 0.11 e 0.13 (produção) concluídas; auditoria de SHAs concluída (versão v1.12); migração para Tailscale (v1.13); `deploy.yml` reescrito com Tailscale (v1.14); adendo sobre usuário dedicado CI/CD (v1.15); cloudflared-ssh removido do servidor (v1.16); Tailscale SSH habilitado, deploy-wrapper.sh e chaves SSH removidos (v1.17)
 **Relacionado:** `SECURITY_ASSESSMENT.md` (item 2 — CI/CD)
 
 ---
 
 ## 0. Registro de Progresso da Implementação (v1.8 — 21/06/2026)
 
-### Fase 0.7 — ✅ CONCLUÍDA (Cloudflare tunnel SSH — acesso manual)
+### Fase 0.7 — ⚠️ DESCONTINUADA (cloudflared-ssh removido do servidor)
 
-> **Nota v1.13:** O tunnel SSH `workshop-ssh` continua ativo e funcional para acesso SSH **manual** (debugging, manutenção). Para CI/CD (GitHub Actions hosted runners), o transporte foi migrado para **Tailscale** — ver seção 0.14 e Fase 1. A instalação do `cloudflared-ssh.service` não é revertida; ela permanece como camada de contingência e para acesso manual.
+> **Nota v1.16:** O `cloudflared-ssh.service` (tunnel SSH nativo) foi **removido do servidor** em 23/06/2026. O CI/CD utiliza **Tailscale** desde a v1.13; o acesso SSH manual agora é feito diretamente via Tailscale (sem necessidade de tunnel Cloudflare). Os containers Docker `cloudflared-prod` e `cloudflared-qa` permanecem ativos como **proxy reverso HTTP** para os endpoints (`api.eletroluk.com`, `api-qa.eletroluk.com`, `grafana.eletroluk.com`). A Fase 0.7 abaixo permanece documentada como **histórico** do que foi implementado e posteriormente descontinuado.
 
 | Bloco | Tarefa | Status | Observação |
 |-------|--------|--------|------------|
@@ -44,33 +44,33 @@
 
 3. **Aplicação Infrastructure incompatível**: A aplicação do tipo Infrastructure requer um target com IP IPv4/IPv6, mas o servidor está atrás de NAT sem IP público. **Decisão:** usar aplicação Self-hosted (funcional com a correção do ingress).
 
-### Fase 0.3 — ✅ CONCLUÍDA (produção)
+### Fase 0.3 — ⚠️ DESCONTINUADA (chaves SSH e deploy-wrapper.sh removidos)
+
+> **Nota v1.17:** Com o Tailscale SSH habilitado (`tailscale up --ssh`), a autenticação SSH é feita via **identidade Tailscale** (OIDC), não via chaves SSH em `authorized_keys`. O Tailscale SSH **ignora** o arquivo `authorized_keys` — as flags `no-port-forwarding`, `no-X11-forwarding`, `no-agent-forwarding`, `no-pty` e o `command="/usr/local/bin/deploy-wrapper.sh"` nunca são avaliadas. Portanto: (1) o `deploy-wrapper.sh` foi **removido** do servidor; (2) as linhas das chaves públicas (`deploy_key_prod.pub`, `deploy_key_qa.pub`) foram **removidas** do `authorized_keys`; (3) os secrets `PROD_SSH_KEY` e `QA_SSH_KEY` no GitHub são **desnecessários** (podem ser removidos); (4) `PROD_SSH_HOST` e `PROD_SSH_PORT` também são obsoletos (o runner conecta via IP Tailscale diretamente, sem porta ou key). A Fase 0.3 abaixo permanece documentada como **histórico** do que foi implementado e posteriormente descontinuado.
 
 | Item | Tarefa | Status | Observação |
 |------|--------|--------|------------|
-| 0.2 | Gerar chaves SSH Ed25519 (`deploy_key_prod`, `deploy_key_qa`) | ✅ | Chaves geradas com sucesso |
-| 0.3a | Copiar `deploy_key_prod.pub` para `authorized_keys` no servidor | ✅ | Configurada com `command="/usr/local/bin/deploy-wrapper.sh"` e flags `no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty` |
-| 0.3b | Criar `/usr/local/bin/deploy-wrapper.sh` | ✅ | Executando (pendência menor: permissão de `/var/log/deploy-wrapper.log`) |
-| 0.3c | Validar acesso SSH via Cloudflare Access | ✅ | `ssh -i ~/.ssh/deploy_key_prod -p 2222 workshop@localhost 'echo OK'` retorna `OK` |
+| 0.2 | Gerar chaves SSH Ed25519 (`deploy_key_prod`, `deploy_key_qa`) | ✅ | Chaves geradas com sucesso (mas não são mais usadas — Tailscale SSH autentica via OIDC) |
+| 0.3a | Copiar `deploy_key_prod.pub` para `authorized_keys` no servidor | ❌ | **Removido** — Tailscale SSH ignora `authorized_keys` |
+| 0.3b | Criar `/usr/local/bin/deploy-wrapper.sh` | ❌ | **Removido** do servidor — sem `command=` no `authorized_keys`, o wrapper nunca é invocado |
+| 0.3c | Validar acesso SSH via Cloudflare Access | ✅ | Concluído na época; agora substituído por Tailscale SSH |
 
-> **Nota:** Chave QA (`deploy_key_qa`) adiada — foco apenas em produção por enquanto.
+> **Nota:** Chave QA (`deploy_key_qa`) nunca foi adicionada ao servidor — obsoleta.
 
-### Fase 0.11 — ✅ CONCLUÍDA (produção)
+### Fase 0.11 — ⚠️ PARCIALMENTE OBSOLETA (v1.17 — secrets SSH desnecessários)
 
 | Secret | Status | Observação |
 |--------|--------|------------|
-| `PROD_SSH_HOST` | ✅ | `localhost` |
-| `PROD_SSH_PORT` | ✅ | `2222` |
-| `PROD_SSH_USER` | ✅ | `workshop` |
-| `PROD_SSH_KEY` | ✅ | Conteúdo de `~/.ssh/deploy_key_prod` |
-| `CF_ACCESS_CLIENT_ID` | ✅ | `9155d9acf6df2f713ed27a9ddf369ee5.access` |
-| `CF_ACCESS_CLIENT_SECRET` | ✅ | `df667569ac146a0002929de42102d9e42def75a31b2017ffa6063513aebfe0ee` |
-| `QA_SSH_HOST` | ✅ | `localhost` |
-| `QA_SSH_PORT` | ✅ | `2223` |
-| `QA_SSH_USER` | ✅ | `workshop` |
-| `QA_SSH_KEY` | ❌ | Adiado — chave QA não gerada ainda |
+| ~~`PROD_SSH_HOST`~~ | ⚠️ OBSOLETO | Tailscale SSH conecta via IP direto (`TS_TAILSCALE_IP`) |
+| ~~`PROD_SSH_PORT`~~ | ⚠️ OBSOLETO | Tailscale SSH usa porta 22 diretamente |
+| `PROD_SSH_USER` | ✅ | `workshop` (ainda necessário para Tailscale SSH) |
+| ~~`PROD_SSH_KEY`~~ | ⚠️ OBSOLETO | Tailscale SSH autentica via OIDC; `authorized_keys` ignorado |
+| ~~`QA_SSH_HOST`~~ | ⚠️ OBSOLETO | idem `PROD_SSH_HOST` |
+| ~~`QA_SSH_PORT`~~ | ⚠️ OBSOLETO | idem `PROD_SSH_PORT` |
+| `QA_SSH_USER` | ✅ | `workshop` (ainda necessário) |
+| ~~`QA_SSH_KEY`~~ | ⚠️ OBSOLETO | Nunca foi adicionada ao servidor; Tailscale SSH autentica via OIDC |
 
-> **Nota:** 9 de 10 secrets adicionados. `QA_SSH_KEY` pendente (chave QA adiada).
+> **Nota v1.17:** 6 de 8 secrets SSH são obsoletos. Apenas `PROD_SSH_USER` e `QA_SSH_USER` continuam necessários. Os 6 secrets obsoletos podem ser removidos do GitHub para reduzir superfície de ataque.
 
 ### 0.14 — Migração para Tailscale (v1.13)
 
@@ -86,7 +86,7 @@
 | Servidor | Permanece atrás de NAT; nenhuma porta pública necessária |
 | Plano | **Tailscale Personal** — gratuito (1.000 minutos efêmeros/mês; suficiente para ~200 deploys) |
 | CI/CD | O Tailscale é usado **exclusivamente** para CI/CD (deploy via SSH) |
-| Acesso manual | O Cloudflare tunnel (`cloudflared-ssh.service`) continua disponível para acesso SSH manual |
+| Acesso manual | **Tailscale SSH** — acesso manual ao servidor via IP Tailscale (sem tunnel Cloudflare) |
 
 **Por que não Cloudflare Access SSH para CI/CD:**
 - Service Token do Zero Trust não encaminha o username de forma consistente
@@ -100,32 +100,37 @@ curl -fsSL https://tailscale.com/install.sh | sh
 tailscale up --ssh
 ```
 
-**Nota:** A Fase 0.7 (Cloudflare tunnel SSH) permanece documentada e implementada — o tunnel é mantido para acesso SSH manual (debugging, manutenção). A mudança é apenas no **transporte de CI/CD**, que passa de Cloudflare Access SSH para Tailscale.
+**Nota v1.16:** A Fase 0.7 (Cloudflare tunnel SSH) foi **descontinuada** — o `cloudflared-ssh.service` foi removido do servidor. O CI/CD e o acesso SSH manual agora utilizam **Tailscale**. Os containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`) permanecem ativos como proxy reverso para os endpoints web.
 
-### Próximos Passos (Pendentes)
+### Próximos Passos (Pendentes — v1.17)
 
-1. **Correção menor** — Ajustar permissão de `/var/log/deploy-wrapper.log` no servidor (opcional).
+1. **Remover secrets obsoletos do GitHub** — `PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_KEY`, `QA_SSH_HOST`, `QA_SSH_PORT`, `QA_SSH_KEY` (6 secrets obsoletos desde v1.17).
 
-2. **Fase 1** — Migrar `deploy.yml` para hosted runner (via Tailscale).
+2. **Remover chaves SSH órfãos** — `SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `SERVER_PASSPHRASE` (4 secrets antigos, Fase 0.5).
 
-### Configuração Atual do Servidor
+3. **Corrigir bugs no `deploy.yml`** — GHCR login no deploy (problema CRÍTICO: `docker login` falha porque `$GH_TOKEN` não existe no servidor); `workflow_dispatch` ignora input `ref`.
+
+4. **Testar `deploy.yml` end-to-end** — Criar tag de homologação (`v1.3.0-rc-test`) e validar build → Tailscale → deploy → health check.
+
+5. **Migrar workflows restantes** — `deploy-qa.yml`, `deploy-gateway.yml`, `deploy-observability.yml` para hosted runner + Tailscale.
+
+6. **Hardening do repositório** — Secret scanning, dependabot, CODEOWNERS, CODEQL, CI workflow (Fases 0.5 e 0.6).
+
+### Configuração Atual do Servidor (v1.17)
 
 ```bash
-# Serviço cloudflared-ssh.service
-Status: active (running)
-Conexões com Edge: 4 (QUIC)
-Protocolo: QUIC
-Localização: gru07, gru11, gru13, gru17, gru20, gru21 (São Paulo)
+# Tailscale
+Status: ativo (systemd: tailscaled enabled)
+SSH via Tailscale: habilitado (tailscale up --ssh)
+IP Tailscale: TS_TAILSCALE_IP (100.x.x.x)
+Autenticação SSH: Tailscale OIDC (identidade Tailscale)
+authorized_keys: sem linhas de deploy (chaves SSH removidas — v1.17)
+deploy-wrapper.sh: removido (v1.17)
 
-# Arquivos de configuração
-/etc/cloudflared/config-ssh.yml
-/etc/cloudflared/d5bda623-2bb9-4a66-8f47-83f8b36dd7ee.json (credentials)
-/etc/cloudflared/cert.pem (origin certificate)
-
-# Systemd
-cloudflared-ssh.service: enabled, active (running)
-Restart=always, RestartSec=5, WatchdogSec=60
-User=nobody, Group=cloudflared
+# Containers Docker (proxy reverso HTTP)
+cloudflared-prod: ativo (proxy reverso → api.eletroluk.com)
+cloudflared-qa: ativo (proxy reverso → api-qa.eletroluk.com)
+caddy-gateway: ativo (proxy reverso local)
 ```
 
 ---
@@ -136,9 +141,9 @@ User=nobody, Group=cloudflared
 
 O pipeline de CI/CD do Workshop REST API roda em **runner self-hosted** instalado no mesmo servidor que hospeda a aplicação. Os quatro workflows existentes (`.github/workflows/deploy.yml`, `deploy-gateway.yml`, `deploy-qa.yml`, `deploy-observability.yml`) executam comandos Docker diretamente, o que requer acesso ao Docker socket do host.
 
-**Observação arquitetural:** o servidor de produção está **atrás de NAT em rede doméstica**, sem IP público. Hoje o acesso SSH ao servidor é feito via `SERVER_HOST` (IP residencial ou hostname do ISP), o que é aceitável para o runner self-hosted no mesmo host, mas é vetor de ataque se exposto em repo público. A migração para GitHub-hosted runners muda esse modelo: o runner hosted precisa alcançar o servidor sem expor porta no roteador doméstico — daí a adoção de **Cloudflare Tunnel HTTP + Cloudflare Zero Trust Free** (Fase 0.7 revisada) como meio de transporte do SSH. O domínio delegado ao Cloudflare é `eletroluk.com` (verificado em 20/06/2026 via `dig NS` — nameservers `konnor.ns.cloudflare.com` e `nola.ns.cloudflare.com`; subdomínios `api.eletroluk.com`, `api-qa.eletroluk.com`, `grafana.eletroluk.com` já em uso no `Caddyfile-gateway`).
+**Observação arquitetural:** o servidor de produção está **atrás de NAT em rede doméstica**, sem IP público. O acesso SSH ao servidor (tanto CI/CD quanto manual) é feito via **Tailscale** — o runner hosted executa `tailscale/github-action@v4` que cria um nó efêmero na rede mesh, conectando ao servidor via WireGuard (UDP). O domínio delegado ao Cloudflare é `eletroluk.com` (verificado em 20/06/2026 via `dig NS` — nameservers `konnor.ns.cloudflare.com` e `nola.ns.cloudflare.com`; subdomínios `api.eletroluk.com`, `api-qa.eletroluk.com`, `grafana.eletroluk.com` já em uso no `Caddyfile-gateway`). Cloudflare atua exclusivamente como **proxy reverso HTTP** para os endpoints web, via containers Docker (`cloudflared-prod`, `cloudflared-qa`).
 
-**Mudança de transporte para CI/CD (v1.13):** após testes extensivos com Cloudflare Access SSH (Service Tokens), a abordagem mostrou-se não confiável para automação — erros intermitentes de autenticação (`username is empty`, `websocket: bad handshake`) impediram deploys consistentes. O transporte de CI/CD foi migrado para **Tailscale** (`tailscale/github-action@v4`), que cria nós efêmeros na rede mesh do Tailscale via WireGuard. O servidor permanece atrás de NAT; o Cloudflare tunnel (`cloudflared-ssh.service`) continua disponível para acesso SSH manual, mas o CI/CD agora usa Tailscale para conexão SSH.
+**Mudança de transporte para CI/CD (v1.13):** após testes extensivos com Cloudflare Access SSH (Service Tokens), a abordagem mostrou-se não confiável para automação — erros intermitentes de autenticação (`username is empty`, `websocket: bad handshake`) impediram deploys consistentes. O transporte de CI/CD foi migrado para **Tailscale** (`tailscale/github-action@v4`), que cria nós efêmeros na rede mesh do Tailscale via WireGuard. O servidor permanece atrás de NAT; o acesso SSH manual também utiliza Tailscale (o `cloudflared-ssh.service` foi removido do servidor em v1.16).
 
 ### 1.2 Riscos Identificados
 
@@ -287,7 +292,7 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 │   3. ./gradlew build + test (cache)                                  │
 │   4. docker/build-push-action@<SHA> → GHCR                          │
 │   5. tailscale/github-action@v4 ( nó efêmero na mesh Tailscale)     │
-│   6. appleboy/ssh-action@<SHA> → TS_TAILSCALE_IP:22                 │
+│   6. ssh/scp → TS_TAILSCALE_IP:22 (Tailscale SSH, auth via OIDC)   │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │ WireGuard (UDP, criptografia ponta-a-ponta)
                            │ 100.x.x.x (runner) → TS_TAILSCALE_IP (servidor)
@@ -305,20 +310,18 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 │                                                                       │
 │  Tailscale (nativo):                                                  │
 │    tailscaled (systemd) — IP Tailscale: TS_TAILSCALE_IP             │
-│    sshd escutando em 0.0.0.0:22 (aceita conexão do runner)          │
+│    Tailscale SSH habilitado (auth via OIDC)                          │
+│    sshd escutando em 0.0.0.0:22                                      │
 │                                                                       │
-│  Cloudflare tunnel (para acesso SSH manual):                          │
-│    /usr/bin/cloudflared  (systemd: cloudflared-ssh.service)          │
-│    SSH access via ssh.eletroluk.com — NÃO usado para CI/CD           │
-│                                                                       │
-│  Containers Docker (inalterados):                                    │
-│    caddy-gateway, cloudflared-prod, cloudflared-qa                   │
+│  Containers Docker:                                                   │
+│    caddy-gateway (proxy reverso HTTP/HTTPS)                          │
+│    cloudflared-prod, cloudflared-qa (proxy reverso Cloudflare)       │
 │                                                                       │
 │  docker compose pull + up -d                                         │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-> **Nota arquitetural (v1.13):** o acesso SSH do CI/CD foi migrado de **Cloudflare Access SSH** para **Tailscale**. O runner hosted executa a action `tailscale/github-action@v4` que cria um nó efêmero na rede mesh Tailscale, conectando ao servidor via WireGuard (UDP). O servidor permanece atrás de NAT; nenhuma porta pública é necessária. O `cloudflared-ssh.service` (Fase 0.7) continua ativo para acesso SSH **manual** (debugging, manutenção), mas não é mais usado para CI/CD. O `appleboy/ssh-action` conecta diretamente no IP Tailscale do servidor (`TS_TAILSCALE_IP:22`), sem intermediary HTTPS.
+> **Nota arquitetural (v1.17):** o acesso SSH do CI/CD e do acesso manual foi migrado para **Tailscale**. O runner hosted executa a action `tailscale/github-action@v4` que cria um nó efêmero na rede mesh Tailscale, conectando ao servidor via WireGuard (UDP). O servidor permanece atrás de NAT; nenhuma porta pública é necessária. O `cloudflared-ssh.service` foi removido do servidor (v1.16). **Com Tailscale SSH habilitado (v1.17):** autenticação é via identidade Tailscale (OIDC), não via chaves SSH. `authorized_keys` e `deploy-wrapper.sh` foram removidos. Os containers Docker `cloudflared-prod` e `cloudflared-qa` permanecem ativos exclusivamente como **proxy reverso HTTP** para os endpoints web (`api.eletroluk.com`, `api-qa.eletroluk.com`, `grafana.eletroluk.com`).
 
 ### 3.2 Decisões Técnicas
 
@@ -327,18 +330,16 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | Plataforma CI | GitHub Actions hosted runners | Resolve integralmente o item 2 do `SECURITY_ASSESSMENT.md`; custo dentro da quota gratuita mensal (repo público em jun/2026) |
 | Runner | `ubuntu-latest` (GitHub-hosted) | Efêmero por design, sem Docker socket, sem persistência |
 | Conectividade runner → servidor | **Tailscale (WireGuard via `tailscale/github-action@v4`)** | Servidor sem IP público; WireGuard é UDP (funciona atrás de NAT sem port mapping); Tailscale Personal gratuito (1.000 min efêmeros/mês); substituiu Cloudflare Access SSH por instabilidade na autenticação via Service Token |
-| Autenticação CI/CD | **OIDC Tailscale (via action) + chave SSH Ed25519 (no sshd)** | Tailscale autentica o nó efêmero na rede mesh; chave SSH autentica o usuário no servidor (defesa em profundidade) |
-| Acesso SSH manual (debugging) | **Cloudflare tunnel (`cloudflared-ssh.service`) — inalterado** | Mantido para acesso manual ao servidor; não usado para CI/CD |
-| Hospedagem do tunnel SSH | Binário nativo no host + systemd (`cloudflared-ssh.service`, `cloudflared-ssh-qa.service`) | SSH é infraestrutura crítica de deploy; desacopla de Docker daemon; tunnel HTTP expõe apenas endpoint HTTPS ao Edge |
-| Hospedagem dos tunnels HTTP | Containers Docker (inalterado) | Não refatorar o que está funcionando; segue padrão atual do `docker-compose-gateway.yml` |
-| Instalação do `cloudflared` no servidor | APT oficial Cloudflare (repo `noble main`) | Atualizações via `apt upgrade`; assinatura GPG verificada; caminho `/usr/bin/cloudflared` |
+| Autenticação CI/CD | **Tailscale SSH (OIDC via action)** | Tailscale autentica o nó efêmero na rede mesh e o usuário no servidor via identidade Tailscale. Chaves SSH em `authorized_keys` são ignoradas quando `tailscale up --ssh` está habilitado. Não há segunda camada de autenticação SSH (chave SSH foi removida — v1.17) |
+| Acesso SSH manual (debugging) | **Tailscale SSH** — acesso direto via IP Tailscale | Sem tunnel; acesso manual via `workshop@TS_TAILSCALE_IP` |
+| Hospedagem dos tunnels HTTP | Containers Docker (`cloudflared-prod`, `cloudflared-qa`) | Proxy reverso Cloudflare para endpoints web (`api.eletroluk.com`, `api-qa.eletroluk.com`, `grafana.eletroluk.com`) |
 | Instalação do Tailscale no servidor | Script oficial (`tailscale.com/install.sh`) + `tailscale up --ssh` | Instalação simplificada; `--ssh` habilita SSH via Tailscale (alternative auth) |
 | Build de imagem | `docker/build-push-action@v6` (Buildx) | Constrói em buildkit isolado do runner hosted (sem expor o Docker socket do servidor de produção) |
 | Registry | GHCR (GitHub Container Registry) | Incluso no GitHub, sem custo extra, suporta tags imutáveis |
-| Deploy | `appleboy/ssh-action@v1` | Padrão de mercado, usa SSH key do secret, idempotente; destino é **IP Tailscale** (`TS_TAILSCALE_IP:22`) |
+| Deploy | SSH direto via `ssh`/`scp` (sem action de terceiros) | Conexão via Tailscale SSH (IP Tailscale + porta 22); autenticação feita pelo Tailscale (OIDC), sem precisar de `-i key`. Destino: `TS_TAILSCALE_IP:22` |
 | Versões de Actions | Pinned por SHA completo | Mitiga supply chain attack (tj-actions/changed-files, Mar/2025) |
-| **Triggers de deploy** | Inalterados (`push: tags`, `push: branches`, `workflow_dispatch`) | Mantém a cadência de release atual |
-| **Secrets** | Migrados do self-hosted para GitHub Secrets (inalterados) + novos (4 SSH + 3 Tailscale, sem CF Access) | **Tailscale OAuth** (par `TS_OAUTH_CLIENT_ID`/`TS_OAUTH_SECRET`) compartilhado prod+QA; `TS_TAILSCALE_IP` é o IP do servidor na mesh; chaves SSH continuam separadas por ambiente |
+| **Triggers de deploy** | `push: tags v*` (prod, gateway, observability) + `workflow_dispatch` (todos) | `branches` removido — deploys disparam apenas na criação de tags, não em commits em branches |
+| **Secrets** | Migrados do self-hosted para GitHub Secrets (inalterados) + novos (4 SSH + 1 Tailscale Auth Key, sem CF Access) | **Tailscale Auth Key** (`TS_AUTH_KEY`) compartilhado prod+QA; `TS_TAILSCALE_IP` é o IP do servidor na mesh; chaves SSH continuam separadas por ambiente |
 
 ### 3.3 Mapeamento Workflow por Workflow
 
@@ -367,7 +368,7 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | deploy | `docker inspect ... health check` | **Mover para step SSH no servidor** |
 | deploy | Rollback com backup image | **Mover para step SSH no servidor** — rollback via tag `:backup` retida localmente no servidor (a tag `latest` no GHCR é sobrescrita a cada push e **não pode** ser usada para reversão) |
 | deploy | — | **Gate humana:** env `production` com required reviewers (aplicada já na Fase 1) |
-| deploy | — | **v1.13 — NEW:** step de setup Tailscale: `tailscale/github-action@v4` com `oauth-client-id`, `oauth-secret`, `tags: tag:ci`, `ping: TS_TAILSCALE_IP` — cria nó efêmero na rede mesh antes do `appleboy/ssh-action` |
+| deploy | — | **v1.13 — NEW:** step de setup Tailscale: `tailscale/github-action@v4` com `authkey` (TS_AUTH_KEY), `tags: tag:ci`, `ping: TS_TAILSCALE_IP` — cria nó efêmero na rede mesh antes do `appleboy/ssh-action` |
 | verify | `pgbackrest check` | **Mover para step SSH no servidor** |
 | verify | `docker compose ps` | **Mover para step SSH no servidor** |
 | cleanup | `docker image prune -f` | **Mover para step SSH no servidor** |
@@ -452,23 +453,22 @@ Migrar o pipeline de CI/CD do Workshop REST API de **GitHub Actions self-hosted 
 | `CF_API_TOKEN`, `CF_API_TOKEN_QA` | deploy-gateway.yml | Injetado como env via SSH |
 | `CLOUDFLARE_TUNNEL_TOKEN`, `CLOUDFLARE_TUNNEL_TOKEN_QA` | deploy-gateway.yml | Tokens dos tunnels HTTP (containers Docker) |
 | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD` | deploy-observability.yml | Injetado como env via SSH |
-| **`PROD_SSH_HOST`** | deploy.yml, deploy-gateway.yml, deploy-observability.yml | IP Tailscale do servidor (`TS_TAILSCALE_IP`) — destino do `appleboy/ssh-action` |
-| **`PROD_SSH_PORT`** | deploy.yml, deploy-gateway.yml, deploy-observability.yml | `22` (porta padrão do SSH no servidor — Tailscale conecta diretamente, sem listener local) |
-| **`PROD_SSH_USER`** | deploy.yml, deploy-gateway.yml, deploy-observability.yml | `workshop` (usuário SSH no servidor) |
-| **`PROD_SSH_KEY`** | deploy.yml, deploy-gateway.yml, deploy-observability.yml | Chave SSH Ed25519 dedicada para deploy (compartilhada entre prod/gateway/observability — mesmo servidor) |
-| **`QA_SSH_HOST`** | deploy-qa.yml | IP Tailscale do servidor (`TS_TAILSCALE_IP`) |
-| **`QA_SSH_PORT`** | deploy-qa.yml | `22` |
-| **`QA_SSH_USER`** | deploy-qa.yml | `workshop` |
-| **`QA_SSH_KEY`** | deploy-qa.yml | Chave SSH Ed25519 dedicada e **separada** da `PROD_SSH_KEY` (defense-in-depth) |
-| **`TS_OAUTH_CLIENT_ID` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | Client ID do OAuth app do Tailscale (usado pela `tailscale/github-action@v4` para autenticar nós efêmeros na rede mesh) |
-| **`TS_OAUTH_SECRET` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | Client Secret do OAuth app do Tailscale |
+| **`PROD_SSH_HOST`** | ~~deploy.yml, deploy-gateway.yml, deploy-observability.yml~~ | ⚠️ **OBSOLETO (v1.17)** — Tailscale SSH conecta via IP direto (`TS_TAILSCALE_IP`), sem host intermediário. Pode ser removido do GitHub. |
+| **`PROD_SSH_PORT`** | ~~deploy.yml, deploy-gateway.yml, deploy-observability.yml~~ | ⚠️ **OBSOLETO (v1.17)** — Tailscale SSH usa porta 22 diretamente. Pode ser removido do GitHub. |
+| **`PROD_SSH_USER`** | deploy.yml, deploy-gateway.yml, deploy-observability.yml | `workshop` (usuário SSH no servidor — ainda necessário para Tailscale SSH) |
+| **`PROD_SSH_KEY`** | ~~deploy.yml, deploy-gateway.yml, deploy-observability.yml~~ | ⚠️ **OBSOLETO (v1.17)** — Tailscale SSH autentica via OIDC (identidade Tailscale), não via chave SSH. `authorized_keys` é ignorado quando `tailscale up --ssh` está habilitado. Pode ser removido do GitHub. |
+| **`QA_SSH_HOST`** | ~~deploy-qa.yml~~ | ⚠️ **OBSOLETO (v1.17)** — idem `PROD_SSH_HOST`. |
+| **`QA_SSH_PORT`** | ~~deploy-qa.yml~~ | ⚠️ **OBSOLETO (v1.17)** — idem `PROD_SSH_PORT`. |
+| **`QA_SSH_USER`** | deploy-qa.yml | `workshop` (ainda necessário) |
+| **`QA_SSH_KEY`** | ~~deploy-qa.yml~~ | ⚠️ **OBSOLETO (v1.17)** — idem `PROD_SSH_KEY`. Nunca foi adicionada ao servidor. |
+| **`TS_AUTH_KEY` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | Auth key do Tailscale (usado pela `tailscale/github-action@v4` para autenticar nós efêmeros na rede mesh; expira em 90 dias — renovação manual) |
 | **`TS_TAILSCALE_IP` (NOVO, v1.13)** | deploy.yml, deploy-gateway.yml, deploy-observability.yml, deploy-qa.yml | IP Tailscale do servidor na rede mesh (ex.: `100.x.x.x`) — destino do `appleboy/ssh-action` |
 
-> **Total de secrets novos (v1.13):** **7** (4 SSH prod + 4 SSH QA + 3 Tailscale − 2 CF Access antigos). Os secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` **não são mais necessários** para CI/CD — o Tailscale substitui o Cloudflare Access SSH como transporte. Caso sejam mantidos para outro uso, podem ser revogados no dashboard Cloudflare Zero Trust (`Access → Service Auth`).
+> **Total de secrets novos (v1.13, revisado v1.17):** Originalmente **5** (4 SSH prod + 3 Tailscale − 2 CF Access antigos). Com v1.17, os 4 secrets SSH (`PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_KEY`, `QA_SSH_HOST`, `QA_SSH_PORT`, `QA_SSH_KEY`) são **obsoletos** — Tailscale SSH autentica via OIDC, sem chaves SSH. Secret efetivamente necessário: **`PROD_SSH_USER`** (1) + **`QA_SSH_USER`** (1) + **`TS_AUTH_KEY`** (1) + **`TS_TAILSCALE_IP`** (1) = **4 secrets novos**. Os secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` foram **removidos** (Service Token do Cloudflare Zero Trust não é mais necessário — o cloudflared-ssh.service foi descontinuado). Os secrets `CF_API_TOKEN`, `CF_API_TOKEN_QA`, `CLOUDFLARE_TUNNEL_TOKEN` e `CLOUDFLARE_TUNNEL_TOKEN_QA` permanecem para os containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`).
 
-> **Decisão sobre `PROD_SSH_HOST` (v1.13):** o valor de `PROD_SSH_HOST` muda de `localhost` (antigo, para listener do `cloudflared access ssh`) para o **IP Tailscale do servidor** (`TS_TAILSCALE_IP`). O `appleboy/ssh-action` conecta diretamente no `TS_TAILSCALE_IP:22` via rede Tailscale, sem intermediary HTTPS. Isso simplifica a arquitetura (sem step de download/configuração do `cloudflared` no runner).
+> **Decisão sobre `PROD_SSH_HOST` (v1.13 → obsoleto v1.17):** originalmente, `PROD_SSH_HOST` mudou de `localhost` (antigo, para listener do `cloudflared access ssh`) para o **IP Tailscale do servidor** (`TS_TAILSCALE_IP`). Com Tailscale SSH habilitado (v1.17), o runner conecta diretamente em `TS_TAILSCALE_IP:22` — não há need de `PROD_SSH_HOST` ou `PROD_SSH_PORT` separados.
 
-> **Nota sobre SSH (v1.13):** As chaves SSH (`*_SSH_KEY`) continuam sendo geradas como chaves dedicadas e adicionadas ao `~/.ssh/authorized_keys` do usuário `workshop` no servidor com `command="/usr/local/bin/deploy-wrapper.sh"` e flags `no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty` (Fase 0.3). Chave do QA é **separada** da chave do prod para isolar blast radius. O wrapper restringe comandos executáveis (whitelist).
+> **Nota sobre SSH (v1.13 → descontinuado v1.17):** As chaves SSH (`*_SSH_KEY`) foram originalmente geradas como chaves dedicadas e adicionadas ao `~/.ssh/authorized_keys` do usuário `workshop` no servidor com `command="/usr/local/bin/deploy-wrapper.sh"` e flags `no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty` (Fase 0.3). **Com Tailscale SSH habilitado (v1.17):** (1) o Tailscale SSH autentica via identidade Tailscale (OIDC), **ignorando** `authorized_keys` completamente; (2) o `deploy-wrapper.sh` foi removido do servidor; (3) as linhas das chaves públicas foram removidas do `authorized_keys`; (4) os secrets `PROD_SSH_KEY` e `QA_SSH_KEY` são desnecessários. A autenticação CI/CD agora depende 100% do Tailscale ACL.
 
 ### 3.5 Permissões Mínimas (`permissions:`)
 
@@ -590,10 +590,10 @@ O projeto inclui o script `scripts/audit-action-shas.sh` (Tarefa 0.6.1) que audi
 | # | Tarefa (revisada v1.7) | Owner | Entregável |
 |---|--------|-------|------------|
 | 0.1 | Confirmar triggers: **`release/*` é a branch de release**; push de tag `v*` em `release/*` dispara prod/gateway/observability; QA é 100% manual via `workflow_dispatch`; branch `release/1.2.0` permanece como branch de trabalho manual (CI workflow roda em PRs mas não dispara deploy QA) | Eng. | Mapeamento de triggers documentado |
-| 0.2 | Gerar **2 pares de chaves SSH Ed25519** dedicados para deploy (não usar chaves pessoais): `deploy_key_prod` (compartilhada entre prod/gateway/observability) e `deploy_key_qa` (separada, defense-in-depth) | Eng. | `deploy_key_prod`/`deploy_key_qa` (privadas) + `.pub` (públicas) |
-| 0.3 | **(v1.7 — promoted from "opcional" no v1.6)** Adicionar `deploy_key_prod.pub` e `deploy_key_qa.pub` ao `~/.ssh/authorized_keys` do usuário `workshop` no servidor **com `command="/usr/local/bin/deploy-wrapper.sh"` e flags `no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty`** (Fase 0.3 promoted). Isso mitiga o risco residual (v1.6, seção 7.2) de que vazar `QA_SSH_KEY` dê shell interativo no servidor de produção. O wrapper registra o comando recebido via env `$SSH_ORIGINAL_COMMAND`, executa apenas comandos whitelisted (`docker compose ...`, `cd ~/workshop && ...`), e bloqueia qualquer outro uso das chaves | Eng. | Autorização SSH configurada com `command="..."` |
+| 0.2 | ~~Gerar **2 pares de chaves SSH Ed25519** dedicados para deploy~~ | ⚠️ | **OBSOLETO (v1.17):** Tailscale SSH autentica via OIDC; chaves SSH não são usadas. |
+| 0.3 | ~~Adicionar `deploy_key_prod.pub` e `deploy_key_qa.pub` ao `~/.ssh/authorized_keys` com `command="..."` e flags~~ | ⚠️ | **OBSOLETO (v1.17):** Tailscale SSH ignora `authorized_keys`; `deploy-wrapper.sh` removido. |
 | 0.4 | Habilitar features de segurança do GitHub (item 5 deste PRD) | Eng. | Secret scanning, dependabot, push protection, fork approval |
-| 0.5 | **(v1.7 — NEW)** Inventariar e marcar para remoção os **4 secrets SSH órfãos** atuais: `SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `SERVER_PASSPHRASE` (criados em 2025-08-06, antes desta migração). Não rotacionar agora (Não-Objetivo do PRD), mas **removê-los após a Fase 5** (Fase 5.5 — ver histórico) para reduzir superfície de ataque. Documentar em `AGENTS.md` | Eng. | Lista de secrets a remover na Fase 5.5 |
+| 0.5 | **(v1.7 — NEW, atualizado v1.17)** Inventariar secrets para remoção: (1) **4 secrets órfãos antigos** — `SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `SERVER_PASSPHRASE` (criados em 2025-08-06). (2) **6 secrets SSH obsoletos (v1.17)** — `PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_KEY`, `QA_SSH_HOST`, `QA_SSH_PORT`, `QA_SSH_KEY` (Tailscale SSH autentica via OIDC, sem chaves SSH). **Total: 10 secrets a remover.** Confirmar que nenhum workflow ativo os referencia antes de remover (`grep` em `.github/workflows/*.yml`) | Eng. | Lista de 10 secrets a remover |
 
 **Comando de geração (referência):**
 ```bash
@@ -603,14 +603,18 @@ ssh-keygen -t ed25519 -a 100 -C "workshop-deploy-qa@<host>" -f deploy_key_qa
 
 **Validação:** `ssh -i deploy_key_prod workshop@<HOST> 'echo OK'` retorna "OK" (e idem para `deploy_key_qa`).
 
-**Template do `authorized_keys` com `command="..."` (referência):**
+**Template do `authorized_keys` com `command="..."` (referência — OBSOLETO v1.17):**
+
+> **Nota v1.17:** o template abaixo é histórico. Com Tailscale SSH habilitado, `authorized_keys` é ignorado. Chaves SSH e `deploy-wrapper.sh` foram removidos do servidor.
 
 ```
 command="/usr/local/bin/deploy-wrapper.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAAC3... workshop-deploy-prod
 command="/usr/local/bin/deploy-wrapper.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAAC3... workshop-deploy-qa
 ```
 
-**Template de `/usr/local/bin/deploy-wrapper.sh`:**
+**Template de `/usr/local/bin/deploy-wrapper.sh` (referência — OBSOLETO v1.17):**
+
+> **Nota v1.17:** o script abaixo é histórico. `deploy-wrapper.sh` foi removido do servidor.
 
 ```bash
 #!/usr/bin/env bash
@@ -778,7 +782,7 @@ ingress:
 |---|--------|-------------|
 | 1.1 | Reescrever `.github/workflows/deploy.yml` com `runs-on: ubuntu-latest`. Job `build`: `actions/checkout` + `actions/setup-java` (JDK 21) + `actions/cache` (Gradle) + `./gradlew build -x test` + `docker/login-action` + `docker/build-push-action@v6` → GHCR com tags `<git-tag>`, `sha-<7>`, `latest` (permissões elevadas: `contents: read` + `packages: write`). Job `deploy`: **`tailscale/github-action@v4`** (step 1 — nó efêmero na rede mesh) + `appleboy/ssh-action` para materializar `.env`/chaves JWT, `docker compose pull` + `up -d`, health check (90 * 5s), rollback (tag `:backup` no servidor), pgBackRest check, `docker image prune` | Fase 0.7 |
 | 1.1b | Configurar env `production` no GitHub com **required reviewers** (mantenedor como reviewer inicial) — gate humana aplicada **já na Fase 1**, não na Fase 5 | 1.1 |
-| 1.2 | Adicionar **7 secrets novos** ao GitHub (`PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_USER`, `PROD_SSH_KEY`, `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `TS_TAILSCALE_IP`) | 1.1 |
+| 1.2 | Adicionar **5 secrets novos** ao GitHub (`PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_USER`, `PROD_SSH_KEY`, `TS_AUTH_KEY`, `TS_TAILSCALE_IP`) | 1.1 |
 | 1.3 | Testar em tag de homologação: criar tag `v1.3.0-rc1` em branch de release (`release/1.3.0`) | 1.2 |
 | 1.4 | Validar: deploy rodou, health check passou, rollback funcionou em falha simulada | 1.3 |
 | 1.5 | Documentar mudanças no `AGENTS.md` | 1.4 |
@@ -841,8 +845,8 @@ ingress:
 | 5.3 | **Remover tudo (opção B — sem backup):** `systemctl stop actions.runner.* && rm -rf ~/actions-runner`. Reverter exige gerar novo token de registro no GitHub (processo de ~5min) | 5.2 |
 | 5.4 | Atualizar `SECURITY_ASSESSMENT.md`: marcar item 2 como **✅ Resolvido em 20/06/2026** (data ajustada de v1.5) | 5.3 |
 | 5.5 | Atualizar `AGENTS.md`: remover referências ao runner self-hosted | 5.4 |
-| **5.6 (NEW, v1.7)** | **Remover 4 secrets órfãos do GitHub** (inventariados na Fase 0.5): `SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `SERVER_PASSPHRASE`. Comando: `gh secret delete SSH_PRIVATE_KEY SERVER_HOST SERVER_USER SERVER_PASSPHRASE`. **Pré-condição:** confirmar que nenhum workflow ativo referencia esses secrets (grep em `.github/workflows/*.yml` para `SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `SERVER_PASSPHRASE`) | 5.5 |
-| **5.7 (NEW, v1.7)** | **Confirmar que `deploy-wrapper.sh` está em produção:** `ssh workshop@HOST 'ls -la /usr/local/bin/deploy-wrapper.sh && cat /usr/local/bin/deploy-wrapper.sh'` (auditoria do `command="..."` da Fase 0.3) | 5.6 |
+| **5.6 (NEW, v1.7, atualizado v1.17)** | **Remover 10 secrets obsoletos do GitHub** (inventariados na Fase 0.5): 4 órfãos antigos (`SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `SERVER_PASSPHRASE`) + 6 SSH obsoletos v1.17 (`PROD_SSH_HOST`, `PROD_SSH_PORT`, `PROD_SSH_KEY`, `QA_SSH_HOST`, `QA_SSH_PORT`, `QA_SSH_KEY`). Comando: `gh secret delete <SECRET_NAME>` para cada um. **Pré-condição:** confirmar que nenhum workflow ativo referencia esses secrets (grep em `.github/workflows/*.yml`) | 5.5 |
+| ~~**5.7 (NEW, v1.7)**~~ | ~~**Confirmar que `deploy-wrapper.sh` está em produção**~~ | ⚠️ **OBSOLETO (v1.17):** `deploy-wrapper.sh` foi removido do servidor. |
 
 ### Fase 6 — Hardening Adicional Contínuo (2h)
 
@@ -1186,13 +1190,13 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 
 ### 6.3 Operacionais
 
-- [ ] **AO1.** Nenhum secret novo precisa ser gerado além dos **7 secrets novos** (4 SSH prod: `PROD_SSH_HOST/PORT/USER/KEY`; 4 SSH QA: `QA_SSH_HOST/PORT/USER/KEY` compartilhados com prod; 3 Tailscale: `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `TS_TAILSCALE_IP`). Cloudflare tunnel SSH mantido para acesso manual (sem secrets adicionais).
+- [ ] **AO1.** Nenhum secret novo precisa ser gerado além dos **5 secrets novos** (4 SSH prod: `PROD_SSH_HOST/PORT/USER/KEY`; 3 Tailscale: `TS_AUTH_KEY`, `TS_TAILSCALE_IP`). Secrets Cloudflare para containers Docker HTTP mantidos (`CF_API_TOKEN`, `CLOUDFLARE_TUNNEL_TOKEN`).
 - [ ] **AO2.** `AGENTS.md` atualizado com novos comandos e referências.
 - [ ] **AO3.** Documentação no `SECURITY_ASSESSMENT.md` reflete a nova arquitetura.
 - [ ] **AO4.** Não há regressão no tempo médio de deploy (alvo: ≤ baseline + 2 min; tolerância para cold start do runner hosted + pull de imagem GHCR; `timeout-minutes: 45` para `deploy` na Fase 6).
-- [ ] **AO5.** `cloudflared-ssh.service` e `cloudflared-ssh-qa.service` ativos e HEALTHY (para acesso manual): `systemctl status` mostra `active (running)`, `WatchdogSec=60` configurado, restart automático validado via `systemctl kill` (sem reboot).
-- [ ] **AO6.** Smoke test ponta-a-ponta via Tailscale (CI/CD): `tailscale/github-action@v4` cria nó efêmero → `ssh -i deploy_key_prod workshop@TS_TAILSCALE_IP` conecta sem pedir senha, valida autenticação via chave SSH no servidor. Smoke test manual via Cloudflare (contingência): `cloudflared access ssh --hostname ssh.eletroluk.com --listener localhost:2222` → `ssh -p 2222 -i deploy_key_prod workshop@localhost` conecta.
-- [ ] **AO7.** `AGENTS.md` documenta o serviço `cloudflared-ssh` nativo (acesso manual), a migração do CI/CD para Tailscale, os **7 secrets novos** do GitHub (4 SSH + 3 Tailscale), os novos triggers (tag `v*` em `release/*` para prod/gateway/observability; `workflow_dispatch` para QA), e o wrapper `deploy-wrapper.sh` com `command="..."` no `authorized_keys` (Fase 0.3 v1.7).
+- [ ] **AO5.** Tailscale `tailscaled` ativo e resiliente a reboot: `systemctl is-enabled tailscaled` retorna `enabled`; módulo `tun` configurado em `/etc/modules-load.d/tun.conf`; `tailscale status` mostra nó conectado com SSH habilitado.
+- [ ] **AO6.** Smoke test ponta-a-ponta via Tailscale (CI/CD): `tailscale/github-action@v4` cria nó efêmero → `ssh workshop@TS_TAILSCALE_IP` conecta sem pedir senha, valida autenticação via Tailscale SSH no servidor.
+- [ ] **AO7.** `AGENTS.md` documenta o uso de Tailscale para CI/CD e acesso SSH manual, os **5 secrets novos** do GitHub (4 SSH + 3 Tailscale, com `TS_AUTH_KEY` no lugar de `TS_OAUTH_CLIENT_ID/SECRET`), os novos triggers (tag `v*` para prod/gateway/observability; `workflow_dispatch` para QA), e o wrapper `deploy-wrapper.sh` com `command="..."` no `authorized_keys` (Fase 0.3 v1.7).
 
 ---
 
@@ -1205,15 +1209,12 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 | Build no hosted runner falha por diferença de ambiente (locale, timezone, etc.) | Média | Médio | Usar `ubuntu-latest` (mesmo OS); `actions/setup-java@v4` padroniza JDK 21; **camada L2 (`build-image.yml` da Fase 0.6.1) exercita build + smoke efêmero a cada push em `release/*`, falhando cedo antes de envolver SSH** |
 | SSH para o servidor falha por firewall/porta bloqueada | Baixa | Alto | Tailscale usa **WireGuard (UDP)** — funciona atrás de NAT sem port mapping; nenhuma porta pública necessária no servidor |
 | Tempo de deploy aumenta (cold start do hosted runner) | Média | Baixo | ~30-60s extras por deploy (cold start + pull de imagem GHCR); aceitável para cadência de release atual; `timeout-minutes: 45` no `deploy` (Fase 6) |
-| Secrets de SSH vazam em logs | Baixa | Alto | `appleboy/ssh-action` não loga conteúdo de comandos por padrão; secrets `TS_OAUTH_CLIENT_ID/SECRET` passados como **env vars** (não CLI args) para não aparecer em `ps aux` |
+| Secrets de SSH vazam em logs | Baixa | Alto | `appleboy/ssh-action` não loga conteúdo de comandos por padrão; `TS_AUTH_KEY` passado como **env var** (não CLI arg) para não aparecer em `ps aux` |
 | `packages: write` no job `build` amplia blast radius do `GITHUB_TOKEN` | Baixa | Médio | Permissão declarada **apenas no escopo do job** (não no workflow inteiro); `contents: read` em todos os demais jobs; **follow-up (v1.7):** considerar `attestations: write` (Fase 6) para build provenance SLSA |
 | Trivy scan bloqueia deploy por falso positivo (modo fail desde o início) | Média | Médio | **v1.7 — endurecimento gradual:** iniciar com `trivy fs --exit-code 0 --severity HIGH,CRITICAL` (relatório, não-bloqueante) por 2 semanas para gerar baseline; endurecer para `--exit-code 1` apenas após findings conhecidos serem mitigados ou aceitos. Build roda em jobs separados para fácil rollback do scan |
 | **Limite do plano Tailscale Personal (1.000 min efêmeros/mês)** | Média | Alto | Monitorar uso mensal via dashboard Tailscale; upgrade para Standard ($8/mês) se necessário; a taxa atual (~200 deploys/mês) cabe no limite; deploys rápidos (<5 min) consomem pouco |
-| Serviço `cloudflared-ssh` cai e impede acesso manual | Baixa | Médio | `Restart=always` + `RestartSec=5` + `WatchdogSec=60` no systemd; validado via `systemctl kill` (Fase 0.7.13, sem reboot); **CI/CD não depende mais deste serviço** (usa Tailscale) |
-| Token do tunnel SSH vaza do host | Baixa | Alto | Credentials file em `/etc/cloudflared` com `chown root:cloudflared` e `chmod 640`; serviço roda como `User=nobody`; credentials file não vai para o GitHub; CI/CD usa Tailscale (não cloudflared) |
-| Atualização do `cloudflared` quebra compatibilidade | Baixa | Médio | `cloudflared --no-autoupdate` na unit; atualizações controladas manualmente via `apt upgrade` no servidor seguindo changelog; CI/CD não usa cloudflared |
-| Falha de validação de restart (kill não recupera) | Baixa | Alto | A própria falha do `Restart=always` é detectada na Fase 0.7.13; se falhar, executar `apt install --reinstall cloudflared` antes de prosseguir |
-| Tailscale OAuth token vaza | Baixa | Alto | OAuth tokens do Tailscale são **revogáveis** no admin console (`Settings → Keys`); o token permite criar nós efêmeros na rede mesh mas não dá acesso ao servidor diretamente — chave SSH ainda é necessária (defesa em profundidade); monitorar uso anômalo no dashboard Tailscale |
+| Tailscale Auth Key vaza | Baixa | Alto | Auth keys são **revogáveis** no admin console (`Settings → Keys`); chave permite criar nós efêmeros na rede mesh mas não dá acesso ao servidor diretamente — Tailscale SSH + chave SSH Ed25519 ainda são necessários (defesa em profundidade); monitorar uso anômalo no dashboard Tailscale; auth key expira em 90 dias (renovação manual) |
+| Tailscale não reconecta após reboot do servidor | Baixa | Alto | `tailscaled` habilitado no systemd (`systemctl is-enabled tailscaled`); módulo `tun` configurado em `/etc/modules-load.d/tun.conf`; state persistente em `/var/lib/tailscale/`; acesso físico ao servidor como contingência final |
 
 ### 7.2 Riscos de Segurança Residuais
 
@@ -1224,8 +1225,6 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 | Exfiltração de secrets via logs | Secrets printados acidentalmente | Marcar todos os secrets como masked (padrão GitHub); não usar `set -x` em steps com secrets |
 | Atacante obtém `GITHUB_TOKEN` válido | Phishing, credencial roubada | `GITHUB_TOKEN` tem `contents: read` por padrão; `packages: write` apenas em jobs `build` (escopo limitado); deploy depende de SSH key separada (não atrelada ao `GITHUB_TOKEN`) |
 | Branch protection bypass | Workflow com `pull_request_target` | Nenhum workflow usa `pull_request_target` (verificado) |
-| Mistura de modelos (tunnel HTTP em Docker, tunnel SSH nativo, Tailscale para CI/CD) dificulta auditoria | Documentado na seção 3.2 e no `AGENTS.md`; comentário nos respectivos compose/unit files deixando explícito que tunnel SSH é exceção por criticidade de deploy; CI/CD usa Tailscale (rede mesh separada) |
-| Binário `cloudflared` no host adiciona vetor de supply chain | Instalado apenas de release oficial do GitHub Cloudflare; chave GPG do repositório APT verificada no passo 0.7.4; `--no-autoupdate` impede auto-update que poderia introduzir versão maliciosa |
 | Chave SSH do QA vaza (ex.: devs com acesso ao workflow do QA) | Comprometimento do secret `QA_SSH_KEY` | Chave `QA_SSH_KEY` é **separada** da `PROD_SSH_KEY` (defense-in-depth); prod e QA compartilham o mesmo host, então vazar `QA_SSH_KEY` dá shell no servidor de prod. **Mitigação adotada em v1.7 (Fase 0.3, promoted from "opcional" no v1.6):** `authorized_keys` com `command="/usr/local/bin/deploy-wrapper.sh"` + flags `no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty` — shell interativo fica **bloqueado**; apenas comandos whitelisted pelo wrapper são executados |
 
 ### 7.3 Riscos Operacionais
@@ -1249,7 +1248,7 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 | Superfície de ataque do CI | Docker socket + rede doméstica | Apenas SSH key em host ephemeral |
 | Número de hosts com acesso a secrets | 1 (servidor) | 1 (servidor, mesmo de antes) |
 | Custo mensal de CI | $0 (mas $0.002/min após mar/2026) | $0 (repo público, dentro da quota gratuita mensal de jun/2026) — **corrige v1.6 que dizia "ilimitado"** |
-| **Secrets novos no GitHub** (v1.13) | — | **7** (4 SSH prod + 4 SSH QA compartilhados + 3 Tailscale) — corrigido de 10 (v1.7, que incluía 2 CF Access) |
+| **Secrets novos no GitHub** (v1.13) | — | **5** (4 SSH prod + 1 Tailscale Auth Key) — `TS_AUTH_KEY` no lugar de `TS_OAUTH_CLIENT_ID/SECRET`; `CF_ACCESS_CLIENT_ID/SECRET` removidos |
 
 ---
 
@@ -1262,7 +1261,7 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 | Fase 0.5 — Proteções do repo (Frentes 1-3) | 30 min (paralelo) | D+0 | D+0 | — |
 | Fase 0.6 — Ações complementares (SECURITY.md, CodeQL com **SHAs distintos por sub-action v1.7**, **L1: `ci.yml`**, permissions) | 30 min (paralelo) | D+0 | D+0 | — |
 | **Fase 0.6.1 — Workflow `build-image.yml` (camada L2, build GHCR isolado, sem deploy)** | **15 min (paralelo)** | **D+0** | **D+0** | **Fase 0.6** |
-| **Fase 0.7 (revisada v1.7) — Instalar `cloudflared-ssh` nativo + 2 tunnels HTTP + Cloudflare Zero Trust + Service Token** | **1,5h** | **D+0** | **D+0** | **B. Pré-requisitos** |
+| **Fase 0.7 (descontinuada v1.16)** — ~~Instalar `cloudflared-ssh` nativo + 2 tunnels HTTP + Cloudflare Zero Trust + Service Token~~ — cloudflared-ssh removido do servidor; containers Docker HTTP permanecem ativos | **N/A (histórico)** | **N/A** | **N/A** |
 | Fase 1 — Migração `deploy.yml` (gate humana já aplicada, GHCR com `latest`, **rollback via tag `:backup` local v1.7**, **transporte via Tailscale v1.13**) | 1,5h | D+0 | D+0 | Fase 0, Fase 0.7 |
 | Fase 2 — Migração `deploy-qa.yml` (tunnel QA já provisionado na Fase 0.7 — **redução de 30 min vs. v1.5**; `concurrency: qa-deploy` v1.7; QA 100% manual) | 1h | D+1 | D+1 | Fase 1 |
 | Fase 3 — Migração `deploy-gateway.yml` (subpacote GHCR; mesma gate humana) | 45 min | D+1 | D+1 | Fase 2 |
@@ -1309,6 +1308,86 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 
 ---
 
+## Adendo v1.15 — Usuário Dedicado para CI/CD via Tailscale SSH
+
+**Data:** 23/06/2026
+**Motivo:** Separação de responsabilidades entre acesso manual ao servidor e CI/CD automatizado via Tailscale SSH.
+
+### Problema
+
+Atualmente, o usuário `workshop` é usado para **tudo**: acesso manual ao servidor (debugging, manutenção) e CI/CD (deploy via Tailscale SSH). Isso apresenta os seguintes riscos:
+
+| Risco | Descrição |
+|-------|-----------|
+| Auditabilidade | Logs do `journalctl` misturam ações manuais e automatizadas — impossível saber se um comando foi executado por um humano ou pelo pipeline |
+| Blast radius | Se o `TS_AUTH_KEY` vazar, o atacante tem acesso como `workshop` — o mesmo usuário que dá acesso manual ao servidor |
+| Controle de acesso | Não é possível restringir comandos do CI/CD sem afetar o acesso manual (e vice-versa) |
+
+### Solução
+
+Criar um usuário Linux dedicado `ci-deploy` no servidor, usado **exclusivamente** pelo CI/CD. O usuário `workshop` continua disponível para acesso manual.
+
+| Aspecto | Antes | Depois |
+|---------|-------|--------|
+| CI/CD usa | `workshop` | `ci-deploy` |
+| Acesso manual usa | `workshop` | `workshop` |
+| Audit logs | Misturados | Separados |
+| Blast radius | `workshop` comprometido = acesso total | `ci-deploy` comprometido = apenas CI/CD |
+
+### Tarefas
+
+| # | Tarefa | Comando/ação | Dependência |
+|---|--------|--------------|-------------|
+| 15.1 | Criar usuário `ci-deploy` no servidor | `sudo useradd -m -s /bin/bash ci-deploy` | — |
+| 15.2 | Adicionar `ci-deploy` ao grupo `workshop` | `sudo usermod -aG workshop ci-deploy` | 15.1 |
+| 15.3 | Configurar `authorized_keys` para `ci-deploy` | Adicionar chave pública do deploy em `~ci-deploy/.ssh/authorized_keys` com `command="/usr/local/bin/deploy-wrapper.sh"` e flags `no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty` (mesmo template da Fase 0.3) | 15.1 |
+| 15.4 | Ajustar ACL Tailscale | `users: ["workshop"]` → `users: ["ci-deploy"]` na regra SSH do Tailscale Admin Console | 15.2 |
+| 15.5 | Atualizar `PROD_SSH_USER` no GitHub | `gh secret set PROD_SSH_USER --body "ci-deploy"` | 15.4 |
+| 15.6 | Testar com workflow de teste | Executar `test-tailscale-ssh.yml` — SSH e SCP devem funcionar como `ci-deploy` | 15.5 |
+| 15.7 | Testar acesso manual | `ssh workshop@TS_TAILSCALE_IP` — deve continuar funcionando como `workshop` | 15.4 |
+
+### Comandos de referência
+
+```bash
+# No servidor:
+sudo useradd -m -s /bin/bash ci-deploy
+sudo usermod -aG workshop ci-deploy
+
+# Criar authorized_keys para ci-deploy:
+sudo mkdir -p /home/ci-deploy/.ssh
+sudo cp /home/workshop/.ssh/authorized_keys /home/ci-deploy/.authorized_keys
+# (ou adicionar nova chave pública do deploy)
+sudo chown -R ci-deploy:ci-deploy /home/ci-deploy/.ssh
+sudo chmod 700 /home/ci-deploy/.ssh
+sudo chmod 600 /home/ci-deploy/.authorized_keys
+
+# No Tailscale Admin Console (https://login.tailscale.com/admin/acls):
+# Na regra SSH, trocar "users": ["workshop"] por "users": ["ci-deploy"]
+
+# No GitHub:
+gh secret set PROD_SSH_USER --body "ci-deploy"
+```
+
+### Riscos e Mitigações
+
+| Risco | Mitigação |
+|-------|-----------|
+| CI/CD não funciona se `ci-deploy` não estiver configurado corretamente | Testar com `test-tailscale-ssh.yml` antes de merge |
+| `ci-deploy` não tem permissões para comandos que o deploy precisa | Grupo `workshop` herda permissões; `deploy-wrapper.sh` controla whitelist |
+| Se Tailscale cair, CI/CD não funciona (usando `ci-deploy`) | `workshop` mantido para acesso manual via Tailscale SSH; acesso físico ao servidor como contingência final |
+| Auth key do Tailscale precisa ser renovada a cada 90 dias | Documentado na seção 12 do artigo; criar calendar reminder |
+
+### Validação
+
+- [ ] Usuário `ci-deploy` criado e no grupo `workshop`
+- [ ] ACL Tailscale atualizada: `users: ["ci-deploy"]`
+- [ ] `PROD_SSH_USER` atualizado no GitHub
+- [ ] Workflow de teste passa (SSH + SCP como `ci-deploy`)
+- [ ] Acesso manual como `workshop` continua funcionando
+- [ ] Audit logs mostram `ci-deploy` para ações do CI/CD
+
+---
+
 ## 11. Aprovações
 
 | Papel | Nome | Data | Status |
@@ -1337,3 +1416,6 @@ Frente 1 (gh CLI)          Frente 2 (git commit)         Frente 3 (Web UI)
 | 1.12 | 22/06/2026 | Eng. | **Auditoria de SHAs (seção 3.6):** 3 dos 6 SHAs de actions listados divergiam dos valores reais publicados no GitHub em jun/2026. SHAs corrigidos: `actions/setup-java` v4.1.0 (`c5195...` → `9704b...`), `docker/build-push-action` v6.0.0 (`05658...` → `c382f...`), `docker/login-action` v3.2.0 (`5cd0f...` → `0d4c9...`). Adicionado SHA de `appleboy/ssh-action` v1.0.3 (`029f5...`) — antes era apenas "pinar via tag". Validação via `curl https://api.github.com/repos/<owner>/<repo>/git/refs/tags/<tag>`. Adicionadas tarefas 0.6.1 (script `scripts/audit-action-shas.sh`) e 0.6.2 (`.github/dependabot.yml`) para automação de auditorias futuras. Adendo 3.6.1 documenta 3 métodos de encontrar/validar SHAs. |
 | 1.13 | 22/06/2026 | Eng. | **Migração do transporte CI/CD de Cloudflare Access SSH para Tailscale.** Problema: Service Tokens do Cloudflare Zero Trust não encaminham o username de forma consistente do runner para o servidor; erros intermitentes (`username is empty`, `websocket: bad handshake`, `error in libcrypto`) impediram deploys confiáveis. Solução: `tailscale/github-action@v4` cria nós efêmeros na rede mesh via WireGuard, conectando ao servidor sem port mapping. Mudanças: (1) Seção 0.14 — novo registro de progresso documentando o problema e a solução. (2) Seção 1.1 — parágrafo adicionado sobre a mudança de transporte. (3) Seção 3.1 — diagrama de arquitetura reescrito com Tailscale (WireGuard) no lugar de Cloudflare Access SSH (HTTPS). (4) Seção 3.2 — tabela de decisões técnicas atualizada: conectividade → Tailscale, auth → OIDC + WireGuard + SSH key; adicionada linha do Tailscale GitHub Action. (5) Seção 3.4 — secrets remapeados: removidos `CF_ACCESS_CLIENT_ID/SECRET`, adicionados `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `TS_TAILSCALE_IP`; total de novos reduzido de 10 para 7. (6) Seção 0.7 — nota adicionada indicando que o tunnel SSH continua para acesso manual mas CI/CD usa Tailscale. (7) Seção 4 — Fase 1 atualizada: step de `tailscale/github-action@v4` substitui `cloudflared access ssh --listener`; workflows deploy-gateway e deploy-qa e deploy-observability atualizados. (8) Seção 7 — novo risco "Limite do plano Tailscale Personal" com mitigação; risco "Service Token vaza" removido/relevância reduzida. (9) Cloudflare tunnel SSH (`cloudflared-ssh.service`) mantido como contingência e para acesso manual — não revertido. |
 | 1.14 | 23/06/2026 | Eng. | **Implementação da Fase 1 — `deploy.yml` reescrito com Tailscale.** Workflow `deploy.yml` migrado de Cloudflare Access SSH para Tailscale. Mudanças: (1) Removidos env vars `CLOUDFLARED_VERSION`, `CLOUDFLARED_SHA256`, `SSH_HOST`. (2) Job `deploy`: step "Setup cloudflared + SSH" substituído por `tailscale/github-action@v4` (SHA `306e68a...` v4.1.2) + step "Setup SSH key" simplificado (sem ProxyCommand). (3) Jobs `verify` e `cleanup`: mesmo padrão — Tailscale action + SSH key setup. (4) `SSH_TARGET` muda de `workshop@ssh.eletroluk.com` para `workshop@${{ secrets.TS_TAILSCALE_IP }}`. (5) Adicionado `-o StrictHostKeyChecking=no` nos comandos SSH/SCP. (6) Secrets confirmados: `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `TS_TAILSCALE_IP` criados via `gh secret set`. (7) Plano Tailscale Personal validado: 6 users, 1.000 ephemeral min/mês (suficiente para ~200 deploys). (8) ACL Tailscale configurado: `autogroup:member → autogroup:self` (network + SSH). (9) Tag `tag:ci` configurada com owner `autogroup:member`. |
+| 1.15 | 23/06/2026 | Eng. | **Adendo v1.15 — Usuário dedicado para CI/CD via Tailscale SSH.** (1) Justificativa: `workshop` é usado para acesso manual e CI/CD, misturando audit logs e blast radius. (2) Solução: criar usuário `ci-deploy` dedicado ao CI/CD, mantendo `workshop` para acesso manual. (3) Tarefas: criar `ci-deploy` no servidor, adicionar ao grupo `workshop`, ajustar ACL Tailscale (`users: ["ci-deploy"]`), atualizar `PROD_SSH_USER` no GitHub, testar com `test-tailscale-ssh.yml`. (4) Risco: se Tailscale cair, CI/CD não funciona — mitigado mantendo `workshop` + Cloudflare tunnel para acesso manual. (5) Checklist de validação adicionado no adendo. |
+| 1.16 | 23/06/2026 | Eng. | **Remoção do cloudflared-ssh do servidor.** (1) `cloudflared-ssh.service` removido — tunnel SSH nativo não é mais necessário (CI/CD e acesso manual usam Tailscale). (2) Fase 0.7 marcada como "descontinuada" no PRD. (3) Containers Docker HTTP (`cloudflared-prod`, `cloudflared-qa`) permanecem ativos como proxy reverso para endpoints web. (4) Secrets `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET` removidos (Service Token obsoleto). (5) Diagrama de arquitetura atualizado — bloco Cloudflare tunnel SSH removido. (6) Riscos do cloudflared-ssh removidos; novo risco "Tailscale não reconecta após reboot" adicionado. (7) `deploy.yml` — trigger corrigido (apenas tags, sem `branches`); step "Deploy via SSH" separado em 3 steps (Prepare, Upload, Execute). (8) Tailscale resiliente a reboot: módulo `tun` configurado em `/etc/modules-load.d/tun.conf`; `tailscaled` habilitado no systemd. |
+| 1.17 | 23/06/2026 | Eng. | **Tailscale SSH habilitado — chaves SSH e deploy-wrapper.sh removidos.** (1) `tailscale up --ssh` habilitado no servidor — autenticação SSH via identidade Tailscale (OIDC), não via `authorized_keys`. (2) `deploy-wrapper.sh` removido do servidor — sem `command=` no `authorized_keys`, o wrapper nunca é invocado. (3) Linhas das chaves públicas (`deploy_key_prod.pub`, `deploy_key_qa.pub`) removidas do `authorized_keys`. (4) Secrets `PROD_SSH_KEY`, `QA_SSH_KEY`, `PROD_SSH_HOST`, `PROD_SSH_PORT`, `QA_SSH_HOST`, `QA_SSH_PORT` marcados como **obsoletos** — podem ser removidos do GitHub. (5) Apenas `PROD_SSH_USER` e `QA_SSH_USER` continuam necessários. (6) Fase 0.3 marcada como "descontinuada" no PRD. (7) Fase 0.11 revisada — 6 de 8 secrets SSH obsoletos. (8) Segurança do CI/CD agora depende 100% do Tailscale ACL (sem segunda camada de autenticação SSH). (9) Configuração atual do servidor atualizada (seção 0). (10) Próximos passos atualizados com lista de pendências. |
