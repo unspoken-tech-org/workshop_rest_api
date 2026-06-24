@@ -2,8 +2,8 @@
 set -e
 cd "${DEPLOY_DIR}"
 
-# Cleanup config.json do GHCR ao sair (preserva config existente do usuário)
-trap 'rm -f ~/.docker/config.json' EXIT
+# Cleanup secrets/credentials ao sair (sucesso ou falha)
+trap 'rm -f /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem ~/.docker/config.json' EXIT
 
 # Setup GHCR auth
 mkdir -p ~/.docker
@@ -38,7 +38,7 @@ docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans workshop_spring_app
 docker compose -f "${COMPOSE_FILE}" ps
 
 # Health check
-ATTEMPTS=90
+ATTEMPTS=30
 SLEEP=5
 for i in $(seq 1 $ATTEMPTS); do
   STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')

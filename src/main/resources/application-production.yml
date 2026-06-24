@@ -55,3 +55,10 @@ jwt:
 cors:
   allowed-origins:
     - https://api.eletroluk.com
+
+server:
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s

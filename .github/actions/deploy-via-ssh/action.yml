@@ -86,6 +86,11 @@ runs:
       run: |
         set -e
 
+        # Garante diretorio ~/.docker no servidor (pode nao existir em host novo)
+        ssh -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          "${SSH_TARGET}" "mkdir -p ~/.docker && chmod 700 ~/.docker"
+
         mkdir -p ~/.docker
         chmod 700 ~/.docker
 
