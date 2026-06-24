@@ -23,3 +23,20 @@ else
   docker compose -f "${COMPOSE_FILE}" up -d --force-recreate caddy-gateway
   echo "Rollback executed (alias :latest)"
 fi
+
+# Health check pos-rollback (parity with deploy.sh)
+ATTEMPTS=30
+SLEEP=5
+for i in $(seq 1 $ATTEMPTS); do
+  STATUS=$(docker inspect --format='{{json .State.Health.Status}}' caddy-gateway 2>/dev/null | tr -d '"')
+  echo "[$i/$ATTEMPTS] caddy-gateway health: ${STATUS:-unknown}"
+  if [ "$STATUS" = "healthy" ]; then
+    echo "Caddy is healthy after rollback"
+    exit 0
+  fi
+  sleep $SLEEP
+done
+
+echo "Caddy did not become healthy after rollback"
+docker logs --tail=200 caddy-gateway || true
+exit 1

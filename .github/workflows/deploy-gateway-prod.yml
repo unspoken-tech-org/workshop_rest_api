@@ -11,23 +11,27 @@
 #   .github/scripts/gateway/rollback.sh   -> restore :backup image
 #   .github/scripts/gateway/verify.sh     -> caddy version + modules + admin health
 #   .github/scripts/gateway/cleanup.sh    -> Docker image prune
-# Triggers: v* tag on release/* + manual workflow_dispatch
+# Triggers: manual workflow_dispatch only
 # Image: ghcr.io/unspoken-tech-org/workshop_rest_api/caddy-gateway:<tag>
 # ===========================================================
 
 name: Deploy Gateway (Prod) v2 (Hosted + Tailscale)
 
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'
   workflow_dispatch:
     inputs:
       ref:
         description: 'Tag, branch or commit to deploy'
         required: false
         default: 'main'
+      confirm:
+        description: 'Production deploy confirmation'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
 
 permissions:
   contents: read
@@ -119,6 +123,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     needs: build
+    environment:
+      name: production
+      url: https://api.eletroluk.com/actuator/health
     permissions:
       contents: read
       packages: read
@@ -181,6 +188,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: deploy
+    environment:
+      name: production
+      url: https://api.eletroluk.com/actuator/health
     permissions:
       contents: read
 
@@ -218,6 +228,9 @@ jobs:
     timeout-minutes: 5
     needs: verify
     if: always()
+    environment:
+      name: production
+      url: https://api.eletroluk.com/actuator/health
     permissions:
       contents: read
 
