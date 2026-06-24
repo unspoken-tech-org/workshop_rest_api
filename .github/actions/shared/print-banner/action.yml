@@ -1,17 +1,17 @@
 name: Print Deploy Banner
 description: >
-  Imprime banner padronizado com informações do deploy (versão, commit, ator, trigger, imagem).
-  Usa o contexto github internamente para evitar duplicação entre jobs.
+  Prints a standardized banner with deploy information (version, commit, actor, trigger, image).
+  Uses the github context internally to avoid duplication between jobs.
 
-  Shared composite action — usado por `deploy-api-prod.yml` e `deploy-gateway-prod.yml`.
-  Mudanças aqui afetam 2 pipelines de produção.
+  Shared composite action — used by `deploy-api-prod.yml` and `deploy-gateway-prod.yml`.
+  Changes here affect 2 production pipelines.
 
 inputs:
   prefix:
-    description: 'Prefixo do banner (ex: BUILD, DEPLOY)'
+    description: 'Banner prefix (e.g., BUILD, DEPLOY)'
     required: true
   image-tag:
-    description: 'Tag da imagem Docker'
+    description: 'Docker image tag'
     required: true
 
 runs:

@@ -1,18 +1,18 @@
 # ===========================================================
 # Workflow: Deploy Gateway Stack (Caddy + Cloudflare Tunnels) - PROD
 # ===========================================================
-# Orquestra: build GHCR → deploy via SSH → verify → cleanup
-# Dependências locais:
-#   .github/actions/gateway/deploy-via-ssh-gateway → upload + execução deploy.sh
-#   .github/actions/shared/print-banner           → log padronizado de status
-#   tailscale/github-action                        → túnel WireGuard para SSH
-# Scripts remotos (executados no servidor):
-#   .github/scripts/gateway/deploy.sh     → pull, retag, backup, restart, healthcheck
-#   .github/scripts/gateway/rollback.sh   → restaura imagem :backup
-#   .github/scripts/gateway/verify.sh     → caddy version + modules + admin health
-#   .github/scripts/gateway/cleanup.sh    → prune de imagens Docker
-# Triggers: tag v* em release/* + workflow_dispatch manual
-# Imagem: ghcr.io/unspoken-tech-org/workshop_rest_api/caddy-gateway:<tag>
+# Orchestrates: build GHCR -> deploy via SSH -> verify -> cleanup
+# Local dependencies:
+#   .github/actions/gateway/deploy-via-ssh-gateway -> upload + run deploy.sh
+#   .github/actions/shared/print-banner           -> standardized status log
+#   tailscale/github-action                        -> WireGuard tunnel for SSH
+# Remote scripts (executed on the server):
+#   .github/scripts/gateway/deploy.sh     -> pull, retag, backup, restart, healthcheck
+#   .github/scripts/gateway/rollback.sh   -> restore :backup image
+#   .github/scripts/gateway/verify.sh     -> caddy version + modules + admin health
+#   .github/scripts/gateway/cleanup.sh    -> Docker image prune
+# Triggers: v* tag on release/* + manual workflow_dispatch
+# Image: ghcr.io/unspoken-tech-org/workshop_rest_api/caddy-gateway:<tag>
 # ===========================================================
 
 name: Deploy Gateway (Prod) v2 (Hosted + Tailscale)

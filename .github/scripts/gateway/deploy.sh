@@ -2,18 +2,17 @@
 set -euo pipefail
 cd "${DEPLOY_DIR}"
 
-# Cleanup secrets/credentials ao sair (sucesso ou falha)
-# Padrao v1.24 do deploy.sh (Spring)
+# Cleanup secrets/credentials on exit (success or failure)
 trap 'rm -f /tmp/.env ~/.docker/config.json' EXIT
 
-# Setup GHCR auth (config.json copiado pelo composite deploy-via-ssh-gateway)
+# Setup GHCR auth (config.json copied by the deploy-via-ssh-gateway composite)
 mkdir -p ~/.docker
 if [ -f ~/.docker/config.json.tmp ]; then
   mv ~/.docker/config.json.tmp ~/.docker/config.json
   chmod 600 ~/.docker/config.json
 fi
 
-# Setup .env (movido do composite; padrao v1.21 do Spring)
+# Setup .env (moved from the composite)
 if [ -f /tmp/.env ]; then
   mv /tmp/.env ./.env
   chmod 600 .env
@@ -24,17 +23,17 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose-gateway.yml}"
 OVERRIDE_FILE="${COMPOSE_FILE%.yml}.override.yml"
 PREVIOUS_OVERRIDE="${OVERRIDE_FILE}.previous"
 
-# Pull da nova imagem do GHCR
+# Pull the new image from GHCR
 docker pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 
-# Retag GHCR -> nome local do compose
+# Retag GHCR -> local compose name
 docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
 
-# Backup da imagem ANTERIOR em producao (padrao v1.36 do Spring)
-# Backup ANTES do retag garante que :backup aponta para a imagem anterior
-# (caso a nova imagem falhe o health check, rollback restaura a versao saudavel)
+# Backup the PREVIOUS image in production
+# Backup BEFORE the retag ensures :backup points to the previous image
+# (in case the new image fails the health check, rollback restores the healthy version)
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
-  # Verifica se a tag :latest atual e diferente da nova (evita sobrescrever :backup se a imagem ja existe)
+  # Check if the current :latest tag differs from the new one (avoid overwriting :backup if the image already exists)
   if [ "$(docker inspect --format='{{index .RepoDigests 0}}' "${LOCAL_IMAGE_NAME}:latest" 2>/dev/null || echo "")" != "${REGISTRY}/${IMAGE_NAME}@$(docker inspect --format='{{index .RepoDigests 0}}' "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" 2>/dev/null | cut -d'@' -f2)" ]; then
     docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"
     echo "Backup created: ${LOCAL_IMAGE_NAME}:backup"
@@ -43,8 +42,8 @@ if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
   fi
 fi
 
-# Override file: expor a tag real no docker ps (padrao v1.39 do Spring)
-# Snapshot do override atual antes de sobrescrever (rollback-gateway.sh restaura o snapshot)
+# Override file: expose the real tag in docker ps
+# Snapshot the current override before overwriting (rollback-gateway.sh restores the snapshot)
 if [ -f "${OVERRIDE_FILE}" ]; then
   cp "${OVERRIDE_FILE}" "${PREVIOUS_OVERRIDE}"
 fi
@@ -55,12 +54,12 @@ services:
     image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
 EOF
 
-# Restart do servico
+# Restart the service
 docker compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" up -d --force-recreate caddy-gateway
 docker compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" ps
 
-# Health check via Docker healthcheck (Adicionado no docker-compose-gateway.yml na Onda 0)
-# Usa a Admin API do Caddy em :2019/health (nao depende dos backends)
+# Health check via Docker healthcheck
+# Uses the Caddy Admin API at :2019/health (does not depend on backends)
 ATTEMPTS=30
 SLEEP=5
 for i in $(seq 1 $ATTEMPTS); do

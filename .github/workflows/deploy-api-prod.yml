@@ -1,16 +1,16 @@
 # ===========================================================
 # Workflow: Deploy Spring Boot API to Production
 # ===========================================================
-# Orquestra: build GHCR → deploy via SSH → verify → cleanup
-# Dependências locais:
-#   .github/actions/api/deploy-via-ssh-api → upload + execução deploy.sh
-#   .github/actions/shared/print-banner   → log padronizado de status
-#   tailscale/github-action               → túnel WireGuard para SSH
-# Scripts remotos (executados no servidor):
-#   .github/scripts/api/deploy.sh       → pull, retag, restart, healthcheck
-#   .github/scripts/api/rollback.sh     → restaura imagem :backup
-#   .github/scripts/api/verify.sh       → pgbackrest + status containers
-#   .github/scripts/api/cleanup.sh      → prune de imagens Docker
+# Orchestrates: build GHCR -> deploy via SSH -> verify -> cleanup
+# Local dependencies:
+#   .github/actions/api/deploy-via-ssh-api -> upload + run deploy.sh
+#   .github/actions/shared/print-banner   -> standardized status log
+#   tailscale/github-action               -> WireGuard tunnel for SSH
+# Remote scripts (executed on the server):
+#   .github/scripts/api/deploy.sh       -> pull, retag, restart, healthcheck
+#   .github/scripts/api/rollback.sh     -> restore :backup image
+#   .github/scripts/api/verify.sh       -> pgbackrest + container status
+#   .github/scripts/api/cleanup.sh      -> Docker image prune
 # ===========================================================
 
 name: Deploy API (Prod) v10 (Hosted + Tailscale)

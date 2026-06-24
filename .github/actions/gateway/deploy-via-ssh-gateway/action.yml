@@ -1,36 +1,36 @@
 name: Deploy Gateway via SSH
 description: >
-  Prepara .env do gateway no runner, faz scp para o servidor e executa deploy-gateway.sh.
-  Requer Setup Tailscale executado previamente no job (depende de túnel WireGuard).
-  NÃO cria chaves JWT (gateway não usa); só secrets CF + tunnel + admin email.
+  Prepares the gateway .env on the runner, scps to the server and runs deploy-gateway.sh.
+  Requires Setup Tailscale executed previously in the job (depends on WireGuard tunnel).
+  Does NOT create JWT keys (gateway does not use them); only CF + tunnel + admin email secrets.
 
 inputs:
   ssh-target:
-    description: 'Destino SSH no formato user@host'
+    description: 'SSH target in the user@host format'
     required: true
   deploy-dir:
-    description: 'Diretório de deploy no servidor'
+    description: 'Deploy directory on the server'
     required: true
   registry:
-    description: 'Registry Docker (ex: ghcr.io)'
+    description: 'Docker registry (e.g., ghcr.io)'
     required: true
   image-name:
-    description: 'Nome completo da imagem no registry (ex: org/repo/caddy-gateway)'
+    description: 'Full image name in the registry (e.g., org/repo/caddy-gateway)'
     required: true
   local-image-name:
-    description: 'Nome local da imagem usado pelo docker compose (ex: workshop/caddy-gateway)'
+    description: 'Local image name used by docker compose (e.g., workshop/caddy-gateway)'
     required: true
   compose-file:
-    description: 'Nome do arquivo docker-compose no servidor'
+    description: 'docker-compose file name on the server'
     required: true
   image-tag:
-    description: 'Tag da imagem a ser deployada'
+    description: 'Image tag to be deployed'
     required: true
   deploy-script:
-    description: 'Caminho do deploy-gateway.sh no repositório'
+    description: 'Path to deploy-gateway.sh in the repository'
     required: true
   admin-email:
-    description: 'Email do admin (Let''s Encrypt / ACME)'
+    description: 'Admin email (Let''s Encrypt / ACME)'
     required: true
   cf-api-token:
     description: 'Cloudflare API Token (production DNS challenge)'
@@ -79,8 +79,7 @@ runs:
       run: |
         set -e
 
-        # Garante diretorio ~/.docker no servidor (pode nao existir em host novo)
-        # Padrao v1.37 do composite deploy-via-ssh (Spring)
+        # Ensure ~/.docker directory exists on the server (may not exist on a fresh host)
         ssh -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
           "${SSH_TARGET}" "mkdir -p ~/.docker && chmod 700 ~/.docker"
