@@ -1,84 +1,256 @@
-name: Deploy Gateway Stack
+# ===========================================================
+# Workflow: Deploy Gateway Stack (Caddy + Cloudflare Tunnels)
+# ===========================================================
+# Orquestra: build GHCR → deploy via SSH → verify → cleanup
+# Dependências locais:
+#   .github/actions/deploy-via-ssh-gateway  → upload + execução deploy-gateway.sh
+#   .github/actions/print-banner            → log padronizado de status
+#   tailscale/github-action                 → túnel WireGuard para SSH
+# Scripts remotos (executados no servidor):
+#   .github/scripts/deploy-gateway.sh   → pull, retag, backup, restart, healthcheck
+#   .github/scripts/rollback-gateway.sh → restaura imagem :backup
+#   .github/scripts/verify-gateway.sh   → caddy version + modules + admin health
+#   .github/scripts/cleanup-gateway.sh  → prune de imagens Docker
+# Triggers: tag v* em release/* + workflow_dispatch manual
+# Imagem: ghcr.io/unspoken-tech-org/workshop_rest_api/caddy-gateway:<tag>
+# ===========================================================
+
+name: Deploy Gateway Stack v2 (Hosted + Tailscale)
 
 on:
   push:
-    branches:
-      - release/1.2.0
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Manual Deployment'
+        description: 'Tag, branch or commit to deploy'
         required: false
-        default: 'Maintenance/Update'
+        default: 'main'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gateway
+  cancel-in-progress: false
 
 env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: unspoken-tech-org/workshop_rest_api/caddy-gateway
+  LOCAL_IMAGE_NAME: workshop/caddy-gateway
   COMPOSE_FILE: docker-compose-gateway.yml
   DEPLOY_DIR: /home/workshop/deploy/gateway_stack
+  SSH_USER: ${{ secrets.PROD_SSH_USER }}
+  TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
+  SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
+  DEPLOY_SCRIPT: .github/scripts/deploy-gateway.sh
+  ROLLBACK_SCRIPT: .github/scripts/rollback-gateway.sh
+  VERIFY_SCRIPT: .github/scripts/verify-gateway.sh
+  CLEANUP_SCRIPT: .github/scripts/cleanup-gateway.sh
 
 jobs:
-  deploy-gateway:
-    name: Deploy Gateway & Tunnels
-    runs-on: self-hosted
+  # ===========================================
+  # JOB 1: BUILD + PUSH GHCR
+  # ===========================================
+  build:
+    name: Build & Push Caddy Image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      deployed-image-tag: ${{ steps.prep.outputs.tag }}
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Prepare deploy directory
+      - name: Prepare image tag
+        id: prep
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
         run: |
-          mkdir -p "${DEPLOY_DIR}"
-          rsync -a --delete \
-            --exclude '.git' \
-            ./ "${DEPLOY_DIR}/"
+          TAG="${INPUT_REF//\//-}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Write .env for Gateway
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          set -e
-          cat > .env <<'EOF'
-          CF_API_TOKEN=${{ secrets.CF_API_TOKEN }}
-          CF_API_TOKEN_QA=${{ secrets.CF_API_TOKEN_QA }}
-          CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
-          CLOUDFLARE_TUNNEL_TOKEN_QA=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
-          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
-          EOF
-          chmod 600 .env
-          echo ".env created for Gateway ✅"
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Caddy Gateway Image
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo ">>> Building Caddy Gateway image..."
-          docker compose -f "$COMPOSE_FILE" build caddy-gateway
-          echo "Caddy Gateway image built ✅"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
 
-      - name: Deploy Gateway Stack
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo ">>> Deploying Gateway, Tunnels and Proxy..."
-          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans --force-recreate
-          echo "Gateway Stack deployed 🚀"
+      - name: Build and push Caddy image
+        uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
+        with:
+          context: ./infra/caddy
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Health Check
+      - name: Print build banner
+        uses: ./.github/actions/print-banner
+        with:
+          prefix: BUILD
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
+
+  # ===========================================
+  # JOB 2: DEPLOY
+  # ===========================================
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: build
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy via SSH gateway
+        uses: ./.github/actions/deploy-via-ssh-gateway
+        with:
+          ssh-target: ${{ env.SSH_TARGET }}
+          deploy-dir: ${{ env.DEPLOY_DIR }}
+          registry: ${{ env.REGISTRY }}
+          image-name: ${{ env.IMAGE_NAME }}
+          local-image-name: ${{ env.LOCAL_IMAGE_NAME }}
+          compose-file: ${{ env.COMPOSE_FILE }}
+          image-tag: ${{ needs.build.outputs.deployed-image-tag }}
+          deploy-script: ${{ env.DEPLOY_SCRIPT }}
+          admin-email: ${{ secrets.ADMIN_EMAIL }}
+          cf-api-token: ${{ secrets.CF_API_TOKEN }}
+          cf-api-token-qa: ${{ secrets.CF_API_TOKEN_QA }}
+          cloudflare-tunnel-token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          cloudflare-tunnel-token-qa: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
+
+      - name: Rollback on failure
+        if: failure()
         run: |
-          sleep 10
-          echo ">>> Checking Caddy status..."
-          if docker ps | grep -q caddy-gateway; then
-            echo "Caddy is running ✅"
-          else
-            echo "Caddy failed to start ❌"
-            exit 1
-          fi
-          
-          echo ">>> Checking Tunnels..."
-          if docker ps | grep -q cloudflared-gateway-prod; then
-            echo "Tunnel Prod OK ✅"
-          else
-             echo "Tunnel Prod Missing ⚠️"
-          fi
-          
-          if docker ps | grep -q cloudflared-gateway-qa; then
-            echo "Tunnel QA OK ✅"
-          else
-             echo "Tunnel QA Missing ⚠️"
-          fi
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/rollback-gateway.sh && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' /tmp/rollback-gateway.sh"
+
+  # ===========================================
+  # JOB 3: VERIFY
+  # ===========================================
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: deploy
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Verify via SSH
+        run: |
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${VERIFY_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/verify-gateway.sh && DEPLOY_DIR='${DEPLOY_DIR}' /tmp/verify-gateway.sh"
+
+  # ===========================================
+  # JOB 4: CLEANUP
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: verify
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Cleanup via SSH
+        run: |
+          scp -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            "${CLEANUP_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/cleanup-gateway.sh && /tmp/cleanup-gateway.sh"
+
+      - name: Print final banner
+        if: success()
+        uses: ./.github/actions/print-banner
+        with:
+          prefix: DEPLOY
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}
