@@ -1,8 +1,8 @@
-name: Deploy Gateway via SSH
+name: Deploy API via SSH
 description: >
-  Prepara .env do gateway no runner, faz scp para o servidor e executa deploy-gateway.sh.
+  Prepara .env + JWT keys no runner, faz scp para o servidor e executa deploy.sh.
+  Usado exclusivamente pelo pipeline `deploy-api-prod.yml` (API Spring Boot em produção).
   Requer Setup Tailscale executado previamente no job (depende de túnel WireGuard).
-  NÃO cria chaves JWT (gateway não usa); só secrets CF + tunnel + admin email.
 
 inputs:
   ssh-target:
@@ -15,10 +15,10 @@ inputs:
     description: 'Registry Docker (ex: ghcr.io)'
     required: true
   image-name:
-    description: 'Nome completo da imagem no registry (ex: org/repo/caddy-gateway)'
+    description: 'Nome completo da imagem no registry (ex: org/repo)'
     required: true
   local-image-name:
-    description: 'Nome local da imagem usado pelo docker compose (ex: workshop/caddy-gateway)'
+    description: 'Nome local da imagem gerado pelo docker compose'
     required: true
   compose-file:
     description: 'Nome do arquivo docker-compose no servidor'
@@ -27,22 +27,25 @@ inputs:
     description: 'Tag da imagem a ser deployada'
     required: true
   deploy-script:
-    description: 'Caminho do deploy-gateway.sh no repositório'
+    description: 'Caminho do deploy.sh no repositório'
+    required: true
+  db-name:
+    description: 'Nome do banco PostgreSQL'
+    required: true
+  db-username:
+    description: 'Usuário do banco'
+    required: true
+  db-password:
+    description: 'Senha do banco'
     required: true
   admin-email:
-    description: 'Email do admin (Let''s Encrypt / ACME)'
+    description: 'Email do admin da aplicação'
     required: true
-  cf-api-token:
-    description: 'Cloudflare API Token (production DNS challenge)'
+  jwt-private-b64:
+    description: 'Chave privada RSA em base64'
     required: true
-  cf-api-token-qa:
-    description: 'Cloudflare API Token (QA DNS challenge)'
-    required: true
-  cloudflare-tunnel-token:
-    description: 'Cloudflare Tunnel Token (production tunnel container)'
-    required: true
-  cloudflare-tunnel-token-qa:
-    description: 'Cloudflare Tunnel Token (QA tunnel container)'
+  jwt-public-b64:
+    description: 'Chave pública RSA em base64'
     required: true
 
 runs:
@@ -51,25 +54,30 @@ runs:
     - name: Prepare deploy files on runner
       shell: bash
       env:
+        DB_NAME: ${{ inputs.db-name }}
+        DB_USERNAME: ${{ inputs.db-username }}
+        DB_PASSWORD: ${{ inputs.db-password }}
         ADMIN_EMAIL: ${{ inputs.admin-email }}
-        CF_API_TOKEN: ${{ inputs.cf-api-token }}
-        CF_API_TOKEN_QA: ${{ inputs.cf-api-token-qa }}
-        CLOUDFLARE_TUNNEL_TOKEN: ${{ inputs.cloudflare-tunnel-token }}
-        CLOUDFLARE_TUNNEL_TOKEN_QA: ${{ inputs.cloudflare-tunnel-token-qa }}
+        JWT_PRIVATE_KEY: ${{ inputs.jwt-private-b64 }}
+        JWT_PUBLIC_KEY: ${{ inputs.jwt-public-b64 }}
       run: |
         set -e
 
         {
+          echo "DB_NAME=${DB_NAME}"
+          echo "DB_USERNAME=${DB_USERNAME}"
+          echo "DB_PASSWORD=${DB_PASSWORD}"
           echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
-          echo "CF_API_TOKEN=${CF_API_TOKEN}"
-          echo "CF_API_TOKEN_QA=${CF_API_TOKEN_QA}"
-          echo "CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}"
-          echo "CLOUDFLARE_TUNNEL_TOKEN_QA=${CLOUDFLARE_TUNNEL_TOKEN_QA}"
         } > /tmp/.env
         chmod 600 /tmp/.env
 
+        echo "${JWT_PRIVATE_KEY}" | base64 -d > /tmp/private-pkcs8.pem
+        echo "${JWT_PUBLIC_KEY}" | base64 -d > /tmp/public.pem
+        chmod 600 /tmp/private-pkcs8.pem
+        chmod 644 /tmp/public.pem
+
         echo "Deploy files prepared:"
-        ls -la /tmp/.env
+        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem
 
     - name: Upload files to server
       shell: bash
@@ -80,7 +88,6 @@ runs:
         set -e
 
         # Garante diretorio ~/.docker no servidor (pode nao existir em host novo)
-        # Padrao v1.37 do composite deploy-via-ssh (Spring)
         ssh -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
           "${SSH_TARGET}" "mkdir -p ~/.docker && chmod 700 ~/.docker"
@@ -90,7 +97,8 @@ runs:
 
         scp -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
-          /tmp/.env "${DEPLOY_SCRIPT}" \
+          /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
+          "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:/tmp/"
 
         scp -o ConnectTimeout=30 \
@@ -121,4 +129,4 @@ runs:
               LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME}" \
               COMPOSE_FILE="${COMPOSE_FILE}" \
               IMAGE_TAG="${IMAGE_TAG}" \
-              bash /tmp/deploy-gateway.sh
+              bash /tmp/deploy.sh

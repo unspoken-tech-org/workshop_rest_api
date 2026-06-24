@@ -3,6 +3,9 @@ description: >
   Imprime banner padronizado com informações do deploy (versão, commit, ator, trigger, imagem).
   Usa o contexto github internamente para evitar duplicação entre jobs.
 
+  Shared composite action — usado por `deploy-api-prod.yml` e `deploy-gateway-prod.yml`.
+  Mudanças aqui afetam 2 pipelines de produção.
+
 inputs:
   prefix:
     description: 'Prefixo do banner (ex: BUILD, DEPLOY)'

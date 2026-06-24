@@ -1,4 +1,4 @@
-name: Deploy QA Environment
+name: Deploy API (QA) v1 (Self-Hosted)
 
 on:
   push:

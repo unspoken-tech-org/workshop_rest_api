@@ -1,26 +1,27 @@
 # ===========================================================
-# Workflow: Deploy Spring Boot App to Production
+# Workflow: Deploy Gateway Stack (Caddy + Cloudflare Tunnels) - PROD
 # ===========================================================
 # Orquestra: build GHCR → deploy via SSH → verify → cleanup
 # Dependências locais:
-#   .github/actions/deploy-via-ssh  → upload + execução deploy.sh
-#   .github/actions/print-banner    → log padronizado de status
-#   tailscale/github-action       → túnel WireGuard para SSH
+#   .github/actions/gateway/deploy-via-ssh-gateway → upload + execução deploy.sh
+#   .github/actions/shared/print-banner           → log padronizado de status
+#   tailscale/github-action                        → túnel WireGuard para SSH
 # Scripts remotos (executados no servidor):
-#   .github/scripts/deploy.sh       → pull, retag, restart, healthcheck
-#   .github/scripts/rollback.sh     → restaura imagem :backup
-#   .github/scripts/verify.sh       → pgbackrest + status containers
-#   .github/scripts/cleanup.sh      → prune de imagens Docker
+#   .github/scripts/gateway/deploy.sh     → pull, retag, backup, restart, healthcheck
+#   .github/scripts/gateway/rollback.sh   → restaura imagem :backup
+#   .github/scripts/gateway/verify.sh     → caddy version + modules + admin health
+#   .github/scripts/gateway/cleanup.sh    → prune de imagens Docker
+# Triggers: tag v* em release/* + workflow_dispatch manual
+# Imagem: ghcr.io/unspoken-tech-org/workshop_rest_api/caddy-gateway:<tag>
 # ===========================================================
 
-name: Deploy Spring Boot App v10 (Hosted + Tailscale)
+name: Deploy Gateway (Prod) v2 (Hosted + Tailscale)
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
-
   workflow_dispatch:
     inputs:
       ref:
@@ -32,31 +33,31 @@ permissions:
   contents: read
 
 concurrency:
-  group: production
+  group: deploy-gateway-prod
   cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: unspoken-tech-org/workshop_rest_api
-  COMPOSE_FILE: docker-compose-production.yml
-  DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
-  LOCAL_IMAGE_NAME: workshop_rest_api-workshop_spring_app
+  IMAGE_NAME: unspoken-tech-org/workshop_rest_api/caddy-gateway
+  LOCAL_IMAGE_NAME: workshop/caddy-gateway
+  COMPOSE_FILE: docker-compose-gateway.yml
+  DEPLOY_DIR: /home/workshop/deploy/gateway_stack
   SSH_USER: ${{ secrets.PROD_SSH_USER }}
   TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
   SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
-  DEPLOY_SCRIPT: .github/scripts/deploy.sh
-  ROLLBACK_SCRIPT: .github/scripts/rollback.sh
-  VERIFY_SCRIPT: .github/scripts/verify.sh
-  CLEANUP_SCRIPT: .github/scripts/cleanup.sh
+  DEPLOY_SCRIPT: .github/scripts/gateway/deploy.sh
+  ROLLBACK_SCRIPT: .github/scripts/gateway/rollback.sh
+  VERIFY_SCRIPT: .github/scripts/gateway/verify.sh
+  CLEANUP_SCRIPT: .github/scripts/gateway/cleanup.sh
 
 jobs:
   # ===========================================
   # JOB 1: BUILD + PUSH GHCR
   # ===========================================
   build:
-    name: Build & Push Image
+    name: Build & Push Caddy Image
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -74,25 +75,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Setup Java 21
-        uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
-
-      - name: Build with Gradle (skip tests)
-        run: ./gradlew build -x test
-
-      - name: Login to GHCR
-        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Prepare image tag
         id: prep
         env:
@@ -101,13 +83,20 @@ jobs:
           TAG="${INPUT_REF//\//-}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
 
-      - name: Build and push image
+      - name: Build and push Caddy image
         uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
         with:
-          context: .
+          context: ./infra/caddy
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
@@ -117,7 +106,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Print build banner
-        uses: ./.github/actions/print-banner
+        uses: ./.github/actions/shared/print-banner
         with:
           prefix: BUILD
           image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
@@ -159,8 +148,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy via SSH
-        uses: ./.github/actions/deploy-via-ssh
+      - name: Deploy via SSH gateway
+        uses: ./.github/actions/gateway/deploy-via-ssh-gateway
         with:
           ssh-target: ${{ env.SSH_TARGET }}
           deploy-dir: ${{ env.DEPLOY_DIR }}
@@ -170,12 +159,11 @@ jobs:
           compose-file: ${{ env.COMPOSE_FILE }}
           image-tag: ${{ needs.build.outputs.deployed-image-tag }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
-          db-name: ${{ secrets.DB_NAME }}
-          db-username: ${{ secrets.DB_USERNAME }}
-          db-password: ${{ secrets.DB_PASSWORD }}
           admin-email: ${{ secrets.ADMIN_EMAIL }}
-          jwt-private-b64: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
-          jwt-public-b64: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
+          cf-api-token: ${{ secrets.CF_API_TOKEN }}
+          cf-api-token-qa: ${{ secrets.CF_API_TOKEN_QA }}
+          cloudflare-tunnel-token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          cloudflare-tunnel-token-qa: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
 
       - name: Rollback on failure
         if: failure()
@@ -183,7 +171,7 @@ jobs:
           scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
             "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
           ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && /tmp/rollback.sh"
+            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' /tmp/rollback.sh"
 
   # ===========================================
   # JOB 3: VERIFY
@@ -215,13 +203,11 @@ jobs:
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
       - name: Verify via SSH
-        env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
             "${VERIFY_SCRIPT}" "${SSH_TARGET}:/tmp/"
           ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" "chmod +x /tmp/verify.sh && DB_PASSWORD='${DB_PASSWORD}' /tmp/verify.sh"
+            "${SSH_TARGET}" "chmod +x /tmp/verify.sh && DEPLOY_DIR='${DEPLOY_DIR}' /tmp/verify.sh"
 
   # ===========================================
   # JOB 4: CLEANUP
@@ -264,7 +250,7 @@ jobs:
 
       - name: Print final banner
         if: success()
-        uses: ./.github/actions/print-banner
+        uses: ./.github/actions/shared/print-banner
         with:
           prefix: DEPLOY
           image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}
