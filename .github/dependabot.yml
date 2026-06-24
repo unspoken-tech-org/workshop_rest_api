@@ -1,4 +1,5 @@
 version: 2
+
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -17,3 +18,20 @@ updates:
         patterns:
           - "*"
     open-pull-requests-limit: 5
+
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Sao_Paulo"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "gradle"
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
