@@ -1,0 +1,45 @@
+name: Deploy Gateway (Prod) v2 (Hosted + Tailscale)
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or commit to deploy'
+        required: false
+        default: 'main'
+      confirm:
+        description: 'Production deploy confirmation'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-gateway-prod
+  cancel-in-progress: false
+
+jobs:
+  placeholder:
+    name: Skeleton - real workflow is on release/1.3.1
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Skeleton placeholder
+        run: |
+          echo "==================================================="
+          echo "SKELETON WORKFLOW"
+          echo "==================================================="
+          echo "This is a placeholder on main to register the"
+          echo "workflow name with GitHub Actions."
+          echo ""
+          echo "The REAL workflow is on release/1.3.1."
+          echo ""
+          echo "To run the real workflow:"
+          echo "  1. Click 'Run workflow'"
+          echo "  2. In 'Use workflow from', select 'release/1.3.1'"
+          echo "  3. Fill inputs and confirm with DEPLOY"
+          echo "==================================================="
+          exit 1
