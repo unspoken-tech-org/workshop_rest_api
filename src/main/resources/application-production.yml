@@ -29,6 +29,9 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     locations: classpath:db/migration/postgresql
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
 message: Local
 
 logging:
@@ -58,7 +61,3 @@ cors:
 
 server:
   shutdown: graceful
-
-spring:
-  lifecycle:
-    timeout-per-shutdown-phase: 30s
