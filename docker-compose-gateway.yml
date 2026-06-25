@@ -19,7 +19,7 @@ services:
     networks:
       - workshop-ingress
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q -O /dev/null http://127.0.0.1:2019/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:2019/config/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
