@@ -21,17 +21,18 @@ chmod 600 config/keys/private-pkcs8.pem
 mv /tmp/public.pem config/keys/ 2>/dev/null || true
 chmod 644 config/keys/public.pem
 
-# Pull the new image from GHCR and retag to the local compose name
-docker pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
-
-# Backup the current image
+# Backup the CURRENT image before pulling the new one
+# (rollback.sh restores :backup, ensuring a safe fallback)
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
   docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"
   echo "Backup created: ${LOCAL_IMAGE_NAME}:backup"
 else
   echo "No previous image found, skipping backup"
 fi
+
+# Pull the new image from GHCR and retag to the local compose name
+docker pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
 
 # Restart the service
 docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans workshop_spring_app

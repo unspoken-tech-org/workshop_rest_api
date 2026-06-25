@@ -23,24 +23,22 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose-gateway.yml}"
 OVERRIDE_FILE="${COMPOSE_FILE%.yml}.override.yml"
 PREVIOUS_OVERRIDE="${OVERRIDE_FILE}.previous"
 
+# Backup the CURRENT image before pulling the new one
+# (rollback.sh restores :backup, ensuring a safe fallback)
+OLD_DIGEST=""
+if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
+  OLD_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${LOCAL_IMAGE_NAME}:latest" 2>/dev/null || echo "")
+  docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"
+  echo "Backup created: ${LOCAL_IMAGE_NAME}:backup"
+else
+  echo "No previous image found, skipping backup"
+fi
+
 # Pull the new image from GHCR
 docker pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 
 # Retag GHCR -> local compose name
 docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
-
-# Backup the PREVIOUS image in production
-# Backup BEFORE the retag ensures :backup points to the previous image
-# (in case the new image fails the health check, rollback restores the healthy version)
-if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
-  # Check if the current :latest tag differs from the new one (avoid overwriting :backup if the image already exists)
-  if [ "$(docker inspect --format='{{index .RepoDigests 0}}' "${LOCAL_IMAGE_NAME}:latest" 2>/dev/null || echo "")" != "${REGISTRY}/${IMAGE_NAME}@$(docker inspect --format='{{index .RepoDigests 0}}' "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" 2>/dev/null | cut -d'@' -f2)" ]; then
-    docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"
-    echo "Backup created: ${LOCAL_IMAGE_NAME}:backup"
-  else
-    echo "Image already up-to-date, skipping backup"
-  fi
-fi
 
 # Override file: expose the real tag in docker ps
 # Snapshot the current override before overwriting (rollback-gateway.sh restores the snapshot)
