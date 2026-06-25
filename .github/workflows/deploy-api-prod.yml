@@ -196,9 +196,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: deploy
-    environment:
-      name: production
-      url: https://api.eletroluk.com/actuator/health
     permissions:
       contents: read
 
@@ -238,9 +235,6 @@ jobs:
     timeout-minutes: 5
     needs: verify
     if: always()
-    environment:
-      name: production
-      url: https://api.eletroluk.com/actuator/health
     permissions:
       contents: read
 
