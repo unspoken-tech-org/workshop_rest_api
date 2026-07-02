@@ -1,0 +1,279 @@
+# ===========================================================
+# Workflow: Deploy Gateway Stack (Caddy + Cloudflare Tunnels) - PROD
+# ===========================================================
+# Orchestrates: build GHCR -> deploy via SSH -> verify -> cleanup
+# Local dependencies:
+#   .github/actions/gateway/deploy-via-ssh-gateway -> upload + run deploy.sh
+#   .github/actions/shared/print-banner           -> standardized status log
+#   tailscale/github-action                        -> WireGuard tunnel for SSH
+# Remote scripts (executed on the server):
+#   .github/scripts/gateway/deploy.sh     -> pull, retag, backup, restart, healthcheck
+#   .github/scripts/gateway/rollback.sh   -> restore :backup image
+#   .github/scripts/gateway/verify.sh     -> caddy version + modules + admin health
+#   .github/scripts/gateway/cleanup.sh    -> Docker image prune
+# Triggers: manual workflow_dispatch only
+# Image: ghcr.io/unspoken-tech-org/workshop_rest_api/caddy-gateway:<tag>
+# ===========================================================
+
+name: Deploy Gateway (Prod) v2 (Hosted + Tailscale)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or commit to deploy'
+        required: false
+        default: 'main'
+      confirm:
+        description: 'Production deploy confirmation'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-gateway-prod
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: unspoken-tech-org/workshop_rest_api/caddy-gateway
+  LOCAL_IMAGE_NAME: workshop/caddy-gateway
+  COMPOSE_FILE: docker-compose-gateway.yml
+  DEPLOY_DIR: /home/workshop/deploy/gateway_stack
+  SSH_USER: ${{ secrets.PROD_SSH_USER }}
+  TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
+  SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
+  DEPLOY_SCRIPT: .github/scripts/gateway/deploy.sh
+  ROLLBACK_SCRIPT: .github/scripts/gateway/rollback.sh
+  VERIFY_SCRIPT: .github/scripts/gateway/verify.sh
+  CLEANUP_SCRIPT: .github/scripts/gateway/cleanup.sh
+
+jobs:
+  # ===========================================
+  # JOB 1: BUILD + PUSH GHCR
+  # ===========================================
+  build:
+    name: Build & Push Caddy Image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      deployed-image-tag: ${{ steps.prep.outputs.tag }}
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Prepare image tag
+        id: prep
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          TAG="${INPUT_REF//\//-}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
+
+      - name: Build and push Caddy image
+        uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
+        with:
+          context: ./infra/caddy
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Print build banner
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: BUILD
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
+
+  # ===========================================
+  # JOB 2: DEPLOY
+  # ===========================================
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: build
+    environment:
+      name: production
+      url: https://api.eletroluk.com/actuator/health
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Sync compose and Caddyfile to server
+        run: |
+          set -e
+          # Snapshot previous versions (for rollback)
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no "${SSH_TARGET}" \
+            "cd ${DEPLOY_DIR} && \
+             [ -f ${COMPOSE_FILE} ] && cp -p ${COMPOSE_FILE} ${COMPOSE_FILE}.previous || true && \
+             [ -f infra/caddy/Caddyfile-gateway ] && cp -p infra/caddy/Caddyfile-gateway infra/caddy/Caddyfile-gateway.previous || true"
+          # Sync new versions
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "./${COMPOSE_FILE}" "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            ./infra/caddy/Caddyfile-gateway \
+            "${SSH_TARGET}:${DEPLOY_DIR}/infra/caddy/Caddyfile-gateway"
+          echo "Synced compose and Caddyfile to ${SSH_TARGET}:${DEPLOY_DIR}"
+
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy via SSH gateway
+        uses: ./.github/actions/gateway/deploy-via-ssh-gateway
+        with:
+          ssh-target: ${{ env.SSH_TARGET }}
+          deploy-dir: ${{ env.DEPLOY_DIR }}
+          registry: ${{ env.REGISTRY }}
+          image-name: ${{ env.IMAGE_NAME }}
+          local-image-name: ${{ env.LOCAL_IMAGE_NAME }}
+          compose-file: ${{ env.COMPOSE_FILE }}
+          image-tag: ${{ needs.build.outputs.deployed-image-tag }}
+          deploy-script: ${{ env.DEPLOY_SCRIPT }}
+          admin-email: ${{ secrets.ADMIN_EMAIL }}
+          cf-api-token: ${{ secrets.CF_API_TOKEN }}
+          cf-api-token-qa: ${{ secrets.CF_API_TOKEN_QA }}
+          cloudflare-tunnel-token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          cloudflare-tunnel-token-qa: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' /tmp/rollback.sh"
+
+  # ===========================================
+  # JOB 3: VERIFY
+  # ===========================================
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: deploy
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Verify via SSH
+        run: |
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${VERIFY_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/verify.sh && DEPLOY_DIR='${DEPLOY_DIR}' /tmp/verify.sh"
+
+  # ===========================================
+  # JOB 4: CLEANUP
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: verify
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Cleanup via SSH
+        run: |
+          scp -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            "${CLEANUP_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/cleanup.sh && /tmp/cleanup.sh"
+
+      - name: Print final banner
+        if: success()
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: DEPLOY
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}
