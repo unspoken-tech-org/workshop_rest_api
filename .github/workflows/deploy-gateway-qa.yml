@@ -1,0 +1,28 @@
+# ===========================================================
+# SKELETON — Registrado no GitHub para workflow_dispatch
+# O workflow real executes da branch feature/segregate-qa-env
+# ===========================================================
+
+name: Deploy Gateway (QA) v1 (Hosted + Tailscale)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or commit to deploy'
+        required: false
+        default: 'main'
+      confirm:
+        description: 'QA deploy confirmation'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
+
+jobs:
+  skeleton:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Skeleton — real workflow runs from feature branch via --ref"
