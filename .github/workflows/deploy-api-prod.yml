@@ -1,67 +1,62 @@
 # ===========================================================
-# Workflow: Deploy Gateway Stack (Caddy + Cloudflare Tunnels) - PROD
+# Workflow: Deploy Spring Boot API to Production
 # ===========================================================
 # Orchestrates: build GHCR -> deploy via SSH -> verify -> cleanup
 # Local dependencies:
-#   .github/actions/gateway/deploy-via-ssh-gateway -> upload + run deploy.sh
-#   .github/actions/shared/print-banner           -> standardized status log
-#   tailscale/github-action                        -> WireGuard tunnel for SSH
+#   .github/actions/api/deploy-via-ssh-api -> upload + run deploy.sh
+#   .github/actions/shared/print-banner   -> standardized status log
+#   tailscale/github-action               -> WireGuard tunnel for SSH
 # Remote scripts (executed on the server):
-#   .github/scripts/gateway/deploy.sh     -> pull, retag, backup, restart, healthcheck
-#   .github/scripts/gateway/rollback.sh   -> restore :backup image
-#   .github/scripts/gateway/verify.sh     -> caddy version + modules + admin health
-#   .github/scripts/gateway/cleanup.sh    -> Docker image prune
-# Triggers: manual workflow_dispatch only
-# Image: ghcr.io/unspoken-tech-org/workshop_rest_api/caddy-gateway:<tag>
+#   .github/scripts/api/deploy.sh       -> pull, retag, restart, healthcheck
+#   .github/scripts/api/rollback.sh     -> restore :backup image
+#   .github/scripts/api/verify.sh       -> pgbackrest + container status
+#   .github/scripts/api/cleanup.sh      -> Docker image prune
 # ===========================================================
 
-name: Deploy Gateway (Prod) v2 (Hosted + Tailscale)
+name: Deploy API (Prod) v10 (Hosted + Tailscale)
 
 on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
   workflow_dispatch:
     inputs:
       ref:
         description: 'Tag, branch or commit to deploy'
         required: false
         default: 'main'
-      confirm:
-        description: 'Production deploy confirmation'
-        type: choice
-        required: true
-        default: 'CANCEL'
-        options:
-          - DEPLOY
-          - CANCEL
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-gateway-prod
+  group: deploy-api-prod
   cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: unspoken-tech-org/workshop_rest_api/caddy-gateway
-  LOCAL_IMAGE_NAME: workshop/caddy-gateway
-  COMPOSE_FILE: docker-compose-gateway.yml
-  DEPLOY_DIR: /home/workshop/deploy/gateway_stack
+  IMAGE_NAME: unspoken-tech-org/workshop_rest_api
+  COMPOSE_FILE: docker-compose-production.yml
+  DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
+  LOCAL_IMAGE_NAME: workshop_rest_api-workshop_spring_app
   SSH_USER: ${{ secrets.PROD_SSH_USER }}
   TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
   SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
-  DEPLOY_SCRIPT: .github/scripts/gateway/deploy.sh
-  ROLLBACK_SCRIPT: .github/scripts/gateway/rollback.sh
-  VERIFY_SCRIPT: .github/scripts/gateway/verify.sh
-  CLEANUP_SCRIPT: .github/scripts/gateway/cleanup.sh
+  DEPLOY_SCRIPT: .github/scripts/api/deploy.sh
+  ROLLBACK_SCRIPT: .github/scripts/api/rollback.sh
+  VERIFY_SCRIPT: .github/scripts/api/verify.sh
+  CLEANUP_SCRIPT: .github/scripts/api/cleanup.sh
 
 jobs:
   # ===========================================
   # JOB 1: BUILD + PUSH GHCR
   # ===========================================
   build:
-    name: Build & Push Caddy Image
+    name: Build & Push Image
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
@@ -79,13 +74,17 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Prepare image tag
-        id: prep
-        env:
-          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
-        run: |
-          TAG="${INPUT_REF//\//-}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+      - name: Setup Java 21
+        uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+
+      - name: Build with Gradle (skip tests)
+        run: ./gradlew build -x test
 
       - name: Login to GHCR
         uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
@@ -94,13 +93,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prepare image tag
+        id: prep
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          TAG="${INPUT_REF//\//-}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
 
-      - name: Build and push Caddy image
+      - name: Build and push image
         uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
         with:
-          context: ./infra/caddy
+          context: .
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
@@ -148,22 +155,6 @@ jobs:
           tags: tag:ci
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
-      - name: Sync compose and Caddyfile to server
-        run: |
-          set -e
-          # Snapshot previous versions (for rollback)
-          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no "${SSH_TARGET}" \
-            "cd ${DEPLOY_DIR} && \
-             [ -f ${COMPOSE_FILE} ] && cp -p ${COMPOSE_FILE} ${COMPOSE_FILE}.previous || true && \
-             [ -f infra/caddy/Caddyfile-gateway ] && cp -p infra/caddy/Caddyfile-gateway infra/caddy/Caddyfile-gateway.previous || true"
-          # Sync new versions
-          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            "./${COMPOSE_FILE}" "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
-          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            ./infra/caddy/Caddyfile-gateway \
-            "${SSH_TARGET}:${DEPLOY_DIR}/infra/caddy/Caddyfile-gateway"
-          echo "Synced compose and Caddyfile to ${SSH_TARGET}:${DEPLOY_DIR}"
-
       - name: Login to GHCR
         uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
         with:
@@ -171,8 +162,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy via SSH gateway
-        uses: ./.github/actions/gateway/deploy-via-ssh-gateway
+      - name: Deploy via SSH
+        uses: ./.github/actions/api/deploy-via-ssh-api
         with:
           ssh-target: ${{ env.SSH_TARGET }}
           deploy-dir: ${{ env.DEPLOY_DIR }}
@@ -182,11 +173,12 @@ jobs:
           compose-file: ${{ env.COMPOSE_FILE }}
           image-tag: ${{ needs.build.outputs.deployed-image-tag }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
+          db-name: ${{ secrets.DB_NAME }}
+          db-username: ${{ secrets.DB_USERNAME }}
+          db-password: ${{ secrets.DB_PASSWORD }}
           admin-email: ${{ secrets.ADMIN_EMAIL }}
-          cf-api-token: ${{ secrets.CF_API_TOKEN }}
-          cf-api-token-qa: ${{ secrets.CF_API_TOKEN_QA }}
-          cloudflare-tunnel-token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
-          cloudflare-tunnel-token-qa: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
+          jwt-private-b64: ${{ secrets.JWT_RSA_PRIVATE_KEY_B64 }}
+          jwt-public-b64: ${{ secrets.JWT_RSA_PUBLIC_KEY_B64 }}
 
       - name: Rollback on failure
         if: failure()
@@ -194,7 +186,7 @@ jobs:
           scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
             "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
           ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' /tmp/rollback.sh"
+            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && /tmp/rollback.sh"
 
   # ===========================================
   # JOB 3: VERIFY
@@ -226,11 +218,13 @@ jobs:
           ping: ${{ secrets.TS_TAILSCALE_IP }}
 
       - name: Verify via SSH
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
             "${VERIFY_SCRIPT}" "${SSH_TARGET}:/tmp/"
           ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
-            "${SSH_TARGET}" "chmod +x /tmp/verify.sh && DEPLOY_DIR='${DEPLOY_DIR}' /tmp/verify.sh"
+            "${SSH_TARGET}" "chmod +x /tmp/verify.sh && DB_PASSWORD='${DB_PASSWORD}' /tmp/verify.sh"
 
   # ===========================================
   # JOB 4: CLEANUP

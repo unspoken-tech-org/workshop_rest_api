@@ -1,4 +1,4 @@
-name: Deploy Observability Stack
+name: Deploy Observability (Prod) v1 (Self-Hosted)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - 'docker-compose-observability.yml'
       - 'infra/promtail-config-*.yaml'
       - 'infra/grafana-provisioning/**'
-      - '.github/workflows/deploy-observability.yml'
+      - '.github/workflows/deploy-observability-prod.yml'
   workflow_dispatch:
     inputs:
       ref:

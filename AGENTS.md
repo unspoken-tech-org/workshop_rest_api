@@ -39,6 +39,22 @@
 - Full stack (DB + observability): `docker-compose -f docker-compose-local-full.yml up -d --build`
 - Stop and clear: `docker-compose -f docker-compose-local.yml down --volumes`
 
+## CI/CD (GitHub Actions + Tailscale)
+- **Transporte SSH:** Tailscale (WireGuard, nós efêmeros via `tailscale/github-action@v4`)
+- **Servidor:** `workshop@${{ secrets.TS_TAILSCALE_IP }}` (IP Tailscale, formato `100.x.x.x`)
+- **Acesso manual:** Cloudflare tunnel (`cloudflared-ssh.service`) — não usado para CI/CD
+- **Secrets Tailscale:** `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `TS_TAILSCALE_IP`
+- **Secrets SSH:** `PROD_SSH_KEY`, `PROD_SSH_USER`, `PROD_SSH_HOST` (IP Tailscale)
+- **Workflows (padrão `deploy-{servico}-{ambiente}`):**
+  - `deploy-api-prod.yml` — API Spring Boot (produção, hosted + Tailscale)
+  - `deploy-api-qa.yml` — API Spring Boot (QA, self-hosted)
+  - `deploy-gateway-prod.yml` — Caddy Gateway (produção, hosted + Tailscale)
+  - `deploy-observability-prod.yml` — Loki + Grafana (produção, self-hosted)
+- **Composite actions:** `.github/actions/{shared,api,gateway}/` (shared = `print-banner`; api = `deploy-via-ssh-api`; gateway = `deploy-via-ssh-gateway`)
+- **Scripts:** `.github/scripts/{api,gateway}/` (deploy/rollback/verify/cleanup.sh, sem sufixo)
+- **Plano:** Tailscale Personal (gratuito, 1.000 min efêmeros/mês)
+- **Deploy:** tag `v*` em `release/*` dispara `deploy-{api,gateway,observability}-prod`; QA (`deploy-api-qa`) é manual via `workflow_dispatch`
+
 ## Linting/Formatting
 - No dedicated linter or formatter configured in `build.gradle`.
 - Use IDE auto-formatting; keep consistent with existing spacing.

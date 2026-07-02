@@ -504,9 +504,19 @@ workshop_rest_api/
 │   └── promtail-config.yaml
 ├── Dockerfile                             # Multi-stage build
 ├── Dockerfile.pgbackrest                  # Backup sidecar container
-└── .github/workflows/
-    ├── deploy.yml           # Production pipeline
-    └── deploy-qa.yml        # QA pipeline
+└── .github/
+    ├── actions/
+    │   ├── shared/          # Shared composite actions (api+gateway)
+    │   ├── api/             # API-specific composite actions
+    │   └── gateway/         # Gateway-specific composite actions
+    ├── scripts/
+    │   ├── api/             # API deploy/rollback/verify/cleanup scripts
+    │   └── gateway/         # Gateway deploy/rollback/verify/cleanup scripts
+    └── workflows/
+        ├── deploy-api-prod.yml            # API Spring Boot (production)
+        ├── deploy-api-qa.yml              # API Spring Boot (QA)
+        ├── deploy-gateway-prod.yml        # Caddy Gateway (production)
+        └── deploy-observability-prod.yml  # Loki + Grafana (production)
 ```
 
 ---

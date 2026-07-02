@@ -3,6 +3,16 @@
     # Disable automatic HTTP to HTTPS redirects to prevent redirect loops
     # when traffic comes from Cloudflare Tunnel via HTTP
     auto_https disable_redirects
+    servers {
+        trusted_proxies static 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+    }
+}
+
+(log) {
+    log {
+        output stderr
+        format json
+    }
 }
 
 # ============================================
@@ -10,6 +20,7 @@
 # For traffic coming from Cloudflare Tunnel
 # ============================================
 :80 {
+    import log
     # Matcher for Production API
     @api_prod host api.eletroluk.com
     handle @api_prod {
@@ -42,6 +53,7 @@
 
 # Production API (HTTPS)
 api.eletroluk.com {
+    import log
     reverse_proxy workshop-api:8080
     tls {
         dns cloudflare {env.CF_API_TOKEN}
@@ -50,6 +62,7 @@ api.eletroluk.com {
 
 # QA API (HTTPS)
 api-qa.eletroluk.com {
+    import log
     reverse_proxy workshop-api-qa:8080
     tls {
         dns cloudflare {env.CF_API_TOKEN_QA}
@@ -58,6 +71,7 @@ api-qa.eletroluk.com {
 
 # Grafana Unified - All environments (HTTPS)
 grafana.eletroluk.com {
+    import log
     reverse_proxy grafana-unified:3000
     tls {
         dns cloudflare {env.CF_API_TOKEN}
