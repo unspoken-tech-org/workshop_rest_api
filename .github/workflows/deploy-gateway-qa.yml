@@ -155,8 +155,8 @@ jobs:
           image-tag: ${{ needs.build.outputs.deployed-image-tag }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
           admin-email: ${{ secrets.QA_ADMIN_EMAIL }}
-          cf-api-token: ${{ secrets.QA_CF_API_TOKEN }}
-          cloudflare-tunnel-token: ${{ secrets.QA_CLOUDFLARE_TUNNEL_TOKEN }}
+          cf-api-token: ${{ secrets.CF_API_TOKEN_QA }}
+          cloudflare-tunnel-token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
 
       - name: Rollback on failure
         if: failure()
