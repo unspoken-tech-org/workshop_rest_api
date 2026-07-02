@@ -64,14 +64,16 @@ runs:
       shell: bash
       env:
         SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
       run: |
         set -e
 
-        # Ensure ~/.docker directory exists on the server
+        # Ensure deploy directory and ~/.docker exist on the server
         ssh -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
-          "${SSH_TARGET}" "mkdir -p ~/.docker && chmod 700 ~/.docker"
+          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}' ~/.docker && chmod 700 ~/.docker"
 
         mkdir -p ~/.docker
         chmod 700 ~/.docker
@@ -82,12 +84,26 @@ runs:
           "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:/tmp/"
 
+        # Upload compose file and Caddyfile if they don't exist on the server
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          "${COMPOSE_FILE}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+
+        CADDYFILE="Caddyfile-gateway-qa"
+        if [ -f "${CADDYFILE}" ]; then
+          scp -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            "${CADDYFILE}" \
+            "${SSH_TARGET}:${DEPLOY_DIR}/${CADDYFILE}"
+        fi
+
         scp -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
           "${HOME}/.docker/config.json" \
           "${SSH_TARGET}:~/.docker/config.json.tmp"
 
-        echo "Files uploaded to ${SSH_TARGET}:/tmp/"
+        echo "Files uploaded to ${SSH_TARGET}:${DEPLOY_DIR}/"
 
     - name: Execute deploy on server
       shell: bash
