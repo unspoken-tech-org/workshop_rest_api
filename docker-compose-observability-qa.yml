@@ -1,0 +1,32 @@
+services:
+  # ==========================================
+  # PROMTAIL QA - Collects logs from QA VM
+  # Sends to central Loki on production server
+  # ==========================================
+  promtail-qa:
+    image: grafana/promtail:2.9.2
+    container_name: promtail-qa
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/promtail-config-qa-vm.yaml:/etc/promtail/config.yaml:ro
+    environment:
+      - LOKI_URL=http://LOKI_TS_TAILSCALE_IP_PLACEHOLDER:3100
+      - ENV_NAME=qa
+      - APP_CONTAINER_NAME=workshop-api-qa
+    command: -config.file=/etc/promtail/config.yaml -config.expand-env=true
+    networks:
+      - workshop-network
+      - workshop-ingress
+    restart: unless-stopped
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  workshop-network:
+    name: workshop-network
+    driver: bridge
+  workshop-ingress:
+    name: workshop-ingress
+    driver: bridge
