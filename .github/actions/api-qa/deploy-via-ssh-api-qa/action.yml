@@ -103,11 +103,17 @@ runs:
           "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:/tmp/"
 
-        # Upload compose file if it doesn't exist on the server
+        # Upload compose file to deploy dir
         scp -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
           "${COMPOSE_FILE}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+
+        # Upload Dockerfile for PostgreSQL image build (first deploy only)
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          "Dockerfile.pgbackrest" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/Dockerfile.pgbackrest"
 
         scp -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \

@@ -21,6 +21,17 @@ chmod 600 config/qa_keys/private-pkcs8.pem
 mv /tmp/public.pem config/qa_keys/ 2>/dev/null || true
 chmod 644 config/qa_keys/public.pem
 
+# Build PostgreSQL image locally if it doesn't exist
+# (image not on GHCR — built from Dockerfile.pgbackrest on first deploy)
+PG_IMAGE="workshop/postgres16-pgbackrest:latest"
+if ! docker image inspect "${PG_IMAGE}" >/dev/null 2>&1; then
+  echo "PostgreSQL image ${PG_IMAGE} not found, building from Dockerfile.pgbackrest..."
+  docker build -f "${DEPLOY_DIR}/Dockerfile.pgbackrest" -t "${PG_IMAGE}" "${DEPLOY_DIR}"
+  echo "PostgreSQL image built: ${PG_IMAGE}"
+else
+  echo "PostgreSQL image ${PG_IMAGE} already exists, skipping build"
+fi
+
 # Backup the CURRENT image before pulling the new one
 # (rollback.sh restores :backup, ensuring a safe fallback)
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
