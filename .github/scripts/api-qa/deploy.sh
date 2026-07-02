@@ -32,6 +32,31 @@ else
   echo "PostgreSQL image ${PG_IMAGE} already exists, skipping build"
 fi
 
+# Create pgbackrest config if it doesn't exist
+PGBACKREST_CONF="/srv/pgbackrest/conf/pgbackrest.conf"
+if [ ! -f "${PGBACKREST_CONF}" ]; then
+  echo "Creating pgbackrest configuration..."
+  mkdir -p /srv/pgbackrest/conf
+  cat > "${PGBACKREST_CONF}" << 'EOF'
+[global]
+repo1-path=/var/lib/pgbackrest
+repo1-retention-full=4
+repo1-retention-diff=14
+start-fast=y
+log-level-console=info
+log-level-file=info
+log-path=/var/log/pgbackrest
+
+[workshop]
+pg1-path=/var/lib/postgresql/data
+pg1-port=5432
+pg1-user=work_shop_prd
+EOF
+  echo "pgbackrest config created: ${PGBACKREST_CONF}"
+else
+  echo "pgbackrest config already exists, skipping"
+fi
+
 # Backup the CURRENT image before pulling the new one
 # (rollback.sh restores :backup, ensuring a safe fallback)
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
