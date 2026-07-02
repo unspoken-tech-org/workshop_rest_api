@@ -29,6 +29,9 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     locations: classpath:db/migration/postgresql
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
 message: Local
 
 logging:
@@ -55,3 +58,6 @@ jwt:
 cors:
   allowed-origins:
     - https://api.eletroluk.com
+
+server:
+  shutdown: graceful
