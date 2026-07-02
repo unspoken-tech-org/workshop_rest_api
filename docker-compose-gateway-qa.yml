@@ -13,7 +13,7 @@ services:
       - CF_API_TOKEN=${CF_API_TOKEN}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
     volumes:
-      - ./infra/caddy/Caddyfile-gateway-qa:/etc/caddy/Caddyfile
+      - ./Caddyfile-gateway-qa:/etc/caddy/Caddyfile
       - caddy_data_qa:/data
       - caddy_config_qa:/config
     networks:
