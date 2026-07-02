@@ -1,0 +1,41 @@
+name: Print Deploy Banner
+description: >
+  Prints a standardized banner with deploy information (version, commit, actor, trigger, image).
+  Uses the github context internally to avoid duplication between jobs.
+
+  Shared composite action — used by `deploy-api-prod.yml` and `deploy-gateway-prod.yml`.
+  Changes here affect 2 production pipelines.
+
+inputs:
+  prefix:
+    description: 'Banner prefix (e.g., BUILD, DEPLOY)'
+    required: true
+  image-tag:
+    description: 'Docker image tag'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Print banner
+      shell: bash
+      env:
+        PREFIX: ${{ inputs.prefix }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+        GIT_REF_NAME: ${{ github.ref_name }}
+        GIT_SHA: ${{ github.sha }}
+        GIT_ACTOR: ${{ github.actor }}
+        GIT_EVENT: ${{ github.event_name }}
+      run: |
+        echo ""
+        echo "============================================="
+        echo "  ${PREFIX} ${GIT_EVENT}: ${GIT_REF_NAME}"
+        echo "============================================="
+        echo ""
+        echo "  Version: ${GIT_REF_NAME}"
+        echo "  Commit:  ${GIT_SHA}"
+        echo "  Actor:   ${GIT_ACTOR}"
+        echo "  Trigger: ${GIT_EVENT}"
+        echo "  Image:   ${IMAGE_TAG}"
+        echo ""
+        echo "============================================="

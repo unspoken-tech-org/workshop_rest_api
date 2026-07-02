@@ -43,17 +43,24 @@ services:
       - /srv/postgres/logical_dumps:/backups/logical
     networks:
       - workshop-network
+    stop_grace_period: 2m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
 
   workshop_spring_app:
     container_name: workshop-api
     labels:
       workshop.env: "production"
-    restart: always
-    build: .
+    restart: unless-stopped
     image: workshop_rest_api-workshop_spring_app:latest
     command: [ "java", "-Dspring.profiles.active=production", "-jar", "app.jar" ]
     expose:
       - "8080"
+    stop_grace_period: 60s
     depends_on:
       workshop_db:
         condition: service_healthy
@@ -75,6 +82,12 @@ services:
     networks:
       - workshop-network
       - workshop-ingress
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
 
 volumes:
   db_data:
