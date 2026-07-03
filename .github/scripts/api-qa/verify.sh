@@ -12,8 +12,8 @@ mkdir -p /srv/pgbackrest/conf
 mkdir -p /srv/pgbackrest/repo
 mkdir -p /srv/pgbackrest/logs
 
-# Ensure postgres user can write to repo and logs dirs
-chown -R 999:999 /srv/pgbackrest/repo /srv/pgbackrest/logs 2>/dev/null || true
+# Ensure postgres user (UID 999) can write to repo and logs dirs
+sudo chown -R 999:999 /srv/pgbackrest/repo /srv/pgbackrest/logs 2>/dev/null || true
 
 cat > "${PGBACKREST_CONF}" << EOF
 [global]
