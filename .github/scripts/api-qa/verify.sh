@@ -2,6 +2,25 @@
 set -e
 cd "${DEPLOY_DIR}"
 
+# Ensure pgbackrest config exists (idempotent — safe to run repeatedly)
+PGBACKREST_CONF="/srv/pgbackrest/conf/pgbackrest.conf"
+mkdir -p /srv/pgbackrest/conf
+cat > "${PGBACKREST_CONF}" << 'EOF'
+[global]
+repo1-path=/var/lib/pgbackrest
+repo1-retention-full=4
+repo1-retention-diff=14
+start-fast=y
+log-level-console=info
+log-level-file=info
+log-path=/var/log/pgbackrest
+
+[workshop]
+pg1-path=/var/lib/postgresql/data
+pg1-port=5432
+pg1-user=work_shop_prd
+EOF
+
 PG_CID=$(docker compose -f "${COMPOSE_FILE}" ps -q workshop_db_qa)
 if [ -z "$PG_CID" ]; then
   echo "Postgres container not found"
