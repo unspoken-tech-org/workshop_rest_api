@@ -3,9 +3,11 @@ set -e
 cd "${DEPLOY_DIR}"
 
 # Ensure pgbackrest config exists (idempotent — safe to run repeatedly)
+# Read DB_USERNAME from .env to match the PostgreSQL user
+DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)
 PGBACKREST_CONF="/srv/pgbackrest/conf/pgbackrest.conf"
 mkdir -p /srv/pgbackrest/conf
-cat > "${PGBACKREST_CONF}" << 'EOF'
+cat > "${PGBACKREST_CONF}" << EOF
 [global]
 repo1-path=/var/lib/pgbackrest
 repo1-retention-full=4
@@ -18,7 +20,7 @@ log-path=/var/log/pgbackrest
 [workshop]
 pg1-path=/var/lib/postgresql/data
 pg1-port=5432
-pg1-user=work_shop_prd
+pg1-user=${DB_USER}
 EOF
 
 PG_CID=$(docker compose -f "${COMPOSE_FILE}" ps -q workshop_db_qa)
