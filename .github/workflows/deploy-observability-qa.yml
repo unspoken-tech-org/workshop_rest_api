@@ -1,0 +1,24 @@
+name: Deploy Observability (QA) v1 (Hosted + Tailscale)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or commit to deploy'
+        required: false
+        default: 'main'
+      confirm:
+        description: 'QA observability deploy confirmation'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
+
+jobs:
+  skeleton:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Skeleton placeholder
+        run: echo "This is a skeleton workflow to register it on the main branch."
