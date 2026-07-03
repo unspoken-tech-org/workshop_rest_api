@@ -2,11 +2,19 @@
 set -e
 cd "${DEPLOY_DIR}"
 
-# Ensure pgbackrest config exists (idempotent — safe to run repeatedly)
+# Ensure pgbackrest directories and config exist (idempotent — safe to run repeatedly)
 # Read DB_USERNAME from .env to match the PostgreSQL user
 DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)
 PGBACKREST_CONF="/srv/pgbackrest/conf/pgbackrest.conf"
+
+# Create required directories with correct permissions
 mkdir -p /srv/pgbackrest/conf
+mkdir -p /srv/pgbackrest/repo
+mkdir -p /srv/pgbackrest/logs
+
+# Ensure postgres user can write to repo and logs dirs
+chown -R 999:999 /srv/pgbackrest/repo /srv/pgbackrest/logs 2>/dev/null || true
+
 cat > "${PGBACKREST_CONF}" << EOF
 [global]
 repo1-path=/var/lib/pgbackrest
