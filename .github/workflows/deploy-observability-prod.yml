@@ -133,7 +133,7 @@ jobs:
         run: |
           echo "=== Checking Promtail instances ==="
           
-          for instance in promtail-prod promtail-qa promtail-gateway; do
+          for instance in promtail-prod promtail-gateway; do
             echo ""
             echo ">>> Checking $instance..."
             if docker ps --filter "name=$instance" --filter "status=running" | grep -q "$instance"; then
@@ -178,7 +178,7 @@ jobs:
           echo ">>> Testing log ingestion from all environments..."
           sleep 10  # Wait for logs to be ingested
           
-          for env in production qa gateway; do
+          for env in production gateway; do
             echo ""
             echo "Checking logs for environment: $env"
             QUERY=$(printf 'query={environment="%s"}' "$env")

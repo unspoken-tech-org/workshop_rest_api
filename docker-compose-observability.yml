@@ -1,7 +1,7 @@
 services:
   # ==========================================
   # LOKI - Centralized log storage
-  # Stores logs from all environments (prod, qa, gateway)
+  # Stores logs from all environments (prod, gateway, remote QA via Tailscale)
   # ==========================================
   loki:
     image: grafana/loki:2.9.2
@@ -13,7 +13,6 @@ services:
     networks:
       - observability-network
       - workshop-network         # Access to prod API
-      - workshop-qa-network      # Access to QA API
       - workshop-ingress         # Access to Gateway
     restart: unless-stopped
     healthcheck:
@@ -24,7 +23,8 @@ services:
       start_period: 60s
 
   # ==========================================
-  # PROMTAIL - Log collectors (one per environment)
+  # PROMTAIL - Log collectors (production + gateway)
+  # QA logs collected by remote Promtail on the QA VM (see docker-compose-observability-qa.yml)
   # ==========================================
   
   # Collects logs from Production API
@@ -45,26 +45,6 @@ services:
     networks:
       - observability-network
       - workshop-network
-    restart: unless-stopped
-
-  # Collects logs from QA API
-  promtail-qa:
-    image: grafana/promtail:2.9.2
-    container_name: promtail-qa
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./infra/promtail-config-qa.yaml:/etc/promtail/config.yaml:ro
-    environment:
-      - LOKI_URL=http://loki-unified:3100
-      - ENV_NAME=qa
-      - APP_CONTAINER_NAME=workshop-api-qa
-    command: -config.file=/etc/promtail/config.yaml -config.expand-env=true
-    depends_on:
-      - loki
-    networks:
-      - observability-network
-      - workshop-qa-network
     restart: unless-stopped
 
   # Collects logs from Gateway (Caddy + Cloudflared)
@@ -127,9 +107,6 @@ networks:
   # Shared networks (created/used by multiple stacks)
   workshop-network:
     name: workshop-network
-    driver: bridge
-  workshop-qa-network:
-    name: workshop-qa-network
     driver: bridge
   workshop-ingress:
     name: workshop-ingress

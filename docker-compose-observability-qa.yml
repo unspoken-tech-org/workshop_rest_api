@@ -1,0 +1,119 @@
+services:
+  # ==========================================
+  # LOKI QA - Centralized log storage for QA
+  # Independent instance on QA VM
+  # ==========================================
+  loki-qa:
+    image: grafana/loki:2.9.2
+    container_name: loki-qa
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./infra/loki-config-qa.yaml:/etc/loki/local-config.yaml:ro
+      - loki_qa_data:/loki
+    networks:
+      - observability-qa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+  # ==========================================
+  # PROMTAIL QA - Collects logs from QA VM
+  # Sends to local Loki instance
+  # ==========================================
+  promtail-qa:
+    image: grafana/promtail:3.0.0
+    container_name: promtail-qa
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/promtail-config-qa-vm.yaml:/etc/promtail/config.yaml:ro
+    environment:
+      - LOKI_URL=http://loki-qa:3100
+      - ENV_NAME=qa
+      - APP_CONTAINER_NAME=workshop-api-qa
+      - DOCKER_API_VERSION=1.44
+    command: -config.file=/etc/promtail/config.yaml -config.expand-env=true
+    depends_on:
+      loki-qa:
+        condition: service_healthy
+    networks:
+      - observability-qa-network
+      - workshop-network
+      - workshop-ingress
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+  # ==========================================
+  # GRAFANA QA - Dashboards for QA environment
+  # Independent instance on QA VM
+  # ==========================================
+  grafana-qa:
+    image: grafana/grafana:10.2.3
+    container_name: grafana-qa
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://grafana-qa.eletroluk.com
+      - GF_SERVER_DOMAIN=grafana-qa.eletroluk.com
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    volumes:
+      - grafana_qa_data:/var/lib/grafana
+      - ./infra/grafana-provisioning-qa:/etc/grafana/provisioning:ro
+    depends_on:
+      loki-qa:
+        condition: service_healthy
+    networks:
+      - observability-qa-network
+      - workshop-ingress
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  observability-qa-network:
+    name: observability-qa-network
+    driver: bridge
+  workshop-network:
+    name: workshop-network
+    driver: bridge
+  workshop-ingress:
+    name: workshop-ingress
+    driver: bridge
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  loki_qa_data:
+    name: loki_qa_data
+  grafana_qa_data:
+    name: grafana_qa_data
