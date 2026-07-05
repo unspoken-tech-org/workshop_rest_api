@@ -1,7 +1,5 @@
 {
     email {env.ADMIN_EMAIL}
-    # Disable automatic HTTP to HTTPS redirects to prevent redirect loops
-    # when traffic comes from Cloudflare Tunnel via HTTP
     auto_https disable_redirects
     servers {
         trusted_proxies static 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
@@ -21,21 +19,18 @@
 # ============================================
 :80 {
     import log
-    # Matcher for Production API
-    @api_prod host api.eletroluk.com
-    handle @api_prod {
-        reverse_proxy workshop-api:8080
+    @api_qa host api-qa.eletroluk.com
+    handle @api_qa {
+        reverse_proxy workshop-api-qa:8080
     }
 
-    # Matcher for Grafana Unified (all environments)
-    @grafana host grafana.eletroluk.com
-    handle @grafana {
-        reverse_proxy grafana-unified:3000
+    @grafana_qa host grafana-qa.eletroluk.com
+    handle @grafana_qa {
+        reverse_proxy grafana-qa:3000
     }
 
-    # Fallback for requests without correct Host header
     handle {
-        respond "Gateway: Invalid Host Header" 400
+        respond "Gateway QA: Invalid Host Header" 400
     }
 }
 
@@ -45,19 +40,18 @@
 # Uses TLS certificates via Cloudflare DNS Challenge
 # ============================================
 
-# Production API (HTTPS)
-api.eletroluk.com {
+# QA API (HTTPS)
+api-qa.eletroluk.com {
     import log
-    reverse_proxy workshop-api:8080
+    reverse_proxy workshop-api-qa:8080
     tls {
         dns cloudflare {env.CF_API_TOKEN}
     }
 }
 
-# Grafana Unified - All environments (HTTPS)
-grafana.eletroluk.com {
+grafana-qa.eletroluk.com {
     import log
-    reverse_proxy grafana-unified:3000
+    reverse_proxy grafana-qa:3000
     tls {
         dns cloudflare {env.CF_API_TOKEN}
     }
