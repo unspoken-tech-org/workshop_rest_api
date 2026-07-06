@@ -21,6 +21,29 @@ chmod 600 config/keys/private-pkcs8.pem
 mv /tmp/public.pem config/keys/ 2>/dev/null || true
 chmod 644 config/keys/public.pem
 
+# Setup pgbackrest config
+if [ -f "/tmp/pgbackrest.conf" ]; then
+  DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)
+  sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" "/tmp/pgbackrest.conf"
+  mv "/tmp/pgbackrest.conf" /srv/pgbackrest/conf/pgbackrest.conf
+  chmod 644 /srv/pgbackrest/conf/pgbackrest.conf
+fi
+
+# Setup Dockerfile.pgbackrest
+if [ -f "/tmp/Dockerfile.pgbackrest" ]; then
+  mv "/tmp/Dockerfile.pgbackrest" "${DEPLOY_DIR}/Dockerfile.pgbackrest"
+fi
+
+# Build PostgreSQL image locally if it doesn't exist
+PG_IMAGE="workshop/postgres16-pgbackrest:latest"
+if ! docker image inspect "${PG_IMAGE}" >/dev/null 2>&1; then
+  echo "PostgreSQL image ${PG_IMAGE} not found, building from Dockerfile.pgbackrest..."
+  docker build -f "${DEPLOY_DIR}/Dockerfile.pgbackrest" -t "${PG_IMAGE}" "${DEPLOY_DIR}"
+  echo "PostgreSQL image built: ${PG_IMAGE}"
+else
+  echo "PostgreSQL image ${PG_IMAGE} already exists, skipping build"
+fi
+
 # Backup the CURRENT image before pulling the new one
 # (rollback.sh restores :backup, ensuring a safe fallback)
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
