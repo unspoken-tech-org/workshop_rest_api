@@ -1,20 +1,21 @@
 services:
-  caddy-gateway:
+  caddy-gateway-qa:
     build:
       context: ./infra/caddy
-    image: workshop/caddy-gateway:latest
-    container_name: caddy-gateway
+      dockerfile: Dockerfile
+    image: workshop/caddy-gateway-qa:latest
+    container_name: caddy-gateway-qa
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
     environment:
       - CF_API_TOKEN=${CF_API_TOKEN}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
     volumes:
-      - ./infra/caddy/Caddyfile-gateway:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - ./Caddyfile-gateway-qa:/etc/caddy/Caddyfile
+      - caddy_data_qa:/data
+      - caddy_config_qa:/config
     networks:
       - workshop-ingress
     healthcheck:
@@ -24,20 +25,19 @@ services:
       retries: 3
       start_period: 20s
     depends_on:
-      - cloudflared-prod
+      - cloudflared-qa
 
-  # Tunnel de Produção
-  cloudflared-prod:
+  cloudflared-qa:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflared-gateway-prod
+    container_name: cloudflared-gateway-qa
     restart: unless-stopped
     command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - workshop-ingress
 
 volumes:
-  caddy_data:
-  caddy_config:
+  caddy_data_qa:
+  caddy_config_qa:
 
 networks:
   workshop-ingress:

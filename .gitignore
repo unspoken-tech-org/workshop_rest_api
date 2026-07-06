@@ -36,9 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 
-### Cursor IDE ###
-.cursor/rules/
-
 ### RSA Keys ###
 *.pem
 *.key
@@ -53,11 +50,14 @@ config/keys/
 
 ### POC Files ###
 estudos/
-
-.opencode/
-.specify/
-/scripts/
-specs/
-.gemini/
-/.memsearch
 /docs
+
+### AI Resourcer
+.opencode/
+/.memsearch
+/.antigravitycli
+
+### Local Secrets and Act configs ###
+.secrets
+.env.act
+.actrc

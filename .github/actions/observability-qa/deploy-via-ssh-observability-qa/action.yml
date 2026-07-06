@@ -1,0 +1,115 @@
+name: Deploy Observability via SSH (QA)
+description: >
+  Prepares .env on the runner, scps to the QA VM and runs deploy.sh.
+  Used exclusively by the `deploy-observability-qa.yml` pipeline.
+  Requires Setup Tailscale executed previously in the job.
+
+inputs:
+  ssh-target:
+    description: 'SSH target in the user@host format'
+    required: true
+  deploy-dir:
+    description: 'Deploy directory on the server'
+    required: true
+  compose-file:
+    description: 'docker-compose file name on the server'
+    required: true
+  deploy-script:
+    description: 'Path to deploy.sh in the repository'
+    required: true
+  grafana-admin-user:
+    description: 'Grafana admin username'
+    required: true
+  grafana-admin-password:
+    description: 'Grafana admin password'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare deploy files on runner
+      shell: bash
+      env:
+        GRAFANA_ADMIN_USER: ${{ inputs.grafana-admin-user }}
+        GRAFANA_ADMIN_PASSWORD: ${{ inputs.grafana-admin-password }}
+      run: |
+        set -e
+
+        {
+          echo "GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}"
+          echo "GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}"
+        } > /tmp/.env
+        chmod 600 /tmp/.env
+
+        echo "Observability QA deploy files prepared"
+
+    - name: Upload files to server
+      shell: bash
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+      run: |
+        set -e
+
+        # Ensure target parent directories exist first so Docker run command doesn't fail
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/infra'"
+
+        # Clean up any potential directory-vs-file mounting conflicts from previous failed runs (idempotency)
+        # Using a temporary docker run to clean root-owned directories created by docker daemon
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+          "${SSH_TARGET}" "docker run --rm -v '${DEPLOY_DIR}/infra:/target' alpine rm -rf /target/loki-config-qa.yaml /target/promtail-config-qa-vm.yaml /target/grafana-provisioning-qa/datasources/loki-qa.yaml"
+
+        # Ensure deploy directory, target config subdirectories, and secure tmp directory exist on the server
+        ssh -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' '${DEPLOY_DIR}/infra/grafana-provisioning-qa/datasources' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          /tmp/.env \
+          "${DEPLOY_SCRIPT}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+
+        # Upload compose file to deploy dir
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          "${COMPOSE_FILE}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+
+        # Upload Loki config
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          infra/loki-config-qa.yaml \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/loki-config-qa.yaml"
+
+        # Upload Promtail config
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          infra/promtail-config-qa-vm.yaml \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/promtail-config-qa-vm.yaml"
+
+        # Upload Grafana provisioning datasources
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          infra/grafana-provisioning-qa/datasources/loki-qa.yaml \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/grafana-provisioning-qa/datasources/loki-qa.yaml"
+
+        echo "Files uploaded to ${SSH_TARGET}:${DEPLOY_DIR}/"
+
+    - name: Execute deploy on server
+      shell: bash
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+      run: |
+        set -e
+
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+          "${SSH_TARGET}" \
+          env DEPLOY_DIR="${DEPLOY_DIR}" \
+              COMPOSE_FILE="${COMPOSE_FILE}" \
+              bash "${DEPLOY_DIR}/.tmp/deploy.sh"

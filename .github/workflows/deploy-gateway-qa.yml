@@ -1,6 +1,8 @@
 # ===========================================================
-# SKELETON — Registrado no GitHub para workflow_dispatch
-# O workflow real executes da branch feature/segregate-qa-env
+# Workflow: Deploy Gateway (QA) — VM Dedicada
+# ===========================================================
+# Orchestrates: build GHCR -> deploy via SSH -> verify -> cleanup
+# Trigger: manual workflow_dispatch only
 # ===========================================================
 
 name: Deploy Gateway (QA) v1 (Hosted + Tailscale)
@@ -21,8 +23,233 @@ on:
           - DEPLOY
           - CANCEL
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-gateway-qa
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: unspoken-tech-org/workshop_rest_api/caddy-gateway
+  LOCAL_IMAGE_NAME: workshop/caddy-gateway-qa
+  COMPOSE_FILE: docker-compose-gateway-qa.yml
+  DEPLOY_DIR: /home/workshop/deploy/gateway_stack_qa
+  SSH_USER: ${{ secrets.QA_SSH_USER }}
+  TS_IP: ${{ secrets.QA_TS_TAILSCALE_IP }}
+  SSH_TARGET: ${{ secrets.QA_SSH_USER }}@${{ secrets.QA_TS_TAILSCALE_IP }}
+  DEPLOY_SCRIPT: .github/scripts/gateway-qa/deploy.sh
+  ROLLBACK_SCRIPT: .github/scripts/gateway-qa/rollback.sh
+  VERIFY_SCRIPT: .github/scripts/gateway-qa/verify.sh
+  CLEANUP_SCRIPT: .github/scripts/gateway-qa/cleanup.sh
+
 jobs:
-  skeleton:
-    runs-on: ubuntu-latest
+  # ===========================================
+  # JOB 1: BUILD + PUSH GHCR
+  # ===========================================
+  build:
+    name: Build & Push Caddy Image
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      deployed-image-tag: ${{ steps.prep.outputs.tag }}
+
     steps:
-      - run: echo "Skeleton — real workflow runs from feature branch via --ref"
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Prepare image tag
+        id: prep
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          TAG="${INPUT_REF//\//-}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
+
+      - name: Build and push Caddy image
+        uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318 # v6.0.0
+        with:
+          context: ./infra/caddy
+          push: true
+          platforms: linux/arm64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Print build banner
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: BUILD
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
+
+  # ===========================================
+  # JOB 2: DEPLOY
+  # ===========================================
+  deploy:
+    name: Deploy to QA VM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: build
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.QA_TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy via SSH
+        uses: ./.github/actions/gateway-qa/deploy-via-ssh-gateway-qa
+        with:
+          ssh-target: ${{ env.SSH_TARGET }}
+          deploy-dir: ${{ env.DEPLOY_DIR }}
+          registry: ${{ env.REGISTRY }}
+          image-name: ${{ env.IMAGE_NAME }}
+          local-image-name: ${{ env.LOCAL_IMAGE_NAME }}
+          compose-file: ${{ env.COMPOSE_FILE }}
+          image-tag: ${{ needs.build.outputs.deployed-image-tag }}
+          deploy-script: ${{ env.DEPLOY_SCRIPT }}
+          admin-email: ${{ secrets.QA_ADMIN_EMAIL }}
+          cf-api-token: ${{ secrets.CF_API_TOKEN_QA }}
+          cloudflare-tunnel-token: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_QA }}
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/rollback.sh"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/rollback.sh' && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/rollback.sh'"
+
+  # ===========================================
+  # JOB 3: VERIFY
+  # ===========================================
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: deploy
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.QA_TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
+
+      - name: Verify via SSH
+        run: |
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${VERIFY_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/verify.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/verify.sh'"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "rm -f '${DEPLOY_DIR}/.tmp/verify.sh'"
+
+  # ===========================================
+  # JOB 4: CLEANUP
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: verify
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.QA_TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
+
+      - name: Cleanup via SSH
+        run: |
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${CLEANUP_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/cleanup.sh' && '${DEPLOY_DIR}/.tmp/cleanup.sh'"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "rm -rf '${DEPLOY_DIR}/.tmp'"
+
+      - name: Print final banner
+        if: success()
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: DEPLOY
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}
