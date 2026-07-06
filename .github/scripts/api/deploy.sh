@@ -3,35 +3,25 @@ set -e
 cd "${DEPLOY_DIR}"
 
 # Cleanup secrets/credentials on exit (success or failure)
-trap 'rm -f /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem ~/.docker/config.json' EXIT
-
-# Setup GHCR auth
-mkdir -p ~/.docker
-mv ~/.docker/config.json.tmp ~/.docker/config.json 2>/dev/null || true
-chmod 600 ~/.docker/config.json
+trap 'rm -rf "${DEPLOY_DIR}/.tmp"' EXIT
 
 # Setup .env
-mv /tmp/.env ./ 2>/dev/null || true
+mv .tmp/.env ./ 2>/dev/null || true
 chmod 600 .env
 
 # Setup JWT keys
 mkdir -p config/keys
-mv /tmp/private-pkcs8.pem config/keys/ 2>/dev/null || true
+mv .tmp/private-pkcs8.pem config/keys/ 2>/dev/null || true
 chmod 600 config/keys/private-pkcs8.pem
-mv /tmp/public.pem config/keys/ 2>/dev/null || true
+mv .tmp/public.pem config/keys/ 2>/dev/null || true
 chmod 644 config/keys/public.pem
 
 # Setup pgbackrest config
-if [ -f "/tmp/pgbackrest.conf" ]; then
+if [ -f ".tmp/pgbackrest.conf" ]; then
   DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)
-  sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" "/tmp/pgbackrest.conf"
-  mv "/tmp/pgbackrest.conf" /srv/pgbackrest/conf/pgbackrest.conf
+  sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" ".tmp/pgbackrest.conf"
+  mv ".tmp/pgbackrest.conf" /srv/pgbackrest/conf/pgbackrest.conf
   chmod 644 /srv/pgbackrest/conf/pgbackrest.conf
-fi
-
-# Setup Dockerfile.pgbackrest
-if [ -f "/tmp/Dockerfile.pgbackrest" ]; then
-  mv "/tmp/Dockerfile.pgbackrest" "${DEPLOY_DIR}/Dockerfile.pgbackrest"
 fi
 
 # Build PostgreSQL image locally if it doesn't exist
@@ -54,8 +44,8 @@ else
 fi
 
 # Pull the new image from GHCR and retag to the local compose name
-docker pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
+docker --config "${DEPLOY_DIR}/.tmp/docker" pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+docker --config "${DEPLOY_DIR}/.tmp/docker" tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
 
 # Restart the service
 docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans workshop_spring_app

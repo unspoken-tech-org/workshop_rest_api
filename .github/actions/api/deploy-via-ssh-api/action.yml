@@ -108,14 +108,16 @@ runs:
       shell: bash
       env:
         SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
       run: |
         set -e
 
-        # Ensure ~/.docker directory and pgbackrest directories exist on the server (may not exist on a fresh host)
+        # Ensure deploy directory, secure tmp directory, and docker config directory exist on the server
         ssh -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
-          "${SSH_TARGET}" "mkdir -p ~/.docker && chmod 700 ~/.docker"
+          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp/docker' && chmod 700 '${DEPLOY_DIR}/.tmp' '${DEPLOY_DIR}/.tmp/docker'"
 
         ssh -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
@@ -129,15 +131,26 @@ runs:
           /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
           "${DEPLOY_SCRIPT}" \
           "infra/pgbackrest/pgbackrest.conf" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+
+        # Upload compose file to deploy dir
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          "${COMPOSE_FILE}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+
+        # Upload Dockerfile for PostgreSQL image build (first deploy only)
+        scp -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
           "Dockerfile.pgbackrest" \
-          "${SSH_TARGET}:/tmp/"
+          "${SSH_TARGET}:${DEPLOY_DIR}/Dockerfile.pgbackrest"
 
         scp -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
           "${HOME}/.docker/config.json" \
-          "${SSH_TARGET}:~/.docker/config.json.tmp"
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/docker/config.json"
 
-        echo "Files uploaded to ${SSH_TARGET}:/tmp/"
+        echo "Files uploaded to ${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
     - name: Execute deploy on server
       shell: bash
@@ -160,4 +173,4 @@ runs:
               LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME}" \
               COMPOSE_FILE="${COMPOSE_FILE}" \
               IMAGE_TAG="${IMAGE_TAG}" \
-              bash /tmp/deploy.sh
+              bash "${DEPLOY_DIR}/.tmp/deploy.sh"
