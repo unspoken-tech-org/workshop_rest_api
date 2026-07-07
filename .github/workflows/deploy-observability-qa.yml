@@ -16,9 +16,183 @@ on:
           - DEPLOY
           - CANCEL
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-observability-qa
+  cancel-in-progress: false
+
+env:
+  COMPOSE_FILE: docker-compose-observability-qa.yml
+  DEPLOY_DIR: /home/workshop/deploy/observability_stack_qa
+  SSH_USER: ${{ secrets.QA_SSH_USER }}
+  TS_IP: ${{ secrets.QA_TS_TAILSCALE_IP }}
+  SSH_TARGET: ${{ secrets.QA_SSH_USER }}@${{ secrets.QA_TS_TAILSCALE_IP }}
+  DEPLOY_SCRIPT: .github/scripts/observability-qa/deploy.sh
+  ROLLBACK_SCRIPT: .github/scripts/observability-qa/rollback.sh
+  VERIFY_SCRIPT: .github/scripts/observability-qa/verify.sh
+  CLEANUP_SCRIPT: .github/scripts/observability-qa/cleanup.sh
+
 jobs:
-  skeleton:
+  # ===========================================
+  # JOB 1: PREPARE
+  # ===========================================
+  prepare:
+    name: Prepare Observability QA
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
     steps:
-      - name: Skeleton placeholder
-        run: echo "This is a skeleton workflow to register it on the main branch."
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "DEPLOY" ]; then
+            echo "Deploy cancelled — confirmation was not DEPLOY"
+            exit 1
+          fi
+          echo "Deploy confirmed"
+
+      - name: Print build banner
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: OBSERVABILITY-QA
+          image-tag: ${{ github.event.inputs.ref || github.ref_name }}
+
+  # ===========================================
+  # JOB 2: DEPLOY
+  # ===========================================
+  deploy:
+    name: Deploy to QA VM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: prepare
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.QA_TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
+
+      - name: Deploy via SSH
+        uses: ./.github/actions/observability-qa/deploy-via-ssh-observability-qa
+        with:
+          ssh-target: ${{ env.SSH_TARGET }}
+          deploy-dir: ${{ env.DEPLOY_DIR }}
+          compose-file: ${{ env.COMPOSE_FILE }}
+          deploy-script: ${{ env.DEPLOY_SCRIPT }}
+          grafana-admin-user: ${{ secrets.GRAFANA_ADMIN_USER }}
+          grafana-admin-password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' /tmp/rollback.sh"
+
+  # ===========================================
+  # JOB 3: VERIFY
+  # ===========================================
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: deploy
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.QA_TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
+
+      - name: Verify via SSH
+        run: |
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${VERIFY_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/verify.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/verify.sh'"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "rm -f '${DEPLOY_DIR}/.tmp/verify.sh'"
+
+  # ===========================================
+  # JOB 4: CLEANUP
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: verify
+    if: always()
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.QA_TS_AUTH_KEY }}
+          tags: tag:ci
+          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
+
+      - name: Cleanup via SSH
+        run: |
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+          scp -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${CLEANUP_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/cleanup.sh' && '${DEPLOY_DIR}/.tmp/cleanup.sh'"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+            "${SSH_TARGET}" "rm -rf '${DEPLOY_DIR}/.tmp'"
+
+      - name: Print final banner
+        if: success()
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: OBSERVABILITY-QA
+          image-tag: ${{ github.event.inputs.ref || github.ref_name }}

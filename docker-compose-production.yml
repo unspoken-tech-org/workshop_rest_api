@@ -13,6 +13,12 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGBACKREST_REPO1_TYPE: s3
+      PGBACKREST_REPO1_S3_BUCKET: ${PGBACKREST_S3_BUCKET}
+      PGBACKREST_REPO1_S3_ENDPOINT: ${PGBACKREST_S3_ENDPOINT}
+      PGBACKREST_REPO1_S3_REGION: ${PGBACKREST_S3_REGION}
+      PGBACKREST_REPO1_S3_KEY: ${PGBACKREST_S3_KEY}
+      PGBACKREST_REPO1_S3_KEY_SECRET: ${PGBACKREST_S3_KEY_SECRET}
     ports:
       - "127.0.0.1:5432:5432"
     command:
@@ -37,7 +43,7 @@ services:
       start_period: 20s
     volumes:
       - db_data:/var/lib/postgresql/data
-      - /srv/pgbackrest/conf:/etc/pgbackrest
+      - /srv/pgbackrest/conf:/etc/pgbackrest:ro
       - /srv/pgbackrest/repo:/var/lib/pgbackrest
       - /srv/pgbackrest/logs:/var/log/pgbackrest
       - /srv/postgres/logical_dumps:/backups/logical

@@ -1,8 +1,8 @@
-name: Deploy API via SSH
+name: Deploy API via SSH (QA)
 description: >
-  Prepares .env + JWT keys on the runner, scps to the server and runs deploy.sh.
-  Used exclusively by the `deploy-api-prod.yml` pipeline (Spring Boot API in production).
-  Requires Setup Tailscale executed previously in the job (depends on WireGuard tunnel).
+  Prepares .env + JWT keys on the runner, scps to the QA VM and runs deploy.sh.
+  Used exclusively by the `deploy-api-qa.yml` pipeline (Spring Boot API in QA).
+  Requires Setup Tailscale executed previously in the job.
 
 inputs:
   ssh-target:
@@ -47,21 +47,6 @@ inputs:
   jwt-public-b64:
     description: 'RSA public key in base64'
     required: true
-  pgbackrest-s3-bucket:
-    description: 'pgBackRest S3 bucket name'
-    required: true
-  pgbackrest-s3-endpoint:
-    description: 'pgBackRest S3 endpoint URL'
-    required: true
-  pgbackrest-s3-region:
-    description: 'pgBackRest S3 region'
-    required: true
-  pgbackrest-s3-key:
-    description: 'pgBackRest S3 access key ID'
-    required: true
-  pgbackrest-s3-key-secret:
-    description: 'pgBackRest S3 secret access key'
-    required: true
 
 runs:
   using: composite
@@ -75,11 +60,6 @@ runs:
         ADMIN_EMAIL: ${{ inputs.admin-email }}
         JWT_PRIVATE_KEY: ${{ inputs.jwt-private-b64 }}
         JWT_PUBLIC_KEY: ${{ inputs.jwt-public-b64 }}
-        PGBACKREST_S3_BUCKET: ${{ inputs.pgbackrest-s3-bucket }}
-        PGBACKREST_S3_ENDPOINT: ${{ inputs.pgbackrest-s3-endpoint }}
-        PGBACKREST_S3_REGION: ${{ inputs.pgbackrest-s3-region }}
-        PGBACKREST_S3_KEY: ${{ inputs.pgbackrest-s3-key }}
-        PGBACKREST_S3_KEY_SECRET: ${{ inputs.pgbackrest-s3-key-secret }}
       run: |
         set -e
 
@@ -88,11 +68,6 @@ runs:
           echo "DB_USERNAME=${DB_USERNAME}"
           echo "DB_PASSWORD=${DB_PASSWORD}"
           echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
-          echo "PGBACKREST_S3_BUCKET=${PGBACKREST_S3_BUCKET}"
-          echo "PGBACKREST_S3_ENDPOINT=${PGBACKREST_S3_ENDPOINT}"
-          echo "PGBACKREST_S3_REGION=${PGBACKREST_S3_REGION}"
-          echo "PGBACKREST_S3_KEY=${PGBACKREST_S3_KEY}"
-          echo "PGBACKREST_S3_KEY_SECRET=${PGBACKREST_S3_KEY_SECRET}"
         } > /tmp/.env
         chmod 600 /tmp/.env
 
@@ -150,7 +125,7 @@ runs:
           "${HOME}/.docker/config.json" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/docker/config.json"
 
-        echo "Files uploaded to ${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+        echo "Files uploaded to ${SSH_TARGET}:${DEPLOY_DIR}/"
 
     - name: Execute deploy on server
       shell: bash
