@@ -48,7 +48,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.slf4j:slf4j-api:2.0.11'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.16.1'
-    implementation 'net.lingala.zip4j:zip4j:2.11.5'
+    implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'commons-io:commons-io:2.15.1'
     implementation 'dev.mccue:guava-base:0.0.4'
     implementation 'org.apache.commons:commons-lang3:3.18.0'
