@@ -46,7 +46,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.slf4j:slf4j-api:2.0.11'
+    implementation 'org.slf4j:slf4j-api:2.0.18'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.16.1'
     implementation 'net.lingala.zip4j:zip4j:2.11.5'
     implementation 'commons-io:commons-io:2.15.1'
