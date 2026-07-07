@@ -53,7 +53,7 @@ dependencies {
     implementation 'dev.mccue:guava-base:0.0.4'
     implementation 'org.apache.commons:commons-lang3:3.18.0'
     implementation 'com.github.spullara.mustache.java:compiler:0.9.11'
-    implementation 'com.google.guava:guava:33.0.0-jre'
+    implementation 'com.google.guava:guava:33.6.0-jre'
     implementation 'org.simpleflatmapper:sfm-springjdbc:8.2.3'
     implementation 'org.simpleflatmapper:sfm-jdbc:8.2.3'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
