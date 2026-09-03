@@ -71,30 +71,27 @@ runs:
         set -e
 
         # Ensure deploy directory exists first
-        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+        ssh -o ConnectTimeout=30 \
           "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}'"
 
         # Clean up any potential directory-vs-file mounting conflicts for Caddyfile from previous failed runs (idempotency)
-        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+        ssh -o ConnectTimeout=30 \
           "${SSH_TARGET}" "docker run --rm -v '${DEPLOY_DIR}:/target' alpine rm -rf /target/Caddyfile-gateway-qa"
 
         # Ensure target directories, secure tmp directory, and docker config directory exist on the server
         ssh -o ConnectTimeout=30 \
-          -o StrictHostKeyChecking=no \
           "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp/docker' && chmod 700 '${DEPLOY_DIR}/.tmp' '${DEPLOY_DIR}/.tmp/docker'"
 
         mkdir -p ~/.docker
         chmod 700 ~/.docker
 
         scp -o ConnectTimeout=30 \
-          -o StrictHostKeyChecking=no \
           /tmp/.env \
           "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
         # Upload compose file to deploy dir
         scp -o ConnectTimeout=30 \
-          -o StrictHostKeyChecking=no \
           "${COMPOSE_FILE}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
@@ -102,13 +99,11 @@ runs:
         CADDYFILE_DEST="Caddyfile-gateway-qa"
         if [ -f "${CADDYFILE_SRC}" ]; then
           scp -o ConnectTimeout=30 \
-            -o StrictHostKeyChecking=no \
             "${CADDYFILE_SRC}" \
             "${SSH_TARGET}:${DEPLOY_DIR}/${CADDYFILE_DEST}"
         fi
 
         scp -o ConnectTimeout=30 \
-          -o StrictHostKeyChecking=no \
           "${HOME}/.docker/config.json" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/docker/config.json"
 
@@ -127,7 +122,7 @@ runs:
       run: |
         set -e
 
-        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+        ssh -o ConnectTimeout=30 \
           "${SSH_TARGET}" \
           env DEPLOY_DIR="${DEPLOY_DIR}" \
               REGISTRY="${REGISTRY}" \

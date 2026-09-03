@@ -1,0 +1,35 @@
+name: Setup SSH Known Hosts
+description: >
+  Configures ~/.ssh/known_hosts securely for SSH/SCP operations.
+  Uses pre-configured secret if available, or performs secure keyscan over the established WireGuard tunnel.
+
+inputs:
+  host:
+    description: 'Target IP or hostname (Tailscale IP)'
+    required: true
+  known-hosts:
+    description: 'Optional pre-configured known_hosts content from secrets'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Configure ~/.ssh/known_hosts
+      shell: bash
+      run: |
+        set -e
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+
+        if [ -n "${{ inputs.known-hosts }}" ]; then
+          echo "Adding known_hosts from secret configuration..."
+          echo "${{ inputs.known-hosts }}" >> ~/.ssh/known_hosts
+        else
+          echo "Scanning host keys for ${{ inputs.host }} over secure tunnel..."
+          ssh-keyscan -H -t ed25519,ecdsa,rsa "${{ inputs.host }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+        fi
+
+        chmod 600 ~/.ssh/known_hosts
+        echo "known_hosts configured successfully:"
+        ls -la ~/.ssh/known_hosts

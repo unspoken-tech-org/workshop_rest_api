@@ -1,24 +1,37 @@
-.git/
-.gradle/
+# Git e IDEs
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+*.iml
+
+# Gradle e Build Caches
+.gradle
 build/
-target/
-coverage/
-*.log*
-.env*
-Dockerfile*
-.dockerignore
-.idea/
-.vscode/
-.opencode/
-.specify/
-.gemini/
-.cursor/
-.DS_Store
-Thumbs.db
+bin/
+out/
+
+# Documentação, Artigos e Relatórios
 *.md
-specs/
+*.pdf
+artigo-*.md
+docs/
+relatorios/
+
+# Chaves e Segredos Locais
+*.pem
+*.key
+*.p12
+.env*
+!.env.example
+
+# Scripts utilitários e infra que não pertencem ao build da imagem da API
+scripts/
 infra/
 docker-compose*.yml
-scripts/
-estudos/
-*.exe
+Dockerfile*
+opencode.json
+
+# Testes e relatórios de teste (a imagem de runtime não precisa do código de teste)
+src/test/
