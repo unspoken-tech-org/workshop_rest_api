@@ -1,0 +1,87 @@
+# ===========================================================
+# Workflow: Continuous Integration (Test & Security Scans)
+# ===========================================================
+# Runs unit tests, compiles the application and performs
+# vulnerability scanning on repository dependencies using Trivy.
+# ===========================================================
+
+name: CI (Build, Test & Security Scan)
+
+on:
+  push:
+    branches:
+      - main
+      - 'infra/**'
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================
+  # JOB 1: TEST & BUILD
+  # ===========================================
+  test-and-build:
+    name: Unit Tests & Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Java 21
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Run Unit Tests
+        run: ./gradlew test
+
+      - name: Build Application JAR
+        run: ./gradlew bootJar -x test
+
+  # ===========================================
+  # JOB 2: SECURITY SCAN (TRIVY)
+  # ===========================================
+  security-scan:
+    name: Trivy Vulnerability Scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: test-and-build
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run Trivy vulnerability scanner (Filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '0'

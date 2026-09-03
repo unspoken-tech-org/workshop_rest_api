@@ -81,19 +81,16 @@ runs:
 
         # Ensure ~/.docker directory exists on the server (may not exist on a fresh host)
         ssh -o ConnectTimeout=30 \
-          -o StrictHostKeyChecking=no \
           "${SSH_TARGET}" "mkdir -p ~/.docker && chmod 700 ~/.docker"
 
         mkdir -p ~/.docker
         chmod 700 ~/.docker
 
         scp -o ConnectTimeout=30 \
-          -o StrictHostKeyChecking=no \
           /tmp/.env "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:/tmp/"
 
         scp -o ConnectTimeout=30 \
-          -o StrictHostKeyChecking=no \
           "${HOME}/.docker/config.json" \
           "${SSH_TARGET}:~/.docker/config.json.tmp"
 
@@ -112,7 +109,7 @@ runs:
       run: |
         set -e
 
-        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no \
+        ssh -o ConnectTimeout=30 \
           "${SSH_TARGET}" \
           env DEPLOY_DIR="${DEPLOY_DIR}" \
               REGISTRY="${REGISTRY}" \

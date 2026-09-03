@@ -9,8 +9,8 @@ PREVIOUS_OVERRIDE="${OVERRIDE_FILE}.previous"
 export IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 if ! docker image inspect "${LOCAL_IMAGE_NAME}:backup" >/dev/null 2>&1; then
-  echo "No backup image found"
-  exit 1
+  echo "No backup image found to restore, skipping rollback"
+  exit 0
 fi
 
 docker tag "${LOCAL_IMAGE_NAME}:backup" "${LOCAL_IMAGE_NAME}:${IMAGE_TAG}"

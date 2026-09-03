@@ -6,18 +6,24 @@ cd "${DEPLOY_DIR}"
 trap 'rm -rf "${DEPLOY_DIR}/.tmp"' EXIT
 
 # Setup .env
-mv .tmp/.env ./ 2>/dev/null || true
+mv "${DEPLOY_DIR}/.tmp/.env" ./ 2>/dev/null || mv .tmp/.env ./ 2>/dev/null || true
 chmod 600 .env
 
 # Setup JWT keys
 mkdir -p config/keys
-mv .tmp/private-pkcs8.pem config/keys/ 2>/dev/null || true
-chmod 600 config/keys/private-pkcs8.pem
-mv .tmp/public.pem config/keys/ 2>/dev/null || true
+chmod 755 config config/keys
+mv "${DEPLOY_DIR}/.tmp/private-pkcs8.pem" config/keys/ 2>/dev/null || mv .tmp/private-pkcs8.pem config/keys/ 2>/dev/null || true
+chmod 644 config/keys/private-pkcs8.pem
+mv "${DEPLOY_DIR}/.tmp/public.pem" config/keys/ 2>/dev/null || mv .tmp/public.pem config/keys/ 2>/dev/null || true
 chmod 644 config/keys/public.pem
 
 # Setup pgbackrest config
-if [ -f ".tmp/pgbackrest.conf" ]; then
+if [ -f "${DEPLOY_DIR}/.tmp/pgbackrest.conf" ]; then
+  DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)
+  sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" "${DEPLOY_DIR}/.tmp/pgbackrest.conf"
+  mv "${DEPLOY_DIR}/.tmp/pgbackrest.conf" /srv/pgbackrest/conf/pgbackrest.conf
+  chmod 644 /srv/pgbackrest/conf/pgbackrest.conf
+elif [ -f ".tmp/pgbackrest.conf" ]; then
   DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)
   sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" ".tmp/pgbackrest.conf"
   mv ".tmp/pgbackrest.conf" /srv/pgbackrest/conf/pgbackrest.conf
