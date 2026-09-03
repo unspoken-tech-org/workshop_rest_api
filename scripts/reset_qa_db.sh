@@ -83,9 +83,31 @@ else
 fi
 
 echo ">>> [5/5] Injecting QA API keys from Infisical path /qa-api-keys..."
+# Source environment variables if .infisical_env exists
+if [ -f "${HOME}/.infisical_env" ]; then
+  # shellcheck source=/dev/null
+  source "${HOME}/.infisical_env"
+fi
+
 SECRETS_JSON="[]"
 if command -v infisical >/dev/null 2>&1; then
-  SECRETS_JSON=$(infisical export --env=staging --path=/qa-api-keys --format=json 2>/dev/null || infisical export --env=qa --path=/qa-api-keys --format=json 2>/dev/null || echo "[]")
+  # Authenticate via Universal Auth if credentials exist
+  INF_TOKEN=""
+  if [ -n "${INFISICAL_CLIENT_ID:-}" ] && [ -n "${INFISICAL_CLIENT_SECRET:-}" ]; then
+    INF_TOKEN=$(infisical login --method=universal-auth --client-id="${INFISICAL_CLIENT_ID}" --client-secret="${INFISICAL_CLIENT_SECRET}" --plain --silent 2>/dev/null || echo "")
+  elif [ -n "${INFISICAL_TOKEN:-}" ]; then
+    INF_TOKEN="${INFISICAL_TOKEN}"
+  fi
+
+  TOKEN_FLAG=""
+  if [ -n "${INF_TOKEN}" ]; then
+    TOKEN_FLAG="--token=${INF_TOKEN}"
+  fi
+
+  # shellcheck disable=SC2086
+  SECRETS_JSON=$(infisical export ${TOKEN_FLAG} --projectId=bbcdd150-2ce5-4d0e-b8b6-d0cba97e2db7 --env=staging --path=/qa-api-keys --format=json 2>/dev/null || \
+                 infisical export ${TOKEN_FLAG} --env=staging --path=/qa-api-keys --format=json 2>/dev/null || \
+                 infisical export ${TOKEN_FLAG} --env=qa --path=/qa-api-keys --format=json 2>/dev/null || echo "[]")
 fi
 
 if [ "${SECRETS_JSON}" != "[]" ] && [ -f "${INSERT_KEYS_SCRIPT}" ]; then
