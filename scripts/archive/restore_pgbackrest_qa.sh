@@ -13,13 +13,24 @@ COMPOSE_FILE="${DEPLOY_DIR}/docker-compose-qa.yml"
 QA_ENV_FILE="${DEPLOY_DIR}/.env"
 MASK_SQL_FILE="${DEPLOY_DIR}/scripts/sql/mask_data_qa.sql"
 
+# Temp files for credentials (cleaned up on EXIT)
+S3_ENV_FILE=""
+PGPASS_FILE=""
+
+cleanup_all() {
+  rm -f "${S3_ENV_FILE}" "${PGPASS_FILE}" /tmp/insert_api_keys.err 2>/dev/null || true
+  unset QA_DB_PASS PGBACKREST_S3_KEY PGBACKREST_S3_KEY_SECRET 2>/dev/null || true
+}
+
 # Fail-Closed error handler to destroy unmasked volume on premature abort
 cleanup_on_error() {
   echo ">>> [ALERT] QA Restore failed! Destroying unmasked data volume..."
   docker compose -f "${COMPOSE_FILE}" down -v || true
+  cleanup_all
   exit 1
 }
 trap cleanup_on_error ERR
+trap cleanup_all EXIT
 
 if [ ! -f "${QA_ENV_FILE}" ]; then
   echo "ERROR: QA environment file not found: ${QA_ENV_FILE}"
@@ -36,6 +47,12 @@ PGBACKREST_S3_ENDPOINT=$(grep '^PGBACKREST_S3_ENDPOINT=' "${QA_ENV_FILE}" | cut 
 PGBACKREST_S3_REGION=$(grep '^PGBACKREST_S3_REGION=' "${QA_ENV_FILE}" | cut -d'=' -f2-)
 PGBACKREST_S3_KEY=$(grep '^PGBACKREST_S3_KEY=' "${QA_ENV_FILE}" | cut -d'=' -f2-)
 PGBACKREST_S3_KEY_SECRET=$(grep '^PGBACKREST_S3_KEY_SECRET=' "${QA_ENV_FILE}" | cut -d'=' -f2-)
+
+# Create PGPASSFILE for psql connections (avoids PGPASSWORD in process list)
+PGPASS_FILE=$(mktemp /tmp/pgpass.XXXXXX)
+chmod 600 "${PGPASS_FILE}"
+echo "workshop-db-qa:5432:${QA_DB_NAME:-work_shop_qa}:${QA_DB_USER}:${QA_DB_PASS}" > "${PGPASS_FILE}"
+export PGPASSFILE="${PGPASS_FILE}"
 
 # 2. Export QA Secrets from Infisical path /qa-api-keys
 INFISICAL_TOKEN_ENV=$(grep '^INFISICAL_TOKEN=' "${QA_ENV_FILE}" | cut -d'=' -f2- || echo "")
@@ -65,28 +82,36 @@ echo ">>> [1/6] Stopping QA API and destroying existing database volume..."
 docker compose -f "${COMPOSE_FILE}" down -v || true
 
 echo ">>> [2/6] Executing pgBackRest physical restore from Cloudflare R2..."
+S3_ENV_FILE=$(mktemp /tmp/s3_env.XXXXXX)
+chmod 600 "${S3_ENV_FILE}"
+cat > "${S3_ENV_FILE}" <<ENVEOF
+PGBACKREST_REPO1_TYPE=s3
+PGBACKREST_REPO1_S3_BUCKET=${PGBACKREST_S3_BUCKET}
+PGBACKREST_REPO1_S3_ENDPOINT=${PGBACKREST_S3_ENDPOINT}
+PGBACKREST_REPO1_S3_REGION=${PGBACKREST_S3_REGION}
+PGBACKREST_REPO1_S3_KEY=${PGBACKREST_S3_KEY}
+PGBACKREST_REPO1_S3_KEY_SECRET=${PGBACKREST_S3_KEY_SECRET}
+ENVEOF
+
 docker run --rm \
   -v workshop_rest_api_qa_db_data:/var/lib/postgresql/data \
   -v /srv/pgbackrest/conf:/etc/pgbackrest:ro \
   -v /srv/pgbackrest/repo:/var/lib/pgbackrest \
   -v /srv/pgbackrest/logs:/var/log/pgbackrest \
-  -e PGBACKREST_REPO1_TYPE=s3 \
-  -e PGBACKREST_REPO1_S3_BUCKET="${PGBACKREST_S3_BUCKET}" \
-  -e PGBACKREST_REPO1_S3_ENDPOINT="${PGBACKREST_S3_ENDPOINT}" \
-  -e PGBACKREST_REPO1_S3_REGION="${PGBACKREST_S3_REGION}" \
-  -e PGBACKREST_REPO1_S3_KEY="${PGBACKREST_S3_KEY}" \
-  -e PGBACKREST_REPO1_S3_KEY_SECRET="${PGBACKREST_S3_KEY_SECRET}" \
+  --env-file "${S3_ENV_FILE}" \
   workshop/postgres16-pgbackrest:latest \
   pgbackrest --stanza=workshop --log-level-console=info restore
 
-echo ">>> [3/6] Adjusting roles and DB name in Single-User Mode (Zero Prod Secrets)..."
+echo ">>> [3/6] Executing WAL recovery via pgBackRest (Single-User Mode)..."
 docker run --rm \
   -v workshop_rest_api_qa_db_data:/var/lib/postgresql/data \
+  -v /srv/pgbackrest/conf:/etc/pgbackrest:ro \
+  -v /srv/pgbackrest/repo:/var/lib/pgbackrest \
+  -v /srv/pgbackrest/logs:/var/log/pgbackrest \
+  --env-file "${S3_ENV_FILE}" \
   workshop/postgres16-pgbackrest:latest \
-  postgres --single -D /var/lib/postgresql/data postgres <<EOF
-ALTER DATABASE ${PRD_DB_NAME_DEFAULT} RENAME TO ${QA_DB_NAME};
-CREATE ROLE ${QA_DB_USER} WITH SUPERUSER LOGIN PASSWORD '${QA_DB_PASS}';
-DROP ROLE IF EXISTS work_shop_prd;
+  postgres --single -D /var/lib/postgresql/data postgres <<'EOF'
+SELECT 1;
 EOF
 
 echo ">>> [4/6] Starting QA PostgreSQL container for recovery and anonymization..."
@@ -96,7 +121,7 @@ echo ">>> Waiting for QA PostgreSQL to be ready..."
 ATTEMPTS=45
 DB_READY=false
 for i in $(seq 1 $ATTEMPTS); do
-  if docker exec -i workshop-db-qa pg_isready -U "${QA_DB_USER}" -d "${QA_DB_NAME}" >/dev/null 2>&1; then
+  if docker exec -i workshop-db-qa pg_isready -U postgres >/dev/null 2>&1; then
     echo "PostgreSQL QA is ready!"
     DB_READY=true
     break
@@ -111,11 +136,33 @@ if [ "$DB_READY" = false ]; then
   exit 1
 fi
 
+echo ">>> [4.1/6] Adjusting roles and DB name (Zero Prod Secrets)..."
+
+# Detect existing superuser from restored production database
+PRD_USER_DEFAULT="work_shop_prd"
+PSQL_USER="postgres"
+if ! docker exec -i workshop-db-qa psql -U postgres -d postgres -c "SELECT 1" >/dev/null 2>&1; then
+  PSQL_USER="${PRD_USER_DEFAULT}"
+fi
+
+docker exec -i workshop-db-qa psql -U "${PSQL_USER}" -d postgres <<EOF >/dev/null 2>&1
+ALTER DATABASE ${PRD_DB_NAME_DEFAULT} RENAME TO ${QA_DB_NAME};
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${QA_DB_USER}') THEN
+    CREATE ROLE ${QA_DB_USER} WITH SUPERUSER LOGIN PASSWORD '${QA_DB_PASS}';
+  END IF;
+END
+\$\$;
+DROP ROLE IF EXISTS ${PRD_USER_DEFAULT};
+EOF
+
 echo ">>> [5/6] Executing data anonymization (Data Masking - LGPD)..."
 if [ -f "${MASK_SQL_FILE}" ]; then
   docker cp "${MASK_SQL_FILE}" workshop-db-qa:/tmp/mask_data_qa.sql
-  docker exec -i -e PGPASSWORD="${QA_DB_PASS}" workshop-db-qa psql -U "${QA_DB_USER}" -d "${QA_DB_NAME}" -f /tmp/mask_data_qa.sql
-  docker exec -i workshop-db-qa rm -f /tmp/mask_data_qa.sql
+  docker exec -i -e PGPASSFILE=/tmp/pgpass_qa workshop-db-qa sh -c 'cp /dev/stdin /tmp/pgpass_qa' < "${PGPASS_FILE}"
+  docker exec -i -e PGPASSFILE=/tmp/pgpass_qa workshop-db-qa psql -U "${QA_DB_USER}" -d "${QA_DB_NAME}" -f /tmp/mask_data_qa.sql
+  docker exec -i workshop-db-qa rm -f /tmp/mask_data_qa.sql /tmp/pgpass_qa
   echo "Data Masking executed successfully!"
 else
   echo "WARNING: File ${MASK_SQL_FILE} not found. Skipping PII anonymization."
@@ -128,7 +175,9 @@ DYNAMIC_INSERT_SQL=$(python3 "${SCRIPT_DIR}/sql/insert_api_keys.py" "${SECRETS_J
 
 if [ -n "${DYNAMIC_INSERT_SQL}" ]; then
   echo ">>> Injecting all Infisical API Keys from /qa-api-keys in a single SQL command..."
-  docker exec -i -e PGPASSWORD="${QA_DB_PASS}" workshop-db-qa psql -U "${QA_DB_USER}" -d "${QA_DB_NAME}" -c "${DYNAMIC_INSERT_SQL}"
+  docker exec -i -e PGPASSFILE=/tmp/pgpass_qa workshop-db-qa sh -c 'cp /dev/stdin /tmp/pgpass_qa' < "${PGPASS_FILE}"
+  docker exec -i -e PGPASSFILE=/tmp/pgpass_qa workshop-db-qa psql -U "${QA_DB_USER}" -d "${QA_DB_NAME}" -c "${DYNAMIC_INSERT_SQL}"
+  docker exec -i workshop-db-qa rm -f /tmp/pgpass_qa
   echo "Infisical API Keys inserted successfully!"
 else
   echo ">>> No API Keys found or generated. Skipping injection."
@@ -137,8 +186,8 @@ else
   fi
 fi
 
-# Disable error trap upon successful completion
-trap - ERR
+# Cleanup sensitive variables
+cleanup_all
 
 echo ">>> [6/6] Restarting QA Spring Boot API..."
 if [ -z "${IMAGE_TAG:-}" ]; then
@@ -148,3 +197,4 @@ fi
 docker compose -f "${COMPOSE_FILE}" up -d workshop_spring_app_qa
 
 echo ">>> Restore, sanitization, and startup executed successfully!"
+exit 0
