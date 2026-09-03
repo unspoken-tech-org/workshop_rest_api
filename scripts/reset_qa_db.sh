@@ -50,7 +50,8 @@ CREATE EXTENSION IF NOT EXISTS unaccent;
 INNER_EOF
 
 echo ">>> [3/5] Starting QA API for Flyway migrations..."
-docker compose -f "${COMPOSE_FILE}" start workshop_spring_app_qa
+# Use up -d to ensure container is created if not already existing
+docker compose -f "${COMPOSE_FILE}" up -d workshop_spring_app_qa
 
 echo ">>> Waiting for Flyway migrations to complete..."
 ATTEMPTS=45

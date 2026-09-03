@@ -109,6 +109,12 @@ runs:
           "${COMPOSE_FILE}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
+        # Upload scripts directory to deploy dir
+        scp -r -o ConnectTimeout=30 \
+          -o StrictHostKeyChecking=no \
+          scripts \
+          "${SSH_TARGET}:${DEPLOY_DIR}/"
+
         # Upload Dockerfile for PostgreSQL image build (first deploy only)
         scp -o ConnectTimeout=30 \
           -o StrictHostKeyChecking=no \
