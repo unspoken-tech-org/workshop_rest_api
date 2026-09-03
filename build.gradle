@@ -87,7 +87,9 @@ tasks.named('bootBuildImage') {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("integration")
+    }
 }
 
 tasks.register('integrationTests', Test) {
