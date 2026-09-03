@@ -15,7 +15,7 @@ chmod 600 .env
 # Setup JWT keys
 mkdir -p config/qa_keys
 mv "${DEPLOY_DIR}/.tmp/private-pkcs8.pem" config/qa_keys/ 2>/dev/null || true
-chmod 600 config/qa_keys/private-pkcs8.pem
+chmod 644 config/qa_keys/private-pkcs8.pem
 mv "${DEPLOY_DIR}/.tmp/public.pem" config/qa_keys/ 2>/dev/null || true
 chmod 644 config/qa_keys/public.pem
 

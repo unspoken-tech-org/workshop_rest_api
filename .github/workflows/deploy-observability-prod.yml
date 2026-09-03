@@ -1,207 +1,219 @@
-name: Deploy Observability (Prod) v1 (Self-Hosted)
+name: Deploy Observability (Prod) v2 (Hosted + Tailscale)
 
 on:
-  push:
-    branches:
-      - release/1.2.0
-    paths:
-      - 'docker-compose-observability.yml'
-      - 'infra/promtail-config-*.yaml'
-      - 'infra/grafana-provisioning/**'
-      - '.github/workflows/deploy-observability-prod.yml'
   workflow_dispatch:
     inputs:
       ref:
         description: 'Tag, branch or commit to deploy'
         required: false
-        default: 'release/1.2.0'
+        default: 'main'
+      confirm:
+        description: 'Prod observability deploy confirmation'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-observability-prod
+  cancel-in-progress: false
 
 env:
   COMPOSE_FILE: docker-compose-observability.yml
   DEPLOY_DIR: /home/workshop/deploy/observability_stack
+  SSH_USER: ${{ secrets.PROD_SSH_USER }}
+  TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
+  SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
+  DEPLOY_SCRIPT: .github/scripts/observability/deploy.sh
+  ROLLBACK_SCRIPT: .github/scripts/observability/rollback.sh
+  VERIFY_SCRIPT: .github/scripts/observability/verify.sh
+  CLEANUP_SCRIPT: .github/scripts/observability/cleanup.sh
 
 jobs:
   # ===========================================
-  # JOB 1: BUILD & PREPARE
+  # JOB 1: PREPARE
   # ===========================================
-  build:
-    name: Build & Prepare Observability
-    runs-on: self-hosted
+  prepare:
+    name: Prepare Observability Prod
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
-          ref: ${{ github.event.inputs.ref }}
+          egress-policy: audit
 
-      - name: Show build info
-        run: |
-          echo "=== OBSERVABILITY BUILD INFO ==="
-          echo "Ref:     ${{ github.event.inputs.ref }}"
-          echo "Commit:  ${{ github.sha }}"
-          echo "Actor:   ${{ github.actor }}"
-          echo "================================"
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Prepare observability deploy directory
+      - name: Validate confirmation
         run: |
-          mkdir -p "${DEPLOY_DIR}"
+          if [ "${{ github.event.inputs.confirm }}" != "DEPLOY" ]; then
+            echo "Deploy cancelled — confirmation was not DEPLOY"
+            exit 1
+          fi
+          echo "Deploy confirmed"
 
-      - name: Copy files to deploy dir
-        run: |
-          rsync -a --delete \
-            --include='docker-compose-observability.yml' \
-            --include='infra/***' \
-            --exclude='*' \
-            ./ "${DEPLOY_DIR}/"
-
-      - name: Write .env for observability
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          set -e
-          cat > .env <<'EOF'
-          GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
-          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-          EOF
-          chmod 600 .env
-          echo ".env created for observability ✅"
+      - name: Print build banner
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: OBSERVABILITY-PROD
+          image-tag: ${{ github.event.inputs.ref || github.ref_name }}
 
   # ===========================================
-  # JOB 2: DEPLOY OBSERVABILITY
+  # JOB 2: DEPLOY
   # ===========================================
   deploy:
-    name: Deploy Observability
-    runs-on: self-hosted
-    needs: build
+    name: Deploy to Prod VM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: prepare
 
     steps:
-      - name: Deploy observability containers
-        working-directory: ${{ env.DEPLOY_DIR }}
-        run: |
-          echo ">>> Deploying observability stack..."
-          docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
-          echo "=== OBSERVABILITY SERVICES ==="
-          docker compose -f "$COMPOSE_FILE" ps
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
 
-      - name: Wait for Loki health
-        id: wait-loki
-        run: |
-          set -e
-          ATTEMPTS=30
-          SLEEP=5
-          for i in $(seq 1 $ATTEMPTS); do
-            STATUS=$(curl -s http://localhost:3100/ready 2>/dev/null || echo "not ready")
-            echo "[$i/${ATTEMPTS}] Loki: ${STATUS}"
-            if [ "$STATUS" = "ready" ]; then
-              echo "Loki is ready ✅"
-              exit 0
-            fi
-            sleep $SLEEP
-          done
-          echo "Loki did not become ready ❌"
-          docker logs loki-unified --tail=100 || true
-          exit 1
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Wait for Grafana health
-        id: wait-grafana
+      - name: Setup Tailscale
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.PRD_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.PRD_TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Setup SSH Known Hosts
+        uses: ./.github/actions/shared/setup-ssh-known-hosts
+        with:
+          host: ${{ secrets.TS_TAILSCALE_IP }}
+          known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+
+      - name: Deploy via SSH
+        uses: ./.github/actions/observability/deploy-via-ssh-observability
+        with:
+          ssh-target: ${{ env.SSH_TARGET }}
+          deploy-dir: ${{ env.DEPLOY_DIR }}
+          compose-file: ${{ env.COMPOSE_FILE }}
+          deploy-script: ${{ env.DEPLOY_SCRIPT }}
+          grafana-admin-user: ${{ secrets.GRAFANA_ADMIN_USER }}
+          grafana-admin-password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+
+      - name: Rollback on failure
+        if: failure()
         run: |
-          set -e
-          ATTEMPTS=40
-          SLEEP=5
-          for i in $(seq 1 $ATTEMPTS); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health 2>/dev/null || echo "000")
-            echo "[$i/${ATTEMPTS}] Grafana HTTP: ${HTTP_CODE}"
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "Grafana is ready ✅"
-              exit 0
-            fi
-            sleep $SLEEP
-          done
-          echo "Grafana did not become ready ❌"
-          docker logs grafana-unified --tail=100 || true
-          exit 1
+          scp -o ConnectTimeout=30 \
+            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' /tmp/rollback.sh"
 
   # ===========================================
-  # JOB 3: VALIDATE
+  # JOB 3: VERIFY
   # ===========================================
-  validate:
-    name: Validate Observability
-    runs-on: self-hosted
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     needs: deploy
 
     steps:
-      - name: Check Promtail instances
-        run: |
-          echo "=== Checking Promtail instances ==="
-          
-          for instance in promtail-prod promtail-gateway; do
-            echo ""
-            echo ">>> Checking $instance..."
-            if docker ps --filter "name=$instance" --filter "status=running" | grep -q "$instance"; then
-              echo "$instance is running ✅"
-              TARGETS=$(docker logs "$instance" 2>&1 | grep -c "added Docker target" || echo "0")
-              echo "  Collecting $TARGETS containers"
-            else
-              echo "$instance is NOT running ⚠️"
-            fi
-          done
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
 
-      - name: Check Loki labels
-        run: |
-          echo ""
-          echo ">>> Checking labels in Loki..."
-          LABELS=$(curl -s http://localhost:3100/loki/api/v1/labels 2>/dev/null || echo "{}")
-          if echo "$LABELS" | grep -q "environment"; then
-            echo "Environment labels found ✅"
-            echo "$LABELS" | jq '.data' || echo "$LABELS"
-          else
-            echo "Labels may not be available yet (normal on first deploy) ⚠️"
-          fi
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Check Grafana datasource
-        run: |
-          echo ""
-          echo ">>> Checking Grafana datasources..."
-          # Wait a bit for Grafana to provision datasources
-          sleep 5
-          DATASOURCES=$(curl -s -u "${{ secrets.GRAFANA_ADMIN_USER }}:${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
-            http://localhost:3000/api/datasources 2>/dev/null || echo "[]")
-          if echo "$DATASOURCES" | grep -q "Loki"; then
-            echo "Loki datasource provisioned ✅"
-          else
-            echo "Loki datasource NOT found ⚠️"
-            echo "$DATASOURCES"
-          fi
+      - name: Setup Tailscale
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.PRD_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.PRD_TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
 
-      - name: Test log ingestion
-        run: |
-          echo ""
-          echo ">>> Testing log ingestion from all environments..."
-          sleep 10  # Wait for logs to be ingested
-          
-          for env in production gateway; do
-            echo ""
-            echo "Checking logs for environment: $env"
-            QUERY=$(printf 'query={environment="%s"}' "$env")
-            RESULT=$(curl -s -G "http://localhost:3100/loki/api/v1/query" --data-urlencode "$QUERY" || echo "{}")
-          
-            if echo "$RESULT" | grep -q "stream"; then
-              echo "  Logs from $env environment found ✅"
-            else
-              echo "  No logs from $env yet (may be normal on first deploy) ℹ️"
-            fi
-          done
+      - name: Setup SSH Known Hosts
+        uses: ./.github/actions/shared/setup-ssh-known-hosts
+        with:
+          host: ${{ secrets.TS_TAILSCALE_IP }}
+          known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
 
-      - name: Summary
+      - name: Verify via SSH
+        run: |
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+          scp -o ConnectTimeout=30 \
+            "${VERIFY_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/verify.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/verify.sh'"
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "rm -f '${DEPLOY_DIR}/.tmp/verify.sh'"
+
+  # ===========================================
+  # JOB 4: CLEANUP
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: verify
+    if: always()
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.PRD_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.PRD_TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ secrets.TS_TAILSCALE_IP }}
+
+      - name: Setup SSH Known Hosts
+        uses: ./.github/actions/shared/setup-ssh-known-hosts
+        with:
+          host: ${{ secrets.TS_TAILSCALE_IP }}
+          known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+
+      - name: Cleanup via SSH
+        run: |
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+          scp -o ConnectTimeout=30 \
+            "${CLEANUP_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/cleanup.sh' && '${DEPLOY_DIR}/.tmp/cleanup.sh'"
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "rm -rf '${DEPLOY_DIR}/.tmp'"
+
+      - name: Print final banner
         if: success()
-        run: |
-          echo ""
-          echo "============================================="
-          echo "  OBSERVABILITY DEPLOY COMPLETED"
-          echo "============================================="
-          echo ""
-          echo "Access Grafana at:"
-          echo "  - https://grafana.eletroluk.com"
-          echo ""
-          echo "Loki endpoint: http://localhost:3100"
-          echo ""
-          echo "============================================="
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: OBSERVABILITY-PROD
+          image-tag: ${{ github.event.inputs.ref || github.ref_name }}

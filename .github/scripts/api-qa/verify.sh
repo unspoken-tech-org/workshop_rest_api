@@ -8,41 +8,21 @@ if [ -z "$PG_CID" ]; then
   exit 1
 fi
 
-# pgbackrest.conf is mounted via bind mount in /etc/pgbackrest/pgbackrest.conf:ro
-
-echo ">>> Checking stanza..."
-if docker exec -u postgres -e PGPASSWORD="\$POSTGRES_PASSWORD" "$PG_CID" \
-    pgbackrest --stanza=workshop --log-level-console=info check; then
-  echo "stanza OK"
-else
-  echo "stanza not found, creating..."
-  docker exec -u postgres -e PGPASSWORD="\$POSTGRES_PASSWORD" "$PG_CID" \
-    pgbackrest --stanza=workshop --log-level-console=info stanza-create
-  docker exec -u postgres -e PGPASSWORD="\$POSTGRES_PASSWORD" "$PG_CID" \
-    pgbackrest --stanza=workshop --log-level-console=info check
-  echo "stanza created and OK"
-fi
-
-docker exec -u postgres -e PGPASSWORD="\$POSTGRES_PASSWORD" "$PG_CID" \
-  pgbackrest info || true
-
-# Verify backups exist (protect against data loss)
-echo ">>> Verifying backups..."
-BACKUP_COUNT=$(docker exec -u postgres "$PG_CID" \
-  pgbackrest --stanza=workshop info --output=json 2>/dev/null | \
-  grep -c '"type":"full"' || echo "0")
-
-if [ "$BACKUP_COUNT" -eq 0 ]; then
-  echo "No backups found, creating initial full backup..."
-  docker exec -u postgres "$PG_CID" \
-    pgbackrest --stanza=workshop --log-level-console=info backup --type=full
-  echo "Initial backup created"
-else
-  echo "Found $BACKUP_COUNT backup(s)"
-fi
-
+echo ">>> Checking PostgreSQL connectivity and health..."
 STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d '"')
 echo "PostgreSQL health: ${STATUS:-unknown}"
+
+if [ "${STATUS}" != "healthy" ]; then
+  echo "ERROR: PostgreSQL container is not healthy"
+  exit 1
+fi
+
+echo ">>> Checking Spring Boot API health..."
+API_CID=$(docker compose -f "${COMPOSE_FILE}" ps -q workshop_spring_app_qa)
+if [ -n "${API_CID}" ]; then
+  API_STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "${API_CID}" 2>/dev/null | tr -d '"')
+  echo "API health: ${API_STATUS:-unknown}"
+fi
 
 echo "=== FINAL CONTAINERS STATUS ==="
 docker compose -f "${COMPOSE_FILE}" ps

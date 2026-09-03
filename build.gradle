@@ -46,14 +46,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.slf4j:slf4j-api:2.0.11'
+    implementation 'org.slf4j:slf4j-api:2.0.18'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.16.1'
-    implementation 'net.lingala.zip4j:zip4j:2.11.5'
+    implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'commons-io:commons-io:2.15.1'
     implementation 'dev.mccue:guava-base:0.0.4'
     implementation 'org.apache.commons:commons-lang3:3.18.0'
     implementation 'com.github.spullara.mustache.java:compiler:0.9.11'
-    implementation 'com.google.guava:guava:33.0.0-jre'
+    implementation 'com.google.guava:guava:33.6.0-jre'
     implementation 'org.simpleflatmapper:sfm-springjdbc:8.2.3'
     implementation 'org.simpleflatmapper:sfm-jdbc:8.2.3'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
@@ -87,7 +87,9 @@ tasks.named('bootBuildImage') {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("integration")
+    }
 }
 
 tasks.register('integrationTests', Test) {
