@@ -1,0 +1,100 @@
+name: Deploy Observability via SSH (Prod)
+description: >
+  Prepares .env on the runner, scps to the Prod VM and runs deploy.sh.
+  Used exclusively by the `deploy-observability-prod.yml` pipeline.
+  Requires Setup Tailscale executed previously in the job.
+
+inputs:
+  ssh-target:
+    description: 'SSH target in the user@host format'
+    required: true
+  deploy-dir:
+    description: 'Deploy directory on the server'
+    required: true
+  compose-file:
+    description: 'docker-compose file name on the server'
+    required: true
+  deploy-script:
+    description: 'Path to deploy.sh in the repository'
+    required: true
+  grafana-admin-user:
+    description: 'Grafana admin username'
+    required: true
+  grafana-admin-password:
+    description: 'Grafana admin password'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare deploy files on runner
+      shell: bash
+      env:
+        GRAFANA_ADMIN_USER: ${{ inputs.grafana-admin-user }}
+        GRAFANA_ADMIN_PASSWORD: ${{ inputs.grafana-admin-password }}
+      run: |
+        set -e
+
+        {
+          echo "GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}"
+          echo "GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}"
+        } > /tmp/.env
+        chmod 600 /tmp/.env
+
+        echo "Observability Prod deploy files prepared"
+
+    - name: Upload files to server
+      shell: bash
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+      run: |
+        set -e
+
+        # Ensure target parent directories exist first
+        ssh -o ConnectTimeout=30 \
+          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/infra'"
+
+        # Upload compose file
+        scp -o ConnectTimeout=30 \
+          "${COMPOSE_FILE}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+
+        # Upload configs and dashboards
+        scp -o ConnectTimeout=30 \
+          infra/loki-config.yaml \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/loki-config.yaml"
+
+        scp -o ConnectTimeout=30 \
+          infra/promtail-config-*.yaml \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/"
+
+        scp -r -o ConnectTimeout=30 \
+          infra/grafana-provisioning \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/"
+
+        # Upload deploy script and .env into isolated temporary directory
+        ssh -o ConnectTimeout=30 \
+          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+
+        scp -o ConnectTimeout=30 \
+          /tmp/.env \
+          "${DEPLOY_SCRIPT}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+
+        echo "Observability Prod files uploaded to ${SSH_TARGET}:${DEPLOY_DIR}"
+
+    - name: Execute deploy on server
+      shell: bash
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+      run: |
+        set -e
+
+        ssh -o ConnectTimeout=30 \
+          "${SSH_TARGET}" \
+          "chmod +x '${DEPLOY_DIR}/.tmp/deploy.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/deploy.sh'"

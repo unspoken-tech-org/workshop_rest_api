@@ -12,7 +12,7 @@ chmod 600 .env
 # Setup JWT keys
 mkdir -p config/keys
 mv .tmp/private-pkcs8.pem config/keys/ 2>/dev/null || true
-chmod 600 config/keys/private-pkcs8.pem
+chmod 644 config/keys/private-pkcs8.pem
 mv .tmp/public.pem config/keys/ 2>/dev/null || true
 chmod 644 config/keys/public.pem
 
