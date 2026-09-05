@@ -8,7 +8,7 @@ services:
     container_name: loki-qa
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - ./infra/loki-config-qa.yaml:/etc/loki/local-config.yaml:ro
+      - ./platform/observability/loki/qa.yaml:/etc/loki/local-config.yaml:ro
       - loki_qa_data:/loki
     networks:
       - observability-qa-network
@@ -36,7 +36,7 @@ services:
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./infra/promtail-config-qa-vm.yaml:/etc/promtail/config.yaml:ro
+      - ./platform/observability/promtail/qa-vm.yaml:/etc/promtail/config.yaml:ro
     environment:
       - LOKI_URL=http://loki-qa:3100
       - ENV_NAME=qa
@@ -74,7 +74,7 @@ services:
       - GF_INSTALL_PLUGINS=grafana-clock-panel
     volumes:
       - grafana_qa_data:/var/lib/grafana
-      - ./infra/grafana-provisioning-qa:/etc/grafana/provisioning:ro
+      - ./platform/observability/grafana/qa/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       loki-qa:
         condition: service_healthy

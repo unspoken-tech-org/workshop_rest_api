@@ -8,7 +8,7 @@ services:
     container_name: loki-unified
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - ./infra/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - ./platform/observability/loki/production.yaml:/etc/loki/local-config.yaml:ro
       - loki_unified_data:/loki
     networks:
       - observability-network
@@ -24,7 +24,7 @@ services:
 
   # ==========================================
   # PROMTAIL - Log collectors (production + gateway)
-  # QA logs collected by remote Promtail on the QA VM (see docker-compose-observability-qa.yml)
+  # QA logs collected by remote Promtail on the QA VM (see compose/qa.yml)
   # ==========================================
   
   # Collects logs from Production API
@@ -34,7 +34,7 @@ services:
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./infra/promtail-config-prod.yaml:/etc/promtail/config.yaml:ro
+      - ./platform/observability/promtail/production.yaml:/etc/promtail/config.yaml:ro
     environment:
       - LOKI_URL=http://loki-unified:3100
       - ENV_NAME=production
@@ -54,7 +54,7 @@ services:
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./infra/promtail-config-gateway.yaml:/etc/promtail/config.yaml:ro
+      - ./platform/observability/promtail/gateway.yaml:/etc/promtail/config.yaml:ro
     environment:
       - LOKI_URL=http://loki-unified:3100
       - ENV_NAME=gateway
@@ -82,7 +82,7 @@ services:
       - GF_INSTALL_PLUGINS=grafana-clock-panel
     volumes:
       - grafana_unified_data:/var/lib/grafana
-      - ./infra/grafana-provisioning:/etc/grafana/provisioning:ro
+      - ./platform/observability/grafana/production/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - loki
     networks:
