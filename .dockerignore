@@ -34,4 +34,5 @@ Dockerfile*
 opencode.json
 
 # Testes e relatórios de teste (a imagem de runtime não precisa do código de teste)
-src/test/
+apps/api/src/test/
+apps/security/src/test/

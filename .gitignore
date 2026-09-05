@@ -43,10 +43,10 @@ out/
 config/keys/
 
 # Allow dev/test keys (NOT used in production)
-!src/main/resources/keys/
-!src/main/resources/keys/*.pem
-!src/test/resources/keys/
-!src/test/resources/keys/*.pem
+!apps/api/src/main/resources/keys/
+!apps/api/src/main/resources/keys/*.pem
+!apps/api/src/test/resources/keys/
+!apps/api/src/test/resources/keys/*.pem
 
 ### POC Files ###
 estudos/

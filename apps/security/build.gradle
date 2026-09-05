@@ -1,0 +1,18 @@
+plugins {
+    id 'java'
+}
+
+// Este módulo é um limite arquitetural para a futura extração da segurança.
+// A implementação continua em apps/api até que o contrato entre os projetos
+// seja definido e validado. Coordenadas são herdadas do projeto raiz.
+java {
+    sourceCompatibility = '21'
+}
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}

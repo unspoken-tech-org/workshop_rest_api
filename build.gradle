@@ -1,104 +1,48 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
-    id 'java'
-    id 'org.springframework.boot' version '3.1.8'
-    id 'io.spring.dependency-management' version '1.1.4'
+    id 'base'
 }
 
 group = 'com.tproject'
 version = '1.3.1'
 
-springBoot {
-    buildInfo()
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
 }
 
-processResources {
-    filesMatching('**/application*.yml') {
-        filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [
-            'project.version': project.version.toString()
-        ])
-    }
+// O projeto raiz é o ponto de entrada do monorepo. Os aliases de ciclo de vida
+// agregam os módulos, e as tarefas tipadas de teste continuam aceitando
+// opções Gradle como --tests.
+tasks.named('build') {
+    dependsOn(':apps:api:build', ':apps:security:build')
 }
 
-java {
-    sourceCompatibility = '21'
+tasks.named('clean') {
+    dependsOn(':apps:api:clean', ':apps:security:clean')
 }
 
-configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
-    }
-}
-
-dependencyManagement {
-    imports {
-        mavenBom "org.testcontainers:testcontainers-bom:1.21.4"
-    }
-}
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.slf4j:slf4j-api:2.0.18'
-    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.16.1'
-    implementation 'net.lingala.zip4j:zip4j:2.11.6'
-    implementation 'commons-io:commons-io:2.15.1'
-    implementation 'dev.mccue:guava-base:0.0.4'
-    implementation 'org.apache.commons:commons-lang3:3.18.0'
-    implementation 'com.github.spullara.mustache.java:compiler:0.9.11'
-    implementation 'com.google.guava:guava:33.6.0-jre'
-    implementation 'org.simpleflatmapper:sfm-springjdbc:8.2.3'
-    implementation 'org.simpleflatmapper:sfm-jdbc:8.2.3'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-    implementation("org.flywaydb:flyway-core:11.11.0")
-    implementation("org.flywaydb:flyway-database-postgresql:11.11.0")
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
-    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
-    compileOnly 'org.projectlombok:lombok:1.18.30'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    runtimeOnly 'org.postgresql:postgresql'
-    annotationProcessor 'org.projectlombok:lombok:1.18.30'
-    testImplementation 'io.rest-assured:rest-assured:5.4.0'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
-    testAnnotationProcessor 'org.projectlombok:lombok'
-}
-
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
-}
-
-tasks.named('bootBuildImage') {
-    builder = 'paketobuildpacks/builder-jammy-base:latest'
-}
-
-tasks.named('test') {
-    useJUnitPlatform {
-        excludeTags("integration")
-    }
+tasks.register('test', Test) {
+    group = 'verification'
+    description = 'Executa os testes unitários de todos os módulos.'
+    // A raiz não possui fontes próprias; a tarefa existe para agregar os
+    // módulos e ainda aceitar --tests sem falhar na configuração.
+    testClassesDirs = files()
+    classpath = files()
+    dependsOn(':apps:api:test', ':apps:security:test')
 }
 
 tasks.register('integrationTests', Test) {
-    group = "tproject"
-    description = 'Runs the integration tests.'
-    useJUnitPlatform() {
-        includeTags("integration")
-        excludeTags("unit")
-        excludeTags("swagger")
-    }
+    group = 'verification'
+    description = 'Executa os testes de integração da API.'
+    testClassesDirs = files()
+    classpath = files()
+    dependsOn(':apps:api:integrationTests')
+}
 
+tasks.register('bootJar') {
+    group = 'build'
+    description = 'Gera o Boot JAR da API.'
+    dependsOn(':apps:api:bootJar')
 }

@@ -3,7 +3,7 @@ services:
     container_name: workshop-db
     build:
       context: .
-      dockerfile: Dockerfile.pgbackrest
+      dockerfile: apps/api/docker/Dockerfile.pgbackrest
     image: workshop/postgres16-pgbackrest:latest
     restart: always
     environment:
