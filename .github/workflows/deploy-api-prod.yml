@@ -39,6 +39,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: unspoken-tech-org/workshop_rest_api
   COMPOSE_FILE: docker-compose-production.yml
+  COMPOSE_SOURCE: apps/api/compose/production.yml
   DEPLOY_DIR: /home/workshop/deploy/workshop_rest_api
   LOCAL_IMAGE_NAME: workshop_rest_api-workshop_spring_app
   SSH_USER: ${{ secrets.PROD_SSH_USER }}
@@ -84,7 +85,7 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
       - name: Build with Gradle (skip tests)
-        run: ./gradlew build -x test
+        run: ./gradlew :apps:api:build -x test
 
       - name: Login to GHCR
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
@@ -108,6 +109,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
+          file: ./apps/api/docker/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
@@ -178,6 +180,7 @@ jobs:
           image-name: ${{ env.IMAGE_NAME }}
           local-image-name: ${{ env.LOCAL_IMAGE_NAME }}
           compose-file: ${{ env.COMPOSE_FILE }}
+          compose-source: ${{ env.COMPOSE_SOURCE }}
           image-tag: ${{ needs.build.outputs.deployed-image-tag }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
           db-name: ${{ secrets.DB_NAME }}

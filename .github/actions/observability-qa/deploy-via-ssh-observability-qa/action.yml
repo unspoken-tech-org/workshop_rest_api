@@ -14,6 +14,18 @@ inputs:
   compose-file:
     description: 'docker-compose file name on the server'
     required: true
+  compose-source:
+    description: 'Path to the compose file in the checked-out repository'
+    required: true
+  loki-config-source:
+    description: 'Path to the QA Loki config in the checked-out repository'
+    required: true
+  promtail-config-source:
+    description: 'Path to the QA Promtail config in the checked-out repository'
+    required: true
+  grafana-datasource-source:
+    description: 'Path to the QA Grafana datasource in the checked-out repository'
+    required: true
   deploy-script:
     description: 'Path to deploy.sh in the repository'
     required: true
@@ -50,8 +62,38 @@ runs:
         DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
         COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
+        LOKI_CONFIG_SOURCE: ${{ inputs.loki-config-source }}
+        PROMTAIL_CONFIG_SOURCE: ${{ inputs.promtail-config-source }}
+        GRAFANA_DATASOURCE_SOURCE: ${{ inputs.grafana-datasource-source }}
       run: |
         set -e
+
+        # Validate every checkout path before touching the remote deployment.
+        test -s "${COMPOSE_SOURCE}"
+        test -s "${LOKI_CONFIG_SOURCE}"
+        test -s "${PROMTAIL_CONFIG_SOURCE}"
+        test -s "${GRAFANA_DATASOURCE_SOURCE}"
+        PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/observability-qa-payload.XXXXXX")"
+        COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
+        sed \
+          -e 's#\./platform/observability/loki/qa.yaml#./infra/loki-config-qa.yaml#g' \
+          -e 's#\./platform/observability/promtail/qa-vm.yaml#./infra/promtail-config-qa-vm.yaml#g' \
+          -e 's#\./platform/observability/grafana/qa/provisioning#./infra/grafana-provisioning-qa#g' \
+          "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
+
+        # Parse the payload with representative values before changing the server.
+        mkdir -p "${PAYLOAD_ROOT}/infra/grafana-provisioning-qa/datasources"
+        touch \
+          "${PAYLOAD_ROOT}/infra/loki-config-qa.yaml" \
+          "${PAYLOAD_ROOT}/infra/promtail-config-qa-vm.yaml" \
+          "${PAYLOAD_ROOT}/infra/grafana-provisioning-qa/datasources/loki-qa.yaml"
+        printf '%s\n' \
+          'GRAFANA_ADMIN_USER=validation-user' \
+          'GRAFANA_ADMIN_PASSWORD=validation-only' > "${PAYLOAD_ROOT}/.env"
+        docker compose --project-directory "${PAYLOAD_ROOT}" \
+          --env-file "${PAYLOAD_ROOT}/.env" \
+          -f "${COMPOSE_PAYLOAD}" config --quiet
 
         # Ensure target parent directories exist first so Docker run command doesn't fail
         ssh -o ConnectTimeout=30 \
@@ -73,22 +115,22 @@ runs:
 
         # Upload compose file to deploy dir
         scp -o ConnectTimeout=30 \
-          "${COMPOSE_FILE}" \
+          "${COMPOSE_PAYLOAD}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
         # Upload Loki config
         scp -o ConnectTimeout=30 \
-          infra/loki-config-qa.yaml \
+          "${LOKI_CONFIG_SOURCE}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/infra/loki-config-qa.yaml"
 
         # Upload Promtail config
         scp -o ConnectTimeout=30 \
-          infra/promtail-config-qa-vm.yaml \
+          "${PROMTAIL_CONFIG_SOURCE}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/infra/promtail-config-qa-vm.yaml"
 
         # Upload Grafana provisioning datasources
         scp -o ConnectTimeout=30 \
-          infra/grafana-provisioning-qa/datasources/loki-qa.yaml \
+          "${GRAFANA_DATASOURCE_SOURCE}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/infra/grafana-provisioning-qa/datasources/loki-qa.yaml"
 
         echo "Files uploaded to ${SSH_TARGET}:${DEPLOY_DIR}/"

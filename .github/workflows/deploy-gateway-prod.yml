@@ -45,6 +45,7 @@ env:
   IMAGE_NAME: unspoken-tech-org/workshop_rest_api/caddy-gateway
   LOCAL_IMAGE_NAME: workshop/caddy-gateway
   COMPOSE_FILE: docker-compose-gateway.yml
+  COMPOSE_SOURCE: platform/gateway/compose/production.yml
   DEPLOY_DIR: /home/workshop/deploy/gateway_stack
   SSH_USER: ${{ secrets.PROD_SSH_USER }}
   TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
@@ -100,7 +101,7 @@ jobs:
       - name: Build and push Caddy image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
-          context: ./infra/caddy
+          context: ./platform/gateway/caddy
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
@@ -158,16 +159,36 @@ jobs:
       - name: Sync compose and Caddyfile to server
         run: |
           set -e
+          test -s "${COMPOSE_SOURCE}"
+          test -s "platform/gateway/caddy/Caddyfile-gateway"
+          PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/gateway-prod-payload.XXXXXX")"
+          COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
+          sed 's#\./platform/gateway/caddy#./infra/caddy#g' \
+            "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
+          mkdir -p "${PAYLOAD_ROOT}/infra/caddy"
+          cp -- platform/gateway/caddy/Caddyfile-gateway \
+            "${PAYLOAD_ROOT}/infra/caddy/Caddyfile-gateway"
+          cp -- platform/gateway/caddy/Dockerfile \
+            "${PAYLOAD_ROOT}/infra/caddy/Dockerfile"
+          printf '%s\n' \
+            'ADMIN_EMAIL=admin@example.invalid' \
+            'CF_API_TOKEN=validation-token' \
+            'CF_API_TOKEN_QA=validation-token' \
+            'CLOUDFLARE_TUNNEL_TOKEN=validation-token' \
+            'CLOUDFLARE_TUNNEL_TOKEN_QA=validation-token' > "${PAYLOAD_ROOT}/.env"
+          docker compose --project-directory "${PAYLOAD_ROOT}" \
+            --env-file "${PAYLOAD_ROOT}/.env" \
+            -f "${COMPOSE_PAYLOAD}" config --quiet
           # Snapshot previous versions (for rollback)
           ssh -o ConnectTimeout=30 "${SSH_TARGET}" \
-            "cd ${DEPLOY_DIR} && \
+            "mkdir -p '${DEPLOY_DIR}/infra/caddy' && cd ${DEPLOY_DIR} && \
              [ -f ${COMPOSE_FILE} ] && cp -p ${COMPOSE_FILE} ${COMPOSE_FILE}.previous || true && \
              [ -f infra/caddy/Caddyfile-gateway ] && cp -p infra/caddy/Caddyfile-gateway infra/caddy/Caddyfile-gateway.previous || true"
           # Sync new versions
           scp -o ConnectTimeout=30 \
-            "./${COMPOSE_FILE}" "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+            "${COMPOSE_PAYLOAD}" "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
           scp -o ConnectTimeout=30 \
-            ./infra/caddy/Caddyfile-gateway \
+            platform/gateway/caddy/Caddyfile-gateway \
             "${SSH_TARGET}:${DEPLOY_DIR}/infra/caddy/Caddyfile-gateway"
           echo "Synced compose and Caddyfile to ${SSH_TARGET}:${DEPLOY_DIR}"
 

@@ -23,6 +23,9 @@ inputs:
   compose-file:
     description: 'docker-compose file name on the server'
     required: true
+  compose-source:
+    description: 'Path to the compose file in the checked-out repository'
+    required: true
   image-tag:
     description: 'Image tag to be deployed'
     required: true
@@ -86,8 +89,28 @@ runs:
         DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
         COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
       run: |
         set -e
+
+        # Materialize a payload with the remote compose basename. The QA host keeps
+        # config/, scripts/ and Dockerfile.pgbackrest at the deployment root.
+        test -s "${COMPOSE_SOURCE}"
+        test -s "apps/api/docker/Dockerfile.pgbackrest"
+        PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/api-qa-payload.XXXXXX")"
+        COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
+        cp -- "${COMPOSE_SOURCE}" "${COMPOSE_PAYLOAD}"
+
+        # Parse the payload with representative values before changing the server.
+        mkdir -p "${PAYLOAD_ROOT}/config/qa_keys"
+        printf '%s\n' \
+          'DB_NAME=workshop_db_qa' \
+          'DB_USERNAME=workshop_admin_qa' \
+          'DB_PASSWORD=validation-only' \
+          'IMAGE_TAG=validation' > "${PAYLOAD_ROOT}/.env"
+        docker compose --project-directory "${PAYLOAD_ROOT}" \
+          --env-file "${PAYLOAD_ROOT}/.env" \
+          -f "${COMPOSE_PAYLOAD}" config --quiet
 
         # Ensure deploy directory, secure tmp directory, and docker config directory exist on the server
         ssh -o ConnectTimeout=30 \
@@ -103,7 +126,7 @@ runs:
 
         # Upload compose file to deploy dir
         scp -o ConnectTimeout=30 \
-          "${COMPOSE_FILE}" \
+          "${COMPOSE_PAYLOAD}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
         # Upload scripts directory to deploy dir
@@ -113,7 +136,7 @@ runs:
 
         # Upload Dockerfile for PostgreSQL image build (first deploy only)
         scp -o ConnectTimeout=30 \
-          "Dockerfile.pgbackrest" \
+          "apps/api/docker/Dockerfile.pgbackrest" \
           "${SSH_TARGET}:${DEPLOY_DIR}/Dockerfile.pgbackrest"
 
         scp -o ConnectTimeout=30 \

@@ -152,7 +152,7 @@ public interface CustomerRepositoryJdbc {
 Complex queries are stored in external `.sql` files for maintainability:
 
 ```
-src/main/resources/db/query/
+apps/api/src/main/resources/db/query/
 ├── customer/
 │   ├── getCustomer.sql          # Single customer with phones (LATERAL JOIN)
 │   └── listCustomers.sql        # Paginated list with filters
@@ -308,7 +308,7 @@ Application → Promtail → Loki → Grafana
 
 ```bash
 # Start full stack: database + app + observability
-docker-compose -f docker-compose-local-full.yml up -d --build
+docker compose --project-directory . -p workshop_rest_api -f environments/local/compose.yml up -d --build
 
 # Access Grafana
 open http://localhost:3000  # admin/admin
@@ -357,10 +357,10 @@ git clone https://github.com/your-username/workshop_rest_api.git
 cd workshop_rest_api
 
 # Start PostgreSQL database
-docker-compose -f docker-compose-local.yml up -d
+docker compose --project-directory . -p workshop_rest_api -f apps/api/compose/local.yml up -d
 
 # Run the application
-./gradlew bootRun
+./gradlew :apps:api:bootRun
 ```
 
 ### Service Endpoints
@@ -375,17 +375,17 @@ docker-compose -f docker-compose-local.yml up -d
 
 ```bash
 # Stop containers and remove volumes (clean slate)
-docker-compose -f docker-compose-local.yml down --volumes
+docker compose --project-directory . -p workshop_rest_api -f apps/api/compose/local.yml down --volumes
 ```
 
 ### Running Tests
 
 ```bash
 # All tests (unit + integration)
-./gradlew test
+./gradlew :apps:api:test :apps:api:integrationTests
 
 # Integration tests only (~200 scenarios)
-./gradlew integrationTests
+./gradlew :apps:api:integrationTests
 ```
 
 ---
@@ -447,12 +447,32 @@ The pipeline implements a "Trust but Verify" approach:
 
 ---
 
+### Compose and deployment paths
+
+The checkout layout is independent from the names kept on deployment hosts. GitHub Actions validate each source before
+uploading it, while `COMPOSE_FILE` and `DEPLOY_DIR` continue to identify the existing remote files and directories.
+
+| Component | Repository sources |
+|-----------|--------------------|
+| API | `apps/api/compose/{production,qa,local}.yml`, `apps/api/docker/`, `apps/api/infra/pgbackrest/` |
+| Gateway | `platform/gateway/compose/`, `platform/gateway/caddy/` |
+| Observability | `platform/observability/{compose,loki,promtail,grafana}/` |
+| Full local stack | `environments/local/compose.yml` |
+
+The API image is built with the repository root as Buildx context (`context: .`) and
+`apps/api/docker/Dockerfile` as the Dockerfile, because the Dockerfile copies the shared Gradle wrapper and modules.
+
+For local Compose commands, always keep the repository root as the project directory and set an explicit project name,
+for example `docker compose --project-directory . -p workshop_rest_api -f environments/local/compose.yml up -d --build`.
+
+---
+
 ## Database Migrations
 
 Schema changes are managed through Flyway migrations:
 
 ```
-src/main/resources/db/migration/postgresql/
+apps/api/src/main/resources/db/migration/postgresql/
 ├── V1__10_08_2025_initial.sql
 ├── V2__31_08_2025_add_many_to_many_customer_phones.sql
 ├── V3__03_09_2025_sanatize_data.sql
@@ -475,48 +495,50 @@ src/main/resources/db/migration/postgresql/
 
 ```
 workshop_rest_api/
-├── src/main/java/com/tproject/workshop/
-│   ├── config/              # Configuration classes (Security, OpenAPI, Jackson)
-│   ├── controller/          # REST endpoints (Interface + Impl pattern)
-│   ├── service/             # Business logic, transaction boundaries
-│   ├── repository/          # JPA repositories
-│   │   └── jdbc/            # JDBC repositories for optimized reads
-│   ├── model/               # JPA entities
-│   ├── dto/                 # Request/Response objects
-│   ├── events/              # Domain events
-│   ├── exception/           # Custom exceptions
-│   ├── errorhandling/       # Global exception handler
-│   └── validation/          # Custom validators
-├── src/main/resources/
-│   ├── db/migration/        # Flyway migrations
-│   ├── db/query/            # External SQL files
-│   └── keys/                # Cryptographic keys
-├── docker-compose-local.yml               # Development: database only
-├── docker-compose-local-full.yml          # Development: full stack with observability
-├── docker-compose-production.yml          # Production: Application stack
-├── docker-compose-qa.yml                  # QA: Isolated environment
-├── docker-compose-gateway.yml             # Gateway: Ingress + Tunnels
-├── infra/                                 # Infrastructure configurations
-│   ├── act/                 # GitHub Actions runner utils
-│   ├── caddy/               # Reverse proxy config
-│   │   └── Caddyfile-gateway
-│   ├── loki-config.yaml
-│   └── promtail-config.yaml
-├── Dockerfile                             # Multi-stage build
-├── Dockerfile.pgbackrest                  # Backup sidecar container
+├── build.gradle                         # Projeto raiz e agregador Gradle
+├── settings.gradle                       # Inclui :apps:api e :apps:security
+├── gradlew                               # Wrapper Gradle compartilhado
+├── apps/
+│   ├── api/
+│   │   ├── build.gradle
+│   │   ├── src/main/java/com/tproject/workshop/ # Código da API
+│   │   ├── src/main/resources/                  # Flyway, SQL e chaves
+│   │   └── src/test/                            # Testes unitários e integração
+│   └── security/                                # Scaffold vazio para a futura extração de segurança
+├── apps/api/compose/
+│   ├── local.yml               # Desenvolvimento: banco de dados
+│   ├── production.yml          # Produção: aplicação + banco
+│   └── qa.yml                  # QA: ambiente isolado
+├── apps/api/docker/
+│   ├── Dockerfile               # Imagem multi-stage da API (contexto raiz)
+│   └── Dockerfile.pgbackrest    # Sidecar de backup
+├── apps/api/infra/pgbackrest/   # Configuração pgBackRest
+├── platform/gateway/
+│   ├── compose/                 # Stacks de gateway (produção e QA)
+│   └── caddy/                   # Caddyfile e Dockerfile
+├── platform/observability/
+│   ├── compose/                 # Stacks Loki/Promtail/Grafana
+│   ├── loki/                    # Configurações Loki
+│   ├── promtail/                # Configurações Promtail
+│   └── grafana/                 # Provisionamento de datasources
+├── environments/local/compose.yml # Stack local completo
 └── .github/
     ├── actions/
-    │   ├── shared/          # Shared composite actions (api+gateway)
-    │   ├── api/             # API-specific composite actions
-    │   └── gateway/         # Gateway-specific composite actions
+    │   ├── shared/          # Shared composite actions (SSH setup + banners)
+    │   ├── api*/            # API production and QA deploy actions
+    │   ├── gateway*/        # Gateway production and QA deploy actions
+    │   └── observability*/  # Loki/Promtail/Grafana deploy actions
     ├── scripts/
-    │   ├── api/             # API deploy/rollback/verify/cleanup scripts
-    │   └── gateway/         # Gateway deploy/rollback/verify/cleanup scripts
+    │   ├── api*/            # API deploy/rollback/verify/cleanup scripts
+    │   ├── gateway*/        # Gateway deploy/rollback/verify/cleanup scripts
+    │   └── observability*/  # Observability deploy/rollback/verify/cleanup scripts
     └── workflows/
         ├── deploy-api-prod.yml            # API Spring Boot (production)
         ├── deploy-api-qa.yml              # API Spring Boot (QA)
         ├── deploy-gateway-prod.yml        # Caddy Gateway (production)
-        └── deploy-observability-prod.yml  # Loki + Grafana (production)
+        ├── deploy-gateway-qa.yml           # Caddy Gateway (QA)
+        ├── deploy-observability-prod.yml  # Loki + Grafana (production)
+        └── deploy-observability-qa.yml    # Loki + Grafana (QA)
 ```
 
 ---

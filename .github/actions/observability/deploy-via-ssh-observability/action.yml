@@ -14,6 +14,21 @@ inputs:
   compose-file:
     description: 'docker-compose file name on the server'
     required: true
+  compose-source:
+    description: 'Path to the compose file in the checked-out repository'
+    required: true
+  loki-config-source:
+    description: 'Path to the production Loki config in the checked-out repository'
+    required: true
+  promtail-production-source:
+    description: 'Path to the production Promtail config in the checked-out repository'
+    required: true
+  promtail-gateway-source:
+    description: 'Path to the gateway Promtail config in the checked-out repository'
+    required: true
+  grafana-provisioning-source:
+    description: 'Path to Grafana provisioning in the checked-out repository'
+    required: true
   deploy-script:
     description: 'Path to deploy.sh in the repository'
     required: true
@@ -50,30 +65,68 @@ runs:
         DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
         COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
+        LOKI_CONFIG_SOURCE: ${{ inputs.loki-config-source }}
+        PROMTAIL_PRODUCTION_SOURCE: ${{ inputs.promtail-production-source }}
+        PROMTAIL_GATEWAY_SOURCE: ${{ inputs.promtail-gateway-source }}
+        GRAFANA_PROVISIONING_SOURCE: ${{ inputs.grafana-provisioning-source }}
       run: |
         set -e
 
+        # Materialize a server-shaped payload before touching the remote deployment.
+        test -s "${COMPOSE_SOURCE}"
+        test -s "${LOKI_CONFIG_SOURCE}"
+        test -s "${PROMTAIL_PRODUCTION_SOURCE}"
+        test -s "${PROMTAIL_GATEWAY_SOURCE}"
+        test -d "${GRAFANA_PROVISIONING_SOURCE}"
+        PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/observability-prod-payload.XXXXXX")"
+        COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
+        sed \
+          -e 's#\./platform/observability/loki/production.yaml#./infra/loki-config.yaml#g' \
+          -e 's#\./platform/observability/promtail/production.yaml#./infra/promtail-config-prod.yaml#g' \
+          -e 's#\./platform/observability/promtail/gateway.yaml#./infra/promtail-config-gateway.yaml#g' \
+          -e 's#\./platform/observability/grafana/production/provisioning#./infra/grafana-provisioning#g' \
+          "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
+
+        # Parse the payload with representative values before changing the server.
+        mkdir -p "${PAYLOAD_ROOT}/infra/grafana-provisioning/datasources"
+        touch \
+          "${PAYLOAD_ROOT}/infra/loki-config.yaml" \
+          "${PAYLOAD_ROOT}/infra/promtail-config-prod.yaml" \
+          "${PAYLOAD_ROOT}/infra/promtail-config-gateway.yaml" \
+          "${PAYLOAD_ROOT}/infra/grafana-provisioning/datasources/loki.yaml"
+        printf '%s\n' \
+          'GRAFANA_ADMIN_USER=validation-user' \
+          'GRAFANA_ADMIN_PASSWORD=validation-only' > "${PAYLOAD_ROOT}/.env"
+        docker compose --project-directory "${PAYLOAD_ROOT}" \
+          --env-file "${PAYLOAD_ROOT}/.env" \
+          -f "${COMPOSE_PAYLOAD}" config --quiet
+
         # Ensure target parent directories exist first
         ssh -o ConnectTimeout=30 \
-          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/infra'"
+          "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/infra/grafana-provisioning'"
 
         # Upload compose file
         scp -o ConnectTimeout=30 \
-          "${COMPOSE_FILE}" \
+          "${COMPOSE_PAYLOAD}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
         # Upload configs and dashboards
         scp -o ConnectTimeout=30 \
-          infra/loki-config.yaml \
+          "${LOKI_CONFIG_SOURCE}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/infra/loki-config.yaml"
 
         scp -o ConnectTimeout=30 \
-          infra/promtail-config-*.yaml \
-          "${SSH_TARGET}:${DEPLOY_DIR}/infra/"
+          "${PROMTAIL_PRODUCTION_SOURCE}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/promtail-config-prod.yaml"
+
+        scp -o ConnectTimeout=30 \
+          "${PROMTAIL_GATEWAY_SOURCE}" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/promtail-config-gateway.yaml"
 
         scp -r -o ConnectTimeout=30 \
-          infra/grafana-provisioning \
-          "${SSH_TARGET}:${DEPLOY_DIR}/infra/"
+          "${GRAFANA_PROVISIONING_SOURCE}/." \
+          "${SSH_TARGET}:${DEPLOY_DIR}/infra/grafana-provisioning/"
 
         # Upload deploy script and .env into isolated temporary directory
         ssh -o ConnectTimeout=30 \

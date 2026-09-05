@@ -25,6 +25,11 @@ concurrency:
 
 env:
   COMPOSE_FILE: docker-compose-observability.yml
+  COMPOSE_SOURCE: platform/observability/compose/production.yml
+  LOKI_CONFIG_SOURCE: platform/observability/loki/production.yaml
+  PROMTAIL_PRODUCTION_SOURCE: platform/observability/promtail/production.yaml
+  PROMTAIL_GATEWAY_SOURCE: platform/observability/promtail/gateway.yaml
+  GRAFANA_PROVISIONING_SOURCE: platform/observability/grafana/production/provisioning
   DEPLOY_DIR: /home/workshop/deploy/observability_stack
   SSH_USER: ${{ secrets.PROD_SSH_USER }}
   TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
@@ -108,6 +113,11 @@ jobs:
           ssh-target: ${{ env.SSH_TARGET }}
           deploy-dir: ${{ env.DEPLOY_DIR }}
           compose-file: ${{ env.COMPOSE_FILE }}
+          compose-source: ${{ env.COMPOSE_SOURCE }}
+          loki-config-source: ${{ env.LOKI_CONFIG_SOURCE }}
+          promtail-production-source: ${{ env.PROMTAIL_PRODUCTION_SOURCE }}
+          promtail-gateway-source: ${{ env.PROMTAIL_GATEWAY_SOURCE }}
+          grafana-provisioning-source: ${{ env.GRAFANA_PROVISIONING_SOURCE }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
           grafana-admin-user: ${{ secrets.GRAFANA_ADMIN_USER }}
           grafana-admin-password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}

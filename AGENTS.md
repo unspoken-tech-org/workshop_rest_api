@@ -19,25 +19,25 @@
 
 ## Quick Commands (Gradle Wrapper)
 - Use `./gradlew` on macOS/Linux, `gradlew.bat` on Windows.
-- Build: `./gradlew build`
-- Run app: `./gradlew bootRun`
-- Run with profile: `./gradlew bootRun --args='--spring.profiles.active=qa'`
-- Clean build: `./gradlew clean build`
-- Build image: `./gradlew bootBuildImage`
+- Build API: `./gradlew :apps:api:build`
+- Run API: `./gradlew :apps:api:bootRun`
+- Run with profile: `./gradlew :apps:api:bootRun --args='--spring.profiles.active=qa'`
+- Clean API build: `./gradlew :apps:api:clean :apps:api:build`
+- Build API image: `./gradlew :apps:api:bootBuildImage`
 
 ## Test Commands
-- All tests (unit + integration): `./gradlew test`
-- Integration tests only (tagged `integration`): `./gradlew integrationTests`
-- Single unit test class: `./gradlew test --tests "com.tproject.workshop.validation.DeviceStatusValidatorTest"`
-- Single integration test class: `./gradlew integrationTests --tests "com.tproject.workshop.integration.controller.AuthControllerIT"`
-- Single test method: `./gradlew test --tests "com.tproject.workshop.validation.DeviceStatusValidatorTest.shouldAcceptNewStatus"`
-- Run tests with info: `./gradlew test --info`
+- All API tests (unit + integration): `./gradlew :apps:api:test :apps:api:integrationTests`
+- Integration tests only (tagged `integration`): `./gradlew :apps:api:integrationTests`
+- Single unit test class: `./gradlew :apps:api:test --tests "com.tproject.workshop.validation.DeviceStatusValidatorTest"`
+- Single integration test class: `./gradlew :apps:api:integrationTests --tests "com.tproject.workshop.integration.controller.AuthControllerIT"`
+- Single test method: `./gradlew :apps:api:test --tests "com.tproject.workshop.validation.DeviceStatusValidatorTest.shouldPassValidation_whenDeviceStatusIsValid"`
+- Run tests with info: `./gradlew :apps:api:test --info`
 - Note: integration tests run the app on port `8081` with `test` profile.
 
 ## Docker/Local Dev
-- Start DB: `docker-compose -f docker-compose-local.yml up -d`
-- Full stack (DB + observability): `docker-compose -f docker-compose-local-full.yml up -d --build`
-- Stop and clear: `docker-compose -f docker-compose-local.yml down --volumes`
+- Start API DB: `docker compose --project-directory . -p workshop_rest_api -f apps/api/compose/local.yml up -d`
+- Full stack (DB + observability): `docker compose --project-directory . -p workshop_rest_api -f environments/local/compose.yml up -d --build`
+- Stop and clear API DB: `docker compose --project-directory . -p workshop_rest_api -f apps/api/compose/local.yml down --volumes`
 
 ## CI/CD (GitHub Actions + Tailscale)
 - **Transporte SSH:** Tailscale (WireGuard, nós efêmeros via `tailscale/github-action@v4`)
@@ -61,7 +61,7 @@
 - Keep line breaks similar to existing code; avoid reformatting unrelated code.
 
 ## Project Structure
-- `src/main/java/com/tproject/workshop/` contains application code.
+- `apps/api/src/main/java/com/tproject/workshop/` contains application code.
 - `controller/` defines API interfaces with OpenAPI annotations.
 - `controller/impl/` contains `@RestController` implementations.
 - `service/` holds business logic and transaction boundaries.
@@ -71,11 +71,11 @@
 - `exception/` defines domain exceptions.
 - `errorhandling/` provides global exception mapping.
 - `config/` includes security, logging, Jackson, OpenAPI config.
-- `src/main/resources/db/query/` contains external SQL for reads.
-- `src/main/resources/db/migration/` contains Flyway migrations.
-- `src/test/java/` holds unit and integration tests.
-- `src/test/resources/jsons/` stores golden JSON snapshots.
-- `src/test/resources/test-scripts/` holds SQL scripts for tests.
+- `apps/api/src/main/resources/db/query/` contains external SQL for reads.
+- `apps/api/src/main/resources/db/migration/` contains Flyway migrations.
+- `apps/api/src/test/java/` holds unit and integration tests.
+- `apps/api/src/test/resources/jsons/` stores golden JSON snapshots.
+- `apps/api/src/test/resources/test-scripts/` holds SQL scripts for tests.
 
 ## Java Style Basics
 - Use 4-space indentation; keep braces on same line.
@@ -112,7 +112,7 @@
 - Use `@Transactional(readOnly = true)` for read-only flows.
 - Repositories return `Optional<T>` for single-entity fetches.
 - For complex reads, use JDBC repositories with external SQL files.
-- When adding new queries, place SQL under `src/main/resources/db/query/`.
+- When adding new queries, place SQL under `apps/api/src/main/resources/db/query/`.
 
 ## DTO and Validation Conventions
 - Use Java `record` for simple request/response DTOs.
@@ -136,18 +136,18 @@
 - Integration tests extend `AbstractIntegrationLiveTest`.
 - Integration tests are tagged `@Tag("integration")` for Gradle filtering.
 - Use `@Sql` scripts to seed/clean test data.
-- JSON snapshot assertions live in `src/test/resources/jsons/`.
+- JSON snapshot assertions live in `apps/api/src/test/resources/jsons/`.
 - When adding new snapshot files, follow existing naming pattern.
 
 ## Database and Migrations
-- Use Flyway migrations under `src/main/resources/db/migration/postgresql/`.
+- Use Flyway migrations under `apps/api/src/main/resources/db/migration/postgresql/`.
 - Migrations are forward-only; avoid modifying existing versions.
 - Keep SQL deterministic and safe for repeated runs when possible.
 - For query SQL, prefer file-based SQL over inline strings.
 
 ## Security and Configuration
 - Do not hardcode secrets or keys in source.
-- Keys are expected in `src/main/resources/keys/` or external mounts.
+- Keys are expected in `apps/api/src/main/resources/keys/` or external mounts.
 - Respect profile isolation (`test`, `qa`, `prod`).
 - JWT and API key logic lives under `config/security` and `service/auth`.
 

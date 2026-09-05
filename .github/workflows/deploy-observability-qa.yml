@@ -25,6 +25,10 @@ concurrency:
 
 env:
   COMPOSE_FILE: docker-compose-observability-qa.yml
+  COMPOSE_SOURCE: platform/observability/compose/qa.yml
+  LOKI_CONFIG_SOURCE: platform/observability/loki/qa.yaml
+  PROMTAIL_CONFIG_SOURCE: platform/observability/promtail/qa-vm.yaml
+  GRAFANA_DATASOURCE_SOURCE: platform/observability/grafana/qa/provisioning/datasources/loki-qa.yaml
   DEPLOY_DIR: /home/workshop/deploy/observability_stack_qa
   SSH_USER: ${{ secrets.QA_SSH_USER }}
   TS_IP: ${{ secrets.QA_TS_TAILSCALE_IP }}
@@ -108,6 +112,10 @@ jobs:
           ssh-target: ${{ env.SSH_TARGET }}
           deploy-dir: ${{ env.DEPLOY_DIR }}
           compose-file: ${{ env.COMPOSE_FILE }}
+          compose-source: ${{ env.COMPOSE_SOURCE }}
+          loki-config-source: ${{ env.LOKI_CONFIG_SOURCE }}
+          promtail-config-source: ${{ env.PROMTAIL_CONFIG_SOURCE }}
+          grafana-datasource-source: ${{ env.GRAFANA_DATASOURCE_SOURCE }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
           grafana-admin-user: ${{ secrets.GRAFANA_ADMIN_USER }}
           grafana-admin-password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}

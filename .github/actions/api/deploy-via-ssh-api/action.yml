@@ -23,6 +23,9 @@ inputs:
   compose-file:
     description: 'docker-compose file name on the server'
     required: true
+  compose-source:
+    description: 'Path to the compose file in the checked-out repository'
+    required: true
   image-tag:
     description: 'Image tag to be deployed'
     required: true
@@ -111,8 +114,35 @@ runs:
         DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
         COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
       run: |
         set -e
+
+        # Materialize a server-shaped payload. The checked-out compose file lives under
+        # apps/api, while the production host keeps Dockerfile.pgbackrest at its root.
+        test -s "${COMPOSE_SOURCE}"
+        test -s "apps/api/infra/pgbackrest/pgbackrest.conf"
+        test -s "apps/api/docker/Dockerfile.pgbackrest"
+        PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/api-prod-payload.XXXXXX")"
+        COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
+        sed 's#apps/api/docker/Dockerfile.pgbackrest#Dockerfile.pgbackrest#g' \
+          "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
+
+        # Parse the payload with representative values before changing the server.
+        mkdir -p "${PAYLOAD_ROOT}/config/keys"
+        touch "${PAYLOAD_ROOT}/Dockerfile.pgbackrest"
+        printf '%s\n' \
+          'DB_NAME=workshop_db' \
+          'DB_USERNAME=workshop_admin' \
+          'DB_PASSWORD=validation-only' \
+          'PGBACKREST_S3_BUCKET=validation-bucket' \
+          'PGBACKREST_S3_ENDPOINT=https://validation.invalid' \
+          'PGBACKREST_S3_REGION=us-east-1' \
+          'PGBACKREST_S3_KEY=validation-key' \
+          'PGBACKREST_S3_KEY_SECRET=validation-secret' > "${PAYLOAD_ROOT}/.env"
+        docker compose --project-directory "${PAYLOAD_ROOT}" \
+          --env-file "${PAYLOAD_ROOT}/.env" \
+          -f "${COMPOSE_PAYLOAD}" config --quiet
 
         # Ensure deploy directory, secure tmp directory, and docker config directory exist on the server
         ssh -o ConnectTimeout=30 \
@@ -127,17 +157,17 @@ runs:
         scp -o ConnectTimeout=30 \
           /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
           "${DEPLOY_SCRIPT}" \
-          "infra/pgbackrest/pgbackrest.conf" \
+          "apps/api/infra/pgbackrest/pgbackrest.conf" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
         # Upload compose file to deploy dir
         scp -o ConnectTimeout=30 \
-          "${COMPOSE_FILE}" \
+          "${COMPOSE_PAYLOAD}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
         # Upload Dockerfile for PostgreSQL image build (first deploy only)
         scp -o ConnectTimeout=30 \
-          "Dockerfile.pgbackrest" \
+          "apps/api/docker/Dockerfile.pgbackrest" \
           "${SSH_TARGET}:${DEPLOY_DIR}/Dockerfile.pgbackrest"
 
         scp -o ConnectTimeout=30 \
