@@ -1,7 +1,7 @@
 services:
   caddy-gateway:
     build:
-      context: ./infra/caddy
+      context: ./platform/gateway/caddy
     image: workshop/caddy-gateway:latest
     container_name: caddy-gateway
     restart: always
@@ -12,7 +12,7 @@ services:
       - CF_API_TOKEN=${CF_API_TOKEN}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
     volumes:
-      - ./infra/caddy/Caddyfile-gateway:/etc/caddy/Caddyfile
+      - ./platform/gateway/caddy/Caddyfile-gateway:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     networks:

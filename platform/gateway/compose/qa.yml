@@ -1,7 +1,7 @@
 services:
   caddy-gateway-qa:
     build:
-      context: ./infra/caddy
+      context: ./platform/gateway/caddy
       dockerfile: Dockerfile
     image: workshop/caddy-gateway-qa:latest
     container_name: caddy-gateway-qa
@@ -13,7 +13,7 @@ services:
       - CF_API_TOKEN=${CF_API_TOKEN}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
     volumes:
-      - ./Caddyfile-gateway-qa:/etc/caddy/Caddyfile
+      - ./platform/gateway/caddy/Caddyfile-gateway-qa:/etc/caddy/Caddyfile
       - caddy_data_qa:/data
       - caddy_config_qa:/config
     networks:
