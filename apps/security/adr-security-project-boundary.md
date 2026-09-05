@@ -1,6 +1,6 @@
 # ADR: limite do projeto de segurança
 
-*Status:* aceito  
+*Status:* aceito
 *Data:* 2026-09-05
 
 ## Contexto
