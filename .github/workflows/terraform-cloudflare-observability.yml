@@ -1,0 +1,357 @@
+# ===========================================================
+# Terraform Cloudflare resources used by observability.
+#
+# Pull requests and release branches are credential-free: only fmt/validate.
+# A plan runs on main (push or manual dispatch). The repository is public, so
+# the readable plan never goes to the job log: the binary plan, its readable
+# text and its metadata (commit SHA and checksum) go to the private R2 state
+# bucket under plans/<run-id>/. Apply is a separate manual dispatch that takes
+# that run ID, checks out the same SHA, verifies the checksum, snapshots the
+# state and applies exactly the reviewed plan. Terraform itself refuses a plan
+# whose state changed after it was created.
+# ===========================================================
+
+name: Terraform Cloudflare Observability
+
+on:
+  pull_request:
+    paths:
+      - 'infra/cloudflare/**'
+      - '.github/workflows/terraform-cloudflare-observability.yml'
+      - '.github/actions/observability-terraform/**'
+  push:
+    branches:
+      - main
+      - 'release/**'
+    paths:
+      - 'infra/cloudflare/**'
+      - '.github/workflows/terraform-cloudflare-observability.yml'
+      - '.github/actions/observability-terraform/**'
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Terraform operation (main only)'
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - apply
+      confirmation:
+        description: 'Confirm the selected manual operation'
+        required: true
+        type: choice
+        default: CANCEL
+        options:
+          - PLAN
+          - APPLY
+          - CANCEL
+      plan_run_id:
+        description: 'Run ID of the reviewed plan (required for apply)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Plan and apply share the same state, so they share one queue.
+concurrency:
+  group: terraform-cloudflare-observability-state
+  cancel-in-progress: false
+
+env:
+  TF_WORKING_DIR: infra/cloudflare
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  # R2 aceita somente checksums quando exigidos pela operação.
+  AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+  AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+  AWS_DEFAULT_REGION: auto
+
+jobs:
+  fmt-validate:
+    name: Terraform fmt and validate (no credentials)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - name: Check formatting
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -diff -recursive
+
+      - name: Initialize without a backend
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -backend=false -input=false -no-color -lockfile=readonly
+
+      - name: Validate configuration
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate -no-color
+
+  plan:
+    name: Terraform plan (main)
+    needs: fmt-validate
+    if: >-
+      needs.fmt-validate.result == 'success' &&
+      github.ref == 'refs/heads/main' &&
+      (
+        github.event_name == 'push' ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          inputs.operation == 'plan' &&
+          inputs.confirmation == 'PLAN'
+        )
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Check Cloudflare inputs
+        env:
+          OBS_CF_API_TOKEN: ${{ secrets.OBS_CF_API_TOKEN }}
+          OBS_CF_ACCOUNT_ID: ${{ secrets.OBS_CF_ACCOUNT_ID }}
+          OBS_CF_ZONE_ID: ${{ secrets.OBS_CF_ZONE_ID }}
+          OBS_CF_GRAFANA_ACCESS_EMAILS: ${{ secrets.OBS_CF_GRAFANA_ACCESS_EMAILS }}
+        run: |
+          set -Eeuo pipefail
+          for variable in OBS_CF_API_TOKEN OBS_CF_ACCOUNT_ID OBS_CF_ZONE_ID OBS_CF_GRAFANA_ACCESS_EMAILS; do
+            [[ -n "${!variable:-}" ]] || {
+              echo "Missing required ${variable} secret" >&2
+              exit 1
+            }
+          done
+
+      - name: Initialize Terraform state
+        uses: ./.github/actions/observability-terraform/init-state
+        with:
+          working-directory: ${{ env.TF_WORKING_DIR }}
+          state-bucket: ${{ secrets.OBS_TF_STATE_BUCKET }}
+          state-key: ${{ secrets.OBS_TF_STATE_KEY }}
+          state-endpoint: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+          state-access-key: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          state-secret-key: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+
+      - name: Create plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_obs_cf_api_token: ${{ secrets.OBS_CF_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.OBS_CF_ACCOUNT_ID }}
+          TF_VAR_cloudflare_zone_id: ${{ secrets.OBS_CF_ZONE_ID }}
+          TF_VAR_grafana_access_emails: ${{ secrets.OBS_CF_GRAFANA_ACCESS_EMAILS }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+        run: |
+          set -Eeuo pipefail
+          plan_dir="${RUNNER_TEMP}/plan"
+          mkdir -m 700 "${plan_dir}"
+          # The full plan output stays out of the public log.
+          if ! terraform plan -input=false -no-color -lock-timeout=5m \
+            -out="${plan_dir}/tfplan" > "${plan_dir}/plan.log" 2>&1; then
+            echo "terraform plan failed; the log is uploaded to the private bucket" >&2
+            exit 1
+          fi
+          terraform show -no-color "${plan_dir}/tfplan" > "${plan_dir}/plan.txt"
+          # Only resource addresses and actions are public; values are not.
+          echo "Planned changes (addresses only):"
+          terraform show -json "${plan_dir}/tfplan" | jq -r '
+            [.resource_changes[]? | select(.change.actions != ["no-op"])
+              | "  \(.change.actions | join(",")) \(.address)"] as $changes
+            | if ($changes | length) == 0 then "  no changes" else $changes[] end'
+          jq -n \
+            --arg sha "${GITHUB_SHA}" \
+            --arg checksum "$(sha256sum "${plan_dir}/tfplan" | cut -d' ' -f1)" \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{sha: $sha, sha256: $checksum, created_at: $created_at}' > "${plan_dir}/metadata.json"
+
+      - name: Upload plan to the private bucket
+        if: always()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+          OBS_TF_STATE_BUCKET: ${{ secrets.OBS_TF_STATE_BUCKET }}
+          OBS_TF_STATE_ENDPOINT: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+        run: |
+          set -Eeuo pipefail
+          plan_dir="${RUNNER_TEMP}/plan"
+          [[ -d "${plan_dir}" ]] || exit 0
+          for file in tfplan plan.txt plan.log metadata.json; do
+            [[ -f "${plan_dir}/${file}" ]] || continue
+            aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+              "${plan_dir}/${file}" "s3://${OBS_TF_STATE_BUCKET}/plans/${GITHUB_RUN_ID}/${file}"
+          done
+          rm -rf -- "${plan_dir}"
+          {
+            echo "### Terraform plan"
+            echo "Review \`plans/${GITHUB_RUN_ID}/plan.txt\` in the private state bucket."
+            echo "To apply exactly this plan, dispatch \`apply\` with \`plan_run_id=${GITHUB_RUN_ID}\`."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  apply:
+    name: Terraform apply (reviewed plan)
+    needs: fmt-validate
+    if: >-
+      needs.fmt-validate.result == 'success' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.operation == 'apply' &&
+      inputs.confirmation == 'APPLY'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: observability-terraform-apply
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout main with history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fetch reviewed plan
+        id: plan
+        env:
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+          OBS_TF_STATE_BUCKET: ${{ secrets.OBS_TF_STATE_BUCKET }}
+          OBS_TF_STATE_ENDPOINT: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+        run: |
+          set -Eeuo pipefail
+          [[ "${PLAN_RUN_ID}" =~ ^[0-9]+$ ]] || {
+            echo "plan_run_id must be the numeric run ID of a plan" >&2
+            exit 1
+          }
+          plan_dir="${RUNNER_TEMP}/plan"
+          mkdir -m 700 "${plan_dir}"
+          for file in tfplan metadata.json; do
+            aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+              "s3://${OBS_TF_STATE_BUCKET}/plans/${PLAN_RUN_ID}/${file}" "${plan_dir}/${file}"
+          done
+          plan_sha="$(jq -r '.sha' "${plan_dir}/metadata.json")"
+          expected_checksum="$(jq -r '.sha256' "${plan_dir}/metadata.json")"
+          [[ "${plan_sha}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Plan metadata has no valid commit SHA" >&2
+            exit 1
+          }
+          [[ "$(sha256sum "${plan_dir}/tfplan" | cut -d' ' -f1)" == "${expected_checksum}" ]] || {
+            echo "Plan checksum does not match its metadata" >&2
+            exit 1
+          }
+          git merge-base --is-ancestor "${plan_sha}" HEAD || {
+            echo "Plan commit is not part of main" >&2
+            exit 1
+          }
+          echo "sha=${plan_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout the planned commit
+        env:
+          PLAN_SHA: ${{ steps.plan.outputs.sha }}
+        run: git checkout --quiet --detach "${PLAN_SHA}"
+
+      - name: Initialize Terraform state
+        uses: ./.github/actions/observability-terraform/init-state
+        with:
+          working-directory: ${{ env.TF_WORKING_DIR }}
+          state-bucket: ${{ secrets.OBS_TF_STATE_BUCKET }}
+          state-key: ${{ secrets.OBS_TF_STATE_KEY }}
+          state-endpoint: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+          state-access-key: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          state-secret-key: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+
+      - name: Snapshot current state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+          OBS_TF_STATE_BUCKET: ${{ secrets.OBS_TF_STATE_BUCKET }}
+          OBS_TF_STATE_KEY: ${{ secrets.OBS_TF_STATE_KEY }}
+          OBS_TF_STATE_ENDPOINT: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+        run: |
+          set -Eeuo pipefail
+          # R2 has no object versioning; keep a copy before every apply.
+          if aws s3api head-object --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            --bucket "${OBS_TF_STATE_BUCKET}" --key "${OBS_TF_STATE_KEY}" > /dev/null 2>&1; then
+            aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+              "s3://${OBS_TF_STATE_BUCKET}/${OBS_TF_STATE_KEY}" \
+              "s3://${OBS_TF_STATE_BUCKET}/snapshots/$(date -u +%Y%m%dT%H%M%SZ)-run${GITHUB_RUN_ID}.tfstate"
+            echo "State snapshot stored"
+          else
+            echo "No state yet; first apply"
+          fi
+
+      - name: Apply reviewed plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_obs_cf_api_token: ${{ secrets.OBS_CF_API_TOKEN }}
+          TF_VAR_cloudflare_account_id: ${{ secrets.OBS_CF_ACCOUNT_ID }}
+          TF_VAR_cloudflare_zone_id: ${{ secrets.OBS_CF_ZONE_ID }}
+          TF_VAR_grafana_access_emails: ${{ secrets.OBS_CF_GRAFANA_ACCESS_EMAILS }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+        run: |
+          set -Eeuo pipefail
+          # Applying a saved plan needs no approval flag and fails if the state
+          # changed after the plan. The detailed output stays out of the log.
+          if terraform apply -input=false -no-color -lock-timeout=5m \
+            "${RUNNER_TEMP}/plan/tfplan" > "${RUNNER_TEMP}/plan/apply.log" 2>&1; then
+            grep -E '^Apply complete!' "${RUNNER_TEMP}/plan/apply.log" || true
+          else
+            echo "terraform apply failed; the log is uploaded to the private bucket" >&2
+            exit 1
+          fi
+
+      - name: Store apply log and retire the plan
+        if: always()
+        env:
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+          OBS_TF_STATE_BUCKET: ${{ secrets.OBS_TF_STATE_BUCKET }}
+          OBS_TF_STATE_ENDPOINT: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+        run: |
+          set -Eeuo pipefail
+          [[ "${PLAN_RUN_ID}" =~ ^[0-9]+$ ]] || exit 0
+          if [[ -f "${RUNNER_TEMP}/plan/apply.log" ]]; then
+            aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+              "${RUNNER_TEMP}/plan/apply.log" \
+              "s3://${OBS_TF_STATE_BUCKET}/plans/${PLAN_RUN_ID}/apply-run${GITHUB_RUN_ID}.log"
+            # A consumed plan is never applied twice.
+            aws s3 rm --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+              "s3://${OBS_TF_STATE_BUCKET}/plans/${PLAN_RUN_ID}/tfplan"
+          fi
+          rm -rf -- "${RUNNER_TEMP}/plan"
