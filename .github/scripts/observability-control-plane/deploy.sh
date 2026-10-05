@@ -48,6 +48,8 @@ printf '%s\n' "${previous_dir}" > "${DEPLOY_MARKER}"
 switch_current_to "${release_dir}"
 echo "Activated control-plane release ${RELEASE_ID}"
 
-compose_in "${release_dir}" up -d --remove-orphans
+# Compose does not hash secret sources, so a kept container would still read
+# the previous release's secrets (or none, after a failed creation).
+compose_in "${release_dir}" up -d --remove-orphans --force-recreate
 compose_in "${release_dir}" ps
 wait_until_ready "${release_dir}"

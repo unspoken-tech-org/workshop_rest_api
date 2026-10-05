@@ -29,8 +29,9 @@ if [[ -n "${previous_dir}" && -d "${previous_dir}" ]]; then
   [[ "${previous_dir}" == "${RELEASES_DIR}/"* ]] || die "marker points outside the releases directory"
   echo "Restoring control-plane release $(basename -- "${previous_dir}")"
   switch_current_to "${previous_dir}"
-  # Same project, previous files: Compose recreates only what differs.
-  compose_in "${previous_dir}" up -d --remove-orphans
+  # Same project, previous files; recreate everything so secrets are
+  # remounted from the restored release (Compose does not hash them).
+  compose_in "${previous_dir}" up -d --remove-orphans --force-recreate
   compose_in "${previous_dir}" ps
   rm -rf -- "${failed_dir}"
   rm -f -- "${DEPLOY_MARKER}"
