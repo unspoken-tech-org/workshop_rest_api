@@ -1,0 +1,239 @@
+# Collector contrib local. Simula o Collector de borda da VM de produção:
+# recebe OTLP (traces da API, logs do Alloy), faz o scrape autenticado da API
+# (R17) e encaminha tudo por OTLP aos backends. A fila de cada exporter fica
+# em disco (file_storage) para absorver indisponibilidade dos backends, como a
+# borda absorverá a da QA, e sobreviver a reinícios do Collector.
+
+extensions:
+  # Lido pelo probe sidecar do Compose (a imagem é distroless).
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # Volume próprio (otel_collector_queue). Cada exporter grava um arquivo
+  # bbolt; a compactação devolve espaço depois da drenagem.
+  file_storage/queue:
+    directory: /var/lib/otelcol/file_storage
+    compaction:
+      directory: /var/lib/otelcol/file_storage
+      on_start: true
+      on_rebound: true
+      cleanup_on_start: true
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Scrape autenticado de /actuator/prometheus com a identidade de leitura
+  # mínima da API. A senha vem de secret montado, nunca do arquivo.
+  prometheus/api:
+    config:
+      scrape_configs:
+        - job_name: workshop-api
+          scrape_interval: 15s
+          scrape_timeout: 10s
+          metrics_path: /actuator/prometheus
+          basic_auth:
+            username: ${env:API_SCRAPE_USERNAME}
+            password_file: /run/secrets/api_scrape_password
+          static_configs:
+            - targets:
+                - ${env:API_SCRAPE_TARGET}
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 384
+    spike_limit_mib: 96
+
+  # Defesa em profundidade: a API e o Flutter são a barreira principal.
+  attributes/redact:
+    actions:
+      - key: authorization
+        action: delete
+      - key: cookie
+        action: delete
+      - key: set-cookie
+        action: delete
+      - key: x-api-key
+        action: delete
+      - key: api-key
+        action: delete
+      - key: password
+        action: delete
+      - key: passwd
+        action: delete
+      - key: secret
+        action: delete
+      - key: access_token
+        action: delete
+      - key: refresh_token
+        action: delete
+      - key: client_secret
+        action: delete
+      # Headers HTTP: allowlist vazia no primeiro corte.
+      - pattern: ^http\.(request|response)\.header\..*
+        action: delete
+      # Statements SQL, URLs e caminhos concretos; http.route é preservada.
+      - key: db.query.text
+        action: delete
+      - key: db.statement
+        action: delete
+      - key: db.connection_string
+        action: delete
+      - key: url.full
+        action: delete
+      - key: url.query
+        action: delete
+      - key: url.path
+        action: delete
+      - key: http.url
+        action: delete
+      - key: http.target
+        action: delete
+      - key: user.email
+        action: delete
+      - key: user.id
+        action: delete
+      - key: enduser.id
+        action: delete
+      - key: enduser.email
+        action: delete
+      - key: customer.cpf
+        action: delete
+      - key: user.cpf
+        action: delete
+
+  # service.instance.id é preservado (identificador técnico efêmero).
+  resource/redact:
+    attributes:
+      - key: host.ip
+        action: delete
+      - key: host.mac
+        action: delete
+      - key: process.command_line
+        action: delete
+      # Java 9+: o agent emite os argumentos da JVM neste atributo.
+      - key: process.command_args
+        action: delete
+      - key: user.email
+        action: delete
+      - key: user.id
+        action: delete
+      - key: customer.cpf
+        action: delete
+      - key: user.cpf
+        action: delete
+
+  resource/local:
+    attributes:
+      - key: deployment.environment.name
+        value: local
+        action: upsert
+      # Atributo depreciado (R16).
+      - key: deployment.environment
+        action: delete
+      - key: service.namespace
+        value: workshop
+        action: upsert
+
+  # Política de dados: service.instance.id nunca vira label de métrica
+  # (no Prometheus ele viraria o label "instance").
+  resource/metrics-labels:
+    attributes:
+      - key: service.instance.id
+        action: delete
+
+exporters:
+  # Fila persistente com limite explícito em bytes por exporter
+  # (COLLECTOR_QUEUE_BYTES); cheia, recusa dados novos sem bloquear quem envia.
+  # O lote é montado na saída da fila, não por processor: assim a recusa chega
+  # ao receiver e a quem enviou, em vez de um descarte silencioso depois do
+  # aceite. Retry sem prazo: o limite é o disco, não o tempo (meta de 4 horas).
+  otlp_grpc/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+    timeout: 10s
+    sending_queue: &persistent_queue
+      enabled: true
+      storage: file_storage/queue
+      sizer: bytes
+      queue_size: ${env:COLLECTOR_QUEUE_BYTES}
+      batch:
+        flush_timeout: 5s
+        sizer: items
+        min_size: 512
+        max_size: 1024
+    retry_on_failure: &retry_until_drained
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 0s
+
+  # Loki 3.x recebe logs OTLP nativamente no endpoint /otlp.
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+    timeout: 10s
+    sending_queue: *persistent_queue
+    retry_on_failure: *retry_until_drained
+
+  # Prometheus 3 recebe métricas OTLP (--web.enable-otlp-receiver); é o mesmo
+  # transporte que a borda usará para o replay após falha PRD → QA.
+  otlp_http/prometheus:
+    metrics_endpoint: http://prometheus:9090/api/v1/otlp/v1/metrics
+    timeout: 10s
+    sending_queue: *persistent_queue
+    retry_on_failure: *retry_until_drained
+
+service:
+  extensions:
+    - health_check
+    - file_storage/queue
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resource/redact
+        - resource/local
+        - attributes/redact
+      exporters:
+        - otlp_grpc/tempo
+    metrics:
+      receivers:
+        - otlp
+        - prometheus/api
+      processors:
+        - memory_limiter
+        - resource/redact
+        - resource/local
+        - resource/metrics-labels
+        - attributes/redact
+      exporters:
+        - otlp_http/prometheus
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resource/redact
+        - resource/local
+        - attributes/redact
+      exporters:
+        - otlp_http/loki

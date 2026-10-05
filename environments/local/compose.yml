@@ -10,6 +10,11 @@
 #   - loki: Agregador de logs (porta 3100)
 #   - promtail: Coletor de logs dos containers
 #   - grafana: Dashboard de visualização (porta 3000)
+#
+# LEGADO: espelha a stack atual de PRD (Loki 2.9 + Promtail), mantida até o
+# cutover da Fase 4 do plano de observabilidade. A stack OTLP (Collector,
+# Alloy, Loki 3, Prometheus 3, Tempo) e a API sobre base sintética ficam em
+# platform/observability/local (ver o README desse diretório).
 
 services:
   workshop-db:

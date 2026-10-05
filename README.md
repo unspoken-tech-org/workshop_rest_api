@@ -314,6 +314,9 @@ docker compose --project-directory . -p workshop_rest_api -f environments/local/
 open http://localhost:3000  # admin/admin
 ```
 
+`environments/local/compose.yml` is the legacy stack (Loki 2.9 + Promtail), kept until the OTLP cutover. The OTLP
+stack (Collector, Alloy, Loki 3, Prometheus 3, Tempo) lives in `platform/observability/local/` (see its README).
+
 > **Note:** The application must run as a Docker container for Promtail to capture logs.
 
 ### Service Endpoints (with Observability)
