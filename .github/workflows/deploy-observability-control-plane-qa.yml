@@ -1,0 +1,328 @@
+# ===========================================================
+# Workflow: Observability control plane on the QA VM
+# ===========================================================
+# Independent from the API and gateway QA deployments: every remote command is
+# scoped to OBS_QA_DEPLOY_DIR and the observability-control-plane-qa project.
+#
+# - prepare resolves the requested ref to one commit SHA; every later job checks
+#   out that SHA. A confirmation other than DEPLOY stops here, before any job
+#   that holds secrets or reaches the VM.
+# - deploy packs the full release (Compose, configs, .env) into an immutable
+#   release directory and switches the active release atomically. The Tunnel
+#   token is read from the Terraform state with a read-only R2 credential and
+#   goes only into the remote .env.
+# - verify checks the active release again from a fresh job.
+# - finalize confirms the release when deploy and verify passed, or restores the
+#   previous release when either failed.
+#
+# The VM is reached through Tailscale SSH with tag:ci (no private SSH key).
+# ===========================================================
+
+name: Deploy Observability Control Plane (QA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag or commit containing the control-plane stack'
+        required: false
+        default: 'main'
+      confirm:
+        description: 'Confirm deployment of the observability control plane on the QA VM'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-observability-control-plane-qa
+  cancel-in-progress: false
+
+env:
+  OBS_QA_DEPLOY_DIR: ${{ vars.OBS_QA_DEPLOY_DIR || '/home/workshop/deploy/observability_control_plane_qa' }}
+  OBS_QA_COMPOSE_FILE: docker-compose-observability-control-plane-qa.yml
+  OBS_QA_COMPOSE_PROJECT_NAME: observability-control-plane-qa
+  OBS_QA_COMPOSE_SOURCE: platform/observability/control-plane/compose.yml
+  # R2 aceita somente checksums quando exigidos pela operação.
+  AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+  AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+  AWS_DEFAULT_REGION: auto
+
+jobs:
+  prepare:
+    name: Prepare control-plane deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      release-id: ${{ steps.resolve.outputs.release-id }}
+
+    steps:
+      - name: Require DEPLOY confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          [[ "${CONFIRM}" == DEPLOY ]] || {
+            echo "Deployment cancelled: confirmation was not DEPLOY" >&2
+            exit 1
+          }
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout requested ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Resolve immutable commit
+        id: resolve
+        run: |
+          set -Eeuo pipefail
+          sha="$(git rev-parse HEAD)"
+          [[ "${sha}" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=${sha}" >> "${GITHUB_OUTPUT}"
+          echo "release-id=${sha:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
+          echo "Deploying commit ${sha}"
+
+      - name: Validate deployment contract
+        env:
+          DEPLOY_DIR: ${{ env.OBS_QA_DEPLOY_DIR }}
+          GRAFANA_PUBLIC_HOST: ${{ vars.OBS_QA_GRAFANA_PUBLIC_HOST }}
+        run: |
+          set -Eeuo pipefail
+          [[ "${DEPLOY_DIR}" =~ ^/[A-Za-z0-9._/-]+$ && "${DEPLOY_DIR}" != *..* ]] || {
+            echo "OBS_QA_DEPLOY_DIR must be an absolute, shell-safe path" >&2
+            exit 1
+          }
+          [[ "${DEPLOY_DIR}" == *observability*control* ]] || {
+            echo "OBS_QA_DEPLOY_DIR must be a dedicated control-plane path" >&2
+            exit 1
+          }
+          [[ "${DEPLOY_DIR}" != *api* && "${DEPLOY_DIR}" != *gateway* ]] || {
+            echo "OBS_QA_DEPLOY_DIR cannot overlap API or gateway" >&2
+            exit 1
+          }
+          [[ "${GRAFANA_PUBLIC_HOST}" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]] || {
+            echo "OBS_QA_GRAFANA_PUBLIC_HOST must be a hostname" >&2
+            exit 1
+          }
+          for script in common deploy verify rollback cleanup; do
+            test -s ".github/scripts/observability-control-plane/${script}.sh"
+          done
+          # Interpolation check only: placeholders, no credentials in a file.
+          env \
+            OTLP_BIND_ADDRESS=127.0.0.1 \
+            GRAFANA_PUBLIC_HOST="${GRAFANA_PUBLIC_HOST}" \
+            GRAFANA_ADMIN_USER=placeholder \
+            GRAFANA_ADMIN_PASSWORD=placeholder \
+            CLOUDFLARE_TUNNEL_TOKEN=placeholder \
+            docker compose \
+              --project-directory . \
+              -p "${OBS_QA_COMPOSE_PROJECT_NAME}" \
+              -f "${OBS_QA_COMPOSE_SOURCE}" \
+              config --quiet
+
+      - name: Print deployment banner
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: OBSERVABILITY-CONTROL-PLANE-QA
+          image-tag: ${{ steps.resolve.outputs.sha }}
+
+  deploy:
+    name: Deploy release to the QA VM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    needs: prepare
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout resolved commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+
+      - name: Prepare release environment
+        env:
+          OTLP_BIND_ADDRESS: ${{ secrets.QA_TS_TAILSCALE_IP }}
+          GRAFANA_PUBLIC_HOST: ${{ vars.OBS_QA_GRAFANA_PUBLIC_HOST }}
+          GRAFANA_ADMIN_USER: ${{ secrets.OBS_QA_GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.OBS_QA_GRAFANA_ADMIN_PASSWORD }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_RO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_RO_SECRET_KEY }}
+          OBS_TF_STATE_BUCKET: ${{ secrets.OBS_TF_STATE_BUCKET }}
+          OBS_TF_STATE_KEY: ${{ secrets.OBS_TF_STATE_KEY }}
+          OBS_TF_STATE_ENDPOINT: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+        run: |
+          set -Eeuo pipefail
+          for variable in \
+            OTLP_BIND_ADDRESS GRAFANA_PUBLIC_HOST GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD \
+            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
+            OBS_TF_STATE_BUCKET OBS_TF_STATE_KEY OBS_TF_STATE_ENDPOINT; do
+            [[ -n "${!variable:-}" ]] || {
+              echo "Missing required ${variable} value" >&2
+              exit 1
+            }
+          done
+
+          umask 077
+          state_file="${RUNNER_TEMP}/terraform.tfstate"
+          aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            "s3://${OBS_TF_STATE_BUCKET}/${OBS_TF_STATE_KEY}" "${state_file}"
+          tunnel_token="$(jq -r '.outputs.tunnel_token.value // empty' "${state_file}")"
+          rm -f -- "${state_file}"
+          [[ -n "${tunnel_token}" ]] || {
+            echo "The Terraform state has no tunnel_token output; apply the Cloudflare plan first" >&2
+            exit 1
+          }
+          echo "::add-mask::${tunnel_token}"
+
+          for value in "${GRAFANA_ADMIN_USER}" "${GRAFANA_ADMIN_PASSWORD}" "${tunnel_token}"; do
+            [[ "${value}" != *[[:space:]\"\'\\\$]* ]] || {
+              echo "A secret value contains characters that .env cannot hold unquoted" >&2
+              exit 1
+            }
+          done
+
+          {
+            printf 'OTLP_BIND_ADDRESS=%s\n' "${OTLP_BIND_ADDRESS}"
+            printf 'GRAFANA_PUBLIC_HOST=%s\n' "${GRAFANA_PUBLIC_HOST}"
+            printf 'GRAFANA_ADMIN_USER=%s\n' "${GRAFANA_ADMIN_USER}"
+            printf 'GRAFANA_ADMIN_PASSWORD=%s\n' "${GRAFANA_ADMIN_PASSWORD}"
+            printf 'CLOUDFLARE_TUNNEL_TOKEN=%s\n' "${tunnel_token}"
+          } > "${RUNNER_TEMP}/observability-control-plane.env"
+
+      - name: Connect to the QA VM
+        uses: ./.github/actions/observability-control-plane/connect
+        with:
+          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
+          tailscale-ip: ${{ secrets.QA_TS_TAILSCALE_IP }}
+          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
+
+      - name: Deploy control-plane release
+        uses: ./.github/actions/observability-control-plane/deploy-via-ssh-observability-control-plane
+        with:
+          ssh-target: ${{ secrets.QA_SSH_USER }}@${{ secrets.QA_TS_TAILSCALE_IP }}
+          deploy-dir: ${{ env.OBS_QA_DEPLOY_DIR }}
+          compose-file: ${{ env.OBS_QA_COMPOSE_FILE }}
+          compose-project-name: ${{ env.OBS_QA_COMPOSE_PROJECT_NAME }}
+          compose-source: ${{ env.OBS_QA_COMPOSE_SOURCE }}
+          release-id: ${{ needs.prepare.outputs.release-id }}
+          env-file: ${{ runner.temp }}/observability-control-plane.env
+
+      - name: Remove local release environment
+        if: always()
+        run: rm -f -- "${RUNNER_TEMP}/observability-control-plane.env"
+
+  verify:
+    name: Verify active release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [prepare, deploy]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout resolved commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+
+      - name: Connect to the QA VM
+        uses: ./.github/actions/observability-control-plane/connect
+        with:
+          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
+          tailscale-ip: ${{ secrets.QA_TS_TAILSCALE_IP }}
+          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
+
+      - name: Verify control plane
+        uses: ./.github/actions/observability-control-plane/run-remote-script
+        with:
+          script: verify
+          ssh-target: ${{ secrets.QA_SSH_USER }}@${{ secrets.QA_TS_TAILSCALE_IP }}
+          deploy-dir: ${{ env.OBS_QA_DEPLOY_DIR }}
+          compose-file: ${{ env.OBS_QA_COMPOSE_FILE }}
+          compose-project-name: ${{ env.OBS_QA_COMPOSE_PROJECT_NAME }}
+          release-id: ${{ needs.prepare.outputs.release-id }}
+
+  finalize:
+    name: Confirm or roll back release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [prepare, deploy, verify]
+    # Never runs when prepare failed or the confirmation was CANCEL.
+    if: always() && needs.prepare.result == 'success'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout resolved commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+
+      - name: Connect to the QA VM
+        uses: ./.github/actions/observability-control-plane/connect
+        with:
+          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
+          tailscale-ip: ${{ secrets.QA_TS_TAILSCALE_IP }}
+          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
+
+      - name: Roll back to the previous release
+        if: needs.deploy.result != 'success' || needs.verify.result != 'success'
+        uses: ./.github/actions/observability-control-plane/run-remote-script
+        with:
+          script: rollback
+          ssh-target: ${{ secrets.QA_SSH_USER }}@${{ secrets.QA_TS_TAILSCALE_IP }}
+          deploy-dir: ${{ env.OBS_QA_DEPLOY_DIR }}
+          compose-file: ${{ env.OBS_QA_COMPOSE_FILE }}
+          compose-project-name: ${{ env.OBS_QA_COMPOSE_PROJECT_NAME }}
+          release-id: ${{ needs.prepare.outputs.release-id }}
+
+      - name: Confirm release and prune old ones
+        if: needs.deploy.result == 'success' && needs.verify.result == 'success'
+        uses: ./.github/actions/observability-control-plane/run-remote-script
+        with:
+          script: cleanup
+          ssh-target: ${{ secrets.QA_SSH_USER }}@${{ secrets.QA_TS_TAILSCALE_IP }}
+          deploy-dir: ${{ env.OBS_QA_DEPLOY_DIR }}
+          compose-file: ${{ env.OBS_QA_COMPOSE_FILE }}
+          compose-project-name: ${{ env.OBS_QA_COMPOSE_PROJECT_NAME }}
+          release-id: ${{ needs.prepare.outputs.release-id }}
+
+      - name: Print final banner
+        if: needs.deploy.result == 'success' && needs.verify.result == 'success'
+        uses: ./.github/actions/shared/print-banner
+        with:
+          prefix: OBSERVABILITY-CONTROL-PLANE-QA
+          image-tag: ${{ needs.prepare.outputs.sha }}

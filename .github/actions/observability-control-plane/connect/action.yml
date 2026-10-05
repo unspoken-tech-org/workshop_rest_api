@@ -1,0 +1,52 @@
+name: Connect to the Observability QA VM
+description: >
+  Joins the tailnet with an ephemeral node and pins the VM host key. The VM is
+  reached through Tailscale SSH, so no private SSH key is involved; a missing
+  known_hosts value fails instead of falling back to ssh-keyscan.
+
+inputs:
+  oauth-client-id:
+    description: 'Tailscale OAuth client ID'
+    required: true
+  oauth-secret:
+    description: 'Tailscale OAuth client secret'
+    required: true
+  tailscale-ip:
+    description: 'Tailscale IP of the QA VM'
+    required: true
+  known-hosts:
+    description: 'known_hosts content for the QA VM'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Require pinned host key
+      shell: bash
+      env:
+        KNOWN_HOSTS: ${{ inputs.known-hosts }}
+        TAILSCALE_IP: ${{ inputs.tailscale-ip }}
+      run: |
+        set -Eeuo pipefail
+        [[ -n "${KNOWN_HOSTS}" ]] || {
+          echo "known_hosts for the QA VM is required" >&2
+          exit 1
+        }
+        [[ "${TAILSCALE_IP}" =~ ^100\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]] || {
+          echo "The QA VM address must be a Tailscale IP" >&2
+          exit 1
+        }
+
+    - name: Setup Tailscale
+      uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+      with:
+        oauth-client-id: ${{ inputs.oauth-client-id }}
+        oauth-secret: ${{ inputs.oauth-secret }}
+        tags: tag:ci
+        ping: ${{ inputs.tailscale-ip }}
+
+    - name: Setup SSH known hosts
+      uses: ./.github/actions/shared/setup-ssh-known-hosts
+      with:
+        host: ${{ inputs.tailscale-ip }}
+        known-hosts: ${{ inputs.known-hosts }}

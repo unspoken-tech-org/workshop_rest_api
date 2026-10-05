@@ -1,0 +1,155 @@
+name: Deploy Observability Control Plane via SSH
+description: >
+  Packs the complete control-plane release (Compose, configs and .env) into one
+  archive, uploads it with the remote scripts and runs deploy.sh, which extracts
+  it into an immutable release directory and switches the active release
+  atomically. Setup Tailscale and known_hosts must run before this action.
+
+inputs:
+  ssh-target:
+    description: 'SSH target in the user@host format'
+    required: true
+  deploy-dir:
+    description: 'Dedicated remote directory for the observability control plane'
+    required: true
+  compose-file:
+    description: 'Compose file name stored at the release root'
+    required: true
+  compose-project-name:
+    description: 'Dedicated Docker Compose project name'
+    required: true
+  compose-source:
+    description: 'Control-plane Compose source file in the checkout'
+    required: true
+  release-id:
+    description: 'Release identifier (<sha12>-<run id>-<attempt>)'
+    required: true
+  env-file:
+    description: 'Path of the prepared .env file (mode 600) outside the checkout'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate deployment contract
+      shell: bash
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_PROJECT_NAME: ${{ inputs.compose-project-name }}
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
+        RELEASE_ID: ${{ inputs.release-id }}
+        ENV_FILE: ${{ inputs.env-file }}
+      run: |
+        set -Eeuo pipefail
+
+        [[ "${SSH_TARGET}" =~ ^[A-Za-z0-9._-]+@[A-Za-z0-9._:-]+$ ]] || {
+          echo "Invalid observability SSH target" >&2
+          exit 1
+        }
+        [[ "${DEPLOY_DIR}" =~ ^/[A-Za-z0-9._/-]+$ && "${DEPLOY_DIR}" != *..* ]] || {
+          echo "DEPLOY_DIR must be an absolute, shell-safe path" >&2
+          exit 1
+        }
+        [[ "${DEPLOY_DIR}" == *observability*control* ]] || {
+          echo "DEPLOY_DIR must identify the control-plane directory" >&2
+          exit 1
+        }
+        [[ "${DEPLOY_DIR}" != *api* && "${DEPLOY_DIR}" != *gateway* ]] || {
+          echo "DEPLOY_DIR cannot overlap API or gateway deployments" >&2
+          exit 1
+        }
+        [[ "${COMPOSE_FILE}" =~ ^[A-Za-z0-9._-]+\.ya?ml$ ]] || {
+          echo "COMPOSE_FILE must be a YAML file name, not a path" >&2
+          exit 1
+        }
+        [[ "${COMPOSE_PROJECT_NAME}" == observability-control-plane-qa ]] || {
+          echo "COMPOSE_PROJECT_NAME must be observability-control-plane-qa" >&2
+          exit 1
+        }
+        [[ "${COMPOSE_SOURCE}" =~ ^platform/observability/control-plane/[A-Za-z0-9._/-]+\.ya?ml$ && "${COMPOSE_SOURCE}" != *..* ]] || {
+          echo "COMPOSE_SOURCE must come from the control-plane tree" >&2
+          exit 1
+        }
+        [[ "${RELEASE_ID}" =~ ^[0-9a-f]{12}-[0-9]+-[0-9]+$ ]] || {
+          echo "RELEASE_ID must be <sha12>-<run id>-<attempt>" >&2
+          exit 1
+        }
+        [[ -s "${ENV_FILE}" && "${ENV_FILE}" == "${RUNNER_TEMP}"/* ]] || {
+          echo "env-file must be a prepared file under RUNNER_TEMP" >&2
+          exit 1
+        }
+        test -s "${COMPOSE_SOURCE}"
+
+    - name: Pack control-plane release
+      shell: bash
+      env:
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_PROJECT_NAME: ${{ inputs.compose-project-name }}
+        ENV_FILE: ${{ inputs.env-file }}
+      run: |
+        set -Eeuo pipefail
+
+        payload_root="${RUNNER_TEMP}/observability-control-plane-payload"
+        rm -rf -- "${payload_root}"
+        mkdir -m 700 -- "${payload_root}"
+
+        # The Compose file sits at the release root and references its configs
+        # under ./platform/observability/control-plane/, as in the checkout.
+        compose_source_dir="$(dirname -- "${COMPOSE_SOURCE}")"
+        cp -- "${COMPOSE_SOURCE}" "${payload_root}/${COMPOSE_FILE}"
+        mkdir -p -- "${payload_root}/${compose_source_dir}"
+        cp -R -- "${compose_source_dir}/." "${payload_root}/${compose_source_dir}/"
+        rm -f -- "${payload_root}/${compose_source_dir}/.env"
+        install -m 600 -- "${ENV_FILE}" "${payload_root}/.env"
+
+        docker compose \
+          --project-directory "${payload_root}" \
+          -p "${COMPOSE_PROJECT_NAME}" \
+          -f "${payload_root}/${COMPOSE_FILE}" \
+          config --quiet
+
+        tar -czf "${RUNNER_TEMP}/observability-control-plane-payload.tar.gz" \
+          -C "${payload_root}" .
+        chmod 600 "${RUNNER_TEMP}/observability-control-plane-payload.tar.gz"
+        rm -rf -- "${payload_root}"
+
+    - name: Upload release and scripts
+      shell: bash
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+      run: |
+        set -Eeuo pipefail
+        ssh_opts=(-o ConnectTimeout=30 -o StrictHostKeyChecking=yes)
+
+        ssh "${ssh_opts[@]}" "${SSH_TARGET}" \
+          "umask 077 && mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}' '${DEPLOY_DIR}/.tmp'"
+        scp "${ssh_opts[@]}" \
+          "${RUNNER_TEMP}/observability-control-plane-payload.tar.gz" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/payload.tar.gz"
+        rm -f -- "${RUNNER_TEMP}/observability-control-plane-payload.tar.gz"
+        scp "${ssh_opts[@]}" \
+          .github/scripts/observability-control-plane/common.sh \
+          .github/scripts/observability-control-plane/deploy.sh \
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+
+    - name: Execute control-plane deploy
+      shell: bash
+      env:
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_PROJECT_NAME: ${{ inputs.compose-project-name }}
+        RELEASE_ID: ${{ inputs.release-id }}
+      run: |
+        set -Eeuo pipefail
+        ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=yes "${SSH_TARGET}" \
+          env \
+            DEPLOY_DIR="${DEPLOY_DIR}" \
+            COMPOSE_FILE="${COMPOSE_FILE}" \
+            COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}" \
+            RELEASE_ID="${RELEASE_ID}" \
+            bash "${DEPLOY_DIR}/.tmp/deploy.sh"

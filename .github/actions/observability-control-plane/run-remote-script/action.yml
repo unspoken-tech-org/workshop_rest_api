@@ -1,0 +1,70 @@
+name: Run Observability Control Plane Remote Script
+description: >
+  Uploads common.sh and one control-plane script to DEPLOY_DIR/.tmp and runs it
+  with the deployment contract. Connect must run before this action.
+
+inputs:
+  script:
+    description: 'Script to run: verify, rollback or cleanup'
+    required: true
+  ssh-target:
+    description: 'SSH target in the user@host format'
+    required: true
+  deploy-dir:
+    description: 'Dedicated remote directory for the observability control plane'
+    required: true
+  compose-file:
+    description: 'Compose file name stored at the release root'
+    required: true
+  compose-project-name:
+    description: 'Dedicated Docker Compose project name'
+    required: true
+  release-id:
+    description: 'Release identifier of this run'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Run remote script
+      shell: bash
+      env:
+        SCRIPT: ${{ inputs.script }}
+        SSH_TARGET: ${{ inputs.ssh-target }}
+        DEPLOY_DIR: ${{ inputs.deploy-dir }}
+        COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_PROJECT_NAME: ${{ inputs.compose-project-name }}
+        RELEASE_ID: ${{ inputs.release-id }}
+      run: |
+        set -Eeuo pipefail
+        [[ "${SCRIPT}" =~ ^(verify|rollback|cleanup)$ ]] || {
+          echo "Unknown control-plane script: ${SCRIPT}" >&2
+          exit 1
+        }
+        [[ "${SSH_TARGET}" =~ ^[A-Za-z0-9._-]+@[A-Za-z0-9._:-]+$ ]] || {
+          echo "Invalid observability SSH target" >&2
+          exit 1
+        }
+        [[ "${DEPLOY_DIR}" =~ ^/[A-Za-z0-9._/-]+$ && "${DEPLOY_DIR}" == *observability*control* ]] || {
+          echo "DEPLOY_DIR must be the control-plane directory" >&2
+          exit 1
+        }
+        ssh_opts=(-o ConnectTimeout=30 -o StrictHostKeyChecking=yes)
+
+        ssh "${ssh_opts[@]}" "${SSH_TARGET}" \
+          "umask 077 && mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+        scp "${ssh_opts[@]}" \
+          .github/scripts/observability-control-plane/common.sh \
+          ".github/scripts/observability-control-plane/${SCRIPT}.sh" \
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+        status=0
+        ssh "${ssh_opts[@]}" "${SSH_TARGET}" \
+          env \
+            DEPLOY_DIR="${DEPLOY_DIR}" \
+            COMPOSE_FILE="${COMPOSE_FILE}" \
+            COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}" \
+            RELEASE_ID="${RELEASE_ID}" \
+            bash "${DEPLOY_DIR}/.tmp/${SCRIPT}.sh" || status=$?
+        ssh "${ssh_opts[@]}" "${SSH_TARGET}" \
+          "rm -f '${DEPLOY_DIR}/.tmp/${SCRIPT}.sh'" || true
+        exit "${status}"
