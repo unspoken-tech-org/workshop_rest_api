@@ -1,0 +1,246 @@
+# ===========================================================
+# Drill of the observability Terraform state backend (R2).
+#
+# Proves, on an isolated key under drills/<run>/ and with no Cloudflare
+# provider, that:
+#   1. use_lockfile blocks a second operation while an apply holds the lock,
+#      and releases the lock when the apply ends;
+#   2. a state copied aside (as the apply job does in snapshots/) can be copied
+#      back and Terraform then sees no changes.
+# It also checks, read-only, that the newest snapshot of the real state has the
+# same lineage as the live state. The real state is never written.
+#
+# The repository is public: Terraform output stays in RUNNER_TEMP and only
+# verdicts reach the log. The drill key is removed at the end.
+# ===========================================================
+
+name: Terraform State Drill Observability
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Run the lock and restore drill on an isolated state key'
+        required: true
+        type: choice
+        default: CANCEL
+        options:
+          - DRILL
+          - CANCEL
+
+permissions:
+  contents: read
+
+# Same queue as plan and apply, so the drill never overlaps them.
+concurrency:
+  group: terraform-cloudflare-observability-state
+  cancel-in-progress: false
+
+env:
+  TF_WORKING_DIR: infra/state-drill
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  # R2 aceita somente checksums quando exigidos pela operação.
+  AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+  AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+  AWS_DEFAULT_REGION: auto
+
+jobs:
+  drill:
+    name: Lock and restore drill
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'DRILL'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: observability-terraform-apply
+    permissions:
+      contents: read
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_SECRET_KEY }}
+      OBS_TF_STATE_BUCKET: ${{ secrets.OBS_TF_STATE_BUCKET }}
+      OBS_TF_STATE_KEY: ${{ secrets.OBS_TF_STATE_KEY }}
+      OBS_TF_STATE_ENDPOINT: ${{ secrets.OBS_TF_STATE_ENDPOINT }}
+      DRILL_PREFIX: drills/${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - name: Initialize the drill state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -Eeuo pipefail
+          for variable in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY OBS_TF_STATE_BUCKET \
+            OBS_TF_STATE_KEY OBS_TF_STATE_ENDPOINT; do
+            [[ -n "${!variable:-}" ]] || {
+              echo "Missing required ${variable} secret" >&2
+              exit 1
+            }
+          done
+          [[ "${OBS_TF_STATE_ENDPOINT}" =~ ^https://[a-f0-9]+\.r2\.cloudflarestorage\.com$ ]] || {
+            echo "State endpoint must be an R2 account endpoint" >&2
+            exit 1
+          }
+          [[ "${DRILL_PREFIX}" =~ ^drills/[0-9]+-[0-9]+$ ]] || {
+            echo "Unexpected drill prefix" >&2
+            exit 1
+          }
+          mkdir -m 700 "${RUNNER_TEMP}/drill"
+          umask 077
+          {
+            printf 'bucket = "%s"\n' "${OBS_TF_STATE_BUCKET}"
+            printf 'key = "%s"\n' "${DRILL_PREFIX}/terraform.tfstate"
+            printf 'endpoints = { s3 = "%s" }\n' "${OBS_TF_STATE_ENDPOINT}"
+          } > "${RUNNER_TEMP}/drill/backend.hcl"
+          terraform init -input=false -no-color \
+            -backend-config="${RUNNER_TEMP}/drill/backend.hcl" > "${RUNNER_TEMP}/drill/init.log" 2>&1 || {
+            echo "terraform init failed" >&2
+            exit 1
+          }
+          echo "Drill state initialized"
+
+      - name: Create the first state and copy it aside
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -Eeuo pipefail
+          terraform apply -input=false -no-color -auto-approve -var marker=first \
+            > "${RUNNER_TEMP}/drill/apply-first.log" 2>&1 || {
+            echo "First apply failed" >&2
+            exit 1
+          }
+          aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            "s3://${OBS_TF_STATE_BUCKET}/${DRILL_PREFIX}/terraform.tfstate" \
+            "s3://${OBS_TF_STATE_BUCKET}/${DRILL_PREFIX}/snapshot.tfstate"
+          echo "First state created and copied aside"
+
+      - name: Prove the state lock
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -Eeuo pipefail
+          lock_key="${DRILL_PREFIX}/terraform.tfstate.tflock"
+          lock_exists() {
+            aws s3api head-object --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+              --bucket "${OBS_TF_STATE_BUCKET}" --key "${lock_key}" > /dev/null 2>&1
+          }
+
+          # The second marker replaces the resource, so this apply sleeps while
+          # it holds the lock.
+          terraform apply -input=false -no-color -auto-approve \
+            -var marker=second -var hold_seconds=90 \
+            > "${RUNNER_TEMP}/drill/apply-holder.log" 2>&1 &
+          holder_pid=$!
+
+          for _ in $(seq 1 45); do
+            lock_exists && break
+            sleep 2
+          done
+          lock_exists || {
+            echo "The holding apply never created the lock object" >&2
+            exit 1
+          }
+          echo "Lock object present while the holding apply runs"
+
+          if terraform plan -input=false -no-color -lock-timeout=0s -var marker=second \
+            > "${RUNNER_TEMP}/drill/plan-blocked.log" 2>&1; then
+            echo "A concurrent plan ran while the state was locked" >&2
+            exit 1
+          fi
+          grep -q 'Error acquiring the state lock' "${RUNNER_TEMP}/drill/plan-blocked.log" || {
+            echo "The concurrent plan failed for a reason other than the lock" >&2
+            exit 1
+          }
+          echo "Concurrent plan refused with 'Error acquiring the state lock'"
+
+          wait "${holder_pid}" || {
+            echo "The holding apply failed" >&2
+            exit 1
+          }
+          if lock_exists; then
+            echo "The lock object remained after the apply ended" >&2
+            exit 1
+          fi
+          echo "Lock released when the holding apply ended"
+
+      - name: Prove the state restore
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -Eeuo pipefail
+          plan_exit() {
+            local status=0
+            terraform plan -input=false -no-color -detailed-exitcode -var marker=first \
+              > "${RUNNER_TEMP}/drill/$1.log" 2>&1 || status=$?
+            echo "${status}"
+          }
+
+          status="$(plan_exit plan-before-restore)"
+          [[ "${status}" == 2 ]] || {
+            echo "Expected changes before the restore, got exit ${status}" >&2
+            exit 1
+          }
+          echo "Before the restore the state holds the second marker"
+
+          aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            "s3://${OBS_TF_STATE_BUCKET}/${DRILL_PREFIX}/snapshot.tfstate" \
+            "s3://${OBS_TF_STATE_BUCKET}/${DRILL_PREFIX}/terraform.tfstate"
+
+          status="$(plan_exit plan-after-restore)"
+          [[ "${status}" == 0 ]] || {
+            echo "Expected no changes after the restore, got exit ${status}" >&2
+            exit 1
+          }
+          echo "After copying the snapshot back, Terraform sees the first marker and no changes"
+
+      - name: Check the newest snapshot of the real state
+        run: |
+          set -Eeuo pipefail
+          # Read-only: compares lineage and serial without printing either.
+          snapshot_key="$(aws s3api list-objects-v2 --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            --bucket "${OBS_TF_STATE_BUCKET}" --prefix snapshots/ \
+            --query 'sort_by(Contents, &LastModified)[-1].Key' --output text)"
+          # The first apply had no previous state to copy.
+          if [[ -z "${snapshot_key}" || "${snapshot_key}" == None ]]; then
+            echo "::notice::No snapshot of the real state yet; the next apply creates one"
+            exit 0
+          fi
+          umask 077
+          aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            "s3://${OBS_TF_STATE_BUCKET}/${snapshot_key}" "${RUNNER_TEMP}/drill/real-snapshot.tfstate"
+          aws s3 cp --only-show-errors --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            "s3://${OBS_TF_STATE_BUCKET}/${OBS_TF_STATE_KEY}" "${RUNNER_TEMP}/drill/real-live.tfstate"
+          [[ "$(jq -r .lineage "${RUNNER_TEMP}/drill/real-snapshot.tfstate")" == \
+            "$(jq -r .lineage "${RUNNER_TEMP}/drill/real-live.tfstate")" ]] || {
+            echo "The newest snapshot has a different lineage from the live state" >&2
+            exit 1
+          }
+          (( $(jq -r .serial "${RUNNER_TEMP}/drill/real-snapshot.tfstate") <= \
+            $(jq -r .serial "${RUNNER_TEMP}/drill/real-live.tfstate") )) || {
+            echo "The newest snapshot is ahead of the live state" >&2
+            exit 1
+          }
+          echo "Newest real snapshot shares the live state lineage and is not ahead of it"
+
+      - name: Remove the drill state
+        if: always()
+        run: |
+          set -Eeuo pipefail
+          rm -rf -- "${RUNNER_TEMP}/drill"
+          [[ "${DRILL_PREFIX}" =~ ^drills/[0-9]+-[0-9]+$ ]] || exit 0
+          aws s3 rm --only-show-errors --recursive --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
+            "s3://${OBS_TF_STATE_BUCKET}/${DRILL_PREFIX}/"
+          echo "Drill state removed"
