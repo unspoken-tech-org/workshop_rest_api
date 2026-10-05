@@ -540,8 +540,7 @@ workshop_rest_api/
         ├── deploy-api-qa.yml              # API Spring Boot (QA)
         ├── deploy-gateway-prod.yml        # Caddy Gateway (production)
         ├── deploy-gateway-qa.yml           # Caddy Gateway (QA)
-        ├── deploy-observability-prod.yml  # Loki + Grafana (production)
-        └── deploy-observability-qa.yml    # Loki + Grafana (QA)
+        └── deploy-observability-prod.yml  # Loki + Grafana (production)
 ```
 
 ---

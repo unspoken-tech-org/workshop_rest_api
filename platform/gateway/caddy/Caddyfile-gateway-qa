@@ -33,11 +33,6 @@
         reverse_proxy workshop-api-qa:8080
     }
 
-    @grafana_qa host grafana-qa.eletroluk.com
-    handle @grafana_qa {
-        reverse_proxy grafana-qa:3000
-    }
-
     handle {
         respond "Gateway QA: Invalid Host Header" 400
     }
@@ -54,14 +49,6 @@ api-qa.eletroluk.com {
     import log
     import block_metrics
     reverse_proxy workshop-api-qa:8080
-    tls {
-        dns cloudflare {env.CF_API_TOKEN}
-    }
-}
-
-grafana-qa.eletroluk.com {
-    import log
-    reverse_proxy grafana-qa:3000
     tls {
         dns cloudflare {env.CF_API_TOKEN}
     }
