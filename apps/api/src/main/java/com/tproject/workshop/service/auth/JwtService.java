@@ -71,14 +71,14 @@ public class JwtService {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (ExpiredJwtException e) {
-            log.warn("Token expired: {}", e.getMessage());
+            log.warn("Token expired");
             throw new TokenExpiredException("Token expired");
         } catch (SignatureException e) {
-            log.warn("Invalid signature: {}", e.getMessage());
+            log.warn("Invalid signature");
             throw new InvalidTokenException("Invalid token signature");
         } catch (JwtException e) {
-            log.warn("Invalid token: {}", e.getMessage());
-            throw new InvalidTokenException("Invalid token: " + e.getMessage());
+            log.warn("Invalid token | ExceptionType: {}", e.getClass().getSimpleName());
+            throw new InvalidTokenException("Invalid token");
         }
     }
 

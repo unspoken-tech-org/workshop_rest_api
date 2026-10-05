@@ -11,7 +11,7 @@ spring:
       max-lifetime: 1800000
 
   jpa:
-    show-sql: true
+    show-sql: false
     generate-ddl: false
     hibernate:
       default_schema: public
@@ -33,6 +33,11 @@ logging:
     dateformat: yyyy-MM-dd HH:mm:ss.SSS,America/Sao_Paulo
 
 message: Integration Test
+
+observability:
+  scrape:
+    # Hash bcrypt de uma senha exclusiva dos testes de integração.
+    password-hash: $2a$10$9lpAFc4.hyFpTDdYUk1XnOnAKxsV43L3s0PGo0oNZGGTEeoRTT2Am
 
 # JWT Configuration for Tests
 jwt:

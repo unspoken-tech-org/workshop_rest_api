@@ -11,7 +11,7 @@
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
                 <pattern>
-                    %d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%-40.40logger{39}) %magenta(rid=%X{requestId:-N/A}) - %msg%n
+                    %d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%-40.40logger{39}) %magenta(rid=%X{requestId:-N/A}) %blue(trace=%X{trace_id:-N/A}/%X{span_id:-N/A}) - %msg%n
                 </pattern>
                 <charset>UTF-8</charset>
             </encoder>
@@ -30,8 +30,11 @@
         <logger name="org.springframework.web.servlet.mvc.method.annotation" level="WARN"/>
         <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="ERROR"/>
         
-        <logger name="org.hibernate.SQL" level="DEBUG"/>
-        <logger name="org.hibernate.orm.jdbc.bind" level="TRACE"/>
+        <!-- SQL and bind values may contain customer data; keep them out of
+             application logs unless a short-lived, local diagnostic override
+             is explicitly supplied outside this file. -->
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <logger name="org.hibernate.orm.jdbc.bind" level="WARN"/>
     </springProfile>
 
     <!-- ========================================
@@ -45,6 +48,8 @@
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
                 <!-- MDC fields -->
                 <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>trace_id</includeMdcKeyName>
+                <includeMdcKeyName>span_id</includeMdcKeyName>
                 <includeMdcKeyName>httpMethod</includeMdcKeyName>
                 <includeMdcKeyName>httpPath</includeMdcKeyName>
                 <includeMdcKeyName>httpStatus</includeMdcKeyName>
@@ -94,4 +99,3 @@
         <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="ERROR"/>
     </springProfile>
 </configuration>
-

@@ -37,7 +37,9 @@ public class AuthService {
      * @return access token + refresh token
      */
     public TokenResponse authenticate(String apiKeyHeader, TokenRequest request) {
-        log.info("Token request for boundDeviceId: {}", request.boundDeviceId());
+        // boundDeviceId is supplied in the request body and must not enter
+        // application logs.
+        log.info("Token request received");
 
         // Validate and get the API Key entity
         apiKeyService.validateApiKey(apiKeyHeader);
@@ -51,8 +53,8 @@ public class AuthService {
         // Generate refresh token linked to the API Key
         String refreshToken = refreshTokenService.createRefreshToken(apiKey);
 
-        log.info("Token generated successfully for client: {}, user: {}, boundDeviceId: {}",
-                apiKey.getClientName(), apiKey.getUserIdentifier(), request.boundDeviceId());
+        log.info("Token generated successfully for platform: {}, role: {}",
+                apiKey.getPlatform(), apiKey.getRole());
 
         return new TokenResponse(
                 accessToken,
@@ -80,8 +82,8 @@ public class AuthService {
         String boundDeviceId = Optional.ofNullable(apiKey.getBoundDeviceId()).orElse("unknown");
         String accessToken = generateAccessToken(apiKey, boundDeviceId, "unknown");
 
-        log.debug("Access token renewed for client: {}, user: {}, boundDeviceId: {}",
-                apiKey.getClientName(), apiKey.getUserIdentifier(), boundDeviceId);
+        log.debug("Access token renewed successfully for platform: {}, role: {}",
+                apiKey.getPlatform(), apiKey.getRole());
 
         return new RefreshTokenResponse(
                 accessToken,

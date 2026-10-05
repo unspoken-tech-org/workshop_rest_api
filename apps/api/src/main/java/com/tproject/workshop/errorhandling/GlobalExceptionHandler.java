@@ -1,5 +1,6 @@
 package com.tproject.workshop.errorhandling;
 
+import com.tproject.workshop.config.logging.RequestLogSanitizer;
 import com.tproject.workshop.exception.ApiKeyDeviceBoundException;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
@@ -36,8 +37,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ResponseError> handleAccessDeniedException(final AccessDeniedException ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("Access denied for request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("auth.access.denied", ex, request);
 
         ErrorMetadata.Error error = new ErrorMetadata.Error("auth.access.denied", "Acesso Negado: Você não tem permissão para realizar esta operação.");
 
@@ -47,8 +47,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler({NotFoundException.class, EmptyResultDataAccessException.class})
     public ResponseEntity<ResponseError> handleNotFoundException(final Exception ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("Entity not found for request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("entity.not.found.for.request", ex, request);
         
         ErrorMetadata.Error error = new ErrorMetadata.Error("entity.not.found.for.request", ex.getMessage());
 
@@ -58,8 +57,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ResponseError> handleBadRequestException(final BadRequestException ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("Bad request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("requisicao.invalida", ex, request);
         
         ErrorMetadata.Error error = new ErrorMetadata.Error("requisicao.invalida", ex.getMessage());
 
@@ -76,8 +74,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             return buildBadRequestResponse(badRequestEx.getMessage());
         }
 
-        EXCEPTION_LOGGER.warn("Message not readable for request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        // The parser message may echo payload values; log only the cause type.
+        logClientError("requisicao.invalida", rootCause, request);
 
         return buildBadRequestResponse("Payload inválido ou malformado. Verifique o JSON enviado.");
     }
@@ -91,8 +89,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(EntityAlreadyExistsException.class)
     public ResponseEntity<ResponseError> handleEntityAlreadyExistsException(final EntityAlreadyExistsException ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("Conflict detected for request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("recurso.conflito", ex, request);
         
         ErrorMetadata.Error error = new ErrorMetadata.Error("recurso.conflito", ex.getMessage());
 
@@ -102,8 +99,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiKeyDeviceBoundException.class)
     public ResponseEntity<ResponseError> handleApiKeyDeviceBoundException(final ApiKeyDeviceBoundException ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("API Key device conflict: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("auth.api_key.device.bound", ex, request);
 
         ErrorMetadata.Error error = new ErrorMetadata.Error("auth.api_key.device.bound", ex.getMessage());
 
@@ -124,11 +120,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .collect(Collectors.joining("; "));
 
         EXCEPTION_LOGGER.warn("Validation error for request: {} | Fields: {} | Global: {}",
-                request.getDescription(false), fieldErrors, globalErrors);
+                RequestLogSanitizer.route(request), fieldErrors, globalErrors);
 
         ResponseError responseError = getResponseError(fieldErrors, globalErrors);
 
         return new ResponseEntity<>(responseError, headers, HttpStatus.BAD_REQUEST);
+    }
+
+    // Client errors are logged by stable code and exception type only:
+    // exception messages may carry values supplied by the user.
+    private static void logClientError(String code, Throwable ex, WebRequest request) {
+        EXCEPTION_LOGGER.warn("Client error for request: {} | Code: {} | ExceptionType: {}",
+                RequestLogSanitizer.route(request), code, ex.getClass().getSimpleName());
     }
 
     private static ResponseError getResponseError(String fieldErrors, String globalErrors) {
@@ -153,8 +156,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(InvalidApiKeyException.class)
     public ResponseEntity<ResponseError> handleInvalidApiKeyException(final InvalidApiKeyException ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("Invalid API Key for request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("auth.invalid.api.key", ex, request);
         
         ErrorMetadata.Error error = new ErrorMetadata.Error("auth.invalid.api.key", ex.getMessage());
 
@@ -164,8 +166,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ResponseError> handleInvalidTokenException(final InvalidTokenException ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("Invalid token for request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("auth.invalid.token", ex, request);
         
         ErrorMetadata.Error error = new ErrorMetadata.Error("auth.invalid.token", ex.getMessage());
 
@@ -175,8 +176,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(TokenExpiredException.class)
     public ResponseEntity<ResponseError> handleTokenExpiredException(final TokenExpiredException ex, WebRequest request) {
-        EXCEPTION_LOGGER.warn("Expired token for request: {} | Message: {}",
-                request.getDescription(false), ex.getMessage());
+        logClientError("auth.token.expired", ex, request);
         
         ErrorMetadata.Error error = new ErrorMetadata.Error("auth.token.expired", ex.getMessage());
 
@@ -186,12 +186,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ResponseError> handleGenericException(final Exception ex, WebRequest request) {
+        // The stack trace is kept for diagnosis; messages are not repeated in
+        // the log line. Unknown exception messages remain a residual risk.
         EXCEPTION_LOGGER.error(
-                "Unhandled exception for request: {} | ExceptionType: {} | Message: {}",
-                request.getDescription(false),
+                "Unhandled exception for request: {} | Code: internal.server.error | ExceptionType: {}",
+                RequestLogSanitizer.route(request),
                 ex.getClass().getName(),
-                ex.getMessage(),
-                ex  
+                ex
         );
 
         ErrorMetadata.Error error = new ErrorMetadata.Error(
@@ -207,11 +208,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler({DataAccessException.class, SQLException.class})
     public ResponseEntity<ResponseError> handleDatabaseException(final Exception ex, WebRequest request) {
+        // PostgreSQL "Detail" (row values) is disabled by logServerErrorDetail=false.
         EXCEPTION_LOGGER.error(
-                "Database error for request: {} | Type: {} | Message: {}",
-                request.getDescription(false),
+                "Database error for request: {} | Code: database.error | ExceptionType: {}",
+                RequestLogSanitizer.route(request),
                 ex.getClass().getName(),
-                ex.getMessage(),
                 ex
         );
 

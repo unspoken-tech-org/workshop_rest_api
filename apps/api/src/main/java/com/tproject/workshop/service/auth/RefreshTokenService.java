@@ -47,8 +47,8 @@ public class RefreshTokenService {
 
         refreshTokenRepository.save(refreshToken);
 
-        log.info("Refresh token created for client: {}, user: {}, boundDeviceId: {}",
-                apiKey.getClientName(), apiKey.getUserIdentifier(), apiKey.getBoundDeviceId());
+        log.info("Refresh token created for platform: {}, role: {}",
+                apiKey.getPlatform(), apiKey.getRole());
         return token;
     }
 
@@ -102,7 +102,7 @@ public class RefreshTokenService {
     @Transactional
     public void revokeAllTokensForClient(String clientName) {
         refreshTokenRepository.revokeAllByClientName(clientName);
-        log.info("All refresh tokens revoked for client: {}", clientName);
+        log.info("All refresh tokens revoked for client");
     }
 
     private String generateSecureToken() {

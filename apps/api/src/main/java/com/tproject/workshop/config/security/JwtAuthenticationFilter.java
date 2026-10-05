@@ -57,8 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .map(SimpleGrantedAuthority::new)
                             .toList();
 
-            String boundDeviceId = claims.get("boundDeviceId", String.class);
-
             // Creates authentication in the Spring Security context
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -70,8 +68,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.debug("JWT authentication succeeded for: {} with roles: {} boundDeviceId: {}",
-                    subject, roles, boundDeviceId);
+            // Subject and boundDeviceId originate from credentials/device data;
+            // only the bounded role set is useful in a diagnostic log.
+            log.debug("JWT authentication succeeded with roles: {}", roles);
 
         } catch (Exception e) {
             log.warn("JWT authentication failed: {}", e.getMessage());
@@ -86,7 +85,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return path.startsWith("/api/auth/")
                 || path.equals("/actuator/health")
-                || path.equals("/actuator/info")
                 || path.startsWith("/swagger")
                 || path.startsWith("/v3/api-docs");
     }

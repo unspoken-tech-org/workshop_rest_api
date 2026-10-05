@@ -11,9 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
-import java.util.UUID;
-
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorrelationIdFilter extends OncePerRequestFilter {
@@ -26,9 +23,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
                                     HttpServletResponse response, 
                                     FilterChain chain) throws ServletException, IOException {
 
-        String requestId = Optional.ofNullable(request.getHeader(HEADER_NAME))
-                .filter(id -> !id.isBlank())
-                .orElseGet(() -> UUID.randomUUID().toString());
+        String requestId = RequestIdValidator.normalizeOrGenerate(request.getHeader(HEADER_NAME));
 
         MDC.put(MDC_KEY, requestId);
         
@@ -41,4 +36,3 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
         }
     }
 }
-

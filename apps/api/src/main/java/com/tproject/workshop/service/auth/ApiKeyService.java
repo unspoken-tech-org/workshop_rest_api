@@ -91,13 +91,12 @@ public class ApiKeyService {
             }
             apiKey.setBoundDeviceId(boundDeviceId);
             apiKey.setBoundAt(apiKey.getBoundAt() == null ? now : apiKey.getBoundAt());
-            log.info("API Key bound to device: {} (apiKeyId: {})", boundDeviceId, apiKey.getId());
+            log.info("API Key bound to device (apiKeyId: {})", apiKey.getId());
             return;
         }
 
         if (!apiKey.getBoundDeviceId().equals(boundDeviceId)) {
-            log.warn("API Key já vinculada a outro dispositivo. atual: {} tentativa: {} apiKeyId: {}",
-                    apiKey.getBoundDeviceId(), boundDeviceId, apiKey.getId());
+            log.warn("API Key já vinculada a outro dispositivo (apiKeyId: {})", apiKey.getId());
             throw new ApiKeyDeviceBoundException("API Key já vinculada a outro dispositivo");
         }
     }
@@ -110,11 +109,10 @@ public class ApiKeyService {
         ApiKey apiKey = apiKeyRepository.findById(apiKeyId)
                 .orElseThrow(() -> new NotFoundException("API Key not found with id: " + apiKeyId));
 
-        String boundDeviceId = apiKey.getBoundDeviceId();
         apiKeyRepository.clearBoundDevice(apiKeyId);
         refreshTokenRepository.revokeByApiKeyId(apiKeyId);
 
-        log.info("API Key binding reset for id: {} boundDeviceId: {}", apiKeyId, boundDeviceId);
+        log.info("API Key binding reset for id: {}", apiKeyId);
     }
 
     /**

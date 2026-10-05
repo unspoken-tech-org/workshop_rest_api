@@ -114,8 +114,7 @@ public class CustomerService {
     public CustomerOutputDto saveCustomer(InputCustomerDtoRecord inputCustomerDto) {
         String cpfOnlyDigits = UtilsString.onlyDigits(inputCustomerDto.cpf());
         customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
-            String formattedCpf = UtilsString.formatCpf(cpfOnlyDigits);
-            throw new EntityAlreadyExistsException(String.format("O CPF %s já está em uso", formattedCpf));
+            throw new EntityAlreadyExistsException("O CPF informado já está em uso");
         });
 
         List<InputPhoneDto> phones = Optional.ofNullable(inputCustomerDto.phones()).orElse(new ArrayList<>());
@@ -147,8 +146,7 @@ public class CustomerService {
 
         customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
             if (customer.getIdCustomer() != id) {
-                String formattedCpf = UtilsString.formatCpf(cpfOnlyDigits);
-                throw new EntityAlreadyExistsException(String.format("O CPF %s já está em uso", formattedCpf));
+                throw new EntityAlreadyExistsException("O CPF informado já está em uso");
             }
         });
 
@@ -194,9 +192,7 @@ public class CustomerService {
                     .findByCustomerIdAndPhoneNumber(customer.getIdCustomer(), phone.getNumber());
             
             if (existingAssociation.isPresent()) {
-                throw new EntityAlreadyExistsException(
-                    String.format("O numero %s já está associado a este cliente", 
-                    UtilsString.formatPhoneNumberBR(phone.getNumber())));
+                throw new EntityAlreadyExistsException("O numero informado já está associado a este cliente");
             }
 
             if (phoneDto.isPrimary()) {
@@ -263,9 +259,7 @@ public class CustomerService {
 
                     // If trying to use as primary a phone that's already primary for another customer
                     if (association.isMain()) {
-                        String formattedNumber = UtilsString.formatPhoneNumberBR(p.getNumber());
-                        String customerName = UtilsString.capitalizeEachWord(associatedCustomer.getName());
-                        throw new EntityAlreadyExistsException(String.format("O numero %s já está cadastrado como principal para o cliente %s", formattedNumber, customerName));
+                        throw new EntityAlreadyExistsException("O numero informado já está cadastrado como principal para outro cliente");
                     }
                 }
             });
