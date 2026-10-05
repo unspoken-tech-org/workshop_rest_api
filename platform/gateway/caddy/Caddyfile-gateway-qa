@@ -13,6 +13,14 @@
     }
 }
 
+# /actuator/prometheus só é raspado pela rede interna (Collector de borda),
+# nunca pelas entradas públicas. O matcher de path do Caddy normaliza o
+# caminho e ignora maiúsculas/minúsculas.
+(block_metrics) {
+    @metrics path /actuator/prometheus /actuator/prometheus/*
+    respond @metrics 404
+}
+
 # ============================================
 # HTTP Listener (port 80)
 # For traffic coming from Cloudflare Tunnel
@@ -21,6 +29,7 @@
     import log
     @api_qa host api-qa.eletroluk.com
     handle @api_qa {
+        import block_metrics
         reverse_proxy workshop-api-qa:8080
     }
 
@@ -43,6 +52,7 @@
 # QA API (HTTPS)
 api-qa.eletroluk.com {
     import log
+    import block_metrics
     reverse_proxy workshop-api-qa:8080
     tls {
         dns cloudflare {env.CF_API_TOKEN}

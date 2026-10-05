@@ -1,229 +1,31 @@
-name: Deploy Observability (Prod) v2 (Hosted + Tailscale)
+# ARCHIVED: legacy production observability deployment.
+#
+# No production observability deployment is enabled by this compatibility
+# stub. It contains no remote commands, secrets or stack lifecycle operations;
+# in particular it cannot affect API or gateway stacks. Keep this file as a
+# semantic retirement marker until a separately reviewed production workflow
+# is introduced.
+
+name: '[Archived] Deploy Observability (Prod) legacy'
 
 on:
   workflow_dispatch:
     inputs:
-      ref:
-        description: 'Tag, branch or commit to deploy'
-        required: false
-        default: 'main'
-      confirm:
-        description: 'Prod observability deploy confirmation'
-        type: choice
+      acknowledge:
+        description: 'This legacy workflow is archived; no deployment is performed'
         required: true
-        default: 'CANCEL'
+        type: choice
+        default: 'ARCHIVED'
         options:
-          - DEPLOY
-          - CANCEL
+          - ARCHIVED
 
 permissions:
   contents: read
 
-concurrency:
-  group: deploy-observability-prod
-  cancel-in-progress: false
-
-env:
-  COMPOSE_FILE: docker-compose-observability.yml
-  COMPOSE_SOURCE: platform/observability/compose/production.yml
-  LOKI_CONFIG_SOURCE: platform/observability/loki/production.yaml
-  PROMTAIL_PRODUCTION_SOURCE: platform/observability/promtail/production.yaml
-  PROMTAIL_GATEWAY_SOURCE: platform/observability/promtail/gateway.yaml
-  GRAFANA_PROVISIONING_SOURCE: platform/observability/grafana/production/provisioning
-  DEPLOY_DIR: /home/workshop/deploy/observability_stack
-  SSH_USER: ${{ secrets.PROD_SSH_USER }}
-  TS_IP: ${{ secrets.TS_TAILSCALE_IP }}
-  SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
-  DEPLOY_SCRIPT: .github/scripts/observability/deploy.sh
-  ROLLBACK_SCRIPT: .github/scripts/observability/rollback.sh
-  VERIFY_SCRIPT: .github/scripts/observability/verify.sh
-  CLEANUP_SCRIPT: .github/scripts/observability/cleanup.sh
-
 jobs:
-  # ===========================================
-  # JOB 1: PREPARE
-  # ===========================================
-  prepare:
-    name: Prepare Observability Prod
+  archived:
+    name: Archived — no deployment
+    if: ${{ false }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      - name: Validate confirmation
-        run: |
-          if [ "${{ github.event.inputs.confirm }}" != "DEPLOY" ]; then
-            echo "Deploy cancelled — confirmation was not DEPLOY"
-            exit 1
-          fi
-          echo "Deploy confirmed"
-
-      - name: Print build banner
-        uses: ./.github/actions/shared/print-banner
-        with:
-          prefix: OBSERVABILITY-PROD
-          image-tag: ${{ github.event.inputs.ref || github.ref_name }}
-
-  # ===========================================
-  # JOB 2: DEPLOY
-  # ===========================================
-  deploy:
-    name: Deploy to Prod VM
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    needs: prepare
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      - name: Setup Tailscale
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
-        with:
-          oauth-client-id: ${{ secrets.PRD_TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.PRD_TS_OAUTH_SECRET }}
-          tags: tag:ci
-          ping: ${{ secrets.TS_TAILSCALE_IP }}
-
-      - name: Setup SSH Known Hosts
-        uses: ./.github/actions/shared/setup-ssh-known-hosts
-        with:
-          host: ${{ secrets.TS_TAILSCALE_IP }}
-          known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
-
-      - name: Deploy via SSH
-        uses: ./.github/actions/observability/deploy-via-ssh-observability
-        with:
-          ssh-target: ${{ env.SSH_TARGET }}
-          deploy-dir: ${{ env.DEPLOY_DIR }}
-          compose-file: ${{ env.COMPOSE_FILE }}
-          compose-source: ${{ env.COMPOSE_SOURCE }}
-          loki-config-source: ${{ env.LOKI_CONFIG_SOURCE }}
-          promtail-production-source: ${{ env.PROMTAIL_PRODUCTION_SOURCE }}
-          promtail-gateway-source: ${{ env.PROMTAIL_GATEWAY_SOURCE }}
-          grafana-provisioning-source: ${{ env.GRAFANA_PROVISIONING_SOURCE }}
-          deploy-script: ${{ env.DEPLOY_SCRIPT }}
-          grafana-admin-user: ${{ secrets.GRAFANA_ADMIN_USER }}
-          grafana-admin-password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-
-      - name: Rollback on failure
-        if: failure()
-        run: |
-          scp -o ConnectTimeout=30 \
-            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:/tmp/"
-          ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "chmod +x /tmp/rollback.sh && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' /tmp/rollback.sh"
-
-  # ===========================================
-  # JOB 3: VERIFY
-  # ===========================================
-  verify:
-    name: Verify Deployment
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    needs: deploy
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      - name: Setup Tailscale
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
-        with:
-          oauth-client-id: ${{ secrets.PRD_TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.PRD_TS_OAUTH_SECRET }}
-          tags: tag:ci
-          ping: ${{ secrets.TS_TAILSCALE_IP }}
-
-      - name: Setup SSH Known Hosts
-        uses: ./.github/actions/shared/setup-ssh-known-hosts
-        with:
-          host: ${{ secrets.TS_TAILSCALE_IP }}
-          known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
-
-      - name: Verify via SSH
-        run: |
-          ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
-          scp -o ConnectTimeout=30 \
-            "${VERIFY_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
-          ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/verify.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/verify.sh'"
-          ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "rm -f '${DEPLOY_DIR}/.tmp/verify.sh'"
-
-  # ===========================================
-  # JOB 4: CLEANUP
-  # ===========================================
-  cleanup:
-    name: Cleanup
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    needs: verify
-    if: always()
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      - name: Setup Tailscale
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
-        with:
-          oauth-client-id: ${{ secrets.PRD_TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.PRD_TS_OAUTH_SECRET }}
-          tags: tag:ci
-          ping: ${{ secrets.TS_TAILSCALE_IP }}
-
-      - name: Setup SSH Known Hosts
-        uses: ./.github/actions/shared/setup-ssh-known-hosts
-        with:
-          host: ${{ secrets.TS_TAILSCALE_IP }}
-          known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
-
-      - name: Cleanup via SSH
-        run: |
-          ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
-          scp -o ConnectTimeout=30 \
-            "${CLEANUP_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
-          ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/cleanup.sh' && '${DEPLOY_DIR}/.tmp/cleanup.sh'"
-          ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "rm -rf '${DEPLOY_DIR}/.tmp'"
-
-      - name: Print final banner
-        if: success()
-        uses: ./.github/actions/shared/print-banner
-        with:
-          prefix: OBSERVABILITY-PROD
-          image-tag: ${{ github.event.inputs.ref || github.ref_name }}
+      - run: echo 'Legacy observability production workflow archived; no action taken.'
