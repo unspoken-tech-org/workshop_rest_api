@@ -3,6 +3,6 @@
     "title": "Conflito de Recurso",
     "error": {
         "code": "recurso.conflito",
-        "message": "O CPF 462.039.120-42 já está em uso"
+        "message": "O CPF informado já está em uso"
     }
 }

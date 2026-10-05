@@ -36,6 +36,10 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
     @DisplayName("List all API Keys")
     @Test
     public void shouldListAllApiKeys() {
+        // The snapshot expects lastUsedAt on the default key; the cached token
+        // skips the login after @Sql recreates the keys (R22), so log in here.
+        TestAuthHelper.getAccessToken(SPEC, API_KEY);
+
         Response response = given().spec(getAuthenticatedSpec())
                 .when()
                 .get(BASE_PATH)
