@@ -1,0 +1,75 @@
+name: Initialize Observability Terraform State
+description: >
+  Installs the pinned Terraform version and initializes infra/cloudflare against
+  the private R2 state bucket. The backend file lives in RUNNER_TEMP and is
+  never written to the checkout. Credentials arrive as inputs from secrets.
+
+inputs:
+  working-directory:
+    description: 'Terraform working directory'
+    required: true
+  state-bucket:
+    description: 'R2 bucket holding the Terraform state'
+    required: true
+  state-key:
+    description: 'Object key of the Terraform state'
+    required: true
+  state-endpoint:
+    description: 'R2 S3 endpoint (https://<account-id>.r2.cloudflarestorage.com)'
+    required: true
+  state-access-key:
+    description: 'R2 access key ID'
+    required: true
+  state-secret-key:
+    description: 'R2 secret access key'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      with:
+        terraform_version: 1.16.5
+        # Sem o wrapper, a saída dos comandos não é copiada para outputs do step.
+        terraform_wrapper: false
+
+    - name: Write backend configuration
+      shell: bash
+      env:
+        STATE_BUCKET: ${{ inputs.state-bucket }}
+        STATE_KEY: ${{ inputs.state-key }}
+        STATE_ENDPOINT: ${{ inputs.state-endpoint }}
+      run: |
+        set -Eeuo pipefail
+        for variable in STATE_BUCKET STATE_KEY STATE_ENDPOINT; do
+          [[ -n "${!variable:-}" ]] || {
+            echo "Missing required ${variable} state value" >&2
+            exit 1
+          }
+        done
+        [[ "${STATE_ENDPOINT}" =~ ^https://[a-f0-9]+\.r2\.cloudflarestorage\.com$ ]] || {
+          echo "State endpoint must be an R2 account endpoint" >&2
+          exit 1
+        }
+        umask 077
+        {
+          printf 'bucket = "%s"\n' "${STATE_BUCKET}"
+          printf 'key = "%s"\n' "${STATE_KEY}"
+          printf 'endpoints = { s3 = "%s" }\n' "${STATE_ENDPOINT}"
+        } > "${RUNNER_TEMP}/backend.hcl"
+
+    - name: Initialize Terraform
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.state-access-key }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.state-secret-key }}
+      run: |
+        set -Eeuo pipefail
+        [[ -n "${AWS_ACCESS_KEY_ID}" && -n "${AWS_SECRET_ACCESS_KEY}" ]] || {
+          echo "Missing R2 state credentials" >&2
+          exit 1
+        }
+        terraform init -input=false -no-color -lockfile=readonly \
+          -backend-config="${RUNNER_TEMP}/backend.hcl"
