@@ -1,0 +1,42 @@
+# ===========================================================
+# Workflow: Observability control plane on the QA VM (skeleton)
+# ===========================================================
+# Placeholder that registers the workflow_dispatch trigger on the default
+# branch. The real implementation lives on feature/observability-otlp; run it
+# with "Use workflow from" (or `gh workflow run --ref`) set to that branch and
+# GitHub executes the branch version of this file. The inputs mirror the real
+# workflow so the dispatch form is the same. See AGENTS.md in this directory.
+# ===========================================================
+
+name: Deploy Observability Control Plane (QA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag or commit containing the control-plane stack'
+        required: false
+        default: 'main'
+      confirm:
+        description: 'Confirm deployment of the observability control plane on the QA VM'
+        type: choice
+        required: true
+        default: 'CANCEL'
+        options:
+          - DEPLOY
+          - CANCEL
+
+permissions:
+  contents: read
+
+jobs:
+  skeleton:
+    name: Skeleton (no-op)
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Explain skeleton
+        run: |
+          echo "This is the skeleton on the default branch; nothing was deployed." >&2
+          echo "Dispatch the workflow from the branch that holds the implementation." >&2
+          exit 1

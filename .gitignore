@@ -59,5 +59,20 @@ estudos/
 
 ### Local Secrets and Act configs ###
 .secrets
+.javaagent
 .env.act
 .actrc
+
+### Terraform Cloudflare state and local variable values ###
+/infra/cloudflare/.terraform/
+/infra/cloudflare/*.tfstate
+/infra/cloudflare/*.tfstate.*
+/infra/cloudflare/*.tfvars
+/infra/cloudflare/*.tfvars.json
+/infra/cloudflare/*.tfplan
+/infra/cloudflare/tfplan
+/infra/cloudflare/backend.hcl
+
+### Observability: local audit notes and control-plane environment values ###
+/AUDITORIA_VAZAMENTO_NOMES_PROD.md
+/platform/observability/control-plane/.env
