@@ -1,0 +1,40 @@
+# Tempo do plano de controle (VM de QA). Mesma base do laboratório local.
+server:
+  http_listen_port: 3200
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+# Tempo 3: a compactação/retenção saiu do bloco "compactor" para o backend-worker.
+backend_worker:
+  compaction:
+    block_retention: 168h
+
+# Disco único da VM de QA (Fase 0): o Tempo não tem retenção por tamanho, então
+# o teto de bytes vem do limite de ingestão, da retenção e do alerta de
+# ocupação do filesystem. Valores provisórios até medir a taxa de PRD.
+overrides:
+  defaults:
+    ingestion:
+      rate_limit_bytes: 1048576
+      burst_size_bytes: 2097152
+    global:
+      max_bytes_per_trace: 5242880
+
+usage_report:
+  reporting_enabled: false

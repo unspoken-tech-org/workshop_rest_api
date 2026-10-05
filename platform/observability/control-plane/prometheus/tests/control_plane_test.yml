@@ -1,0 +1,105 @@
+# Execução: promtool test rules tests/control_plane_test.yml
+# (a partir de platform/observability/control-plane/prometheus). As regras
+# herdadas do laboratório local são cobertas por local/prometheus/tests.
+rule_files:
+  - ../rules/observability.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: disco abaixo de 30% livre alerta warning, abaixo de 15% critical
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node-exporter",instance="node-exporter:9100",mountpoint="/"}'
+        values: '50x20 25x20'
+      - series: 'node_filesystem_size_bytes{job="node-exporter",instance="node-exporter:9100",mountpoint="/"}'
+        values: '200x40'
+    alert_rule_test:
+      - eval_time: 18m
+        alertname: QaHostFilesystemLow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: node-exporter
+              instance: node-exporter:9100
+              mountpoint: /
+            exp_annotations:
+              summary: "Disco da VM de QA abaixo de 30% livre"
+              description: "Reduza retenção ou ingestão da observabilidade antes de afetar a homologação."
+      - eval_time: 18m
+        alertname: QaHostFilesystemCritical
+      - eval_time: 30m
+        alertname: QaHostFilesystemCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: node-exporter
+              instance: node-exporter:9100
+              mountpoint: /
+            exp_annotations:
+              summary: "Disco da VM de QA abaixo de 15% livre"
+              description: "Pare ou descarte telemetria antes que o PostgreSQL de QA fique sem espaço."
+
+  - name: amostra fora da janela fora de ordem alerta sem espera
+    interval: 1m
+    input_series:
+      - series: 'prometheus_tsdb_out_of_order_samples_total{job="prometheus",instance="prometheus:9090",type="float"}'
+        values: '0 0 0 5 5 5'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: PrometheusOutOfOrderSamplesRejected
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              summary: "Prometheus rejeitando amostras fora de ordem"
+              description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
+
+  - name: Tunnel e node-exporter fora do ar entram no alerta de alvo
+    interval: 1m
+    input_series:
+      - series: 'up{job="cloudflared",instance="cloudflared:2000"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ObservabilityTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: cloudflared
+              instance: cloudflared:2000
+            exp_annotations:
+              summary: "Alvo de observabilidade indisponível"
+              description: "cloudflared em cloudflared:2000 está indisponível há mais de 10 minutos."
+
+  # 600 MB < 0,8 × 768 MiB (644 MB): sem alerta; 700 MB dispara.
+  - name: pressão de memória abaixo de 80% de 768 MiB não alerta
+    interval: 1m
+    input_series:
+      - series: 'otelcol_process_memory_rss{job="otel-collector-internal",instance="otel-collector:8888"}'
+        values: '600000000x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: OTelCollectorMemoryPressure
+
+  - name: pressão de memória acima de 80% de 768 MiB alerta
+    interval: 1m
+    input_series:
+      - series: 'otelcol_process_memory_rss{job="otel-collector-internal",instance="otel-collector:8888"}'
+        values: '700000000x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: OTelCollectorMemoryPressure
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: otel-collector-internal
+              instance: otel-collector:8888
+            exp_annotations:
+              summary: "Collector próximo do limite de memória"
+              description: "O uso RSS do Collector excede 80% do limite do memory_limiter (768 MiB)."

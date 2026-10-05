@@ -1,0 +1,71 @@
+# Prometheus do plano de controle (VM de QA). Retenção por tempo e tamanho nas
+# flags do Compose (disco único, Fase 0).
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    stack: workshop-observability
+    observer: qa-control-plane
+
+# Métricas de PRD chegam do Collector interno por /api/v1/otlp. A janela fora
+# de ordem cobre as 4 horas da fila da borda mais drenagem e margem de relógio;
+# o custo de memória/disco ainda precisa ser medido na QA.
+storage:
+  tsdb:
+    out_of_order_time_window: 6h
+
+otlp:
+  promote_resource_attributes:
+    - deployment.environment.name
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - prometheus:9090
+
+  - job_name: otel-collector-internal
+    static_configs:
+      - targets:
+          - otel-collector:8888
+
+  - job_name: loki
+    static_configs:
+      - targets:
+          - loki:3100
+
+  - job_name: tempo
+    static_configs:
+      - targets:
+          - tempo:3200
+
+  - job_name: grafana
+    static_configs:
+      - targets:
+          - grafana:3000
+
+  - job_name: alertmanager
+    static_configs:
+      - targets:
+          - alertmanager:9093
+
+  - job_name: cloudflared
+    static_configs:
+      - targets:
+          - cloudflared:2000
+
+  # Ocupação do filesystem único da VM (compensação da Fase 0).
+  - job_name: node-exporter
+    static_configs:
+      - targets:
+          - node-exporter:9100

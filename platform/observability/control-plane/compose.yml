@@ -1,0 +1,476 @@
+# Plano de controle de observabilidade na VM de QA (projeto Compose
+# observability-control-plane-qa). Implantado por
+# .github/workflows/deploy-observability-control-plane-qa.yml, que copia este
+# diretório para OBS_QA_DEPLOY_DIR e roda o Compose com --project-directory
+# nesse diretório: os caminhos relativos abaixo valem lá e na raiz do repo.
+#
+# Variáveis (.env gerado pelo workflow a partir dos segredos OBS_QA_*):
+#   OTLP_BIND_ADDRESS        IP Tailscale da VM; único endereço com OTLP
+#   GRAFANA_PUBLIC_HOST      hostname do Grafana no Tunnel de observabilidade
+#   GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD, CLOUDFLARE_TUNNEL_TOKEN
+# Senha e token chegam aos containers como secrets em arquivo, nunca como
+# variável de ambiente do container.
+#
+# Isolamento da homologação: projeto, redes e volumes próprios; nenhum serviço
+# monta o docker.sock nem entra nas redes de QA. Só o OTLP é publicado, e só no
+# IP Tailscale: portas do Docker contornam a cadeia INPUT do host, então a
+# restrição de origem (VM de produção) fica na ACL do tailnet. O Grafana sai
+# apenas pelo Tunnel dedicado, protegido por Cloudflare Access.
+#
+# Disco único da VM (Fase 0): retenção por tempo em todos os backends, por
+# tamanho no Prometheus, limites de ingestão no Loki/Tempo e alertas de
+# ocupação do filesystem (node-exporter).
+#
+# Imagens fixadas por tag e digest multi-arquitetura (a VM é arm64); o conjunto
+# compartilhado com o laboratório local é o testado em 04/10/2026.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
+    command:
+      - --config=file:/etc/otelcol-contrib/config.yaml
+    environment:
+      # Limite da fila persistente de cada exporter (256 MiB por padrão).
+      COLLECTOR_QUEUE_BYTES: ${COLLECTOR_QUEUE_BYTES:-268435456}
+    ports:
+      - "${OTLP_BIND_ADDRESS:?OTLP_BIND_ADDRESS must be the Tailscale IP}:4317:4317"
+      - "${OTLP_BIND_ADDRESS:?OTLP_BIND_ADDRESS must be the Tailscale IP}:4318:4318"
+    volumes:
+      - ./platform/observability/control-plane/collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - otel_collector_queue:/var/lib/otelcol/file_storage
+    networks:
+      - cp-backend
+      - cp-otlp
+    depends_on:
+      otel-collector-queue-init:
+        condition: service_completed_successfully
+      loki-probe:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Sem healthcheck próprio (distroless): o deploy exige o probe saudável.
+    labels:
+      com.workshop.observability.readiness-probe: otel-collector-probe
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+        reservations:
+          cpus: "0.10"
+          memory: 256M
+
+  # O volume nasce root; a imagem distroless roda como 10001. Execução única
+  # (restart "no"): os scripts de deploy aceitam este serviço encerrado com 0.
+  otel-collector-queue-init:
+    image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+    command: ["chown", "10001:10001", "/var/lib/otelcol/file_storage"]
+    volumes:
+      - otel_collector_queue:/var/lib/otelcol/file_storage
+    network_mode: none
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  otel-collector-probe:
+    image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+    command: ["sleep", "2147483647"]
+    depends_on:
+      otel-collector:
+        condition: service_started
+    networks:
+      - cp-backend
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://otel-collector:13133/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: 16M
+
+  loki-probe:
+    image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+    command: ["sleep", "2147483647"]
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - cp-backend
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://loki:3100/ready"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: 16M
+
+  loki:
+    image: grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193
+    command:
+      - -config.file=/etc/loki/config.yaml
+    volumes:
+      - ./platform/observability/control-plane/loki/config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - cp-backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Sem healthcheck próprio (imagem sem shell/wget): o deploy exige o probe saudável.
+    labels:
+      com.workshop.observability.readiness-probe: loki-probe
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+        reservations:
+          cpus: "0.10"
+          memory: 256M
+
+  tempo:
+    image: grafana/tempo:3.1.0@sha256:3076b8dcdfb32fd6bc5ccef85e7b7313e6199b9cb84366257fc17ecb696db5fd
+    command:
+      - -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./platform/observability/control-plane/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    networks:
+      - cp-backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "/tempo", "-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+        reservations:
+          cpus: "0.10"
+          memory: 256M
+
+  prometheus:
+    # Linha LTS 3.13.x (suporte até 31/07/2027).
+    image: prom/prometheus:v3.13.4@sha256:87861b8cf91579109319ebc300f3f1060e6da9c05d6ae8ad15a20c879e84e32e
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Retenção por tempo e tamanho, provisória até medir a taxa de PRD.
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=8GB
+      - --web.enable-otlp-receiver
+    volumes:
+      - ./platform/observability/control-plane/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./platform/observability/control-plane/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    networks:
+      - cp-backend
+      # Somente para raspar as métricas do cloudflared.
+      - cp-tunnel
+    depends_on:
+      alertmanager:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "/bin/wget", "-q", "--spider", "http://127.0.0.1:9090/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          # A janela fora de ordem de 6 horas aumenta o uso de memória.
+          memory: 2G
+        reservations:
+          cpus: "0.10"
+          memory: 512M
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --cluster.listen-address=
+    volumes:
+      - ./platform/observability/control-plane/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    # O canal externo de alertas precisará de uma rede com saída.
+    networks:
+      - cp-backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "/bin/wget", "-q", "--spider", "http://127.0.0.1:9093/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+
+  grafana:
+    image: grafana/grafana:13.2.3@sha256:b28bae15e219c998fb0e0424ed724930cc61b1f61fb404d47c862f9a23f9e572
+    environment:
+      GF_SERVER_HTTP_ADDR: 0.0.0.0
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_SERVER_ROOT_URL: https://${GRAFANA_PUBLIC_HOST:?GRAFANA_PUBLIC_HOST is required}/
+      # Usuário e senha valem só na criação do banco do Grafana (volume novo).
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_ALLOW_EMBEDDING: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    secrets:
+      - grafana_admin_password
+    volumes:
+      - ./platform/observability/control-plane/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - cp-backend
+      - cp-grafana
+    depends_on:
+      loki-probe:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
+  # Único caminho de entrada: Tunnel → Caddy → Grafana.
+  caddy:
+    image: caddy:2.11.6-alpine@sha256:c776e0c6413b544d0459665e54ec7b8b2a15000c0cbee8b254da0067b1d184ff
+    environment:
+      GRAFANA_PUBLIC_HOST: ${GRAFANA_PUBLIC_HOST:?GRAFANA_PUBLIC_HOST is required}
+    volumes:
+      - ./platform/observability/control-plane/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      - cp-grafana
+      - cp-tunnel
+    depends_on:
+      grafana:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /data:size=8m,noexec,nosuid,nodev
+      - /config:size=8m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # O binário traz a file capability cap_net_bind_service; sem ela no
+    # conjunto permitido, o exec falha com no-new-privileges.
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # Tunnel remotamente gerenciado, dedicado à observabilidade; não compartilha
+  # token nem rede com o gateway de QA ou de produção.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --metrics
+      - 0.0.0.0:2000
+      - run
+    environment:
+      TUNNEL_TOKEN_FILE: /run/secrets/cloudflare_tunnel_token
+    secrets:
+      - cloudflare_tunnel_token
+    networks:
+      - cp-tunnel
+      - cp-egress
+    depends_on:
+      caddy:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:2000", "ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  # Ocupação do filesystem único da VM, lida somente leitura do host.
+  node-exporter:
+    image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    command:
+      - --path.rootfs=/host
+      - --collector.disable-defaults
+      - --collector.filesystem
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run|sys|var/lib/docker/.+|var/snap/.+)($$|/)
+      - --collector.cpu
+      - --collector.meminfo
+      - --collector.loadavg
+      - --collector.pressure
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - cp-backend
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+networks:
+  # Backends sem saída e sem porta publicada.
+  cp-backend:
+    driver: bridge
+    internal: true
+  # Somente para publicar o OTLP no IP Tailscale.
+  cp-otlp:
+    driver: bridge
+  # Somente Caddy ↔ Grafana.
+  cp-grafana:
+    driver: bridge
+    internal: true
+  # Somente cloudflared ↔ Caddy (e o scrape do cloudflared).
+  cp-tunnel:
+    driver: bridge
+    internal: true
+  # Saída do cloudflared para a Cloudflare.
+  cp-egress:
+    driver: bridge
+
+# Valores do .env do deploy; o Compose os entrega como arquivo em /run/secrets.
+secrets:
+  grafana_admin_password:
+    environment: GRAFANA_ADMIN_PASSWORD
+  cloudflare_tunnel_token:
+    environment: CLOUDFLARE_TUNNEL_TOKEN
+
+volumes:
+  alertmanager_data:
+  grafana_data:
+  loki_data:
+  otel_collector_queue:
+  prometheus_data:
+  tempo_data:

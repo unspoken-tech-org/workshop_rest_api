@@ -1,0 +1,27 @@
+global:
+  resolve_timeout: 5m
+
+# Sink vazio até a decisão do canal externo (Fase 0): o canal não pode depender
+# de serviços hospedados em produção, e seus segredos não entram neste diretório.
+route:
+  receiver: local-sink
+  group_by:
+    - alertname
+    - job
+    - severity
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+
+receivers:
+  - name: local-sink
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - job
+      - instance

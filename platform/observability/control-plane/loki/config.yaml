@@ -1,0 +1,67 @@
+# Loki do plano de controle (VM de QA). Mesma base do laboratório local.
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # Obrigatório para a ingestão de logs OTLP nativa do Loki 3.x.
+  allow_structured_metadata: true
+  volume_enabled: true
+  retention_period: 168h
+  max_query_series: 5000
+  max_query_parallelism: 2
+  max_line_size: 256KB
+  # Disco único da VM de QA (Fase 0): o Loki não tem retenção por tamanho, então
+  # o teto de bytes vem do limite de ingestão, da retenção e do alerta de
+  # ocupação do filesystem. Valores provisórios até medir a taxa de PRD.
+  ingestion_rate_mb: 2
+  ingestion_burst_size_mb: 4
+  per_stream_rate_limit: 1MB
+  per_stream_rate_limit_burst: 2MB
+  # service.instance.id é indexado por padrão; a política exige mantê-lo
+  # apenas como structured metadata (R4). trace_id/span_id já são metadata.
+  otlp_config:
+    resource_attributes:
+      attributes_config:
+        - action: structured_metadata
+          attributes:
+            - service.instance.id
+
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 20
+  delete_request_store: filesystem
+
+ruler:
+  alertmanager_url: http://alertmanager:9093
+
+analytics:
+  reporting_enabled: false
