@@ -7,9 +7,12 @@
 # Variáveis (.env gerado pelo workflow a partir dos segredos OBS_QA_*):
 #   OTLP_BIND_ADDRESS        IP Tailscale da VM; único endereço com OTLP
 #   GRAFANA_PUBLIC_HOST      hostname do Grafana no Tunnel de observabilidade
-#   GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD, CLOUDFLARE_TUNNEL_TOKEN
-# Senha e token chegam aos containers como secrets em arquivo, nunca como
-# variável de ambiente do container.
+#   GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD
+# O token do Tunnel não passa pelo .env: o workflow o grava em
+# .secrets/cloudflare_tunnel_token na raiz da release, porque o Compose só
+# aceita secret de arquivo em serviço read_only (cloudflared). Senha e token
+# chegam aos containers como secrets em arquivo, nunca como variável de
+# ambiente do container.
 #
 # Isolamento da homologação: projeto, redes e volumes próprios; nenhum serviço
 # monta o docker.sock nem entra nas redes de QA. Só o OTLP é publicado, e só no
@@ -465,7 +468,7 @@ secrets:
   grafana_admin_password:
     environment: GRAFANA_ADMIN_PASSWORD
   cloudflare_tunnel_token:
-    environment: CLOUDFLARE_TUNNEL_TOKEN
+    file: ./.secrets/cloudflare_tunnel_token
 
 volumes:
   alertmanager_data:

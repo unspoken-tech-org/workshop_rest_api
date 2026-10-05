@@ -124,7 +124,6 @@ jobs:
             GRAFANA_PUBLIC_HOST="${GRAFANA_PUBLIC_HOST}" \
             GRAFANA_ADMIN_USER=placeholder \
             GRAFANA_ADMIN_PASSWORD=placeholder \
-            CLOUDFLARE_TUNNEL_TOKEN=placeholder \
             docker compose \
               --project-directory . \
               -p "${OBS_QA_COMPOSE_PROJECT_NAME}" \
@@ -204,8 +203,9 @@ jobs:
             printf 'GRAFANA_PUBLIC_HOST=%s\n' "${GRAFANA_PUBLIC_HOST}"
             printf 'GRAFANA_ADMIN_USER=%s\n' "${GRAFANA_ADMIN_USER}"
             printf 'GRAFANA_ADMIN_PASSWORD=%s\n' "${GRAFANA_ADMIN_PASSWORD}"
-            printf 'CLOUDFLARE_TUNNEL_TOKEN=%s\n' "${tunnel_token}"
           } > "${RUNNER_TEMP}/observability-control-plane.env"
+          # cloudflared is read_only, so Compose only accepts a file secret.
+          printf '%s' "${tunnel_token}" > "${RUNNER_TEMP}/observability-control-plane.tunnel-token"
 
       - name: Connect to the QA VM
         uses: ./.github/actions/observability-control-plane/connect
@@ -225,10 +225,13 @@ jobs:
           compose-source: ${{ env.OBS_QA_COMPOSE_SOURCE }}
           release-id: ${{ needs.prepare.outputs.release-id }}
           env-file: ${{ runner.temp }}/observability-control-plane.env
+          tunnel-token-file: ${{ runner.temp }}/observability-control-plane.tunnel-token
 
       - name: Remove local release environment
         if: always()
-        run: rm -f -- "${RUNNER_TEMP}/observability-control-plane.env"
+        run: |
+          rm -f -- "${RUNNER_TEMP}/observability-control-plane.env" \
+            "${RUNNER_TEMP}/observability-control-plane.tunnel-token"
 
   verify:
     name: Verify active release
