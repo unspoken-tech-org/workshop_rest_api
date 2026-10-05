@@ -211,10 +211,11 @@ jobs:
           set -Eeuo pipefail
           # Read-only: compares lineage and serial without printing either.
           snapshot_key="$(aws s3api list-objects-v2 --endpoint-url "${OBS_TF_STATE_ENDPOINT}" \
-            --bucket "${OBS_TF_STATE_BUCKET}" --prefix snapshots/ \
-            --query 'sort_by(Contents, &LastModified)[-1].Key' --output text)"
-          # The first apply had no previous state to copy.
-          if [[ -z "${snapshot_key}" || "${snapshot_key}" == None ]]; then
+            --bucket "${OBS_TF_STATE_BUCKET}" --prefix snapshots/ --output json |
+            jq -r '(.Contents // []) | sort_by(.LastModified) | last | .Key // empty')"
+          # The first apply had no previous state to copy; an empty prefix has
+          # no Contents at all.
+          if [[ -z "${snapshot_key}" ]]; then
             echo "::notice::No snapshot of the real state yet; the next apply creates one"
             exit 0
           fi
