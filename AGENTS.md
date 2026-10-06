@@ -42,7 +42,7 @@
 ## CI/CD (GitHub Actions + Tailscale)
 - **Transporte SSH:** Tailscale (WireGuard, nós efêmeros via `tailscale/github-action@v4`)
 - **Servidor:** `workshop@${{ secrets.TS_TAILSCALE_IP }}` (IP Tailscale, formato `100.x.x.x`)
-- **Acesso manual:** Cloudflare tunnel (`cloudflared-ssh.service`) — não usado para CI/CD
+- **Acesso manual:** Tailscale SSH (o Tunnel Cloudflare `ssh.eletroluk.com` foi aposentado)
 - **Secrets Tailscale:** `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `TS_TAILSCALE_IP`
 - **Secrets SSH:** `PROD_SSH_KEY`, `PROD_SSH_USER`, `PROD_SSH_HOST` (IP Tailscale)
 - **Workflows (padrão `deploy-{servico}-{ambiente}`):**
