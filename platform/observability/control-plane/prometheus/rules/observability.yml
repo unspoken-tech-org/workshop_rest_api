@@ -121,6 +121,17 @@ groups:
           summary: "Métricas da API ausentes"
           description: "Nenhuma amostra de up da API chegou ao Prometheus nos últimos 10 minutos."
 
+      # Homologação: warning, a QA pode ser reiniciada a qualquer momento.
+      - alert: WorkshopApiQaScrapeFailing
+        expr: up{job="workshop/workshop-api-qa"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Scrape da API de QA falhando"
+          description: "O Prometheus não consegue raspar /actuator/prometheus da API de QA há mais de 10 minutos."
+
   - name: prometheus-integrity
     interval: 1m
     rules:

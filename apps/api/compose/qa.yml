@@ -54,8 +54,14 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: qa
+      # Hash bcrypt da identidade de scrape lido como arquivo (configtree),
+      # nunca por variável de ambiente; o .env não guarda o hash.
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
       JAVA_TOOL_OPTIONS: -Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo
       TZ: America/Sao_Paulo
+    secrets:
+      - source: api_scrape_password_hash
+        target: OBSERVABILITY_SCRAPE_PASSWORD_HASH
     volumes:
       - ./config/qa_keys:/app/config/qa_keys:ro
     healthcheck:
@@ -67,6 +73,7 @@ services:
     networks:
       - workshop-network
       - workshop-ingress
+      - workshop-metrics
     logging:
       driver: json-file
       options:
@@ -77,6 +84,10 @@ services:
 volumes:
   db_data:
 
+secrets:
+  api_scrape_password_hash:
+    file: ./config/observability/scrape_password_hash
+
 networks:
   workshop-network:
     name: workshop-network
@@ -84,3 +95,9 @@ networks:
   workshop-ingress:
     name: workshop-ingress
     driver: bridge
+  # Somente o scrape de /actuator/prometheus pelo Prometheus do plano de
+  # controle, que entra nesta rede como externa; sem saída.
+  workshop-metrics:
+    name: workshop-metrics
+    driver: bridge
+    internal: true

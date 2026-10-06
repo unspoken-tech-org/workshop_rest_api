@@ -53,8 +53,10 @@ management:
     distribution:
       # Buckets fixos (_bucket) para p95 e SLI de latência, sem o custo do
       # histograma percentil completo. Revisar quando o limite do SLI for aprovado.
+      # 25 ms e 50 ms evitam que o p95 de rotas rápidas seja só interpolação
+      # dentro do primeiro bucket (R27b).
       slo:
-        http.server.requests: 100ms,250ms,500ms,1s,2500ms,5s
+        http.server.requests: 25ms,50ms,100ms,250ms,500ms,1s,2500ms,5s
 
 # Identidade de scrape de leitura mínima (HTTP Basic, somente
 # /actuator/prometheus). Sem hash configurado, o endpoint fica inacessível.

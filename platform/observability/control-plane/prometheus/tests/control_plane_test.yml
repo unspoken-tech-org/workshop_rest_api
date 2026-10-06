@@ -103,3 +103,35 @@ tests:
             exp_annotations:
               summary: "Collector próximo do limite de memória"
               description: "O uso RSS do Collector excede 80% do limite do memory_limiter (768 MiB)."
+
+  - name: scrape da API de QA falhando alerta warning, sem afetar os alertas de PRD
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/workshop-api-qa",instance="workshop-api-qa:8080",deployment_environment_name="qa"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: WorkshopApiQaScrapeFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/workshop-api-qa
+              instance: workshop-api-qa:8080
+              deployment_environment_name: qa
+            exp_annotations:
+              summary: "Scrape da API de QA falhando"
+              description: "O Prometheus não consegue raspar /actuator/prometheus da API de QA há mais de 10 minutos."
+      - eval_time: 15m
+        alertname: WorkshopApiScrapeFailing
+      # A série de QA não satisfaz a ausência das métricas de PRD.
+      - eval_time: 20m
+        alertname: WorkshopApiMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api
+            exp_annotations:
+              summary: "Métricas da API ausentes"
+              description: "Nenhuma amostra de up da API chegou ao Prometheus nos últimos 10 minutos."

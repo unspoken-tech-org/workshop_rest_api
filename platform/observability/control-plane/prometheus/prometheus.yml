@@ -69,3 +69,19 @@ scrape_configs:
     static_configs:
       - targets:
           - node-exporter:9100
+
+  # API de QA, raspada direto pelo Prometheus (não pelo Collector, que marca
+  # tudo como produção) na rede interna workshop-metrics. Mesma identidade de
+  # scrape de leitura mínima da borda de PRD; a senha vem de secret em arquivo.
+  # O job difere do de PRD (workshop/workshop-api) para que os alertas de
+  # ausência de PRD não sejam satisfeitos por séries de QA.
+  - job_name: workshop/workshop-api-qa
+    metrics_path: /actuator/prometheus
+    basic_auth:
+      username: metrics-scraper
+      password_file: /run/secrets/api_scrape_password
+    static_configs:
+      - targets:
+          - workshop-api-qa:8080
+        labels:
+          deployment_environment_name: qa
