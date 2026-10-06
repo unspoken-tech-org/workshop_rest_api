@@ -1,8 +1,7 @@
 name: Deploy Observability Control Plane via SSH
 description: >
   Packs the complete control-plane release (Compose, configs, .env and the
-  Tunnel token file) into one
-  archive, uploads it with the remote scripts and runs deploy.sh, which extracts
+  file secrets) into one archive, uploads it with the remote scripts and runs deploy.sh, which extracts
   it into an immutable release directory and switches the active release
   atomically. Setup Tailscale and known_hosts must run before this action.
 
@@ -28,8 +27,8 @@ inputs:
   env-file:
     description: 'Path of the prepared .env file (mode 600) outside the checkout'
     required: true
-  tunnel-token-file:
-    description: 'Path of the prepared Cloudflare Tunnel token file outside the checkout'
+  secrets-dir:
+    description: 'Prepared directory (mode 700) of file secrets outside the checkout'
     required: true
 
 runs:
@@ -45,7 +44,7 @@ runs:
         COMPOSE_SOURCE: ${{ inputs.compose-source }}
         RELEASE_ID: ${{ inputs.release-id }}
         ENV_FILE: ${{ inputs.env-file }}
-        TUNNEL_TOKEN_FILE: ${{ inputs.tunnel-token-file }}
+        SECRETS_DIR: ${{ inputs.secrets-dir }}
       run: |
         set -Eeuo pipefail
 
@@ -85,8 +84,8 @@ runs:
           echo "env-file must be a prepared file under RUNNER_TEMP" >&2
           exit 1
         }
-        [[ -s "${TUNNEL_TOKEN_FILE}" && "${TUNNEL_TOKEN_FILE}" == "${RUNNER_TEMP}"/* ]] || {
-          echo "tunnel-token-file must be a prepared file under RUNNER_TEMP" >&2
+        [[ -d "${SECRETS_DIR}" && "${SECRETS_DIR}" == "${RUNNER_TEMP}"/* ]] || {
+          echo "secrets-dir must be a prepared directory under RUNNER_TEMP" >&2
           exit 1
         }
         test -s "${COMPOSE_SOURCE}"
@@ -98,7 +97,7 @@ runs:
         COMPOSE_FILE: ${{ inputs.compose-file }}
         COMPOSE_PROJECT_NAME: ${{ inputs.compose-project-name }}
         ENV_FILE: ${{ inputs.env-file }}
-        TUNNEL_TOKEN_FILE: ${{ inputs.tunnel-token-file }}
+        SECRETS_DIR: ${{ inputs.secrets-dir }}
       run: |
         set -Eeuo pipefail
 
@@ -115,7 +114,10 @@ runs:
         rm -f -- "${payload_root}/${compose_source_dir}/.env"
         install -m 600 -- "${ENV_FILE}" "${payload_root}/.env"
         install -d -m 700 -- "${payload_root}/.secrets"
-        install -m 600 -- "${TUNNEL_TOKEN_FILE}" "${payload_root}/.secrets/cloudflare_tunnel_token"
+        # deploy.sh checks that every secret the Compose file declares exists.
+        for secret_file in "${SECRETS_DIR}"/*; do
+          install -m 600 -- "${secret_file}" "${payload_root}/.secrets/$(basename -- "${secret_file}")"
+        done
 
         docker compose \
           --project-directory "${payload_root}" \

@@ -9,8 +9,9 @@
 #   that holds secrets or reaches the VM.
 # - deploy packs the full release (Compose, configs, .env) into an immutable
 #   release directory and switches the active release atomically. The Tunnel
-#   token is read from the Terraform state with a read-only R2 credential and
-#   goes only into the remote .env.
+#   token is read from the Terraform state with a read-only R2 credential; it,
+#   the QA API scrape password and the Telegram bot token and chat ID travel as
+#   files under .secrets/, never in the .env.
 # - verify checks the active release again from a fresh job.
 # - finalize confirms the release when deploy and verify passed, or restores the
 #   previous release when either failed.
@@ -162,6 +163,9 @@ jobs:
           GRAFANA_PUBLIC_HOST: ${{ vars.OBS_QA_GRAFANA_PUBLIC_HOST }}
           GRAFANA_ADMIN_USER: ${{ secrets.OBS_QA_GRAFANA_ADMIN_USER }}
           GRAFANA_ADMIN_PASSWORD: ${{ secrets.OBS_QA_GRAFANA_ADMIN_PASSWORD }}
+          API_SCRAPE_PASSWORD: ${{ secrets.OBS_QA_API_SCRAPE_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.OBS_QA_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.OBS_QA_TELEGRAM_CHAT_ID }}
           AWS_ACCESS_KEY_ID: ${{ secrets.OBS_TF_STATE_RO_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.OBS_TF_STATE_RO_SECRET_KEY }}
           OBS_TF_STATE_BUCKET: ${{ secrets.OBS_TF_STATE_BUCKET }}
@@ -171,6 +175,7 @@ jobs:
           set -Eeuo pipefail
           for variable in \
             OTLP_BIND_ADDRESS GRAFANA_PUBLIC_HOST GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD \
+            API_SCRAPE_PASSWORD TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID \
             AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
             OBS_TF_STATE_BUCKET OBS_TF_STATE_KEY OBS_TF_STATE_ENDPOINT; do
             [[ -n "${!variable:-}" ]] || {
@@ -204,8 +209,19 @@ jobs:
             printf 'GRAFANA_ADMIN_USER=%s\n' "${GRAFANA_ADMIN_USER}"
             printf 'GRAFANA_ADMIN_PASSWORD=%s\n' "${GRAFANA_ADMIN_PASSWORD}"
           } > "${RUNNER_TEMP}/observability-control-plane.env"
-          # cloudflared is read_only, so Compose only accepts a file secret.
-          printf '%s' "${tunnel_token}" > "${RUNNER_TEMP}/observability-control-plane.tunnel-token"
+          [[ "${TELEGRAM_CHAT_ID}" =~ ^-?[0-9]+$ ]] || {
+            echo "OBS_QA_TELEGRAM_CHAT_ID must be a numeric chat ID" >&2
+            exit 1
+          }
+          # cloudflared is read_only, so Compose only accepts file secrets; the
+          # others follow the same path so no credential reaches the .env.
+          secrets_dir="${RUNNER_TEMP}/observability-control-plane-secrets"
+          rm -rf -- "${secrets_dir}"
+          mkdir -m 700 -- "${secrets_dir}"
+          printf '%s' "${tunnel_token}" > "${secrets_dir}/cloudflare_tunnel_token"
+          printf '%s' "${API_SCRAPE_PASSWORD}" > "${secrets_dir}/api_scrape_password"
+          printf '%s' "${TELEGRAM_BOT_TOKEN}" > "${secrets_dir}/telegram_bot_token"
+          printf '%s' "${TELEGRAM_CHAT_ID}" > "${secrets_dir}/telegram_chat_id"
 
       - name: Connect to the QA VM
         uses: ./.github/actions/observability-control-plane/connect
@@ -225,13 +241,13 @@ jobs:
           compose-source: ${{ env.OBS_QA_COMPOSE_SOURCE }}
           release-id: ${{ needs.prepare.outputs.release-id }}
           env-file: ${{ runner.temp }}/observability-control-plane.env
-          tunnel-token-file: ${{ runner.temp }}/observability-control-plane.tunnel-token
+          secrets-dir: ${{ runner.temp }}/observability-control-plane-secrets
 
       - name: Remove local release environment
         if: always()
         run: |
-          rm -f -- "${RUNNER_TEMP}/observability-control-plane.env" \
-            "${RUNNER_TEMP}/observability-control-plane.tunnel-token"
+          rm -rf -- "${RUNNER_TEMP}/observability-control-plane.env" \
+            "${RUNNER_TEMP}/observability-control-plane-secrets"
 
   verify:
     name: Verify active release

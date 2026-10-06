@@ -8,17 +8,21 @@
 #   OTLP_BIND_ADDRESS        IP Tailscale da VM; único endereço com OTLP
 #   GRAFANA_PUBLIC_HOST      hostname do Grafana no Tunnel de observabilidade
 #   GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD
-# O token do Tunnel não passa pelo .env: o workflow o grava em
-# .secrets/cloudflare_tunnel_token na raiz da release, porque o Compose só
-# aceita secret de arquivo em serviço read_only (cloudflared). Senha e token
-# chegam aos containers como secrets em arquivo, nunca como variável de
-# ambiente do container.
+# O token do Tunnel, a senha de scrape da API de QA e o bot do Telegram não
+# passam pelo .env: o workflow os grava em .secrets/ na raiz da release, porque
+# o Compose só aceita secret de arquivo em serviço read_only (cloudflared).
+# Senhas e tokens chegam aos containers como secrets em arquivo, nunca como
+# variável de ambiente do container.
 #
 # Isolamento da homologação: projeto, redes e volumes próprios; nenhum serviço
-# monta o docker.sock nem entra nas redes de QA. Só o OTLP é publicado, e só no
-# IP Tailscale: portas do Docker contornam a cadeia INPUT do host, então a
-# restrição de origem (VM de produção) fica na ACL do tailnet. O Grafana sai
-# apenas pelo Tunnel dedicado, protegido por Cloudflare Access.
+# monta o docker.sock nem entra nas redes funcionais de QA. A única exceção é a
+# rede interna workshop-metrics, criada pelo Compose da API de QA, onde o
+# Prometheus raspa /actuator/prometheus com a identidade de scrape (a API de QA
+# precisa ser implantada antes, para a rede existir). Só o OTLP é publicado, e
+# só no IP Tailscale: portas do Docker contornam a cadeia INPUT do host, então
+# a restrição de origem (VM de produção) fica na ACL do tailnet. O Grafana sai
+# apenas pelo Tunnel dedicado, protegido por Cloudflare Access; o Alertmanager
+# tem saída própria só para o Telegram.
 #
 # Disco único da VM (Fase 0): retenção por tempo em todos os backends, por
 # tamanho no Prometheus, limites de ingestão no Loki/Tempo e alertas de
@@ -220,10 +224,14 @@ services:
       - ./platform/observability/control-plane/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./platform/observability/control-plane/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
+    secrets:
+      - api_scrape_password
     networks:
       - cp-backend
       # Somente para raspar as métricas do cloudflared.
       - cp-tunnel
+      # Somente para raspar a API de QA.
+      - qa-metrics
     depends_on:
       alertmanager:
         condition: service_healthy
@@ -256,9 +264,13 @@ services:
     volumes:
       - ./platform/observability/control-plane/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
-    # O canal externo de alertas precisará de uma rede com saída.
+    secrets:
+      - telegram_bot_token
+      - telegram_chat_id
     networks:
       - cp-backend
+      # Saída para a API do Telegram.
+      - cp-alert-egress
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -462,6 +474,13 @@ networks:
   # Saída do cloudflared para a Cloudflare.
   cp-egress:
     driver: bridge
+  # Saída do Alertmanager para o Telegram.
+  cp-alert-egress:
+    driver: bridge
+  # Criada pelo Compose da API de QA (interna): API ↔ Prometheus.
+  qa-metrics:
+    name: workshop-metrics
+    external: true
 
 # Valores do .env do deploy; o Compose os entrega como arquivo em /run/secrets.
 secrets:
@@ -469,6 +488,12 @@ secrets:
     environment: GRAFANA_ADMIN_PASSWORD
   cloudflare_tunnel_token:
     file: ./.secrets/cloudflare_tunnel_token
+  api_scrape_password:
+    file: ./.secrets/api_scrape_password
+  telegram_bot_token:
+    file: ./.secrets/telegram_bot_token
+  telegram_chat_id:
+    file: ./.secrets/telegram_chat_id
 
 volumes:
   alertmanager_data:

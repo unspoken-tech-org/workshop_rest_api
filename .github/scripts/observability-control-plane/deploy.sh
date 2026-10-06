@@ -28,13 +28,15 @@ rm -f -- "${PAYLOAD}"
 test -s "${staging_dir}/${COMPOSE_FILE}" || die "payload has no ${COMPOSE_FILE}"
 test -s "${staging_dir}/.env" || die "payload has no .env"
 chmod 600 -- "${staging_dir}/.env"
-token_file="${staging_dir}/.secrets/cloudflare_tunnel_token"
-test -s "${token_file}" || die "payload has no Tunnel token file"
-# Compose bind-mounts file secrets with host permissions, and cloudflared runs
-# as a non-root user: the file must be world-readable, while the 700 release
-# and .secrets directories keep it private on the host.
+# Compose bind-mounts file secrets with host permissions, and the services run
+# as non-root users: the files must be world-readable, while the 700 release
+# and .secrets directories keep them private on the host.
 chmod 700 -- "${staging_dir}/.secrets"
-chmod 444 -- "${token_file}"
+for secret_name in cloudflare_tunnel_token api_scrape_password telegram_bot_token telegram_chat_id; do
+  secret_file="${staging_dir}/.secrets/${secret_name}"
+  test -s "${secret_file}" || die "payload has no ${secret_name} secret file"
+  chmod 444 -- "${secret_file}"
+done
 mv -T -- "${staging_dir}" "${release_dir}"
 
 compose_in "${release_dir}" config --quiet
