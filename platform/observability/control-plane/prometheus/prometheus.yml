@@ -70,6 +70,12 @@ scrape_configs:
       - targets:
           - node-exporter:9100
 
+  # Métricas do próprio blackbox, que executa as sondas da API de produção.
+  - job_name: blackbox
+    static_configs:
+      - targets:
+          - blackbox:9115
+
   # API de QA, raspada direto pelo Prometheus (não pelo Collector, que marca
   # tudo como produção) na rede interna workshop-metrics. Mesma identidade de
   # scrape de leitura mínima da borda de PRD; a senha vem de secret em arquivo.
@@ -85,3 +91,28 @@ scrape_configs:
           - workshop-api-qa:8080
         labels:
           deployment_environment_name: qa
+
+  # Sonda externa da API de produção: o blackbox acessa a URL pública (pela
+  # Cloudflare) e o Prometheus recebe probe_success. A medição sai da VM de QA,
+  # então falha de rede da QA também aparece como indisponibilidade. O job
+  # difere do de PRD (workshop/workshop-api) para que as métricas de PRD não
+  # satisfaçam os alertas desta sonda, e vice-versa.
+  - job_name: workshop/workshop-api-prod-probe
+    metrics_path: /probe
+    params:
+      module:
+        - workshop_api_health
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    static_configs:
+      - targets:
+          - https://api.eletroluk.com/actuator/health
+        labels:
+          deployment_environment_name: production
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115

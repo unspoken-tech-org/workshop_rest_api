@@ -135,3 +135,155 @@ tests:
             exp_annotations:
               summary: "Métricas da API ausentes"
               description: "Nenhuma amostra de up da API chegou ao Prometheus nos últimos 10 minutos."
+
+  - name: blackbox fora do ar entra no alerta de alvo
+    interval: 1m
+    input_series:
+      - series: 'up{job="blackbox",instance="blackbox:9115"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ObservabilityTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: blackbox
+              instance: blackbox:9115
+            exp_annotations:
+              summary: "Alvo de observabilidade indisponível"
+              description: "blackbox em blackbox:9115 está indisponível há mais de 10 minutos."
+
+  # Sonda externa da API de produção (job workshop/workshop-api-prod-probe).
+  - name: API de produção fora do ar na sonda alerta após 3 minutos
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x5 0x20'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: WorkshopApiProductionDown
+      - eval_time: 10m
+        alertname: WorkshopApiProductionDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+              instance: https://api.eletroluk.com/actuator/health
+              deployment_environment_name: production
+            exp_annotations:
+              summary: "API de produção indisponível na sonda externa"
+              description: "https://api.eletroluk.com/actuator/health não respondeu de forma saudável há mais de 3 minutos. A sonda sai da VM de QA pela internet pública e pela Cloudflare: falha de rede da QA também dispara este alerta."
+
+  - name: falha de um minuto na sonda da API de produção não alerta
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x5 0x1 1x20'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: WorkshopApiProductionDown
+
+  - name: sonda saudável da API de produção não alerta indisponibilidade
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionDown
+
+  - name: sem nenhum resultado da sonda de produção alerta ausência após 5 minutos
+    interval: 1m
+    input_series:
+      - series: 'up{job="prometheus",instance="prometheus:9090"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WorkshopApiProductionProbeAbsent
+      - eval_time: 6m
+        alertname: WorkshopApiProductionProbeAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+            exp_annotations:
+              summary: "Sonda da API de produção sem resultados"
+              description: "Nenhum resultado da sonda da API de produção chegou ao Prometheus há mais de 5 minutos. A indisponibilidade da API não está sendo detectada."
+
+  # Série que para de chegar (blackbox fora do ar no meio do período) também é ausência.
+  - name: sonda que deixa de publicar resultados alerta ausência
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x5'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: WorkshopApiProductionProbeAbsent
+      - eval_time: 17m
+        alertname: WorkshopApiProductionProbeAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+            exp_annotations:
+              summary: "Sonda da API de produção sem resultados"
+              description: "Nenhum resultado da sonda da API de produção chegou ao Prometheus há mais de 5 minutos. A indisponibilidade da API não está sendo detectada."
+
+  - name: sonda com resultados recentes não alerta ausência
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionProbeAbsent
+
+  - name: sonda bem-sucedida acima de 5 segundos alerta lentidão após 10 minutos
+    interval: 1m
+    input_series:
+      - series: 'probe_duration_seconds{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '6x30'
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopApiProductionSlow
+      - eval_time: 12m
+        alertname: WorkshopApiProductionSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+              instance: https://api.eletroluk.com/actuator/health
+              deployment_environment_name: production
+            exp_annotations:
+              summary: "API de produção lenta na sonda externa"
+              description: "A sonda de https://api.eletroluk.com/actuator/health levou mais de 5 segundos para concluir com sucesso há mais de 10 minutos."
+
+  - name: sonda rápida com sucesso não alerta lentidão
+    interval: 1m
+    input_series:
+      - series: 'probe_duration_seconds{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '0.4x30'
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionSlow
+
+  # Falha já é coberta por WorkshopApiProductionDown; lentidão não deve duplicar.
+  - name: sonda lenta que falha não alerta lentidão
+    interval: 1m
+    input_series:
+      - series: 'probe_duration_seconds{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '10x30'
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionSlow

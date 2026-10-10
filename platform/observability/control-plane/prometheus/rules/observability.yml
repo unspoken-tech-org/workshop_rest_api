@@ -5,10 +5,10 @@ groups:
     interval: 30s
     rules:
       - record: observability:target_up_ratio
-        expr: avg by (job) (up{job=~"otel-collector-internal|loki|tempo|grafana|alertmanager|cloudflared|node-exporter"})
+        expr: avg by (job) (up{job=~"otel-collector-internal|loki|tempo|grafana|alertmanager|cloudflared|node-exporter|blackbox"})
 
       - alert: ObservabilityTargetDown
-        expr: up{job=~"otel-collector-internal|loki|tempo|grafana|alertmanager|cloudflared|node-exporter"} == 0
+        expr: up{job=~"otel-collector-internal|loki|tempo|grafana|alertmanager|cloudflared|node-exporter|blackbox"} == 0
         for: 10m
         labels:
           severity: warning
@@ -131,6 +131,49 @@ groups:
         annotations:
           summary: "Scrape da API de QA falhando"
           description: "O Prometheus não consegue raspar /actuator/prometheus da API de QA há mais de 10 minutos."
+
+  # Sonda externa da API de produção (blackbox na VM de QA). A medição passa
+  # pela internet pública e pela Cloudflare: falha de rede da QA também dispara
+  # estes alertas, o que é intencional para a detecção independente de PRD.
+  - name: workshop-api-probe
+    interval: 30s
+    rules:
+      - alert: WorkshopApiProductionDown
+        expr: probe_success{job="workshop/workshop-api-prod-probe"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "API de produção indisponível na sonda externa"
+          description: "{{ $labels.instance }} não respondeu de forma saudável há mais de 3 minutos. A sonda sai da VM de QA pela internet pública e pela Cloudflare: falha de rede da QA também dispara este alerta."
+
+      # Sem resultado de sonda a detecção está cega: blackbox fora do ar ou
+      # inacessível (o scrape falho não gera probe_success) ou job removido.
+      - alert: WorkshopApiProductionProbeAbsent
+        expr: absent(probe_success{job="workshop/workshop-api-prod-probe"})
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Sonda da API de produção sem resultados"
+          description: "Nenhum resultado da sonda da API de produção chegou ao Prometheus há mais de 5 minutos. A indisponibilidade da API não está sendo detectada."
+
+      # Só alerta lentidão em sonda bem-sucedida; falha já é coberta por
+      # WorkshopApiProductionDown.
+      - alert: WorkshopApiProductionSlow
+        expr: |
+          probe_duration_seconds{job="workshop/workshop-api-prod-probe"} > 5
+            and on (job, instance)
+          probe_success{job="workshop/workshop-api-prod-probe"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "API de produção lenta na sonda externa"
+          description: "A sonda de {{ $labels.instance }} levou mais de 5 segundos para concluir com sucesso há mais de 10 minutos."
 
   - name: prometheus-integrity
     interval: 1m

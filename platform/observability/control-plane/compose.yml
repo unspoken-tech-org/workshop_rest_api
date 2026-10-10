@@ -22,7 +22,8 @@
 # só no IP Tailscale: portas do Docker contornam a cadeia INPUT do host, então
 # a restrição de origem (VM de produção) fica na ACL do tailnet. O Grafana sai
 # apenas pelo Tunnel dedicado, protegido por Cloudflare Access; o Alertmanager
-# tem saída própria só para o Telegram.
+# tem saída própria só para o Telegram, e o blackbox só para sondar a API
+# pública de produção.
 #
 # Disco único da VM (Fase 0): retenção por tempo em todos os backends, por
 # tamanho no Prometheus, limites de ingestão no Loki/Tempo e alertas de
@@ -232,6 +233,8 @@ services:
       - cp-tunnel
       # Somente para raspar a API de QA.
       - qa-metrics
+      # Somente para as sondas do blackbox.
+      - cp-probe
     depends_on:
       alertmanager:
         condition: service_healthy
@@ -455,6 +458,39 @@ services:
           cpus: "0.25"
           memory: 64M
 
+  # Sonda externa da API de produção pelo caminho público (DNS, TLS, Cloudflare
+  # e API). Sem credenciais e sem porta publicada: o Prometheus raspa /probe
+  # pela rede cp-probe, e só este serviço sai à internet, por cp-probe-egress.
+  blackbox:
+    image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    volumes:
+      - ./platform/observability/control-plane/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - cp-probe
+      - cp-probe-egress
+    restart: unless-stopped
+    # Nobody: a sonda HTTP não precisa de root nem de capabilities.
+    user: "65534:65534"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "/bin/wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:9115/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 64M
+
 networks:
   # Backends sem saída e sem porta publicada.
   cp-backend:
@@ -476,6 +512,13 @@ networks:
     driver: bridge
   # Saída do Alertmanager para o Telegram.
   cp-alert-egress:
+    driver: bridge
+  # Somente Prometheus ↔ blackbox (raspagem de /probe e das métricas do próprio blackbox).
+  cp-probe:
+    driver: bridge
+    internal: true
+  # Saída do blackbox para a API pública de produção, pela Cloudflare.
+  cp-probe-egress:
     driver: bridge
   # Criada pelo Compose da API de QA (interna): API ↔ Prometheus.
   qa-metrics:
