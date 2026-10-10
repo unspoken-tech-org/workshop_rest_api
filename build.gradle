@@ -54,8 +54,8 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3:3.18.0'
     implementation 'com.github.spullara.mustache.java:compiler:0.9.11'
     implementation 'com.google.guava:guava:33.6.0-jre'
-    implementation 'org.simpleflatmapper:sfm-springjdbc:8.2.3'
-    implementation 'org.simpleflatmapper:sfm-jdbc:8.2.3'
+    implementation 'org.simpleflatmapper:sfm-springjdbc:9.0.2'
+    implementation 'org.simpleflatmapper:sfm-jdbc:9.0.2'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     implementation("org.flywaydb:flyway-core:11.11.0")
     implementation("org.flywaydb:flyway-database-postgresql:11.11.0")
