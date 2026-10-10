@@ -1,0 +1,156 @@
+# Collector de borda da VM de produção (PRD). Projeto Compose próprio, volume de
+# fila próprio e nenhuma porta publicada no host. Faz o scrape autenticado da API
+# de PRD, recebe OTLP do próprio projeto (ainda sem produtores) e envia tudo à QA
+# pela rede privada (Tailscale), com fila persistente em disco. Ainda não
+# implantado: a instalação em PRD é a Fase 1, item 11 do plano.
+#
+# Implantação, a partir da raiz da release (mesmo padrão da QA):
+#   docker compose --project-directory . -p workshop-edge \
+#     -f platform/observability/edge/compose.yml up -d --wait
+# O nome do projeto também está fixado no arquivo (name:), para que um deploy
+# sem -p não reutilize o projeto do ambiente local.
+#
+# Pré-requisitos:
+#   - Rede workshop-metrics criada pelo Compose da API de PRD (interna); a API
+#     precisa estar implantada antes, como na QA.
+#   - Arquivo com a senha de scrape fora da release, legível pelo UID 10001 da
+#     imagem; o caminho entra em EDGE_API_SCRAPE_PASSWORD_FILE.
+#
+# Variáveis (ambiente do deploy):
+#   QA_OTLP_ENDPOINT               IP Tailscale da QA com a porta, ex.: 100.x.y.z:4317
+#   API_SCRAPE_TARGET              host:porta da API de PRD na rede workshop-metrics
+#   API_SCRAPE_USERNAME            identidade de leitura mínima (padrão metrics-scraper)
+#   EDGE_API_SCRAPE_PASSWORD_FILE  caminho do arquivo com a senha de scrape
+#   COLLECTOR_QUEUE_BYTES          limite em bytes da fila de cada sinal (256 MiB)
+#
+# Redes: edge-otlp e edge-probe são internas e sem saída; edge-egress é a única
+# saída, rumo à QA pela Tailscale; workshop-metrics é compartilhada somente com a
+# API de PRD, para o scrape. A restrição de quem pode enviar à QA fica na ACL do
+# tailnet (lado da QA).
+
+name: workshop-edge
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
+    command:
+      - --config=file:/etc/otelcol-contrib/config.yaml
+    environment:
+      QA_OTLP_ENDPOINT: ${QA_OTLP_ENDPOINT:?QA_OTLP_ENDPOINT is required}
+      API_SCRAPE_TARGET: ${API_SCRAPE_TARGET:?API_SCRAPE_TARGET is required}
+      API_SCRAPE_USERNAME: ${API_SCRAPE_USERNAME:-metrics-scraper}
+      # Limite da fila persistente de cada sinal (256 MiB por padrão).
+      COLLECTOR_QUEUE_BYTES: ${COLLECTOR_QUEUE_BYTES:-268435456}
+    secrets:
+      - api_scrape_password
+    volumes:
+      - ./platform/observability/edge/collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - edge_collector_queue:/var/lib/otelcol/file_storage
+    networks:
+      # Ingresso OTLP do próprio projeto (ainda sem produtores).
+      - edge-otlp
+      - edge-probe
+      # Saída para a QA.
+      - edge-egress
+      # Scrape de /actuator/prometheus da API de PRD.
+      - workshop-metrics
+    depends_on:
+      otel-collector-queue-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Sem healthcheck próprio (distroless): o deploy exige o probe saudável.
+    labels:
+      com.workshop.observability.readiness-probe: otel-collector-probe
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 96M
+
+  # O volume nasce root; a imagem distroless roda como 10001. Execução única
+  # (restart "no"): os scripts de deploy aceitam este serviço encerrado com 0.
+  otel-collector-queue-init:
+    image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+    command: ["chown", "10001:10001", "/var/lib/otelcol/file_storage"]
+    volumes:
+      - edge_collector_queue:/var/lib/otelcol/file_storage
+    network_mode: none
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  otel-collector-probe:
+    image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+    command: ["sleep", "2147483647"]
+    depends_on:
+      otel-collector:
+        condition: service_started
+    networks:
+      - edge-probe
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://otel-collector:13133/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: 16M
+
+secrets:
+  # Caminho absoluto fora da release, definido no ambiente do deploy.
+  api_scrape_password:
+    file: ${EDGE_API_SCRAPE_PASSWORD_FILE:?EDGE_API_SCRAPE_PASSWORD_FILE is required}
+
+networks:
+  # Ingresso OTLP do projeto; sem saída e sem porta publicada.
+  edge-otlp:
+    driver: bridge
+    internal: true
+  # Somente probe ↔ Collector (healthcheck); sem saída.
+  edge-probe:
+    driver: bridge
+    internal: true
+  # Única saída do projeto: Collector → QA pelo IP Tailscale.
+  edge-egress:
+    driver: bridge
+  # Criada pelo Compose da API de PRD (interna): scrape de /actuator/prometheus.
+  workshop-metrics:
+    name: workshop-metrics
+    external: true
+
+volumes:
+  edge_collector_queue:
