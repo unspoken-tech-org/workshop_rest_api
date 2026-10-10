@@ -1,5 +1,5 @@
 # Stage 1: Build da aplicação
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:24-jdk-alpine AS builder
 WORKDIR /app
 
 # Copia arquivos do Gradle Wrapper e dependências para cacheamento de camadas
@@ -16,7 +16,7 @@ COPY src/main src/main
 RUN ./gradlew bootJar --no-daemon -x test
 
 # Stage 2: Runtime seguro e enxuto
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 WORKDIR /app
 
 # Adiciona tzdata para suporte correto a fuso horário e ca-certificates
