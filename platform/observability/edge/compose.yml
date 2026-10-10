@@ -13,8 +13,9 @@
 # Pré-requisitos:
 #   - Rede workshop-metrics criada pelo Compose da API de PRD (interna); a API
 #     precisa estar implantada antes, como na QA.
-#   - Arquivo com a senha de scrape fora da release, legível pelo UID 10001 da
-#     imagem; o caminho entra em EDGE_API_SCRAPE_PASSWORD_FILE.
+#   - Arquivo com a senha de scrape legível pelo UID 10001 da imagem; o deploy
+#     o grava em .secrets/ da release (diretório 700, arquivo 444) e passa o
+#     caminho em EDGE_API_SCRAPE_PASSWORD_FILE.
 #
 # Variáveis (ambiente do deploy):
 #   QA_OTLP_ENDPOINT               IP Tailscale da QA com a porta, ex.: 100.x.y.z:4317
