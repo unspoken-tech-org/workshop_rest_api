@@ -185,7 +185,8 @@ exporters:
     # Fila persistente com limite em bytes (COLLECTOR_QUEUE_BYTES), cheia a
     # recusa chega ao receiver em vez de descarte silencioso depois do aceite.
     # Dimensionamento: 6 MB/h com todos os sinais (taxa de referência do plano);
-    # 4 horas somam ~24 MB; com margem de 10× ficam ~250 MB, dentro de 256 MiB.
+    # 4 horas somam ~24 MB. Há uma fila por sinal, cada uma com 64 MiB (192 MiB
+    # no pior caso de disco): mais de 2× a janela, mesmo com um sinal só.
     sending_queue:
       enabled: true
       storage: file_storage/queue

@@ -21,7 +21,7 @@
 #   API_SCRAPE_TARGET              host:porta da API de PRD na rede workshop-metrics
 #   API_SCRAPE_USERNAME            identidade de leitura mínima (padrão metrics-scraper)
 #   EDGE_API_SCRAPE_PASSWORD_FILE  caminho do arquivo com a senha de scrape
-#   COLLECTOR_QUEUE_BYTES          limite em bytes da fila de cada sinal (256 MiB)
+#   COLLECTOR_QUEUE_BYTES          limite em bytes da fila de cada sinal (64 MiB)
 #
 # Redes: edge-otlp e edge-probe são internas e sem saída; edge-egress é a única
 # saída, rumo à QA pela Tailscale; workshop-metrics é compartilhada somente com a
@@ -46,8 +46,9 @@ services:
       QA_OTLP_ENDPOINT: ${QA_OTLP_ENDPOINT:?QA_OTLP_ENDPOINT is required}
       API_SCRAPE_TARGET: ${API_SCRAPE_TARGET:?API_SCRAPE_TARGET is required}
       API_SCRAPE_USERNAME: ${API_SCRAPE_USERNAME:-metrics-scraper}
-      # Limite da fila persistente de cada sinal (256 MiB por padrão).
-      COLLECTOR_QUEUE_BYTES: ${COLLECTOR_QUEUE_BYTES:-268435456}
+      # Limite da fila persistente de cada sinal (64 MiB por padrão; 192 MiB nos
+      # três sinais).
+      COLLECTOR_QUEUE_BYTES: ${COLLECTOR_QUEUE_BYTES:-67108864}
     secrets:
       - api_scrape_password
     volumes:
