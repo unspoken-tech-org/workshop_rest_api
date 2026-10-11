@@ -14,9 +14,33 @@ on:
       - 'infra/**'
       - 'feature/**'
       - 'fix/**'
+    paths:
+      - 'apps/api/**'
+      - 'apps/security/**'
+      - 'platform/**'
+      - 'environments/local/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - '.github/**'
+      - 'scripts/**'
   pull_request:
     branches:
       - main
+    paths:
+      - 'apps/api/**'
+      - 'apps/security/**'
+      - 'platform/**'
+      - 'environments/local/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - '.github/**'
+      - 'scripts/**'
 
 permissions:
   contents: read
@@ -53,10 +77,10 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
       - name: Run Unit Tests
-        run: ./gradlew test
+        run: ./gradlew :apps:api:test
 
       - name: Build Application JAR
-        run: ./gradlew bootJar -x test
+        run: ./gradlew :apps:api:bootJar -x test
 
   # ===========================================
   # JOB 2: SECURITY SCAN (TRIVY)

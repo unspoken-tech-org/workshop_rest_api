@@ -1,0 +1,289 @@
+# Execução: promtool test rules tests/control_plane_test.yml
+# (a partir de platform/observability/control-plane/prometheus). As regras
+# herdadas do laboratório local são cobertas por local/prometheus/tests.
+rule_files:
+  - ../rules/observability.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: disco abaixo de 30% livre alerta warning, abaixo de 15% critical
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node-exporter",instance="node-exporter:9100",mountpoint="/"}'
+        values: '50x20 25x20'
+      - series: 'node_filesystem_size_bytes{job="node-exporter",instance="node-exporter:9100",mountpoint="/"}'
+        values: '200x40'
+    alert_rule_test:
+      - eval_time: 18m
+        alertname: QaHostFilesystemLow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: node-exporter
+              instance: node-exporter:9100
+              mountpoint: /
+            exp_annotations:
+              summary: "Disco da VM de QA abaixo de 30% livre"
+              description: "Reduza retenção ou ingestão da observabilidade antes de afetar a homologação."
+      - eval_time: 18m
+        alertname: QaHostFilesystemCritical
+      - eval_time: 30m
+        alertname: QaHostFilesystemCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: node-exporter
+              instance: node-exporter:9100
+              mountpoint: /
+            exp_annotations:
+              summary: "Disco da VM de QA abaixo de 15% livre"
+              description: "Pare ou descarte telemetria antes que o PostgreSQL de QA fique sem espaço."
+
+  - name: amostra fora da janela fora de ordem alerta sem espera
+    interval: 1m
+    input_series:
+      - series: 'prometheus_tsdb_out_of_order_samples_total{job="prometheus",instance="prometheus:9090",type="float"}'
+        values: '0 0 0 5 5 5'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: PrometheusOutOfOrderSamplesRejected
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              summary: "Prometheus rejeitando amostras fora de ordem"
+              description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
+
+  - name: Tunnel e node-exporter fora do ar entram no alerta de alvo
+    interval: 1m
+    input_series:
+      - series: 'up{job="cloudflared",instance="cloudflared:2000"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ObservabilityTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: cloudflared
+              instance: cloudflared:2000
+            exp_annotations:
+              summary: "Alvo de observabilidade indisponível"
+              description: "cloudflared em cloudflared:2000 está indisponível há mais de 10 minutos."
+
+  # 600 MB < 0,8 × 768 MiB (644 MB): sem alerta; 700 MB dispara.
+  - name: pressão de memória abaixo de 80% de 768 MiB não alerta
+    interval: 1m
+    input_series:
+      - series: 'otelcol_process_memory_rss{job="otel-collector-internal",instance="otel-collector:8888"}'
+        values: '600000000x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: OTelCollectorMemoryPressure
+
+  - name: pressão de memória acima de 80% de 768 MiB alerta
+    interval: 1m
+    input_series:
+      - series: 'otelcol_process_memory_rss{job="otel-collector-internal",instance="otel-collector:8888"}'
+        values: '700000000x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: OTelCollectorMemoryPressure
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: otel-collector-internal
+              instance: otel-collector:8888
+            exp_annotations:
+              summary: "Collector próximo do limite de memória"
+              description: "O uso RSS do Collector excede 80% do limite do memory_limiter (768 MiB)."
+
+  - name: scrape da API de QA falhando alerta warning, sem afetar os alertas de PRD
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/workshop-api-qa",instance="workshop-api-qa:8080",deployment_environment_name="qa"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: WorkshopApiQaScrapeFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/workshop-api-qa
+              instance: workshop-api-qa:8080
+              deployment_environment_name: qa
+            exp_annotations:
+              summary: "Scrape da API de QA falhando"
+              description: "O Prometheus não consegue raspar /actuator/prometheus da API de QA há mais de 10 minutos."
+      - eval_time: 15m
+        alertname: WorkshopApiScrapeFailing
+      # A série de QA não satisfaz a ausência das métricas de PRD.
+      - eval_time: 20m
+        alertname: WorkshopApiMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api
+            exp_annotations:
+              summary: "Métricas da API ausentes"
+              description: "Nenhuma amostra de up da API chegou ao Prometheus nos últimos 10 minutos."
+
+  - name: blackbox fora do ar entra no alerta de alvo
+    interval: 1m
+    input_series:
+      - series: 'up{job="blackbox",instance="blackbox:9115"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ObservabilityTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: blackbox
+              instance: blackbox:9115
+            exp_annotations:
+              summary: "Alvo de observabilidade indisponível"
+              description: "blackbox em blackbox:9115 está indisponível há mais de 10 minutos."
+
+  # Sonda externa da API de produção (job workshop/workshop-api-prod-probe).
+  - name: API de produção fora do ar na sonda alerta após 3 minutos
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x5 0x20'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: WorkshopApiProductionDown
+      - eval_time: 10m
+        alertname: WorkshopApiProductionDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+              instance: https://api.eletroluk.com/actuator/health
+              deployment_environment_name: production
+            exp_annotations:
+              summary: "API de produção indisponível na sonda externa"
+              description: "https://api.eletroluk.com/actuator/health não respondeu de forma saudável há mais de 3 minutos. A sonda sai da VM de QA pela internet pública e pela Cloudflare: falha de rede da QA também dispara este alerta."
+
+  - name: falha de um minuto na sonda da API de produção não alerta
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x5 0x1 1x20'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: WorkshopApiProductionDown
+
+  - name: sonda saudável da API de produção não alerta indisponibilidade
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionDown
+
+  - name: sem nenhum resultado da sonda de produção alerta ausência após 5 minutos
+    interval: 1m
+    input_series:
+      - series: 'up{job="prometheus",instance="prometheus:9090"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WorkshopApiProductionProbeAbsent
+      - eval_time: 6m
+        alertname: WorkshopApiProductionProbeAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+            exp_annotations:
+              summary: "Sonda da API de produção sem resultados"
+              description: "Nenhum resultado da sonda da API de produção chegou ao Prometheus há mais de 5 minutos. A indisponibilidade da API não está sendo detectada."
+
+  # Série que para de chegar (blackbox fora do ar no meio do período) também é ausência.
+  - name: sonda que deixa de publicar resultados alerta ausência
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x5'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: WorkshopApiProductionProbeAbsent
+      - eval_time: 17m
+        alertname: WorkshopApiProductionProbeAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+            exp_annotations:
+              summary: "Sonda da API de produção sem resultados"
+              description: "Nenhum resultado da sonda da API de produção chegou ao Prometheus há mais de 5 minutos. A indisponibilidade da API não está sendo detectada."
+
+  - name: sonda com resultados recentes não alerta ausência
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionProbeAbsent
+
+  - name: sonda bem-sucedida acima de 5 segundos alerta lentidão após 10 minutos
+    interval: 1m
+    input_series:
+      - series: 'probe_duration_seconds{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '6x30'
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopApiProductionSlow
+      - eval_time: 12m
+        alertname: WorkshopApiProductionSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/workshop-api-prod-probe
+              instance: https://api.eletroluk.com/actuator/health
+              deployment_environment_name: production
+            exp_annotations:
+              summary: "API de produção lenta na sonda externa"
+              description: "A sonda de https://api.eletroluk.com/actuator/health levou mais de 5 segundos para concluir com sucesso há mais de 10 minutos."
+
+  - name: sonda rápida com sucesso não alerta lentidão
+    interval: 1m
+    input_series:
+      - series: 'probe_duration_seconds{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '0.4x30'
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionSlow
+
+  # Falha já é coberta por WorkshopApiProductionDown; lentidão não deve duplicar.
+  - name: sonda lenta que falha não alerta lentidão
+    interval: 1m
+    input_series:
+      - series: 'probe_duration_seconds{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '10x30'
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="https://api.eletroluk.com/actuator/health",deployment_environment_name="production"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopApiProductionSlow

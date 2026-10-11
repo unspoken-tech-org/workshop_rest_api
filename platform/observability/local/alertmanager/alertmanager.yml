@@ -1,0 +1,27 @@
+global:
+  resolve_timeout: 5m
+
+# Sink local deliberadamente vazio: a fundação não envia dados para terceiros.
+# Integrações (e seus segredos) devem ser adicionadas fora deste diretório.
+route:
+  receiver: local-sink
+  group_by:
+    - alertname
+    - job
+    - severity
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+
+receivers:
+  - name: local-sink
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - job
+      - instance

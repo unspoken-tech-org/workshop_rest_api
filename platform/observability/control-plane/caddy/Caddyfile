@@ -1,0 +1,26 @@
+# Caddy dedicado ao Grafana do plano de controle. Recebe somente o Cloudflare
+# Tunnel de observabilidade (rede interna, sem porta publicada); hostname ou
+# caminho fora do previsto recebe 404. Não compartilha o gateway de QA.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	@grafana host {$GRAFANA_PUBLIC_HOST}
+
+	handle @grafana {
+		# Métricas internas do Grafana não saem pelo Tunnel.
+		respond /metrics 404
+		reverse_proxy grafana:3000
+	}
+
+	handle {
+		respond 404
+	}
+}
+
+# Somente para o healthcheck do container.
+:8081 {
+	respond /health 200
+}

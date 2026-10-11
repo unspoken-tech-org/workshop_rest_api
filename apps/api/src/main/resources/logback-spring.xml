@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Import Spring Boot defaults -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- ========================================
+         PROFILE: LOCAL (development)
+         Logs readable in console
+         ======================================== -->
+    <springProfile name="local,test">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>
+                    %d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%-40.40logger{39}) %magenta(rid=%X{requestId:-N/A}) %blue(trace=%X{trace_id:-N/A}/%X{span_id:-N/A}) - %msg%n
+                </pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <logger name="com.tproject.workshop" level="DEBUG"/>
+        <logger name="http.access" level="DEBUG"/>
+        <logger name="org.springframework.web" level="INFO"/>
+        
+        <!-- Silencia logs internos verbosos do Spring MVC -->
+        <logger name="org.springframework.web.servlet" level="INFO"/>
+        <logger name="org.springframework.web.servlet.mvc.method.annotation" level="WARN"/>
+        <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="ERROR"/>
+        
+        <!-- SQL and bind values may contain customer data; keep them out of
+             application logs unless a short-lived, local diagnostic override
+             is explicitly supplied outside this file. -->
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <logger name="org.hibernate.orm.jdbc.bind" level="WARN"/>
+    </springProfile>
+
+    <!-- ========================================
+         PROFILE: PRODUCTION & QA
+         JSON structured logs for Loki/ELK
+         ======================================== -->
+    <springProfile name="production,qa">
+        <springProperty scope="context" name="appVersion" source="app.version" defaultValue="unknown"/>
+        
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- MDC fields -->
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>trace_id</includeMdcKeyName>
+                <includeMdcKeyName>span_id</includeMdcKeyName>
+                <includeMdcKeyName>httpMethod</includeMdcKeyName>
+                <includeMdcKeyName>httpPath</includeMdcKeyName>
+                <includeMdcKeyName>httpStatus</includeMdcKeyName>
+                <includeMdcKeyName>durationMs</includeMdcKeyName>
+                
+                <!-- Custom field names -->
+                <fieldNames>
+                    <timestamp>@timestamp</timestamp>
+                    <message>message</message>
+                    <logger>logger</logger>
+                    <level>level</level>
+                    <thread>thread</thread>
+                    <stackTrace>stackTrace</stackTrace>
+                </fieldNames>
+                
+                <!-- Add application name and version (version is injected from build.gradle) -->
+                <customFields>{"application":"workshop-api","version":"${appVersion}"}</customFields>
+                
+                <!-- Exception formatting -->
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <maxLength>2048</maxLength>
+                    <shortenedClassNameLength>20</shortenedClassNameLength>
+                    <exclude>sun\.reflect\..*</exclude>
+                    <exclude>java\.lang\.reflect\..*</exclude>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+
+        <logger name="com.tproject.workshop" level="INFO"/>
+        <logger name="http.access" level="INFO"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.flywaydb" level="INFO"/>
+        
+        <!-- Silence verbose logs -->
+        <logger name="org.apache.catalina" level="WARN"/>
+        <logger name="org.apache.tomcat" level="WARN"/>
+        <logger name="org.springframework.data.repository.config" level="WARN"/>
+        <logger name="org.hibernate.orm.deprecation" level="ERROR"/>
+        <logger name="org.springframework.boot.autoconfigure.orm.jpa" level="ERROR"/>
+        <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="ERROR"/>
+    </springProfile>
+</configuration>

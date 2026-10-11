@@ -1,0 +1,161 @@
+# Execução: promtool test rules tests/observability_test.yml
+# (a partir de platform/observability/local/prometheus)
+rule_files:
+  - ../rules/observability.yml
+
+evaluation_interval: 30s
+
+tests:
+  - name: falhas de exportação de logs e métricas também alertam
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_log_records{exporter="otlp_http/loki"}'
+        values: '0+10x30'
+      - series: 'otelcol_exporter_send_failed_metric_points{exporter="otlp_http/prometheus"}'
+        values: '0+0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OTelCollectorExportFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_http/loki
+            exp_annotations:
+              summary: "Falha de exportação no Collector"
+              description: "O exporter otlp_http/loki falha continuamente há mais de 10 minutos."
+
+  - name: pressão de memória usa RSS contra o limite do memory_limiter
+    interval: 1m
+    input_series:
+      - series: 'otelcol_process_memory_rss{job="otel-collector-internal",instance="otel-collector:8888"}'
+        values: '350000000x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OTelCollectorMemoryPressure
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: otel-collector-internal
+              instance: otel-collector:8888
+            exp_annotations:
+              summary: "Collector próximo do limite de memória"
+              description: "O uso RSS do Collector excede 80% do limite do memory_limiter (384 MiB)."
+
+  - name: memória abaixo do limite não alerta
+    interval: 1m
+    input_series:
+      - series: 'otelcol_process_memory_rss{job="otel-collector-internal",instance="otel-collector:8888"}'
+        values: '100000000x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OTelCollectorMemoryPressure
+        exp_alerts: []
+
+  - name: recusa do receiver e fila cheia alertam
+    interval: 1m
+    input_series:
+      - series: 'otelcol_receiver_refused_spans{receiver="otlp"}'
+        values: '0+5x30'
+      - series: 'otelcol_exporter_queue_size{job="otel-collector-internal",exporter="otlp_grpc/tempo"}'
+        values: '240x30'
+      - series: 'otelcol_exporter_queue_capacity{job="otel-collector-internal",exporter="otlp_grpc/tempo"}'
+        values: '256x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OTelCollectorReceiverRefused
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              receiver: otlp
+            exp_annotations:
+              summary: "Collector recusando dados"
+              description: "O receiver otlp está recusando dados (pressão de memória ou backpressure)."
+      - eval_time: 20m
+        alertname: OTelCollectorQueueNearlyFull
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              exporter: otlp_grpc/tempo
+            exp_annotations:
+              summary: "Fila do Collector acima de 80%"
+              description: "A fila do exporter otlp_grpc/tempo está acima de 80% da capacidade."
+
+  - name: ausência de métricas da API alerta
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/workshop-api"}'
+        values: '1x5'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: WorkshopApiMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/workshop-api
+            exp_annotations:
+              summary: "Métricas da API ausentes"
+              description: "Nenhuma amostra de up da API chegou ao Prometheus nos últimos 10 minutos."
+
+  - name: fila que não esvazia alerta; fila que drena não
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_queue_size{job="otel-collector-internal",exporter="otlp_http/loki"}'
+        values: '0 0 0 0 0 5000+5000x30'
+      - series: 'otelcol_exporter_queue_size{job="otel-collector-internal",exporter="otlp_grpc/tempo"}'
+        values: '0 300 0 120 0 0 450 0 0 200 0 0 0 80 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'
+      # Mesma métrica exposta pelo Alloy: não é fila do Collector.
+      - series: 'otelcol_exporter_queue_size{job="alloy",exporter="otlp_grpc/otelcol.exporter.otlp.collector"}'
+        values: '1000x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: OTelCollectorQueueBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_http/loki
+            exp_annotations:
+              summary: "Fila do Collector acumulando"
+              description: "A fila do exporter otlp_http/loki não esvazia há mais de 15 minutos (destino indisponível ou lento)."
+
+  - name: descarte no Alloy alerta, inclusive por retry esgotado; Alloy sem descarte não
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_enqueue_failed_log_records_total{job="alloy",instance="alloy:12345",exporter="otlp_grpc/otelcol.exporter.otlp.collector"}'
+        values: '0x10 0+40x10 400x10'
+      - series: 'otelcol_exporter_send_failed_log_records_total{job="alloy",instance="alloy:12345",exporter="otlp_grpc/otelcol.exporter.otlp.collector"}'
+        values: '0x25 0+5x5'
+      - series: 'otelcol_exporter_enqueue_failed_log_records_total{job="alloy",instance="alloy-b:12345",exporter="otlp_grpc/otelcol.exporter.otlp.collector"}'
+        values: '0x30'
+      # Nome sem _total é do Collector, coberto por OTelCollectorEnqueueFailures.
+      - series: 'otelcol_exporter_enqueue_failed_log_records{job="otel-collector-internal",instance="otel-collector:8888",exporter="otlp_http/loki"}'
+        values: '0+50x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AlloyLogsDropped
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: AlloyLogsDropped
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              instance: alloy:12345
+            exp_annotations:
+              summary: "Alloy descartando logs"
+              description: "O Alloy em alloy:12345 descartou logs nos últimos 5 minutos (Collector recusando ou indisponível)."
+      - eval_time: 28m
+        alertname: AlloyLogsDropped
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              instance: alloy:12345
+            exp_annotations:
+              summary: "Alloy descartando logs"
+              description: "O Alloy em alloy:12345 descartou logs nos últimos 5 minutos (Collector recusando ou indisponível)."

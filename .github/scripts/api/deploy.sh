@@ -17,6 +17,13 @@ chmod 644 config/keys/private-pkcs8.pem
 mv "${DEPLOY_DIR}/.tmp/public.pem" config/keys/ 2>/dev/null || mv .tmp/public.pem config/keys/ 2>/dev/null || true
 chmod 644 config/keys/public.pem
 
+# Setup scrape identity hash (file secret; the API runs as a non-root user, so
+# the file is world-readable inside the private config/observability directory)
+mkdir -p config/observability
+chmod 700 config/observability
+mv "${DEPLOY_DIR}/.tmp/scrape_password_hash" config/observability/scrape_password_hash 2>/dev/null || mv .tmp/scrape_password_hash config/observability/scrape_password_hash
+chmod 444 config/observability/scrape_password_hash
+
 # Setup pgbackrest config
 if [ -f "${DEPLOY_DIR}/.tmp/pgbackrest.conf" ]; then
   DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)

@@ -1,0 +1,68 @@
+app:
+  version: '@project.version@'
+
+spring:
+  profiles:
+    active: local
+  application:
+    name: ${OTEL_SERVICE_NAME:workshop-api}
+
+  datasource:
+    hikari:
+      connection-init-sql: SET pg_trgm.word_similarity_threshold TO 0.45
+      # Sem o "Detail" do PostgreSQL (valores da linha) nas exceções e logs.
+      data-source-properties:
+        logServerErrorDetail: false
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      default_schema: public
+      ddl-auto: validate
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.temp.use_jdbc_metadata_defaults: false
+
+server:
+  compression:
+    enabled: true
+  port: 8080
+  servlet:
+    session:
+      timeout: 30
+
+# Métricas ficam disponíveis no mesmo servidor HTTP da API, mas o endpoint
+# prometheus só aceita a identidade de scrape (ROLE_METRICS). Apenas health
+# é público; info exige ROLE_ADMIN.
+management:
+  # Only Prometheus is on the classpath; no push/export connection is started.
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${OTEL_SERVICE_NAME:workshop-api}
+    distribution:
+      # Buckets fixos (_bucket) para p95 e SLI de latência, sem o custo do
+      # histograma percentil completo. Revisar quando o limite do SLI for aprovado.
+      # 25 ms e 50 ms evitam que o p95 de rotas rápidas seja só interpolação
+      # dentro do primeiro bucket (R27b).
+      slo:
+        http.server.requests: 25ms,50ms,100ms,250ms,500ms,1s,2500ms,5s
+
+# Identidade de scrape de leitura mínima (HTTP Basic, somente
+# /actuator/prometheus). Sem hash configurado, o endpoint fica inacessível.
+# O Java Agent não lê este arquivo: é configurado por OTEL_* e por
+# apps/api/otel/javaagent.properties.
+observability:
+  scrape:
+    username: ${OBSERVABILITY_SCRAPE_USERNAME:metrics-scraper}
+    password-hash: ${OBSERVABILITY_SCRAPE_PASSWORD_HASH:}

@@ -1,0 +1,118 @@
+# Prometheus do plano de controle (VM de QA). Retenção por tempo e tamanho nas
+# flags do Compose (disco único, Fase 0).
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    stack: workshop-observability
+    observer: qa-control-plane
+
+# Métricas de PRD chegam do Collector interno por /api/v1/otlp. A janela fora
+# de ordem cobre as 4 horas da fila da borda mais drenagem e margem de relógio;
+# o custo de memória/disco ainda precisa ser medido na QA.
+storage:
+  tsdb:
+    out_of_order_time_window: 6h
+
+otlp:
+  promote_resource_attributes:
+    - deployment.environment.name
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - prometheus:9090
+
+  - job_name: otel-collector-internal
+    static_configs:
+      - targets:
+          - otel-collector:8888
+
+  - job_name: loki
+    static_configs:
+      - targets:
+          - loki:3100
+
+  - job_name: tempo
+    static_configs:
+      - targets:
+          - tempo:3200
+
+  - job_name: grafana
+    static_configs:
+      - targets:
+          - grafana:3000
+
+  - job_name: alertmanager
+    static_configs:
+      - targets:
+          - alertmanager:9093
+
+  - job_name: cloudflared
+    static_configs:
+      - targets:
+          - cloudflared:2000
+
+  # Ocupação do filesystem único da VM (compensação da Fase 0).
+  - job_name: node-exporter
+    static_configs:
+      - targets:
+          - node-exporter:9100
+
+  # Métricas do próprio blackbox, que executa as sondas da API de produção.
+  - job_name: blackbox
+    static_configs:
+      - targets:
+          - blackbox:9115
+
+  # API de QA, raspada direto pelo Prometheus (não pelo Collector, que marca
+  # tudo como produção) na rede interna workshop-metrics. Mesma identidade de
+  # scrape de leitura mínima da borda de PRD; a senha vem de secret em arquivo.
+  # O job difere do de PRD (workshop/workshop-api) para que os alertas de
+  # ausência de PRD não sejam satisfeitos por séries de QA.
+  - job_name: workshop/workshop-api-qa
+    metrics_path: /actuator/prometheus
+    basic_auth:
+      username: metrics-scraper
+      password_file: /run/secrets/api_scrape_password
+    static_configs:
+      - targets:
+          - workshop-api-qa:8080
+        labels:
+          deployment_environment_name: qa
+
+  # Sonda externa da API de produção: o blackbox acessa a URL pública (pela
+  # Cloudflare) e o Prometheus recebe probe_success. A medição sai da VM de QA,
+  # então falha de rede da QA também aparece como indisponibilidade. O job
+  # difere do de PRD (workshop/workshop-api) para que as métricas de PRD não
+  # satisfaçam os alertas desta sonda, e vice-versa.
+  - job_name: workshop/workshop-api-prod-probe
+    metrics_path: /probe
+    params:
+      module:
+        - workshop_api_health
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    static_configs:
+      - targets:
+          - https://api.eletroluk.com/actuator/health
+        labels:
+          deployment_environment_name: production
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115

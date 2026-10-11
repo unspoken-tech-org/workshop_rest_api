@@ -1,0 +1,39 @@
+global:
+  resolve_timeout: 5m
+
+# Canal externo: Telegram (decisão de 06/10/2026), independente de produção.
+# Token do bot e chat ID chegam como secrets em arquivo, fora deste diretório.
+route:
+  receiver: telegram
+  group_by:
+    - alertname
+    - job
+    - severity
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  routes:
+    # Dependem do Collector de borda de PRD (Fase 2), que ainda não existe:
+    # dispararia sem parar. Remover esta rota quando a borda for implantada.
+    - receiver: local-sink
+      matchers:
+        - alertname="WorkshopApiMetricsAbsent"
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token_file: /run/secrets/telegram_bot_token
+        chat_id_file: /run/secrets/telegram_chat_id
+        send_resolved: true
+
+  - name: local-sink
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - job
+      - instance

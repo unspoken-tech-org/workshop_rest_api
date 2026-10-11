@@ -1,0 +1,151 @@
+# Nomes conferidos no Collector contrib 0.161.0 (sem sufixo _total). Revalidar
+# após cada upgrade do Collector com `promtool test rules` (tests/).
+groups:
+  - name: local-observability-health
+    interval: 30s
+    rules:
+      - record: observability:target_up_ratio
+        expr: avg by (job) (up{job=~"otel-collector-internal|alloy|loki|tempo|grafana|alertmanager"})
+
+      - alert: ObservabilityTargetDown
+        expr: up{job=~"otel-collector-internal|alloy|loki|tempo|grafana|alertmanager"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Alvo de observabilidade indisponível"
+          description: "{{ $labels.job }} em {{ $labels.instance }} está indisponível há mais de 10 minutos."
+
+      # Os três sinais: spans, pontos de métrica e registros de log.
+      - alert: OTelCollectorExportFailures
+        expr: |
+          sum by (exporter) (
+            rate({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"}[5m])
+          ) > 0
+        for: 10m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Falha de exportação no Collector"
+          description: "O exporter {{ $labels.exporter }} falha continuamente há mais de 10 minutos."
+
+      - alert: OTelCollectorEnqueueFailures
+        expr: |
+          sum by (exporter) (
+            rate({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"}[5m])
+          ) > 0
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Fila do Collector descartando dados"
+          description: "O exporter {{ $labels.exporter }} não consegue enfileirar dados (fila cheia)."
+
+      # Com retry sem prazo (fila persistente), send_failed só cresce com erro
+      # permanente: backend fora do ar aparece como fila que nunca esvazia.
+      - alert: OTelCollectorQueueBacklog
+        expr: |
+          min by (exporter) (min_over_time(otelcol_exporter_queue_size{job="otel-collector-internal"}[10m])) > 0
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Fila do Collector acumulando"
+          description: "A fila do exporter {{ $labels.exporter }} não esvazia há mais de 15 minutos (destino indisponível ou lento)."
+
+      - alert: OTelCollectorQueueNearlyFull
+        expr: |
+          max by (exporter) (
+            otelcol_exporter_queue_size{job="otel-collector-internal"}
+              / otelcol_exporter_queue_capacity{job="otel-collector-internal"}
+          ) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Fila do Collector acima de 80%"
+          description: "A fila do exporter {{ $labels.exporter }} está acima de 80% da capacidade."
+
+      # Recusado pelo Collector (fila cheia ou retry esgotado), o Alloy descarta
+      # o log: loki.source.docker não reenvia (R26d). As métricas do Alloy têm o
+      # sufixo _total e os mesmos nomes de fila das do Collector, por isso as
+      # regras de fila acima filtram o job. Descarte é perda definitiva: sem for.
+      - alert: AlloyLogsDropped
+        expr: |
+          sum by (instance) (increase(otelcol_exporter_enqueue_failed_log_records_total{job="alloy"}[5m])) > 0
+            or
+          sum by (instance) (increase(otelcol_exporter_send_failed_log_records_total{job="alloy"}[5m])) > 0
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Alloy descartando logs"
+          description: "O Alloy em {{ $labels.instance }} descartou logs nos últimos 5 minutos (Collector recusando ou indisponível)."
+
+      # memory_limiter recusa dados quando o limite é atingido.
+      - alert: OTelCollectorReceiverRefused
+        expr: |
+          sum by (receiver) (
+            rate({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"}[5m])
+          ) > 0
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Collector recusando dados"
+          description: "O receiver {{ $labels.receiver }} está recusando dados (pressão de memória ou backpressure)."
+
+      # 384 MiB = processors.memory_limiter.limit_mib do Collector local.
+      # Manter em sincronia com collector/config.yaml.
+      - alert: OTelCollectorMemoryPressure
+        expr: otelcol_process_memory_rss > 0.80 * 384 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Collector próximo do limite de memória"
+          description: "O uso RSS do Collector excede 80% do limite do memory_limiter (384 MiB)."
+
+  - name: workshop-api-scrape
+    interval: 30s
+    rules:
+      - alert: WorkshopApiScrapeFailing
+        expr: up{job="workshop/workshop-api"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Scrape da API falhando"
+          description: "O Collector não consegue raspar /actuator/prometheus da API há mais de 5 minutos."
+
+      # Ausência de dados não é estado saudável.
+      - alert: WorkshopApiMetricsAbsent
+        expr: absent_over_time(up{job="workshop/workshop-api"}[10m])
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Métricas da API ausentes"
+          description: "Nenhuma amostra de up da API chegou ao Prometheus nos últimos 10 minutos."
+
+  - name: prometheus-integrity
+    interval: 1m
+    rules:
+      - alert: PrometheusRuleEvaluationFailures
+        expr: increase(prometheus_rule_evaluation_failures_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Falha ao avaliar regra do Prometheus"
+          description: "O Prometheus registrou falha de avaliação de regras nos últimos 5 minutos."

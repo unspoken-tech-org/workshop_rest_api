@@ -23,6 +23,9 @@ inputs:
   compose-file:
     description: 'docker-compose file name on the server'
     required: true
+  compose-source:
+    description: 'Path to the compose file in the checked-out repository'
+    required: true
   image-tag:
     description: 'Image tag to be deployed'
     required: true
@@ -62,6 +65,9 @@ inputs:
   pgbackrest-s3-key-secret:
     description: 'pgBackRest S3 secret access key'
     required: true
+  scrape-password-hash:
+    description: 'Bcrypt hash of the /actuator/prometheus scrape identity'
+    required: true
 
 runs:
   using: composite
@@ -80,8 +86,15 @@ runs:
         PGBACKREST_S3_REGION: ${{ inputs.pgbackrest-s3-region }}
         PGBACKREST_S3_KEY: ${{ inputs.pgbackrest-s3-key }}
         PGBACKREST_S3_KEY_SECRET: ${{ inputs.pgbackrest-s3-key-secret }}
+        SCRAPE_PASSWORD_HASH: ${{ inputs.scrape-password-hash }}
       run: |
         set -e
+
+        # Without the hash the API denies every scrape; fail before the server.
+        [[ "${SCRAPE_PASSWORD_HASH}" =~ ^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$ ]] || {
+          echo "scrape-password-hash must be a bcrypt hash" >&2
+          exit 1
+        }
 
         {
           echo "DB_NAME=${DB_NAME}"
@@ -101,8 +114,10 @@ runs:
         chmod 600 /tmp/private-pkcs8.pem
         chmod 644 /tmp/public.pem
 
+        ( umask 077 && printf '%s' "${SCRAPE_PASSWORD_HASH}" > /tmp/scrape_password_hash )
+
         echo "Deploy files prepared:"
-        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem
+        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash
 
     - name: Upload files to server
       shell: bash
@@ -111,8 +126,36 @@ runs:
         DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
         COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
       run: |
         set -e
+
+        # Materialize a server-shaped payload. The checked-out compose file lives under
+        # apps/api, while the production host keeps Dockerfile.pgbackrest at its root.
+        test -s "${COMPOSE_SOURCE}"
+        test -s "apps/api/infra/pgbackrest/pgbackrest.conf"
+        test -s "apps/api/docker/Dockerfile.pgbackrest"
+        PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/api-prod-payload.XXXXXX")"
+        COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
+        sed 's#apps/api/docker/Dockerfile.pgbackrest#Dockerfile.pgbackrest#g' \
+          "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
+
+        # Parse the payload with representative values before changing the server.
+        mkdir -p "${PAYLOAD_ROOT}/config/keys" "${PAYLOAD_ROOT}/config/observability"
+        printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/config/observability/scrape_password_hash"
+        touch "${PAYLOAD_ROOT}/Dockerfile.pgbackrest"
+        printf '%s\n' \
+          'DB_NAME=workshop_db' \
+          'DB_USERNAME=workshop_admin' \
+          'DB_PASSWORD=validation-only' \
+          'PGBACKREST_S3_BUCKET=validation-bucket' \
+          'PGBACKREST_S3_ENDPOINT=https://validation.invalid' \
+          'PGBACKREST_S3_REGION=us-east-1' \
+          'PGBACKREST_S3_KEY=validation-key' \
+          'PGBACKREST_S3_KEY_SECRET=validation-secret' > "${PAYLOAD_ROOT}/.env"
+        docker compose --project-directory "${PAYLOAD_ROOT}" \
+          --env-file "${PAYLOAD_ROOT}/.env" \
+          -f "${COMPOSE_PAYLOAD}" config --quiet
 
         # Ensure deploy directory, secure tmp directory, and docker config directory exist on the server
         ssh -o ConnectTimeout=30 \
@@ -125,19 +168,19 @@ runs:
         chmod 700 ~/.docker
 
         scp -o ConnectTimeout=30 \
-          /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
+          /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
           "${DEPLOY_SCRIPT}" \
-          "infra/pgbackrest/pgbackrest.conf" \
+          "apps/api/infra/pgbackrest/pgbackrest.conf" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
         # Upload compose file to deploy dir
         scp -o ConnectTimeout=30 \
-          "${COMPOSE_FILE}" \
+          "${COMPOSE_PAYLOAD}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
         # Upload Dockerfile for PostgreSQL image build (first deploy only)
         scp -o ConnectTimeout=30 \
-          "Dockerfile.pgbackrest" \
+          "apps/api/docker/Dockerfile.pgbackrest" \
           "${SSH_TARGET}:${DEPLOY_DIR}/Dockerfile.pgbackrest"
 
         scp -o ConnectTimeout=30 \

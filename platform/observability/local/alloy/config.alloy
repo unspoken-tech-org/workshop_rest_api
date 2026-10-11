@@ -1,0 +1,91 @@
+// Alloy coleta logs dos containers Docker marcados para coleta e os envia por
+// OTLP ao Collector (mesma ponte Alloy → OTLP → Collector de borda da PRD).
+// O acesso ao Docker é feito pelo socket-proxy somente leitura (R1).
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+discovery.docker "containers" {
+	host             = "tcp://docker-socket-proxy:2375"
+	refresh_interval = "15s"
+}
+
+discovery.relabel "containers" {
+	targets = discovery.docker.containers.targets
+
+	// Allowlist: somente containers com o label explícito de coleta.
+	rule {
+		source_labels = ["__meta_docker_container_label_com_workshop_observability_logs"]
+		regex         = "true"
+		action        = "keep"
+	}
+
+	// service_name vem do label do container ou, na falta dele, do nome.
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "service_name"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_workshop_observability_service"]
+		regex         = "(.+)"
+		target_label  = "service_name"
+	}
+}
+
+loki.source.docker "containers" {
+	host       = "tcp://docker-socket-proxy:2375"
+	targets    = discovery.relabel.containers.output
+	forward_to = [loki.process.redact.receiver]
+}
+
+loki.process "redact" {
+	// Defesa complementar à sanitização na origem. Casa formato chave=valor,
+	// "Chave: valor" e JSON ("chave":"valor"), incluindo "Bearer <token>".
+	// Só o grupo capturado (o valor) é substituído.
+	stage.replace {
+		expression = "(?i)\"?(?:password|passwd|secret|token|access_token|refresh_token|authorization|cookie|x-api-key|api[-_]key|cpf)\"?\\s*[:=]\\s*\"?(?:bearer\\s+)?([^\",;\\s}]+)"
+		replace    = "[REDACTED]"
+	}
+
+	forward_to = [otelcol.receiver.loki.containers.receiver]
+}
+
+otelcol.receiver.loki "containers" {
+	output {
+		logs = [otelcol.processor.transform.resource.input]
+	}
+}
+
+// Os labels Loki chegam como atributos do log; service_name vira o atributo
+// de recurso padrão, igual aos logs OTLP da aplicação.
+otelcol.processor.transform "resource" {
+	error_mode = "ignore"
+
+	log_statements {
+		context    = "log"
+		statements = [
+			`set(resource.attributes["service.name"], attributes["service_name"]) where attributes["service_name"] != nil`,
+			`delete_key(attributes, "service_name")`,
+			`delete_key(attributes, "loki.attribute.labels")`,
+			`set(resource.attributes["log.source"], "docker")`,
+		]
+	}
+
+	output {
+		logs = [otelcol.exporter.otlp.collector.input]
+	}
+}
+
+otelcol.exporter.otlp "collector" {
+	client {
+		endpoint = "otel-collector:4317"
+
+		tls {
+			insecure = true
+		}
+	}
+}

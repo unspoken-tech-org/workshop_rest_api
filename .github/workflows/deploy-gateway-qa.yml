@@ -35,6 +35,7 @@ env:
   IMAGE_NAME: unspoken-tech-org/workshop_rest_api/caddy-gateway
   LOCAL_IMAGE_NAME: workshop/caddy-gateway-qa
   COMPOSE_FILE: docker-compose-gateway-qa.yml
+  COMPOSE_SOURCE: platform/gateway/compose/qa.yml
   DEPLOY_DIR: /home/workshop/deploy/gateway_stack_qa
   SSH_USER: ${{ secrets.QA_SSH_USER }}
   TS_IP: ${{ secrets.QA_TS_TAILSCALE_IP }}
@@ -90,7 +91,7 @@ jobs:
       - name: Build and push Caddy image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
-          context: ./infra/caddy
+          context: ./platform/gateway/caddy
           push: true
           platforms: linux/arm64
           tags: |
@@ -159,6 +160,8 @@ jobs:
           image-name: ${{ env.IMAGE_NAME }}
           local-image-name: ${{ env.LOCAL_IMAGE_NAME }}
           compose-file: ${{ env.COMPOSE_FILE }}
+          compose-source: ${{ env.COMPOSE_SOURCE }}
+          caddyfile-source: platform/gateway/caddy/Caddyfile-gateway-qa
           image-tag: ${{ needs.build.outputs.deployed-image-tag }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
           admin-email: ${{ secrets.QA_ADMIN_EMAIL }}

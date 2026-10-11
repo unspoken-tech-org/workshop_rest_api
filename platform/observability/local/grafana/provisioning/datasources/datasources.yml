@@ -1,0 +1,71 @@
+apiVersion: 1
+
+deleteDatasources:
+  - name: Local Prometheus
+    orgId: 1
+  - name: Local Loki
+    orgId: 1
+  - name: Local Tempo
+    orgId: 1
+
+datasources:
+  - name: Local Prometheus
+    uid: local-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      cacheLevel: High
+
+  - name: Local Loki
+    uid: local-loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        # Logs OTLP guardam trace_id como structured metadata.
+        - name: trace_id
+          matcherType: label
+          matcherRegex: trace_id
+          url: "$${__value.raw}"
+          datasourceUid: local-tempo
+        # Logs JSON da API ("trace_id":"...") e padrão texto local (trace=<id>/<span>).
+        - name: TraceID
+          matcherRegex: '(?:"trace_id"\s*:\s*"|trace(?:_id)?=)([a-fA-F0-9]{32})'
+          url: "$${__value.raw}"
+          datasourceUid: local-tempo
+        # Os links acima levam ao Explore, oculto para o Viewer anônimo; este
+        # abre o trace no dashboard provisionado.
+        - name: Trace no dashboard
+          matcherRegex: '(?:"trace_id"\s*:\s*"|trace(?:_id)?=)([a-fA-F0-9]{32})'
+          url: "/d/workshop-api/workshop-api?var-trace_id=$${__value.raw}"
+
+  - name: Local Tempo
+    uid: local-tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      nodeGraph:
+        enabled: true
+      tracesToLogsV2:
+        datasourceUid: local-loki
+        spanStartTimeShift: "-5m"
+        spanEndTimeShift: "5m"
+        filterByTraceID: true
+        filterBySpanID: false
+        # Atributos com ponto viram labels Loki com "_" (service.name → service_name).
+        tags:
+          - key: service.name
+            value: service_name
+      tracesToMetrics:
+        datasourceUid: local-prometheus

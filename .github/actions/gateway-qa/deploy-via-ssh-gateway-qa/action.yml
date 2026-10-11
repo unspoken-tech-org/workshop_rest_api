@@ -23,6 +23,12 @@ inputs:
   compose-file:
     description: 'docker-compose file name on the server'
     required: true
+  compose-source:
+    description: 'Path to the compose file in the checked-out repository'
+    required: true
+  caddyfile-source:
+    description: 'Path to the QA Caddyfile in the checked-out repository'
+    required: true
   image-tag:
     description: 'Image tag to be deployed'
     required: true
@@ -67,8 +73,33 @@ runs:
         DEPLOY_DIR: ${{ inputs.deploy-dir }}
         DEPLOY_SCRIPT: ${{ inputs.deploy-script }}
         COMPOSE_FILE: ${{ inputs.compose-file }}
+        COMPOSE_SOURCE: ${{ inputs.compose-source }}
+        CADDYFILE_SOURCE: ${{ inputs.caddyfile-source }}
       run: |
         set -e
+
+        # Materialize a server-shaped payload before any remote state is touched.
+        test -s "${COMPOSE_SOURCE}"
+        test -s "${CADDYFILE_SOURCE}"
+        PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/gateway-qa-payload.XXXXXX")"
+        COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
+        sed \
+          -e 's#\./platform/gateway/caddy/Caddyfile-gateway-qa#./Caddyfile-gateway-qa#g' \
+          -e 's#context: \./platform/gateway/caddy#context: ./infra/caddy#g' \
+          "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
+        cp -- "${CADDYFILE_SOURCE}" "${PAYLOAD_ROOT}/Caddyfile-gateway-qa"
+
+        # Parse the payload with representative values before changing the server.
+        mkdir -p "${PAYLOAD_ROOT}/infra/caddy"
+        cp -- "${CADDYFILE_SOURCE}" "${PAYLOAD_ROOT}/infra/caddy/Caddyfile-gateway-qa"
+        touch "${PAYLOAD_ROOT}/infra/caddy/Dockerfile"
+        printf '%s\n' \
+          'ADMIN_EMAIL=admin@example.invalid' \
+          'CF_API_TOKEN=validation-token' \
+          'CLOUDFLARE_TUNNEL_TOKEN=validation-token' > "${PAYLOAD_ROOT}/.env"
+        docker compose --project-directory "${PAYLOAD_ROOT}" \
+          --env-file "${PAYLOAD_ROOT}/.env" \
+          -f "${COMPOSE_PAYLOAD}" config --quiet
 
         # Ensure deploy directory exists first
         ssh -o ConnectTimeout=30 \
@@ -92,10 +123,10 @@ runs:
 
         # Upload compose file to deploy dir
         scp -o ConnectTimeout=30 \
-          "${COMPOSE_FILE}" \
+          "${COMPOSE_PAYLOAD}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
 
-        CADDYFILE_SRC="infra/caddy/Caddyfile-gateway-qa"
+        CADDYFILE_SRC="${CADDYFILE_SOURCE}"
         CADDYFILE_DEST="Caddyfile-gateway-qa"
         if [ -f "${CADDYFILE_SRC}" ]; then
           scp -o ConnectTimeout=30 \

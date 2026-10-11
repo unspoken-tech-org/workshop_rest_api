@@ -1,8 +1,5 @@
-#!/bin/bash
-set -eo pipefail
-cd "${DEPLOY_DIR}"
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-echo ">>> Rolling back observability deployment..."
-docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans || true
-docker compose -f "${COMPOSE_FILE}" ps || true
-echo "Rollback executed"
+echo 'Legacy production observability rollback is archived; no changes were performed.' >&2
+exit 1

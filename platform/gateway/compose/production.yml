@@ -1,0 +1,45 @@
+services:
+  caddy-gateway:
+    build:
+      context: ./platform/gateway/caddy
+    image: workshop/caddy-gateway:latest
+    container_name: caddy-gateway
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CF_API_TOKEN=${CF_API_TOKEN}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+    volumes:
+      - ./platform/gateway/caddy/Caddyfile-gateway:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - workshop-ingress
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:2019/config/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      - cloudflared-prod
+
+  # Tunnel de Produção
+  cloudflared-prod:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-gateway-prod
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - workshop-ingress
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  workshop-ingress:
+    name: workshop-ingress
+    driver: bridge

@@ -1,0 +1,56 @@
+spring:
+  jackson:
+    time-zone: America/Sao_Paulo
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 50
+      idle-timeout: 600000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
+  jpa:
+    show-sql: false
+    generate-ddl: false
+    hibernate:
+      default_schema: public
+      ddl-auto: validate
+      #      allow camel case names on entities
+#      naming:
+#        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.temp.use_jdbc_metadata_defaults: false
+
+server:
+  port: 8081
+
+# Timezone
+spring.main.banner-mode: off
+logging:
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS,America/Sao_Paulo
+
+message: Integration Test
+
+observability:
+  scrape:
+    # Hash bcrypt de uma senha exclusiva dos testes de integração.
+    password-hash: $2a$10$9lpAFc4.hyFpTDdYUk1XnOnAKxsV43L3s0PGo0oNZGGTEeoRTT2Am
+
+# JWT Configuration for Tests
+jwt:
+  rsa:
+    public-key: classpath:keys/public.pem
+    private-key: classpath:keys/private-pkcs8.pem
+  access-token:
+    expiration: 900
+  refresh-token:
+    expiration: 604800
+
+# CORS para testes
+cors:
+  allowed-origins:
+    - http://localhost:8081
+    - http://127.0.0.1:8081

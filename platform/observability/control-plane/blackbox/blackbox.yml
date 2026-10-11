@@ -1,0 +1,20 @@
+# Módulo da sonda externa da API de produção (blackbox_exporter na VM de QA).
+# A sonda mede o caminho público (DNS, TLS, Cloudflare e API) a partir da QA;
+# não substitui o monitor externo da Fase 6. Não há credenciais: o endpoint de
+# saúde é público e, com o padrão do Spring (show-details never), não expõe
+# detalhes.
+modules:
+  workshop_api_health:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      # Redirecionamento (login ou negação do Access) não é saúde da API.
+      follow_redirects: false
+      fail_if_not_ssl: true
+      fail_if_body_not_matches_regexp:
+        - '"status":"UP"'
+      preferred_ip_protocol: ip4
+      tls_config:
+        insecure_skip_verify: false
