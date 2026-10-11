@@ -65,6 +65,9 @@ inputs:
   pgbackrest-s3-key-secret:
     description: 'pgBackRest S3 secret access key'
     required: true
+  scrape-password-hash:
+    description: 'Bcrypt hash of the /actuator/prometheus scrape identity'
+    required: true
 
 runs:
   using: composite
@@ -83,8 +86,15 @@ runs:
         PGBACKREST_S3_REGION: ${{ inputs.pgbackrest-s3-region }}
         PGBACKREST_S3_KEY: ${{ inputs.pgbackrest-s3-key }}
         PGBACKREST_S3_KEY_SECRET: ${{ inputs.pgbackrest-s3-key-secret }}
+        SCRAPE_PASSWORD_HASH: ${{ inputs.scrape-password-hash }}
       run: |
         set -e
+
+        # Without the hash the API denies every scrape; fail before the server.
+        [[ "${SCRAPE_PASSWORD_HASH}" =~ ^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$ ]] || {
+          echo "scrape-password-hash must be a bcrypt hash" >&2
+          exit 1
+        }
 
         {
           echo "DB_NAME=${DB_NAME}"
@@ -104,8 +114,10 @@ runs:
         chmod 600 /tmp/private-pkcs8.pem
         chmod 644 /tmp/public.pem
 
+        ( umask 077 && printf '%s' "${SCRAPE_PASSWORD_HASH}" > /tmp/scrape_password_hash )
+
         echo "Deploy files prepared:"
-        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem
+        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash
 
     - name: Upload files to server
       shell: bash
@@ -129,7 +141,8 @@ runs:
           "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
 
         # Parse the payload with representative values before changing the server.
-        mkdir -p "${PAYLOAD_ROOT}/config/keys"
+        mkdir -p "${PAYLOAD_ROOT}/config/keys" "${PAYLOAD_ROOT}/config/observability"
+        printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/config/observability/scrape_password_hash"
         touch "${PAYLOAD_ROOT}/Dockerfile.pgbackrest"
         printf '%s\n' \
           'DB_NAME=workshop_db' \
@@ -155,7 +168,7 @@ runs:
         chmod 700 ~/.docker
 
         scp -o ConnectTimeout=30 \
-          /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem \
+          /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
           "${DEPLOY_SCRIPT}" \
           "apps/api/infra/pgbackrest/pgbackrest.conf" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"

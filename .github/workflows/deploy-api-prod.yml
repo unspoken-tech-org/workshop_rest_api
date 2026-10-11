@@ -145,6 +145,17 @@ jobs:
         with:
           egress-policy: audit
 
+      # A missing secret must fail here, not inside the deploy step, so the
+      # rollback below never runs for a deploy that never reached the server.
+      - name: Check scrape password hash
+        env:
+          SCRAPE_PASSWORD_HASH: ${{ secrets.OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
+        run: |
+          [[ "${SCRAPE_PASSWORD_HASH}" =~ ^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$ ]] || {
+            echo "OBSERVABILITY_SCRAPE_PASSWORD_HASH must be a bcrypt hash" >&2
+            exit 1
+          }
+
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -172,6 +183,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy via SSH
+        id: deploy
         uses: ./.github/actions/api/deploy-via-ssh-api
         with:
           ssh-target: ${{ env.SSH_TARGET }}
@@ -194,9 +206,10 @@ jobs:
           pgbackrest-s3-region: ${{ secrets.PGBACKREST_S3_REGION }}
           pgbackrest-s3-key: ${{ secrets.PGBACKREST_S3_KEY }}
           pgbackrest-s3-key-secret: ${{ secrets.PGBACKREST_S3_KEY_SECRET }}
+          scrape-password-hash: ${{ secrets.OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
 
       - name: Rollback on failure
-        if: failure()
+        if: failure() && steps.deploy.outcome == 'failure'
         run: |
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
@@ -261,7 +274,7 @@ jobs:
     name: Cleanup
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    needs: verify
+    needs: [build, verify]
     if: always()
     permissions:
       contents: read
