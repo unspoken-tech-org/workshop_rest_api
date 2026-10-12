@@ -1,0 +1,81 @@
+# Coletor de containers do host de PRD (projeto Compose workshop-edge). É o único
+# componente com leitura da API do Docker, pela allowlist docker-api-proxy. Não tem
+# saída para a internet nem para a QA: envia ao Collector de borda pela rede
+# interna edge-otlp, e é o Collector de borda que fala com a QA. Assim o acesso à
+# API (que inclui o inspect, com variáveis de ambiente) fica fora do Collector que
+# guarda credenciais e tem saída.
+#
+# Nada aqui é exportado com variáveis de ambiente: o receiver não as usa como
+# atributo, e o Collector de borda ainda redige chaves sensíveis.
+
+extensions:
+  # Lido pelo probe sidecar do Compose (a imagem é distroless).
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  docker_stats:
+    endpoint: tcp://docker-api-proxy:2375
+    collection_interval: 15s
+    timeout: 10s
+    metrics:
+      # Desligadas por padrão no receiver; usadas para reinício e uptime.
+      container.uptime:
+        enabled: true
+      container.restarts:
+        enabled: true
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 96
+    spike_limit_mib: 24
+
+  # O id do container muda a cada recriação e a imagem completa não é necessária:
+  # saem do recurso. O nome do container fica. O receiver não define service.name;
+  # ele é fixado aqui e vira o job workshop/docker-stats na QA.
+  resource/containers:
+    attributes:
+      - key: container.id
+        action: delete
+      - key: container.image.name
+        action: delete
+      - key: container.hostname
+        action: delete
+      - key: service.name
+        value: docker-stats
+        action: upsert
+
+exporters:
+  # Único destino: o Collector de borda, na rede interna edge-otlp. Sem TLS: o
+  # tráfego não sai da rede interna do Compose.
+  otlp_grpc/edge:
+    endpoint: otel-collector:4317
+    tls:
+      insecure: true
+    timeout: 10s
+
+service:
+  extensions:
+    - health_check
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: basic
+      # Interno ao container: lido pelo verify.sh pelo probe da mesma rede.
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+  pipelines:
+    metrics:
+      receivers:
+        - docker_stats
+      processors:
+        - memory_limiter
+        - resource/containers
+      exporters:
+        - otlp_grpc/edge

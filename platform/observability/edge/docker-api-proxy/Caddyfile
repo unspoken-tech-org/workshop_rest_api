@@ -1,0 +1,46 @@
+# Allowlist da API do Docker para o receiver docker_stats (containers-collector).
+# Só GET nas rotas de que o receiver precisa: lista de containers, inspect de cada
+# um, stats, eventos, versão e ping. Qualquer outra rota recebe 403. O socket fica
+# montado somente neste container, na rede interna edge-docker.
+#
+# Risco aceito: o inspect (/containers/{id}/json) devolve Config.Env, com as
+# variáveis de ambiente dos containers. O receiver exige essa rota para registrar
+# cada container (sem ela, não há nenhum ponto). Por isso o acesso fica restrito a
+# um Collector sem saída para a internet nem para a QA (ver containers-collector).
+#
+# Não se usa a imagem genérica de socket-proxy: a seção CONTAINERS dela libera
+# também logs e archive de containers (leitura de arquivos), que não são necessários.
+{
+	admin off
+	auto_https off
+}
+
+:2375 {
+	# O cliente Docker pode prefixar a versão da API (/v1.xx); o prefixo é opcional.
+	@allowed {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/(_ping|version|events|containers/json)$
+	}
+	@inspect {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/[^/]+/(json|stats)$
+	}
+
+	handle @allowed {
+		reverse_proxy unix//var/run/docker.sock {
+			# Eventos e stats são respostas em stream: sem buffer, senão o receiver
+			# espera o fim da resposta.
+			flush_interval -1
+		}
+	}
+
+	handle @inspect {
+		reverse_proxy unix//var/run/docker.sock {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond 403
+	}
+}

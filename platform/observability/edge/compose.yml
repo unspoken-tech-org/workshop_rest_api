@@ -1,8 +1,9 @@
 # Collector de borda da VM de produção (PRD). Projeto Compose próprio, volume de
 # fila próprio e nenhuma porta publicada no host. Faz o scrape autenticado da API
-# de PRD, recebe OTLP do próprio projeto (ainda sem produtores) e envia tudo à QA
-# pela rede privada (Tailscale), com fila persistente em disco. Ainda não
-# implantado: a instalação em PRD é a Fase 1, item 11 do plano.
+# de PRD, coleta métricas do host e dos containers, recebe OTLP do próprio projeto
+# (ainda sem produtores) e envia tudo à QA pela rede privada (Tailscale), com fila
+# persistente em disco. Ainda não implantado: a instalação em PRD é a Fase 1,
+# item 11 do plano.
 #
 # Implantação, a partir da raiz da release (mesmo padrão da QA):
 #   docker compose --project-directory . -p workshop-edge \
@@ -24,10 +25,18 @@
 #   EDGE_API_SCRAPE_PASSWORD_FILE  caminho do arquivo com a senha de scrape
 #   COLLECTOR_QUEUE_BYTES          limite em bytes da fila de cada sinal (64 MiB)
 #
-# Redes: edge-otlp e edge-probe são internas e sem saída; edge-egress é a única
-# saída, rumo à QA pela Tailscale; workshop-metrics é compartilhada somente com a
-# API de PRD, para o scrape. A restrição de quem pode enviar à QA fica na ACL do
-# tailnet (lado da QA).
+# Redes: edge-otlp, edge-probe, edge-node e edge-docker são internas e sem saída;
+# edge-egress é a única saída, rumo à QA pela Tailscale; workshop-metrics é
+# compartilhada somente com a API de PRD, para o scrape. A restrição de quem pode
+# enviar à QA fica na ACL do tailnet (lado da QA).
+#
+# Host e containers: node-exporter (mesmos coletores da QA, para o dashboard Hosts)
+# e containers-collector, que lê containers por docker-api-proxy (allowlist de rotas
+# GET). Só o containers-collector alcança a API do Docker, e ele não tem saída: o
+# Collector de borda, que tem credenciais e saída, não tem acesso ao socket.
+# PostgreSQL ainda não entra aqui: exige a rede do banco (workshop-network, hoje
+# fora do alcance desta borda) e um usuário de monitoramento com pg_monitor, que
+# depende de um passo de criação de papel ainda não automatizado.
 
 name: workshop-edge
 
@@ -63,9 +72,14 @@ services:
       - edge-egress
       # Scrape de /actuator/prometheus da API de PRD.
       - workshop-metrics
+      # Scrape do node-exporter do próprio projeto. Não tem acesso à API do Docker:
+      # ela fica só com containers-collector (ver abaixo).
+      - edge-node
     depends_on:
       otel-collector-queue-init:
         condition: service_completed_successfully
+      node-exporter:
+        condition: service_healthy
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -133,18 +147,165 @@ services:
           cpus: "0.05"
           memory: 16M
 
+  # Coletor de containers: o único com acesso à API do Docker (pela allowlist
+  # docker-api-proxy). Sem saída para a internet nem para a QA, e sem credenciais:
+  # envia ao Collector de borda pela rede edge-otlp. Isso separa a leitura da API
+  # (inspect devolve variáveis de ambiente) do Collector que guarda credenciais e
+  # tem saída. Probe próprio, pelo mesmo motivo do Collector principal (distroless).
+  containers-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
+    command:
+      - --config=file:/etc/otelcol-contrib/config.yaml
+    volumes:
+      - ./platform/observability/edge/containers-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - edge-docker
+      - edge-otlp
+    depends_on:
+      docker-api-proxy:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Sem healthcheck próprio (distroless): o deploy exige o probe saudável.
+    labels:
+      com.workshop.observability.readiness-probe: containers-collector-probe
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  containers-collector-probe:
+    image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+    command: ["sleep", "2147483647"]
+    depends_on:
+      containers-collector:
+        condition: service_started
+    networks:
+      - edge-otlp
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://containers-collector:13133/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: 16M
+
+  # Métricas do host com os mesmos coletores do node-exporter da QA, para que o
+  # dashboard Hosts sirva aos dois ambientes (nomes node_*). Diferença da QA: o
+  # container não publica porta e só entra na rede edge-node. O mount de / é
+  # somente leitura, como na QA; o container roda como nobody (padrão da imagem).
+  node-exporter:
+    image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    command:
+      - --path.rootfs=/host
+      - --collector.disable-defaults
+      - --collector.filesystem
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run|sys|var/lib/docker/.+|var/snap/.+)($$|/)
+      - --collector.cpu
+      - --collector.meminfo
+      - --collector.loadavg
+      - --collector.pressure
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - edge-node
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+  # Única via até a API do Docker, por allowlist de rotas (Caddy): GET de
+  # /containers/json, /containers/{id}/json, /containers/{id}/stats, /events,
+  # /version e /_ping; o resto recebe 403. O socket é montado só aqui. O :ro do
+  # bind não restringe a API (a restrição é a allowlist no Caddyfile). Sem porta
+  # publicada: só a rede edge-docker. A imagem é a Caddy já fixada na plataforma.
+  docker-api-proxy:
+    image: caddy:2.11.6-alpine@sha256:c776e0c6413b544d0459665e54ec7b8b2a15000c0cbee8b254da0067b1d184ff
+    volumes:
+      - ./platform/observability/edge/docker-api-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - edge-docker
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /data:size=8m,noexec,nosuid,nodev
+      - /config:size=8m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # O binário traz a file capability cap_net_bind_service; sem ela no conjunto
+    # permitido, o exec falha com no-new-privileges (como no Caddy da plataforma).
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 64M
+
 secrets:
   # Caminho absoluto fora da release, definido no ambiente do deploy.
   api_scrape_password:
     file: ${EDGE_API_SCRAPE_PASSWORD_FILE:?EDGE_API_SCRAPE_PASSWORD_FILE is required}
 
 networks:
-  # Ingresso OTLP do projeto; sem saída e sem porta publicada.
+  # OTLP do projeto: containers-collector → Collector de borda; sem saída e sem
+  # porta publicada.
   edge-otlp:
     driver: bridge
     internal: true
   # Somente probe ↔ Collector (healthcheck); sem saída.
   edge-probe:
+    driver: bridge
+    internal: true
+  # Somente Collector ↔ node-exporter; sem saída.
+  edge-node:
+    driver: bridge
+    internal: true
+  # Somente containers-collector ↔ allowlist da API do Docker; sem saída.
+  edge-docker:
     driver: bridge
     internal: true
   # Única saída do projeto: Collector → QA pelo IP Tailscale.
