@@ -32,8 +32,9 @@
 #
 # Host e containers: node-exporter (mesmos coletores da QA, para o dashboard Hosts)
 # e containers-collector, que lê containers por docker-api-proxy (allowlist de rotas
-# GET). Só o containers-collector alcança a API do Docker, e ele não tem saída: o
-# Collector de borda, que tem credenciais e saída, não tem acesso ao socket.
+# GET). Só o containers-collector alcança a API do Docker, e ele não tem rota para a
+# internet: envia OTLP ao Collector de borda, que tem credenciais e saída, mas não
+# tem acesso ao socket.
 # PostgreSQL ainda não entra aqui: exige a rede do banco (workshop-network, hoje
 # fora do alcance desta borda) e um usuário de monitoramento com pg_monitor, que
 # depende de um passo de criação de papel ainda não automatizado.
@@ -148,10 +149,12 @@ services:
           memory: 16M
 
   # Coletor de containers: o único com acesso à API do Docker (pela allowlist
-  # docker-api-proxy). Sem saída para a internet nem para a QA, e sem credenciais:
-  # envia ao Collector de borda pela rede edge-otlp. Isso separa a leitura da API
-  # (inspect devolve variáveis de ambiente) do Collector que guarda credenciais e
-  # tem saída. Probe próprio, pelo mesmo motivo do Collector principal (distroless).
+  # docker-api-proxy). Não tem rota para a internet nem credenciais: envia OTLP ao
+  # Collector de borda pela rede edge-otlp, e é esse Collector, com credenciais e
+  # saída, que exporta à QA. Isso separa a leitura da API do Collector que guarda
+  # credenciais. O inspect devolve Config.Env dos containers: risco aceito enquanto
+  # os segredos da API e do banco não ficarem no env (ver docker-api-proxy). Probe
+  # próprio, pelo mesmo motivo do Collector principal (distroless).
   containers-collector:
     image: otel/opentelemetry-collector-contrib:0.161.0@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
     command:

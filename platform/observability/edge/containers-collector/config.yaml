@@ -1,10 +1,11 @@
 # Coletor de containers do host de PRD (projeto Compose workshop-edge). É o único
 # componente com leitura da API do Docker, pela allowlist docker-api-proxy. Não tem
-# saída para a internet nem para a QA: envia ao Collector de borda pela rede
-# interna edge-otlp, e é o Collector de borda que fala com a QA. Assim o acesso à
-# API (que inclui o inspect, com variáveis de ambiente) fica fora do Collector que
-# guarda credenciais e tem saída.
+# rota para a internet: envia OTLP ao Collector de borda pela rede interna edge-otlp,
+# e é o Collector de borda, com credenciais e saída, que fala com a QA. Assim o
+# acesso à API fica fora do Collector que guarda credenciais.
 #
+# O inspect devolve Config.Env dos containers. Esse risco foi aceito enquanto os
+# segredos da API e do banco não saírem do env dos containers (ver docker-api-proxy).
 # Nada aqui é exportado com variáveis de ambiente: o receiver não as usa como
 # atributo, e o Collector de borda ainda redige chaves sensíveis.
 
