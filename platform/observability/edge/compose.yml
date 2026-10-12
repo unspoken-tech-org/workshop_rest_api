@@ -150,6 +150,9 @@ networks:
   edge-egress:
     driver: bridge
   # Criada pelo Compose da API de PRD (interna): scrape de /actuator/prometheus.
+  # external: este projeto nunca cria nem remove a rede. Se o down do projeto da
+  # API (dono da rede) rodar com a borda anexada, o Compose dele avisa "is still in
+  # use and was left in place": é o comportamento esperado, não um erro.
   workshop-metrics:
     name: workshop-metrics
     external: true
