@@ -15,9 +15,13 @@ storage:
   tsdb:
     out_of_order_time_window: 6h
 
+# Recursos promovidos a label. container.name (job workshop/docker-stats) tem
+# cardinalidade limitada ao número de containers de PRD; o id do container e a
+# imagem não são promovidos (o Collector de borda já os remove).
 otlp:
   promote_resource_attributes:
     - deployment.environment.name
+    - container.name
 
 rule_files:
   - /etc/prometheus/rules/*.yml

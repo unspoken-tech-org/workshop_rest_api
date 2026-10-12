@@ -62,25 +62,70 @@ scrape_health() {
     wget -qO- http://otel-collector:8889/metrics
 }
 
-api_scrape_up() {
-  scrape_health 2>/dev/null | awk '/^up\{/ && /job="workshop-api"/ {print $NF}' || true
+scrape_up() {
+  scrape_health 2>/dev/null | awk -v job="$1" '/^up\{/ && index($0, "job=\"" job "\"") {print $NF}' || true
 }
 
-up_value=""
+# Pontos aceitos pelo receiver docker_stats, lidos do Collector de containers pelo
+# probe da mesma rede (edge-otlp). Zero ou ausente: a allowlist ou a API do Docker
+# não está respondendo, e o receiver não registra nenhum container.
+docker_stats_points() {
+  compose_in "${release_dir}" exec -T containers-collector-probe \
+    wget -qO- http://containers-collector:8888/metrics 2>/dev/null \
+    | awk '/^otelcol_receiver_accepted_metric_points\{receiver="docker_stats"/ {sum += $NF; found = 1} END {if (found) printf "%d\n", sum}' || true
+}
+
+# Pontos enviados pelo exporter do containers-collector ao Collector de borda: prova
+# que o que o receiver aceita sai do container e chega ao Collector. Na 0.161 o nome
+# não tem sufixo _total.
+containers_sent_points() {
+  compose_in "${release_dir}" exec -T containers-collector-probe \
+    wget -qO- http://containers-collector:8888/metrics 2>/dev/null \
+    | awk '/^otelcol_exporter_sent_metric_points\{/ && index($0, "exporter=\"otlp_grpc/edge\"") {sum += $NF; found = 1} END {if (found) printf "%d\n", sum}' || true
+}
+
+# Espera a primeira amostra de cada fonte: up == 1 da API e do node-exporter, pontos
+# aceitos de docker_stats e pontos enviados pelo containers-collector à borda. A
+# janela cobre pelo menos uma coleta de 15 s.
+api_up=""
+node_up=""
+containers_points=""
+containers_sent=""
 for attempt in $(seq 1 "${METRICS_WAIT_ATTEMPTS}"); do
-  up_value="$(api_scrape_up)"
-  if [[ "${up_value}" == 1 ]]; then
+  api_up="$(scrape_up workshop-api)"
+  node_up="$(scrape_up node-exporter)"
+  containers_points="$(docker_stats_points)"
+  containers_sent="$(containers_sent_points)"
+  if [[ "${api_up}" == 1 && "${node_up}" == 1 && "${containers_points}" =~ ^[1-9][0-9]*$ && "${containers_sent}" =~ ^[1-9][0-9]*$ ]]; then
     break
   fi
-  echo "[${attempt}/${METRICS_WAIT_ATTEMPTS}] workshop-api scrape is not up yet (up=${up_value:-none})"
+  echo "[${attempt}/${METRICS_WAIT_ATTEMPTS}] waiting: api up=${api_up:-none}, node-exporter up=${node_up:-none}, docker_stats points=${containers_points:-none}, sent to edge=${containers_sent:-none}"
   sleep "${METRICS_WAIT_SECONDS}"
 done
 
-if [[ "${up_value}" != 1 ]]; then
+if [[ "${api_up}" != 1 ]]; then
   show_service_logs "${release_dir}" otel-collector
-  die "workshop-api scrape is not up (up=${up_value:-none}): the authenticated scrape is not working"
+  die "workshop-api scrape is not up (up=${api_up:-none}): the authenticated scrape is not working"
 fi
 echo "prometheus/api: up{job=\"workshop-api\"} is 1: the authenticated scrape works"
+
+if [[ "${node_up}" != 1 ]]; then
+  show_service_logs "${release_dir}" node-exporter
+  die "node-exporter scrape is not up (up=${node_up:-none}): host metrics are not arriving"
+fi
+echo "prometheus/node: up{job=\"node-exporter\"} is 1: host metrics are being scraped"
+
+if [[ ! "${containers_points}" =~ ^[1-9][0-9]*$ ]]; then
+  show_service_logs "${release_dir}" containers-collector
+  die "docker_stats accepted no points (${containers_points:-none}): the container allowlist or the Docker API is not working"
+fi
+echo "docker_stats: ${containers_points} metric points accepted from the Docker API allowlist"
+
+if [[ ! "${containers_sent}" =~ ^[1-9][0-9]*$ ]]; then
+  show_service_logs "${release_dir}" containers-collector
+  die "containers-collector sent no points to the edge collector (${containers_sent:-none}): the OTLP path from the containers to the edge is not working"
+fi
+echo "containers-collector: ${containers_sent} metric points sent to the edge collector (otlp_grpc/edge)"
 
 # Informativo: fila de exportação por tipo de dado. A entrega à QA ainda não é
 # critério de aprovação (a ACL PRD -> QA é adiada), então a fila pode crescer.

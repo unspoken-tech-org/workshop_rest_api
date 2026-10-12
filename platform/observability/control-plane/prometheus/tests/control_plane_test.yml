@@ -7,6 +7,250 @@ rule_files:
 evaluation_interval: 1m
 
 tests:
+  # Host e containers de PRD (jobs workshop/node-exporter e workshop/docker-stats).
+  - name: métricas do host de PRD ausentes alertam após 5 minutos e voltam ao normal
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/node-exporter"}'
+        values: '1x3 _x37 1x30'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: WorkshopHostMetricsAbsent
+      - eval_time: 19m
+        alertname: WorkshopHostMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Métricas do host de PRD ausentes"
+              description: "Nenhuma amostra do node-exporter de PRD chegou ao Prometheus nos últimos 10 minutos."
+      - eval_time: 44m
+        alertname: WorkshopHostMetricsAbsent
+
+  - name: host de PRD com métricas presentes não alerta ausência
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/node-exporter"}'
+        values: '1x40'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: WorkshopHostMetricsAbsent
+
+  - name: node-exporter de PRD fora do ar alerta após 5 minutos e volta ao normal
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/node-exporter"}'
+        values: '0x10 1x30'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WorkshopHostScrapeFailing
+      - eval_time: 10m
+        alertname: WorkshopHostScrapeFailing
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Scrape do node-exporter de PRD falhando"
+              description: "O Collector de borda não consegue raspar o node-exporter do host há mais de 5 minutos."
+      - eval_time: 25m
+        alertname: WorkshopHostScrapeFailing
+
+  - name: disco do host de PRD abaixo de 30% livre alerta warning após 15 minutos
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="workshop/node-exporter",device="/dev/sda1",fstype="ext4",mountpoint="/"}'
+        values: '50x40'
+      - series: 'node_filesystem_size_bytes{job="workshop/node-exporter",device="/dev/sda1",fstype="ext4",mountpoint="/"}'
+        values: '200x40'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: WorkshopHostFilesystemLow
+      - eval_time: 17m
+        alertname: WorkshopHostFilesystemLow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              mountpoint: /
+            exp_annotations:
+              summary: "Disco do host de PRD abaixo de 30% livre"
+              description: "O ponto de montagem / tem menos de 30% livre há mais de 15 minutos. Reveja retenção de backups e logs antes que o PostgreSQL de PRD seja afetado."
+      - eval_time: 17m
+        alertname: WorkshopHostFilesystemCritical
+
+  - name: disco do host de PRD abaixo de 15% livre alerta critical após 5 minutos
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="workshop/node-exporter",device="/dev/sda1",fstype="ext4",mountpoint="/"}'
+        values: '25x40'
+      - series: 'node_filesystem_size_bytes{job="workshop/node-exporter",device="/dev/sda1",fstype="ext4",mountpoint="/"}'
+        values: '200x40'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WorkshopHostFilesystemCritical
+      - eval_time: 8m
+        alertname: WorkshopHostFilesystemCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              mountpoint: /
+            exp_annotations:
+              summary: "Disco do host de PRD abaixo de 15% livre"
+              description: "O ponto de montagem / tem menos de 15% livre há mais de 5 minutos. Libere espaço antes que o PostgreSQL de PRD fique sem espaço."
+
+  - name: disco do host de PRD que volta acima de 30% deixa de alertar
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="workshop/node-exporter",device="/dev/sda1",fstype="ext4",mountpoint="/"}'
+        values: '25x10 150x30'
+      - series: 'node_filesystem_size_bytes{job="workshop/node-exporter",device="/dev/sda1",fstype="ext4",mountpoint="/"}'
+        values: '200x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopHostFilesystemCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              mountpoint: /
+            exp_annotations:
+              summary: "Disco do host de PRD abaixo de 15% livre"
+              description: "O ponto de montagem / tem menos de 15% livre há mais de 5 minutos. Libere espaço antes que o PostgreSQL de PRD fique sem espaço."
+      - eval_time: 25m
+        alertname: WorkshopHostFilesystemCritical
+      - eval_time: 25m
+        alertname: WorkshopHostFilesystemLow
+
+  - name: tmpfs no host de PRD não entra nos alertas de disco
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="workshop/node-exporter",device="tmpfs",fstype="tmpfs",mountpoint="/run"}'
+        values: '10x40'
+      - series: 'node_filesystem_size_bytes{job="workshop/node-exporter",device="tmpfs",fstype="tmpfs",mountpoint="/run"}'
+        values: '200x40'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: WorkshopHostFilesystemLow
+      - eval_time: 30m
+        alertname: WorkshopHostFilesystemCritical
+
+  - name: métricas de containers de PRD ausentes alertam após 5 minutos
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/node-exporter"}'
+        values: '1x40'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WorkshopContainerMetricsAbsent
+      - eval_time: 20m
+        alertname: WorkshopContainerMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/docker-stats
+            exp_annotations:
+              summary: "Métricas de containers de PRD ausentes"
+              description: "Nenhum container de PRD foi reportado nos últimos 10 minutos. Verifique o containers-collector e a allowlist da API do Docker na VM de PRD."
+
+  - name: containers de PRD reportados não alertam ausência
+    interval: 1m
+    input_series:
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-api",deployment_environment_name="production"}'
+        values: '100+60x40'
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-db",deployment_environment_name="production"}'
+        values: '100+60x40'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: WorkshopContainerMetricsAbsent
+      - eval_time: 30m
+        alertname: WorkshopApiContainerAbsent
+      - eval_time: 30m
+        alertname: WorkshopDbContainerAbsent
+
+  - name: container da API de PRD que deixa de ser reportado alerta após 7 minutos
+    interval: 1m
+    input_series:
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-api",deployment_environment_name="production"}'
+        values: '1x5 _x20 1x30'
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-db",deployment_environment_name="production"}'
+        values: '1x60'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: WorkshopApiContainerAbsent
+      - eval_time: 14m
+        alertname: WorkshopApiContainerAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/docker-stats
+              container_name: workshop-api
+            exp_annotations:
+              summary: "Container da API de PRD ausente"
+              description: "O container workshop-api não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+      - eval_time: 40m
+        alertname: WorkshopApiContainerAbsent
+
+  - name: container do PostgreSQL de PRD que deixa de ser reportado alerta após 7 minutos
+    interval: 1m
+    input_series:
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-db",deployment_environment_name="production"}'
+        values: '1x5 _x20 1x30'
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-api",deployment_environment_name="production"}'
+        values: '1x60'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: WorkshopDbContainerAbsent
+      - eval_time: 14m
+        alertname: WorkshopDbContainerAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/docker-stats
+              container_name: workshop-db
+            exp_annotations:
+              summary: "Container do PostgreSQL de PRD ausente"
+              description: "O container workshop-db não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+      - eval_time: 40m
+        alertname: WorkshopDbContainerAbsent
+
+  - name: container de PRD que reinicia três vezes em 30 minutos alerta warning
+    interval: 1m
+    input_series:
+      - series: 'container_restarts_total{job="workshop/docker-stats",container_name="workshop-api",deployment_environment_name="production"}'
+        values: '0+1x10 10x40'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: WorkshopContainerRestarting
+      - eval_time: 5m
+        alertname: WorkshopContainerRestarting
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              container_name: workshop-api
+            exp_annotations:
+              summary: "Container de PRD reiniciando"
+              description: "workshop-api reiniciou 3 vezes ou mais nos últimos 30 minutos."
+      - eval_time: 40m
+        alertname: WorkshopContainerRestarting
+
+  - name: reinício único de container de PRD não alerta
+    interval: 1m
+    input_series:
+      - series: 'container_restarts_total{job="workshop/docker-stats",container_name="workshop-api",deployment_environment_name="production"}'
+        values: '0 1x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkshopContainerRestarting
+
   - name: disco abaixo de 30% livre alerta warning, abaixo de 15% critical
     interval: 1m
     input_series:

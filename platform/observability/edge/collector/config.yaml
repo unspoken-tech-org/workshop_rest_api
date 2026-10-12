@@ -1,8 +1,10 @@
 # Collector de borda da VM de produção (projeto Compose workshop-edge). Faz o
-# scrape autenticado da API de PRD, mede a si mesmo e recebe OTLP do próprio
-# projeto (nenhum produtor ainda). Tudo sai por um único exporter OTLP/gRPC para
-# o Collector interno da QA, com fila persistente em disco: a fila absorve a
-# indisponibilidade da QA (meta de 4 horas) e sobrevive a reinícios do container.
+# scrape autenticado da API de PRD e o scrape do node-exporter do host, mede a si
+# mesmo e recebe OTLP do próprio projeto: hoje, o Collector de containers
+# (containers-collector), que é o único com acesso à API do Docker e não tem saída.
+# Tudo sai por um único exporter OTLP/gRPC para o Collector interno da QA, com fila
+# persistente em disco: a fila absorve a indisponibilidade da QA (meta de 4 horas)
+# e sobrevive a reinícios do container.
 #
 # Todo dado que passa por aqui é de produção: o ambiente é reescrito pela origem
 # confiável. A redaction repete a do Collector interno da QA como defesa em
@@ -52,10 +54,23 @@ receivers:
             - targets:
                 - localhost:8888
 
-  # OTLP do próprio projeto, sem produtores ainda: o Java Agent e o Alloy entram
-  # nas fases seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por
-  # isso o alcance real é o conjunto de redes anexadas a este serviço; por isso
-  # não há porta publicada no host.
+  # Host, pelo node-exporter do próprio projeto. Os coletores são os da QA, então os
+  # nomes node_* são os do dashboard Hosts. Na QA o job vira workshop/node-exporter.
+  prometheus/node:
+    config:
+      scrape_configs:
+        - job_name: node-exporter
+          scrape_interval: 15s
+          scrape_timeout: 10s
+          static_configs:
+            - targets:
+                - node-exporter:9100
+
+  # OTLP do próprio projeto. Único produtor hoje: containers-collector (métricas de
+  # containers), pela rede edge-otlp. O Java Agent e o Alloy entram nas fases
+  # seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por isso o
+  # alcance real é o conjunto de redes anexadas a este serviço; por isso não há
+  # porta publicada no host.
   otlp:
     protocols:
       grpc:
@@ -171,9 +186,9 @@ processors:
       - key: service.instance.id
         action: delete
 
-  # Só a série up do scrape da API segue para o endpoint de saúde (scrape-health).
-  # Esse endpoint é interno, mas as redes do projeto o alcançam; por isso não pode
-  # expor as métricas autenticadas da API.
+  # Só a série up (de cada alvo: API e node-exporter) segue para o endpoint de saúde
+  # (scrape-health). Esse endpoint é interno, mas as redes do projeto o alcançam; por
+  # isso não pode expor as métricas autenticadas da API.
   filter/scrape-health:
     error_mode: ignore
     metric_conditions:
@@ -215,7 +230,8 @@ exporters:
       max_elapsed_time: 0s
 
   # Endpoint interno de saúde do scrape, lido por verify.sh a partir do probe
-  # (edge-probe). Expõe só up{job="workshop-api"}; nenhuma porta é publicada no host.
+  # (edge-probe). Expõe só as séries up de cada alvo (workshop-api e node-exporter) e
+  # target_info, que o exporter gera a partir do resource; nenhuma porta é publicada.
   prometheus/scrape-health:
     endpoint: 0.0.0.0:8889
 
@@ -251,6 +267,7 @@ service:
       receivers:
         - prometheus/api
         - prometheus/self
+        - prometheus/node
         - otlp
       processors:
         - memory_limiter
@@ -263,6 +280,7 @@ service:
     metrics/scrape-health:
       receivers:
         - prometheus/api
+        - prometheus/node
       processors:
         - memory_limiter
         - filter/scrape-health

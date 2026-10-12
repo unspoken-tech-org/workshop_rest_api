@@ -1,0 +1,79 @@
+# Allowlist da API do Docker para o receiver docker_stats (containers-collector).
+# Só GET nas rotas de que o receiver precisa: lista de containers, inspect de cada
+# um, stats, eventos, versão e ping. Qualquer outra rota recebe 403. O socket fica
+# montado somente neste container, na rede interna edge-docker.
+#
+# Risco aceito: o inspect (/containers/{id}/json) devolve Config.Env, com as
+# variáveis de ambiente dos containers. O receiver exige essa rota para registrar
+# cada container (sem ela, não há nenhum ponto). O containers-collector não tem rota
+# para a internet, mas envia OTLP ao Collector de borda, que exporta à QA. O risco
+# foi aceito enquanto os segredos da API e do banco não ficarem no env dos containers.
+#
+# Defesa antes da allowlist: path com ".." ou "//" recebe 403. O Caddy limpa o path
+# antes de casar as rotas (/a/../containers/json vira /containers/json), mas o upstream
+# recebia o path sem limpeza; por isso a checagem lê o placeholder cru. Query no
+# inspect também recebe 403: o receiver não envia nenhuma (cliente moby), e size=1
+# faz o Docker calcular o tamanho do filesystem de cada container. Na lista, só size
+# é recusado pelo mesmo motivo; o receiver não o envia.
+#
+# Não se usa a imagem genérica de socket-proxy: a seção CONTAINERS dela libera
+# também logs e archive de containers (leitura de arquivos), que não são necessários.
+{
+	admin off
+	auto_https off
+}
+
+:2375 {
+	# O cliente Docker pode prefixar a versão da API (/v1.xx); o prefixo é opcional.
+	@allowed {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/(_ping|version|events|containers/json)$
+	}
+	@inspect {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/[^/]+/(json|stats)$
+	}
+	# Lê o placeholder cru (orig_uri.path: decodificado, sem limpeza). Os matchers de
+	# rota abaixo casam com o path já limpo pelo Caddy, então não servem para isto.
+	@traversal expression {http.request.orig_uri.path}.contains("..") || {http.request.orig_uri.path}.contains("//")
+	@inspect_query {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/[^/]+/json$
+		expression {http.request.orig_uri.query} != ""
+	}
+	@list_size {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/json$
+		query size=*
+	}
+
+	handle @traversal {
+		respond 403
+	}
+
+	handle @inspect_query {
+		respond 403
+	}
+
+	handle @list_size {
+		respond 403
+	}
+
+	handle @allowed {
+		reverse_proxy unix//var/run/docker.sock {
+			# Eventos e stats são respostas em stream: sem buffer, senão o receiver
+			# espera o fim da resposta.
+			flush_interval -1
+		}
+	}
+
+	handle @inspect {
+		reverse_proxy unix//var/run/docker.sock {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond 403
+	}
+}
