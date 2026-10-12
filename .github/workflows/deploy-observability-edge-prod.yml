@@ -60,8 +60,9 @@ env:
   API_SCRAPE_TARGET: ${{ vars.OBS_PRD_API_SCRAPE_TARGET || 'workshop-api:8080' }}
   # Read-only scrape identity, the same one the QA Prometheus uses.
   API_SCRAPE_USERNAME: metrics-scraper
-  # 64 MiB per signal. The VM checks free disk against 3 x this value.
-  COLLECTOR_QUEUE_BYTES: '67108864'
+  # 96 MiB per signal (~6 h of metrics at ~15 MB/h). The VM checks free disk
+  # against 3 x this value.
+  COLLECTOR_QUEUE_BYTES: '100663296'
 
 jobs:
   prepare:
