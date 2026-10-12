@@ -1,8 +1,8 @@
 # Collector de borda da VM de produção (PRD). Projeto Compose próprio, volume de
 # fila próprio e nenhuma porta publicada no host. Faz o scrape autenticado da API
 # de PRD, coleta métricas do host e dos containers, recebe OTLP do próprio projeto
-# (ainda sem produtores) e envia tudo à QA pela rede privada (Tailscale), com fila
-# persistente em disco. Ainda não implantado: a instalação em PRD é a Fase 1,
+# (hoje, o containers-collector) e envia tudo à QA pela rede privada (Tailscale), com
+# fila persistente em disco. Ainda não implantado: a instalação em PRD é a Fase 1,
 # item 11 do plano.
 #
 # Implantação, a partir da raiz da release (mesmo padrão da QA):
@@ -66,7 +66,7 @@ services:
       - ./platform/observability/edge/collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
       - edge_collector_queue:/var/lib/otelcol/file_storage
     networks:
-      # Ingresso OTLP do próprio projeto (ainda sem produtores).
+      # Ingresso OTLP do próprio projeto (hoje, o containers-collector).
       - edge-otlp
       - edge-probe
       # Saída para a QA.

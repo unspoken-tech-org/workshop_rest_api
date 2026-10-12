@@ -66,7 +66,6 @@ receivers:
             - targets:
                 - node-exporter:9100
 
-
   # OTLP do próprio projeto. Único produtor hoje: containers-collector (métricas de
   # containers), pela rede edge-otlp. O Java Agent e o Alloy entram nas fases
   # seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por isso o
@@ -187,9 +186,9 @@ processors:
       - key: service.instance.id
         action: delete
 
-  # Só a série up do scrape da API segue para o endpoint de saúde (scrape-health).
-  # Esse endpoint é interno, mas as redes do projeto o alcançam; por isso não pode
-  # expor as métricas autenticadas da API.
+  # Só a série up (de cada alvo: API e node-exporter) segue para o endpoint de saúde
+  # (scrape-health). Esse endpoint é interno, mas as redes do projeto o alcançam; por
+  # isso não pode expor as métricas autenticadas da API.
   filter/scrape-health:
     error_mode: ignore
     metric_conditions:
@@ -231,7 +230,8 @@ exporters:
       max_elapsed_time: 0s
 
   # Endpoint interno de saúde do scrape, lido por verify.sh a partir do probe
-  # (edge-probe). Expõe só up{job="workshop-api"}; nenhuma porta é publicada no host.
+  # (edge-probe). Expõe só as séries up de cada alvo (workshop-api e node-exporter) e
+  # target_info, que o exporter gera a partir do resource; nenhuma porta é publicada.
   prometheus/scrape-health:
     endpoint: 0.0.0.0:8889
 
