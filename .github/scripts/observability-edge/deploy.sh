@@ -8,15 +8,66 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 RELEASE_ID="${RELEASE_ID:?RELEASE_ID is required}"
 PAYLOAD="${TMP_DIR}/payload.tar.gz"
 
+# Image of the scrape check: the busybox pinned for the edge probe in compose.yml.
+SCRAPE_CHECK_IMAGE="busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e"
+
+# The API keeps only the bcrypt hash and the edge keeps the password, so rotating
+# one without the other would fail only at scrape time. A one-shot container on
+# the metrics network checks it: the API must answer 200 with the credential and
+# 401 without it. The password is read from the mounted file inside the container
+# and never reaches this script's output; it is not in the docker command line.
+# Only the Basic header is in wget's arguments, inside that container.
+scrape_credential_check() {
+  local env_file="$1"
+  local secret_file="$2"
+  local scrape_user scrape_target check result
+
+  scrape_user="$(sed -n 's/^API_SCRAPE_USERNAME=//p' "${env_file}")"
+  scrape_target="$(sed -n 's/^API_SCRAPE_TARGET=//p' "${env_file}")"
+  [[ -n "${scrape_user}" ]] || die "API_SCRAPE_USERNAME must be set in .env"
+  [[ "${scrape_target}" =~ ^[A-Za-z0-9._-]+:[0-9]{1,5}$ ]] || die "API_SCRAPE_TARGET must be host:port"
+
+  # Runs inside the container, where $1 is the secret path. Prints status codes only.
+  # shellcheck disable=SC2016  # the variables expand inside the container, not here
+  check='
+    url="http://${SCRAPE_TARGET}/actuator/prometheus"
+    auth="$({ printf "%s:" "${SCRAPE_USER}"; cat -- "$1"; } | base64 | tr -d "\n")"
+    status() { sed -n "s/.*HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p" | tail -n 1; }
+    with="$(wget -S -T 10 -O /dev/null --header "Authorization: Basic ${auth}" "${url}" 2>&1 | status)"
+    without="$(wget -S -T 10 -O /dev/null "${url}" 2>&1 | status)"
+    echo "with=${with:-none} without=${without:-none}"
+  '
+
+  # The values reach the container through the environment (-e NAME), so the
+  # docker command line only carries names.
+  if ! result="$(SCRAPE_USER="${scrape_user}" SCRAPE_TARGET="${scrape_target}" docker run --rm \
+    --network "${METRICS_NETWORK}" \
+    -e SCRAPE_USER -e SCRAPE_TARGET \
+    -v "${secret_file}:/run/secrets/api-scrape-password:ro" \
+    "${SCRAPE_CHECK_IMAGE}" sh -c "${check}" check /run/secrets/api-scrape-password)"; then
+    die "scrape credential check could not run"
+  fi
+  if [[ "${result}" == *none* ]]; then
+    die "the API did not answer /actuator/prometheus on the metrics network (${result})"
+  fi
+  [[ "${result}" == "with=200 without=401" ]] || \
+    die "the scrape password does not match the API hash (${result}); expected with=200 without=401"
+  echo "API scrape credential: 200 with it, 401 without it"
+}
+
 # Checks that run before the active release is switched. The external network
-# must exist (the PRD API Compose creates it), and the free disk must cover the
-# queue budget: one queue per signal, 3 x COLLECTOR_QUEUE_BYTES.
+# must exist (the PRD API Compose creates it), the scrape password must match the
+# API hash, and the free disk must cover the queue budget: one queue per signal,
+# 3 x COLLECTOR_QUEUE_BYTES.
 preflight() {
   local env_file="$1"
+  local secret_file="$2"
   local queue_bytes budget docker_root free_bytes
 
   docker network inspect "${METRICS_NETWORK}" >/dev/null 2>&1 || \
     die "external network ${METRICS_NETWORK} does not exist; deploy the PRD API Compose first, it creates the network"
+
+  scrape_credential_check "${env_file}" "${secret_file}"
 
   queue_bytes="$(sed -n 's/^COLLECTOR_QUEUE_BYTES=//p' "${env_file}")"
   [[ "${queue_bytes}" =~ ^[1-9][0-9]*$ ]] || die "COLLECTOR_QUEUE_BYTES in .env must be a positive integer"
@@ -61,7 +112,7 @@ test -s "${staging_dir}/.secrets/qa-otlp-endpoint" || die "payload has no qa-otl
 chmod 444 -- "${staging_dir}/.secrets/api-scrape-password"
 chmod 600 -- "${staging_dir}/.secrets/qa-otlp-endpoint"
 
-preflight "${staging_dir}/.env"
+preflight "${staging_dir}/.env" "${staging_dir}/.secrets/api-scrape-password"
 
 mv -T -- "${staging_dir}" "${release_dir}"
 
