@@ -244,3 +244,106 @@ groups:
         annotations:
           summary: "Prometheus rejeitando amostras fora de ordem"
           description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
+
+  # Host e containers de PRD, chegados pela borda (jobs workshop/node-exporter e
+  # workshop/docker-stats). As regras de ausência só valem com a borda atualizada:
+  # antes do deploy dos novos coletores, a ausência é o estado real.
+  - name: prd-host
+    interval: 1m
+    rules:
+      - alert: WorkshopHostMetricsAbsent
+        expr: absent_over_time(up{job="workshop/node-exporter"}[10m])
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Métricas do host de PRD ausentes"
+          description: "Nenhuma amostra do node-exporter de PRD chegou ao Prometheus nos últimos 10 minutos."
+
+      - alert: WorkshopHostScrapeFailing
+        expr: up{job="workshop/node-exporter"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Scrape do node-exporter de PRD falhando"
+          description: "O Collector de borda não consegue raspar o node-exporter do host há mais de 5 minutos."
+
+      # Por ponto de montagem, sem tmpfs, overlay e squashfs (não são disco do host).
+      - alert: WorkshopHostFilesystemLow
+        expr: |
+          min by (mountpoint) (
+            node_filesystem_avail_bytes{job="workshop/node-exporter", fstype!~"tmpfs|overlay|squashfs"}
+              / node_filesystem_size_bytes{job="workshop/node-exporter", fstype!~"tmpfs|overlay|squashfs"}
+          ) < 0.30
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Disco do host de PRD abaixo de 30% livre"
+          description: "O ponto de montagem {{ $labels.mountpoint }} tem menos de 30% livre há mais de 15 minutos. Reveja retenção de backups e logs antes que o PostgreSQL de PRD seja afetado."
+
+      - alert: WorkshopHostFilesystemCritical
+        expr: |
+          min by (mountpoint) (
+            node_filesystem_avail_bytes{job="workshop/node-exporter", fstype!~"tmpfs|overlay|squashfs"}
+              / node_filesystem_size_bytes{job="workshop/node-exporter", fstype!~"tmpfs|overlay|squashfs"}
+          ) < 0.15
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Disco do host de PRD abaixo de 15% livre"
+          description: "O ponto de montagem {{ $labels.mountpoint }} tem menos de 15% livre há mais de 5 minutos. Libere espaço antes que o PostgreSQL de PRD fique sem espaço."
+
+  - name: prd-containers
+    interval: 1m
+    rules:
+      # Nenhum container de PRD reportado: a allowlist, o Collector de containers
+      # ou a API do Docker não estão respondendo.
+      - alert: WorkshopContainerMetricsAbsent
+        expr: absent_over_time(container_uptime_seconds{job="workshop/docker-stats"}[10m])
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Métricas de containers de PRD ausentes"
+          description: "Nenhum container de PRD foi reportado nos últimos 10 minutos. Verifique o containers-collector e a allowlist da API do Docker na VM de PRD."
+
+      # Container que deixa de ser reportado: parado ou removido. A janela de 5
+      # minutos mais 2 de espera evita alerta em recriações curtas do deploy.
+      - alert: WorkshopApiContainerAbsent
+        expr: absent_over_time(container_uptime_seconds{job="workshop/docker-stats", container_name="workshop-api"}[5m])
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Container da API de PRD ausente"
+          description: "O container workshop-api não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+
+      - alert: WorkshopDbContainerAbsent
+        expr: absent_over_time(container_uptime_seconds{job="workshop/docker-stats", container_name="workshop-db"}[5m])
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Container do PostgreSQL de PRD ausente"
+          description: "O container workshop-db não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+
+      # O Docker reinicia containers com restart policy; três reinícios em 30 minutos
+      # indicam loop de falha. O contador zera na recriação do container.
+      - alert: WorkshopContainerRestarting
+        expr: sum by (container_name) (increase(container_restarts_total{job="workshop/docker-stats"}[30m])) >= 3
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Container de PRD reiniciando"
+          description: "{{ $labels.container_name }} reiniciou 3 vezes ou mais nos últimos 30 minutos."
