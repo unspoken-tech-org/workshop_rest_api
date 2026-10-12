@@ -213,13 +213,15 @@ services:
   # dashboard Hosts sirva aos dois ambientes (nomes node_*). Diferença da QA: o
   # container não publica porta e só entra na rede edge-node. O mount de / é
   # somente leitura, como na QA; o container roda como nobody (padrão da imagem).
+  # /etc/hosts, /etc/hostname e /etc/resolv.conf são bind mounts do Docker no mesmo
+  # disco do /: sem a exclusão abaixo, o disco aparece duplicado com esses nomes.
   node-exporter:
     image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
     command:
       - --path.rootfs=/host
       - --collector.disable-defaults
       - --collector.filesystem
-      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run|sys|var/lib/docker/.+|var/snap/.+)($$|/)
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run|sys|var/lib/docker/.+|var/snap/.+|etc/(hosts|hostname|resolv\.conf))($$|/)
       - --collector.cpu
       - --collector.meminfo
       - --collector.loadavg

@@ -423,14 +423,16 @@ services:
           cpus: "0.50"
           memory: 256M
 
-  # Ocupação do filesystem único da VM, lida somente leitura do host.
+  # Ocupação do filesystem único da VM, lida somente leitura do host. Os bind mounts
+  # /etc/hosts, /etc/hostname e /etc/resolv.conf do Docker ficam fora do filesystem
+  # collector (são o mesmo disco do /, e apareceriam duplicados). Igual à borda de PRD.
   node-exporter:
     image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
     command:
       - --path.rootfs=/host
       - --collector.disable-defaults
       - --collector.filesystem
-      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run|sys|var/lib/docker/.+|var/snap/.+)($$|/)
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run|sys|var/lib/docker/.+|var/snap/.+|etc/(hosts|hostname|resolv\.conf))($$|/)
       - --collector.cpu
       - --collector.meminfo
       - --collector.loadavg
