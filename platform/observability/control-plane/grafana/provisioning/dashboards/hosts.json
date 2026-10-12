@@ -33,24 +33,14 @@
   "templating": {
     "list": [
       {
-        "type": "query",
+        "type": "custom",
         "name": "node_job",
-        "label": "Host",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
+        "label": "Ambiente",
+        "query": "Produção : workshop/node-exporter,QA : node-exporter",
+        "current": {
+          "text": "Produção",
+          "value": "workshop/node-exporter"
         },
-        "query": {
-          "qryType": 1,
-          "query": "label_values(node_load1, job)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "definition": "label_values(node_load1, job)",
-        "refresh": 2,
-        "includeAll": false,
-        "multi": false,
-        "sort": 1,
-        "current": {},
         "options": [],
         "hide": 0
       }
@@ -318,7 +308,7 @@
         },
         "overrides": []
       },
-      "description": "Os alertas de disco da QA disparam com menos de 30% (warning) e 15% (critical) livres."
+      "description": "Os alertas de disco disparam com menos de 30% (warning) e 15% (critical) livres, em QA e em PRD (por ponto de montagem)."
     }
   ]
 }
