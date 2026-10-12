@@ -36,7 +36,7 @@ scrape_credential_check() {
   check='
     host="${SCRAPE_TARGET%:*}"
     port="${SCRAPE_TARGET##*:}"
-    auth="$({ printf "%s:" "${SCRAPE_USER}"; cat -- "$1"; } | base64 | tr -d "\n")"
+    auth="$({ printf "%s:" "${SCRAPE_USER}"; cat -- "$1" | tr -d "\r\n"; } | base64 | tr -d "\n")"
     status() { sed -n "1s/^HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p"; }
     with="$(printf "GET /actuator/prometheus HTTP/1.0\r\nHost: %s\r\nAuthorization: Basic %s\r\n\r\n" "${SCRAPE_TARGET}" "${auth}" | nc -w 10 "${host}" "${port}" 2>/dev/null | status)"
     without="$(printf "GET /actuator/prometheus HTTP/1.0\r\nHost: %s\r\n\r\n" "${SCRAPE_TARGET}" | nc -w 10 "${host}" "${port}" 2>/dev/null | status)"
