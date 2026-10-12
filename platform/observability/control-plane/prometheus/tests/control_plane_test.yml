@@ -619,3 +619,129 @@ tests:
             exp_annotations:
               summary: "Prometheus rejeitando amostras fora de ordem"
               description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
+
+  # PostgreSQL de PRD (job workshop/postgres-exporter).
+  - name: métricas do PostgreSQL de PRD ausentes alertam após 5 minutos e voltam ao normal
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/postgres-exporter"}'
+        values: '1x3 _x37 1x30'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: WorkshopPostgresMetricsAbsent
+      - eval_time: 19m
+        alertname: WorkshopPostgresMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/postgres-exporter
+            exp_annotations:
+              summary: "Métricas do PostgreSQL de PRD ausentes"
+              description: "Nenhuma amostra do postgres-exporter de PRD chegou ao Prometheus nos últimos 10 minutos."
+      - eval_time: 44m
+        alertname: WorkshopPostgresMetricsAbsent
+
+  - name: PostgreSQL de PRD sem resposta ao exporter alerta após 3 minutos e volta ao normal
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/postgres-exporter"}'
+        values: '1x40'
+      - series: 'pg_up{job="workshop/postgres-exporter"}'
+        values: '1x5 0x10 1x25'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: WorkshopPostgresDown
+      - eval_time: 12m
+        alertname: WorkshopPostgresDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/postgres-exporter
+            exp_annotations:
+              summary: "PostgreSQL de PRD inacessível ao monitoramento"
+              description: "O postgres-exporter não consegue consultar o PostgreSQL de PRD há mais de 3 minutos. Verifique o container workshop-db, a rede workshop-db-metrics e o papel workshop_metrics."
+      - eval_time: 30m
+        alertname: WorkshopPostgresDown
+
+  - name: postgres-exporter de PRD fora do ar também alerta PostgreSQL inacessível
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/postgres-exporter"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: WorkshopPostgresDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/postgres-exporter
+            exp_annotations:
+              summary: "PostgreSQL de PRD inacessível ao monitoramento"
+              description: "O postgres-exporter não consegue consultar o PostgreSQL de PRD há mais de 3 minutos. Verifique o container workshop-db, a rede workshop-db-metrics e o papel workshop_metrics."
+
+  - name: conexões do PostgreSQL de PRD acima de 80% alertam após 10 minutos
+    interval: 1m
+    input_series:
+      - series: 'pg_stat_database_numbackends{job="workshop/postgres-exporter",datname="workshop"}'
+        values: '70x10 85x20'
+      - series: 'pg_stat_database_numbackends{job="workshop/postgres-exporter",datname="postgres"}'
+        values: '1x30'
+      - series: 'pg_settings_max_connections{job="workshop/postgres-exporter"}'
+        values: '100x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: WorkshopPostgresConnectionsHigh
+      - eval_time: 22m
+        alertname: WorkshopPostgresConnectionsHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              summary: "PostgreSQL de PRD acima de 80% das conexões"
+              description: "As conexões abertas passam de 80% de max_connections há mais de 10 minutos."
+
+  - name: deadlock no PostgreSQL de PRD alerta por banco
+    interval: 1m
+    input_series:
+      - series: 'pg_stat_database_deadlocks_total{job="workshop/postgres-exporter",datname="workshop"}'
+        values: '0x10 1x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopPostgresDeadlocks
+      - eval_time: 15m
+        alertname: WorkshopPostgresDeadlocks
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              datname: workshop
+            exp_annotations:
+              summary: "Deadlock no PostgreSQL de PRD"
+              description: "O banco workshop registrou deadlock nos últimos 15 minutos."
+      - eval_time: 35m
+        alertname: WorkshopPostgresDeadlocks
+
+  - name: falha no arquivamento de WAL de PRD alerta critical
+    interval: 1m
+    input_series:
+      - series: 'pg_stat_archiver_failed_count_total{job="workshop/postgres-exporter"}'
+        values: '0x10 2x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopPostgresWalArchiveFailing
+      - eval_time: 15m
+        alertname: WorkshopPostgresWalArchiveFailing
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/postgres-exporter
+            exp_annotations:
+              summary: "Arquivamento de WAL do PostgreSQL de PRD falhando"
+              description: "O archive_command (pgBackRest) falhou nos últimos 15 minutos. Verifique o repositório de backup antes que o PITR perca cobertura."
+      - eval_time: 35m
+        alertname: WorkshopPostgresWalArchiveFailing

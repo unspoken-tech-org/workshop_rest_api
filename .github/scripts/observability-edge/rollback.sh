@@ -43,6 +43,11 @@ for required in .env "${COMPOSE_FILE}" .secrets/qa-otlp-endpoint .secrets/api-sc
 done
 
 echo "Restoring edge release $(basename -- "${previous_dir}")"
+# The failed deploy may have rotated the monitoring role password; the restored
+# release brings its own. A release from before the postgres-exporter has none.
+if [[ -s "${previous_dir}/.secrets/pg-monitor-password" ]]; then
+  pg_monitor_role "${previous_dir}/.secrets/pg-monitor-password"
+fi
 switch_current_to "${previous_dir}"
 # Same project, previous files; recreate everything so secrets are
 # remounted from the restored release (Compose does not hash them).

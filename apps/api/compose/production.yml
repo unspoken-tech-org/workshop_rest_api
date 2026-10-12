@@ -47,6 +47,10 @@ services:
       - /srv/pgbackrest/repo:/var/lib/pgbackrest
       - /srv/pgbackrest/logs:/var/log/pgbackrest
       - /srv/postgres/logical_dumps:/backups/logical
+    # O deploy da borda (projeto workshop-edge) também conecta este container à rede
+    # interna workshop-db-metrics, em tempo de execução, para o postgres-exporter. Ela
+    # não é declarada aqui: mudar as redes do banco o recriaria no próximo deploy da
+    # API. Recriado o banco, a conexão volta no próximo deploy da borda.
     networks:
       - workshop-network
     stop_grace_period: 2m

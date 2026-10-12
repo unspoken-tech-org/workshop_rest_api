@@ -347,3 +347,61 @@ groups:
         annotations:
           summary: "Container de PRD reiniciando"
           description: "{{ $labels.container_name }} reiniciou 3 vezes ou mais nos últimos 30 minutos."
+
+  # PostgreSQL de PRD, pelo postgres-exporter da borda (job workshop/postgres-exporter).
+  # pg_up 0 com o exporter no ar: o banco não responde ao papel de monitoramento
+  # (banco fora, rede workshop-db-metrics desconectada ou senha divergente).
+  - name: prd-postgres
+    interval: 1m
+    rules:
+      - alert: WorkshopPostgresMetricsAbsent
+        expr: absent_over_time(up{job="workshop/postgres-exporter"}[10m])
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Métricas do PostgreSQL de PRD ausentes"
+          description: "Nenhuma amostra do postgres-exporter de PRD chegou ao Prometheus nos últimos 10 minutos."
+
+      - alert: WorkshopPostgresDown
+        expr: pg_up{job="workshop/postgres-exporter"} == 0 or up{job="workshop/postgres-exporter"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "PostgreSQL de PRD inacessível ao monitoramento"
+          description: "O postgres-exporter não consegue consultar o PostgreSQL de PRD há mais de 3 minutos. Verifique o container workshop-db, a rede workshop-db-metrics e o papel workshop_metrics."
+
+      - alert: WorkshopPostgresConnectionsHigh
+        expr: |
+          sum(pg_stat_database_numbackends{job="workshop/postgres-exporter"})
+            / max(pg_settings_max_connections{job="workshop/postgres-exporter"}) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "PostgreSQL de PRD acima de 80% das conexões"
+          description: "As conexões abertas passam de 80% de max_connections há mais de 10 minutos."
+
+      - alert: WorkshopPostgresDeadlocks
+        expr: sum by (datname) (increase(pg_stat_database_deadlocks_total{job="workshop/postgres-exporter"}[15m])) > 0
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Deadlock no PostgreSQL de PRD"
+          description: "O banco {{ $labels.datname }} registrou deadlock nos últimos 15 minutos."
+
+      # Falha do archive_command (pgBackRest): o WAL não chega ao repositório e a
+      # recuperação a um ponto no tempo deixa de cobrir as escritas recentes.
+      - alert: WorkshopPostgresWalArchiveFailing
+        expr: increase(pg_stat_archiver_failed_count_total{job="workshop/postgres-exporter"}[15m]) > 0
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Arquivamento de WAL do PostgreSQL de PRD falhando"
+          description: "O archive_command (pgBackRest) falhou nos últimos 15 minutos. Verifique o repositório de backup antes que o PITR perca cobertura."

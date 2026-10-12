@@ -63,16 +63,22 @@ scrape_credential_check() {
 # Checks that run before the active release is switched. The external network
 # must exist (the PRD API Compose creates it), the scrape password must match the
 # API hash, and the free disk must cover the queue budget: one queue per signal,
-# 3 x COLLECTOR_QUEUE_BYTES.
+# 3 x COLLECTOR_QUEUE_BYTES. The database network and the monitoring role are
+# additive and idempotent, so they are applied here too: the previous release does
+# not use them, and a rollback keeps them.
 preflight() {
   local env_file="$1"
   local secret_file="$2"
+  local pg_secret_file="$3"
   local queue_bytes budget docker_root free_bytes
 
   docker network inspect "${METRICS_NETWORK}" >/dev/null 2>&1 || \
     die "external network ${METRICS_NETWORK} does not exist; deploy the PRD API Compose first, it creates the network"
 
   scrape_credential_check "${env_file}" "${secret_file}"
+
+  ensure_db_metrics_network
+  pg_monitor_role "${pg_secret_file}"
 
   queue_bytes="$(sed -n 's/^COLLECTOR_QUEUE_BYTES=//p' "${env_file}")"
   [[ "${queue_bytes}" =~ ^[1-9][0-9]*$ ]] || die "COLLECTOR_QUEUE_BYTES in .env must be a positive integer"
@@ -108,16 +114,20 @@ test -s "${staging_dir}/.env" || die "payload has no .env"
 chmod 600 -- "${staging_dir}/.env"
 
 # Secret modes. The scrape password is bind-mounted into a container that runs
-# as UID 10001 and cannot be chowned without root, so the file is readable by
-# others while its directory stays 700: only this SSH user can reach it on the
-# host. The QA endpoint is read only by this script (600).
+# as UID 10001 (the pg-monitor password, as nobody) and cannot be chowned without
+# root, so these files are readable by others while their directory stays 700:
+# only this SSH user can reach them on the host. The QA endpoint is read only by
+# this script (600).
 chmod 700 -- "${staging_dir}/.secrets"
 test -s "${staging_dir}/.secrets/api-scrape-password" || die "payload has no api-scrape-password secret file"
 test -s "${staging_dir}/.secrets/qa-otlp-endpoint" || die "payload has no qa-otlp-endpoint secret file"
+test -s "${staging_dir}/.secrets/pg-monitor-password" || die "payload has no pg-monitor-password secret file"
 chmod 444 -- "${staging_dir}/.secrets/api-scrape-password"
+chmod 444 -- "${staging_dir}/.secrets/pg-monitor-password"
 chmod 600 -- "${staging_dir}/.secrets/qa-otlp-endpoint"
 
-preflight "${staging_dir}/.env" "${staging_dir}/.secrets/api-scrape-password"
+preflight "${staging_dir}/.env" "${staging_dir}/.secrets/api-scrape-password" \
+  "${staging_dir}/.secrets/pg-monitor-password"
 
 mv -T -- "${staging_dir}" "${release_dir}"
 

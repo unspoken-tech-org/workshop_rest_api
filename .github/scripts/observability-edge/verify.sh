@@ -66,6 +66,12 @@ scrape_up() {
   scrape_health 2>/dev/null | awk -v job="$1" '/^up\{/ && index($0, "job=\"" job "\"") {print $NF}' || true
 }
 
+# pg_up do postgres-exporter: 1 quando o papel workshop_metrics consulta o banco pela
+# rede workshop-db-metrics. up do job só prova que o exporter respondeu.
+pg_up() {
+  scrape_health 2>/dev/null | awk '/^pg_up\{/ && index($0, "job=\"postgres-exporter\"") {print $NF}' || true
+}
+
 # Pontos aceitos pelo receiver docker_stats, lidos do Collector de containers pelo
 # probe da mesma rede (edge-otlp). Zero ou ausente: a allowlist ou a API do Docker
 # não está respondendo, e o receiver não registra nenhum container.
@@ -84,22 +90,28 @@ containers_sent_points() {
     | awk '/^otelcol_exporter_sent_metric_points\{/ && index($0, "exporter=\"otlp_grpc/edge\"") {sum += $NF; found = 1} END {if (found) printf "%d\n", sum}' || true
 }
 
-# Espera a primeira amostra de cada fonte: up == 1 da API e do node-exporter, pontos
+# Espera a primeira amostra de cada fonte: up == 1 da API, do node-exporter e do
+# postgres-exporter, pg_up == 1, pontos
 # aceitos de docker_stats e pontos enviados pelo containers-collector à borda. A
 # janela cobre pelo menos uma coleta de 15 s.
 api_up=""
 node_up=""
+postgres_up=""
+postgres_db_up=""
 containers_points=""
 containers_sent=""
 for attempt in $(seq 1 "${METRICS_WAIT_ATTEMPTS}"); do
   api_up="$(scrape_up workshop-api)"
   node_up="$(scrape_up node-exporter)"
+  postgres_up="$(scrape_up postgres-exporter)"
+  postgres_db_up="$(pg_up)"
   containers_points="$(docker_stats_points)"
   containers_sent="$(containers_sent_points)"
-  if [[ "${api_up}" == 1 && "${node_up}" == 1 && "${containers_points}" =~ ^[1-9][0-9]*$ && "${containers_sent}" =~ ^[1-9][0-9]*$ ]]; then
+  if [[ "${api_up}" == 1 && "${node_up}" == 1 && "${postgres_up}" == 1 && "${postgres_db_up}" == 1 \
+    && "${containers_points}" =~ ^[1-9][0-9]*$ && "${containers_sent}" =~ ^[1-9][0-9]*$ ]]; then
     break
   fi
-  echo "[${attempt}/${METRICS_WAIT_ATTEMPTS}] waiting: api up=${api_up:-none}, node-exporter up=${node_up:-none}, docker_stats points=${containers_points:-none}, sent to edge=${containers_sent:-none}"
+  echo "[${attempt}/${METRICS_WAIT_ATTEMPTS}] waiting: api up=${api_up:-none}, node-exporter up=${node_up:-none}, postgres-exporter up=${postgres_up:-none}, pg_up=${postgres_db_up:-none}, docker_stats points=${containers_points:-none}, sent to edge=${containers_sent:-none}"
   sleep "${METRICS_WAIT_SECONDS}"
 done
 
@@ -114,6 +126,12 @@ if [[ "${node_up}" != 1 ]]; then
   die "node-exporter scrape is not up (up=${node_up:-none}): host metrics are not arriving"
 fi
 echo "prometheus/node: up{job=\"node-exporter\"} is 1: host metrics are being scraped"
+
+if [[ "${postgres_up}" != 1 || "${postgres_db_up}" != 1 ]]; then
+  show_service_logs "${release_dir}" postgres-exporter
+  die "PostgreSQL metrics are not working (postgres-exporter up=${postgres_up:-none}, pg_up=${postgres_db_up:-none}): check the ${DB_METRICS_NETWORK} network and the ${PG_MONITOR_ROLE} role"
+fi
+echo "prometheus/postgres: up{job=\"postgres-exporter\"} and pg_up are 1: the monitoring role reads PostgreSQL"
 
 if [[ ! "${containers_points}" =~ ^[1-9][0-9]*$ ]]; then
   show_service_logs "${release_dir}" containers-collector
