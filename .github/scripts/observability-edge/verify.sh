@@ -51,8 +51,10 @@ collector_metrics() {
     wget -qO- http://otel-collector:8888/metrics
 }
 
-# Endpoint de saúde do scrape (porta 8889, só o probe alcança): a série up de cada
-# alvo. up == 1 é o critério. O receiver prometheus/api emite up 0 quando o scrape
+# Endpoint de saúde do scrape (porta 8889). O exporter escuta em 0.0.0.0, então
+# alcança todas as redes do otel-collector, inclusive workshop-metrics; por isso só
+# expõe up e target_info (filtro em config.yaml). Mostra a série up de cada alvo.
+# up == 1 é o critério. O receiver prometheus/api emite up 0 quando o scrape
 # falha (credencial recusada, timeout, API fora). Pontos aceitos não distinguem
 # essas falhas, e a telemetria do Collector (8888) não traz up por alvo.
 scrape_health() {

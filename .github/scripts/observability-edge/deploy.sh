@@ -9,6 +9,7 @@ RELEASE_ID="${RELEASE_ID:?RELEASE_ID is required}"
 PAYLOAD="${TMP_DIR}/payload.tar.gz"
 
 # Image of the scrape check: the busybox pinned for the edge probe in compose.yml.
+# Keep the digest equal to the busybox image in platform/observability/edge/compose.yml.
 SCRAPE_CHECK_IMAGE="busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e"
 
 # The API keeps only the bcrypt hash and the edge keeps the password, so rotating
@@ -16,7 +17,10 @@ SCRAPE_CHECK_IMAGE="busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c
 # the metrics network checks it: the API must answer 200 with the credential and
 # 401 without it. The password is read from the mounted file inside the container
 # and never reaches this script's output; it is not in the docker command line.
-# Only the Basic header is in wget's arguments, inside that container.
+# The Basic header must not reach any process's argv, since /proc/<pid>/cmdline is
+# readable from the host. The raw HTTP request is therefore written with printf (a
+# shell builtin in ash) and sent with nc, which gets only host and port as
+# arguments. The base64 comes from stdin for the same reason.
 scrape_credential_check() {
   local env_file="$1"
   local secret_file="$2"
@@ -30,11 +34,12 @@ scrape_credential_check() {
   # Runs inside the container, where $1 is the secret path. Prints status codes only.
   # shellcheck disable=SC2016  # the variables expand inside the container, not here
   check='
-    url="http://${SCRAPE_TARGET}/actuator/prometheus"
+    host="${SCRAPE_TARGET%:*}"
+    port="${SCRAPE_TARGET##*:}"
     auth="$({ printf "%s:" "${SCRAPE_USER}"; cat -- "$1"; } | base64 | tr -d "\n")"
-    status() { sed -n "s/.*HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p" | tail -n 1; }
-    with="$(wget -S -T 10 -O /dev/null --header "Authorization: Basic ${auth}" "${url}" 2>&1 | status)"
-    without="$(wget -S -T 10 -O /dev/null "${url}" 2>&1 | status)"
+    status() { sed -n "1s/^HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p"; }
+    with="$(printf "GET /actuator/prometheus HTTP/1.0\r\nHost: %s\r\nAuthorization: Basic %s\r\n\r\n" "${SCRAPE_TARGET}" "${auth}" | nc -w 10 "${host}" "${port}" 2>/dev/null | status)"
+    without="$(printf "GET /actuator/prometheus HTTP/1.0\r\nHost: %s\r\n\r\n" "${SCRAPE_TARGET}" | nc -w 10 "${host}" "${port}" 2>/dev/null | status)"
     echo "with=${with:-none} without=${without:-none}"
   '
 
@@ -47,11 +52,11 @@ scrape_credential_check() {
     "${SCRAPE_CHECK_IMAGE}" sh -c "${check}" check /run/secrets/api-scrape-password)"; then
     die "scrape credential check could not run"
   fi
-  if [[ "${result}" == *none* ]]; then
+  if [[ "${result}" == "with=none without=none" ]]; then
     die "the API did not answer /actuator/prometheus on the metrics network (${result})"
   fi
   [[ "${result}" == "with=200 without=401" ]] || \
-    die "the scrape password does not match the API hash (${result}); expected with=200 without=401"
+    die "unexpected scrape check result (${result}); expected with=200 without=401 (with=401 means the password does not match the API hash)"
   echo "API scrape credential: 200 with it, 401 without it"
 }
 
