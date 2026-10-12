@@ -4,9 +4,12 @@
 # Independent from the API, gateway and control-plane deployments: every remote
 # command is scoped to OBS_PRD_EDGE_DEPLOY_DIR and the workshop-edge project.
 #
-# - prepare resolves the requested ref to one commit SHA; every later job checks
-#   out that SHA. A confirmation other than DEPLOY stops here, before any job
-#   that holds secrets or reaches the VM.
+# - prepare resolves the requested ref to one commit SHA that must be on main;
+#   every later job checks out that SHA. A confirmation other than DEPLOY stops
+#   here, before any job that holds secrets or reaches the VM.
+# - deploy runs in the production-observability Environment (required reviewer,
+#   dispatch only from main). It is separate from production, which only allows
+#   tags and release/* for the API and gateway.
 # - deploy packs the full release (Compose, collector config, .env) into an
 #   immutable release directory and switches the active release atomically. The
 #   QA OTLP endpoint and the API scrape password travel as files under .secrets/,
@@ -88,6 +91,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.ref }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Resolve immutable commit
@@ -96,6 +100,11 @@ jobs:
           set -Eeuo pipefail
           sha="$(git rev-parse HEAD)"
           [[ "${sha}" =~ ^[0-9a-f]{40}$ ]]
+          # The approval covers what is on main, not an arbitrary branch.
+          git merge-base --is-ancestor "${sha}" origin/main || {
+            echo "Commit ${sha} is not on main" >&2
+            exit 1
+          }
           echo "sha=${sha}" >> "${GITHUB_OUTPUT}"
           echo "release-id=${sha:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
           echo "Deploying commit ${sha}"
@@ -149,6 +158,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     needs: prepare
+    environment: production-observability
     permissions:
       contents: read
 

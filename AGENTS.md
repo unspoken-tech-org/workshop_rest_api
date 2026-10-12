@@ -66,7 +66,7 @@
   - `observability/deploy-via-ssh-observability` — arquivado, recusa execução
 - **Scripts (`.github/scripts/<grupo>/`, sem sufixo):** `api/`, `api-qa/`, `gateway/`, `gateway-qa/` com deploy/rollback/verify/cleanup.sh; `observability-control-plane/` e `observability-edge/` idem, mais `common.sh` (carregado por source); `observability/` arquivado (stubs sem operação remota)
 - **Plano:** Tailscale Personal (gratuito, 1.000 min efêmeros/mês)
-- **Deploy:** tag semver (`vX.Y.Z` e `vX.Y.Z-*`) dispara apenas `deploy-api-prod`; os demais deploys são manuais via `workflow_dispatch`, e os de PRD `deploy-gateway-prod` e `deploy-observability-edge-prod` exigem `confirm` = `DEPLOY`
+- **Deploy:** tag semver (`vX.Y.Z` e `vX.Y.Z-*`) dispara apenas `deploy-api-prod`; os demais deploys são manuais via `workflow_dispatch`, e os de PRD `deploy-gateway-prod` e `deploy-observability-edge-prod` exigem `confirm` = `DEPLOY`. Aprovação por Environment: `production` (revisor; só tags `v*.*.*` e `release/*`) em `deploy-api-prod` e `deploy-gateway-prod`; `production-observability` (revisor; só `main`, commit precisa estar na `main`) em `deploy-observability-edge-prod`
 
 ## Linting/Formatting
 - No dedicated linter or formatter configured in `build.gradle`.
