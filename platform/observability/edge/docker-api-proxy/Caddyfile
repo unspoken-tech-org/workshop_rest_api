@@ -44,7 +44,7 @@
 	@list_size {
 		method GET
 		path_regexp ^(/v[0-9.]+)?/containers/json$
-		expression {http.request.orig_uri.query}.matches("(^|&)size(=|&|$)")
+		query size=*
 	}
 
 	handle @traversal {
