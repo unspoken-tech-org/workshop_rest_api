@@ -75,11 +75,11 @@ services:
       # Scrape do node-exporter do próprio projeto. Não tem acesso à API do Docker:
       # ela fica só com containers-collector (ver abaixo).
       - edge-node
+    # Sem depends_on do node-exporter: o Collector sobe sem ele. Se o node-exporter
+    # falhar, o deploy reprova pela prontidão e pelo verify.sh (up{job="node-exporter"}).
     depends_on:
       otel-collector-queue-init:
         condition: service_completed_successfully
-      node-exporter:
-        condition: service_healthy
     restart: unless-stopped
     read_only: true
     tmpfs:
