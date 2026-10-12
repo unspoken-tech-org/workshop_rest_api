@@ -231,8 +231,13 @@ groups:
       # Amostras do replay fora da janela out_of_order_time_window são
       # rejeitadas (perda de métricas após queda longa PRD → QA). Com a janela
       # habilitada, essas contam em too_old_samples, não em out_of_order_samples.
+      # Os dois contadores têm os mesmos rótulos; somados em separado, porque
+      # increase() remove o __name__ e um vetor único teria rótulos duplicados.
       - alert: PrometheusOutOfOrderSamplesRejected
-        expr: sum(increase({__name__=~"prometheus_tsdb_(out_of_order|too_old)_samples_total"}[10m])) > 0
+        expr: |
+          (sum(increase(prometheus_tsdb_out_of_order_samples_total[10m])) or vector(0))
+          + (sum(increase(prometheus_tsdb_too_old_samples_total[10m])) or vector(0))
+          > 0
         labels:
           severity: warning
           owner: platform

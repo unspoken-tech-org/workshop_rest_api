@@ -47,6 +47,8 @@ tests:
     input_series:
       - series: 'prometheus_tsdb_out_of_order_samples_total{job="prometheus",instance="prometheus:9090",type="float"}'
         values: '0 0 0 5 5 5'
+      - series: 'prometheus_tsdb_too_old_samples_total{job="prometheus",instance="prometheus:9090",type="float"}'
+        values: '0x5'
     alert_rule_test:
       - eval_time: 4m
         alertname: PrometheusOutOfOrderSamplesRejected
@@ -359,6 +361,8 @@ tests:
   - name: amostra mais velha que a janela fora de ordem alerta sem espera
     interval: 1m
     input_series:
+      - series: 'prometheus_tsdb_out_of_order_samples_total{job="prometheus",instance="prometheus:9090",type="float"}'
+        values: '0x5'
       - series: 'prometheus_tsdb_too_old_samples_total{job="prometheus",instance="prometheus:9090",type="float"}'
         values: '0 0 0 5 5 5'
     alert_rule_test:
