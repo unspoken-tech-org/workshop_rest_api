@@ -1,5 +1,7 @@
-# Nomes conferidos no Collector contrib 0.161.0 (sem sufixo _total). Revalidar
-# após cada upgrade do Collector com `promtool test rules` (tests/).
+# Nomes conferidos no Collector contrib 0.161.0. O Collector interno é raspado
+# (sem sufixo _total); a telemetria da borda de PRD chega por OTLP
+# (job workshop/otelcol-contrib) e os counters ganham _total. Revalidar após
+# cada upgrade do Collector com `promtool test rules` (tests/).
 groups:
   - name: control-plane-health
     interval: 30s
@@ -21,7 +23,7 @@ groups:
       - alert: OTelCollectorExportFailures
         expr: |
           sum by (exporter) (
-            rate({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"}[5m])
+            rate({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"}[5m])
           ) > 0
         for: 10m
         labels:
@@ -34,7 +36,7 @@ groups:
       - alert: OTelCollectorEnqueueFailures
         expr: |
           sum by (exporter) (
-            rate({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"}[5m])
+            rate({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"}[5m])
           ) > 0
         for: 5m
         labels:
@@ -45,23 +47,32 @@ groups:
           description: "O exporter {{ $labels.exporter }} não consegue enfileirar dados (fila cheia)."
 
       # Com retry sem prazo (fila persistente), send_failed só cresce com erro
-      # permanente: backend fora do ar aparece como fila que nunca esvazia.
+      # permanente: backend fora do ar aparece como fila parada, sem envio.
+      # Exigir envio zerado evita o falso positivo do 0.161: após descartes,
+      # queue_size (sizer bytes) fica preso num resíduo com os dados fluindo.
+      # max por exporter: na borda um exporter atende os três sinais.
       - alert: OTelCollectorQueueBacklog
         expr: |
-          min by (exporter) (min_over_time(otelcol_exporter_queue_size{job="otel-collector-internal"}[10m])) > 0
+          max by (job, exporter) (
+            min_over_time(otelcol_exporter_queue_size{job=~"otel-collector-internal|workshop/otelcol-contrib"}[10m])
+          ) > 0
+          unless on (job, exporter)
+          sum by (job, exporter) (
+            rate({__name__=~"otelcol_exporter_sent_(spans|metric_points|log_records)(_total)?"}[10m])
+          ) > 0
         for: 5m
         labels:
           severity: critical
           owner: platform
         annotations:
           summary: "Fila do Collector acumulando"
-          description: "A fila do exporter {{ $labels.exporter }} não esvazia há mais de 15 minutos (destino indisponível ou lento)."
+          description: "A fila do exporter {{ $labels.exporter }} ({{ $labels.job }}) tem dados e nada foi enviado há mais de 15 minutos (destino indisponível)."
 
       - alert: OTelCollectorQueueNearlyFull
         expr: |
-          max by (exporter) (
-            otelcol_exporter_queue_size{job="otel-collector-internal"}
-              / otelcol_exporter_queue_capacity{job="otel-collector-internal"}
+          max by (job, exporter) (
+            otelcol_exporter_queue_size{job=~"otel-collector-internal|workshop/otelcol-contrib"}
+              / otelcol_exporter_queue_capacity{job=~"otel-collector-internal|workshop/otelcol-contrib"}
           ) > 0.80
         for: 10m
         labels:
@@ -75,7 +86,7 @@ groups:
       - alert: OTelCollectorReceiverRefused
         expr: |
           sum by (receiver) (
-            rate({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"}[5m])
+            rate({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"}[5m])
           ) > 0
         for: 5m
         labels:
@@ -218,9 +229,10 @@ groups:
           description: "Pare ou descarte telemetria antes que o PostgreSQL de QA fique sem espaço."
 
       # Amostras do replay fora da janela out_of_order_time_window são
-      # rejeitadas (perda de métricas após queda longa PRD → QA).
+      # rejeitadas (perda de métricas após queda longa PRD → QA). Com a janela
+      # habilitada, essas contam em too_old_samples, não em out_of_order_samples.
       - alert: PrometheusOutOfOrderSamplesRejected
-        expr: sum(increase(prometheus_tsdb_out_of_order_samples_total[10m])) > 0
+        expr: sum(increase({__name__=~"prometheus_tsdb_(out_of_order|too_old)_samples_total"}[10m])) > 0
         labels:
           severity: warning
           owner: platform

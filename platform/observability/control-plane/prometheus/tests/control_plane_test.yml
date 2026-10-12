@@ -287,3 +287,87 @@ tests:
     alert_rule_test:
       - eval_time: 20m
         alertname: WorkshopApiProductionSlow
+
+  # Resíduo preso do sizer bytes (0.161) com os dados fluindo: sem alerta.
+  - name: fila com resíduo e envio ativo não alerta backlog
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_queue_size{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",data_type="metrics",deployment_environment_name="production"}'
+        values: '52770x30'
+      - series: 'otelcol_exporter_queue_size{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",data_type="traces",deployment_environment_name="production"}'
+        values: '0x30'
+      - series: 'otelcol_exporter_sent_metric_points_total{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",deployment_environment_name="production"}'
+        values: '0+1200x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: OTelCollectorQueueBacklog
+
+  - name: fila com dados e envio parado alerta backlog
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_queue_size{job="otel-collector-internal",instance="otel-collector:8888",exporter="otlp_grpc/tempo",data_type="traces"}'
+        values: '0x30'
+      - series: 'otelcol_exporter_queue_size{job="otel-collector-internal",instance="otel-collector:8888",exporter="otlp_http/prometheus",data_type="metrics"}'
+        values: '1000+1000x30'
+      - series: 'otelcol_exporter_sent_metric_points{job="otel-collector-internal",instance="otel-collector:8888",exporter="otlp_http/prometheus"}'
+        values: '5000x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: OTelCollectorQueueBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: otel-collector-internal
+              exporter: otlp_http/prometheus
+            exp_annotations:
+              summary: "Fila do Collector acumulando"
+              description: "A fila do exporter otlp_http/prometheus (otel-collector-internal) tem dados e nada foi enviado há mais de 15 minutos (destino indisponível)."
+
+  - name: fila cheia da borda de PRD alerta descarte e ocupação
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_enqueue_failed_metric_points_total{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",deployment_environment_name="production"}'
+        values: '0+100x30'
+      - series: 'otelcol_exporter_queue_size{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",data_type="metrics",deployment_environment_name="production"}'
+        values: '60000000x30'
+      - series: 'otelcol_exporter_queue_capacity{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",data_type="metrics",deployment_environment_name="production"}'
+        values: '67108864x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OTelCollectorEnqueueFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_grpc/qa
+            exp_annotations:
+              summary: "Fila do Collector descartando dados"
+              description: "O exporter otlp_grpc/qa não consegue enfileirar dados (fila cheia)."
+      - eval_time: 20m
+        alertname: OTelCollectorQueueNearlyFull
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/otelcol-contrib
+              exporter: otlp_grpc/qa
+            exp_annotations:
+              summary: "Fila do Collector acima de 80%"
+              description: "A fila do exporter otlp_grpc/qa está acima de 80% da capacidade."
+
+  - name: amostra mais velha que a janela fora de ordem alerta sem espera
+    interval: 1m
+    input_series:
+      - series: 'prometheus_tsdb_too_old_samples_total{job="prometheus",instance="prometheus:9090",type="float"}'
+        values: '0 0 0 5 5 5'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: PrometheusOutOfOrderSamplesRejected
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              summary: "Prometheus rejeitando amostras fora de ordem"
+              description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
