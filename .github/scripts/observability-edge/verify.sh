@@ -51,31 +51,40 @@ collector_metrics() {
     wget -qO- http://otel-collector:8888/metrics
 }
 
-# Pontos aceitos pelo receiver prometheus/api. O nome pode sair com o sufixo _total.
-accepted_points() {
-  awk '/^otelcol_receiver_accepted_metric_points(_total)?\{/ && /receiver="prometheus\/api"/ {sum += $NF} END {printf "%.0f\n", sum}'
+# Endpoint de saúde do scrape (porta 8889). O exporter escuta em 0.0.0.0, então
+# alcança todas as redes do otel-collector, inclusive workshop-metrics; por isso só
+# expõe up e target_info (filtro em config.yaml). Mostra a série up de cada alvo.
+# up == 1 é o critério. O receiver prometheus/api emite up 0 quando o scrape
+# falha (credencial recusada, timeout, API fora). Pontos aceitos não distinguem
+# essas falhas, e a telemetria do Collector (8888) não traz up por alvo.
+scrape_health() {
+  compose_in "${release_dir}" exec -T otel-collector-probe \
+    wget -qO- http://otel-collector:8889/metrics
 }
 
-accepted=0
-metrics=""
+api_scrape_up() {
+  scrape_health 2>/dev/null | awk '/^up\{/ && /job="workshop-api"/ {print $NF}' || true
+}
+
+up_value=""
 for attempt in $(seq 1 "${METRICS_WAIT_ATTEMPTS}"); do
-  metrics="$(collector_metrics 2>/dev/null)" || metrics=""
-  accepted="$(printf '%s\n' "${metrics}" | accepted_points)"
-  if (( accepted > 0 )); then
+  up_value="$(api_scrape_up)"
+  if [[ "${up_value}" == 1 ]]; then
     break
   fi
-  echo "[${attempt}/${METRICS_WAIT_ATTEMPTS}] prometheus/api has not accepted metric points yet"
+  echo "[${attempt}/${METRICS_WAIT_ATTEMPTS}] workshop-api scrape is not up yet (up=${up_value:-none})"
   sleep "${METRICS_WAIT_SECONDS}"
 done
 
-if (( accepted == 0 )); then
+if [[ "${up_value}" != 1 ]]; then
   show_service_logs "${release_dir}" otel-collector
-  die "prometheus/api accepted no metric points: the authenticated scrape is not working"
+  die "workshop-api scrape is not up (up=${up_value:-none}): the authenticated scrape is not working"
 fi
-echo "prometheus/api accepted ${accepted} metric points: the authenticated scrape works"
+echo "prometheus/api: up{job=\"workshop-api\"} is 1: the authenticated scrape works"
 
 # Informativo: fila de exportação por tipo de dado. A entrega à QA ainda não é
 # critério de aprovação (a ACL PRD -> QA é adiada), então a fila pode crescer.
+metrics="$(collector_metrics 2>/dev/null)" || metrics=""
 echo "Exporter queue size per data type (information only):"
 printf '%s\n' "${metrics}" \
   | awk '/^otelcol_exporter_queue_size\{/ {match($0, /data_type="[^"]*"/); print "  " substr($0, RSTART, RLENGTH) " " $NF}' \

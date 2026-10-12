@@ -25,20 +25,29 @@ fi
 
 previous_dir="$(cat -- "${DEPLOY_MARKER}")"
 
-if [[ -n "${previous_dir}" && -d "${previous_dir}" ]]; then
-  [[ "${previous_dir}" == "${RELEASES_DIR}/"* ]] || die "marker points outside the releases directory"
-  echo "Restoring edge release $(basename -- "${previous_dir}")"
-  switch_current_to "${previous_dir}"
-  # Same project, previous files; recreate everything so secrets are
-  # remounted from the restored release (Compose does not hash them).
-  compose_in "${previous_dir}" up -d --remove-orphans --force-recreate
-  compose_in "${previous_dir}" ps
-  rm -rf -- "${failed_dir}"
-  rm -f -- "${DEPLOY_MARKER}"
-  wait_until_ready "${previous_dir}"
-else
-  # First deployment: there is no known-good release. Keep the failed one
-  # running for diagnosis instead of tearing the project down.
+# Empty marker: the first deployment had no known-good release. Keep the failed
+# one running for diagnosis instead of tearing the project down.
+if [[ -z "${previous_dir}" ]]; then
   rm -f -- "${DEPLOY_MARKER}"
   echo "No previous edge release exists; the failed first release stays for diagnosis" >&2
+  exit 0
 fi
+
+# A named previous release must be intact. If it is gone or lacks a file needed
+# to run, that is a real failure: stop before switching, so the failed release
+# keeps running and nothing is restored half-way.
+[[ "${previous_dir}" == "${RELEASES_DIR}/"* ]] || die "marker points outside the releases directory"
+[[ -d "${previous_dir}" ]] || die "previous edge release is missing: $(basename -- "${previous_dir}")"
+for required in .env "${COMPOSE_FILE}" .secrets/qa-otlp-endpoint .secrets/api-scrape-password; do
+  test -s "${previous_dir}/${required}" || die "previous edge release has no ${required}; it cannot be restored"
+done
+
+echo "Restoring edge release $(basename -- "${previous_dir}")"
+switch_current_to "${previous_dir}"
+# Same project, previous files; recreate everything so secrets are
+# remounted from the restored release (Compose does not hash them).
+compose_in "${previous_dir}" up -d --remove-orphans --force-recreate
+compose_in "${previous_dir}" ps
+rm -rf -- "${failed_dir}"
+rm -f -- "${DEPLOY_MARKER}"
+wait_until_ready "${previous_dir}"

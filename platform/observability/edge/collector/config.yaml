@@ -171,6 +171,14 @@ processors:
       - key: service.instance.id
         action: delete
 
+  # Só a série up do scrape da API segue para o endpoint de saúde (scrape-health).
+  # Esse endpoint é interno, mas as redes do projeto o alcançam; por isso não pode
+  # expor as métricas autenticadas da API.
+  filter/scrape-health:
+    error_mode: ignore
+    metric_conditions:
+      - 'metric.name != "up"'
+
 exporters:
   # Único destino: o Collector interno da QA, no IP Tailscale informado no deploy
   # (QA_OTLP_ENDPOINT). Sem TLS porque o transporte é o túnel WireGuard do
@@ -205,6 +213,11 @@ exporters:
       initial_interval: 1s
       max_interval: 30s
       max_elapsed_time: 0s
+
+  # Endpoint interno de saúde do scrape, lido por verify.sh a partir do probe
+  # (edge-probe). Expõe só up{job="workshop-api"}; nenhuma porta é publicada no host.
+  prometheus/scrape-health:
+    endpoint: 0.0.0.0:8889
 
 service:
   extensions:
@@ -247,6 +260,14 @@ service:
         - attributes/redact
       exporters:
         - otlp_grpc/qa
+    metrics/scrape-health:
+      receivers:
+        - prometheus/api
+      processors:
+        - memory_limiter
+        - filter/scrape-health
+      exporters:
+        - prometheus/scrape-health
     logs:
       receivers:
         - otlp

@@ -106,6 +106,7 @@ services:
     logging: *default-logging
 
   otel-collector-probe:
+    # Mesmo digest do busybox do queue-init acima e do SCRAPE_CHECK_IMAGE em deploy.sh: manter igual.
     image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
     command: ["sleep", "2147483647"]
     depends_on:
@@ -150,6 +151,9 @@ networks:
   edge-egress:
     driver: bridge
   # Criada pelo Compose da API de PRD (interna): scrape de /actuator/prometheus.
+  # external: este projeto nunca cria nem remove a rede. Se o down do projeto da
+  # API (dono da rede) rodar com a borda anexada, o Compose dele avisa "is still in
+  # use and was left in place": é o comportamento esperado, não um erro.
   workshop-metrics:
     name: workshop-metrics
     external: true
