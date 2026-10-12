@@ -105,11 +105,11 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "unit": "percent"
         },
         "overrides": []
       },
-      "description": "Utilização reportada pelo receiver docker_stats (fração do CPU, por container)."
+      "description": "Utilização reportada pelo receiver docker_stats (porcentagem do CPU por container; pode passar de 100% em container com mais de um CPU)."
     },
     {
       "id": 3,
@@ -185,7 +185,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "unit": "percent"
         },
         "overrides": []
       },
