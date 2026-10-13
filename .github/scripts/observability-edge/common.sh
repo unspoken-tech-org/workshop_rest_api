@@ -111,6 +111,9 @@ pg_monitor_role() {
     die "could not create or update the ${PG_MONITOR_ROLE} role (psql output hidden: it may echo the statement)"
 SET log_min_error_statement = panic;
 SET log_statement = 'none';
+SET log_min_duration_statement = -1;
+SET log_min_duration_sample = -1;
+SET log_transaction_sample_rate = 0;
 SET pg_stat_statements.track_utility = off;
 SET client_min_messages = warning;
 SELECT 'CREATE ROLE ${PG_MONITOR_ROLE}' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${PG_MONITOR_ROLE}')\gexec
@@ -118,6 +121,23 @@ ALTER ROLE ${PG_MONITOR_ROLE} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOR
 GRANT pg_monitor TO ${PG_MONITOR_ROLE} WITH INHERIT TRUE;
 SQL
   echo "PostgreSQL role ${PG_MONITOR_ROLE} is up to date (pg_monitor)"
+}
+
+# Rollback: reaplica a senha do release restaurado quando ela difere da do release
+# que falhou. Não é fatal: restaurar a borda não pode depender da saúde do banco; se
+# falhar, WorkshopPostgresDown avisa.
+restore_pg_monitor_role() {
+  local release_dir="$1"
+  local failed_dir="$2"
+  local secret_file="${release_dir}/.secrets/pg-monitor-password"
+
+  # Release de antes do postgres-exporter: não há senha a restaurar.
+  [[ -s "${secret_file}" ]] || return 0
+  if cmp -s -- "${secret_file}" "${failed_dir}/.secrets/pg-monitor-password"; then
+    return 0
+  fi
+  (pg_monitor_role "${secret_file}") || \
+    echo "edge ${SCRIPT_NAME:-script}: warning: could not restore the ${PG_MONITOR_ROLE} password" >&2
 }
 
 current_release_dir() {

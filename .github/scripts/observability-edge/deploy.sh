@@ -64,8 +64,9 @@ scrape_credential_check() {
 # must exist (the PRD API Compose creates it), the scrape password must match the
 # API hash, and the free disk must cover the queue budget: one queue per signal,
 # 3 x COLLECTOR_QUEUE_BYTES. The database network and the monitoring role are
-# additive and idempotent, so they are applied here too: the previous release does
-# not use them, and a rollback keeps them.
+# additive and idempotent, so they are applied last, after every check that can
+# fail: the previous release does not use them, and a rollback keeps them (it only
+# restores the previous password).
 preflight() {
   local env_file="$1"
   local secret_file="$2"
@@ -77,9 +78,6 @@ preflight() {
 
   scrape_credential_check "${env_file}" "${secret_file}"
 
-  ensure_db_metrics_network
-  pg_monitor_role "${pg_secret_file}"
-
   queue_bytes="$(sed -n 's/^COLLECTOR_QUEUE_BYTES=//p' "${env_file}")"
   [[ "${queue_bytes}" =~ ^[1-9][0-9]*$ ]] || die "COLLECTOR_QUEUE_BYTES in .env must be a positive integer"
   budget=$((3 * queue_bytes))
@@ -90,6 +88,9 @@ preflight() {
   free_bytes="$(df -PB1 -- "${docker_root}" | awk 'NR == 2 {print $4}')"
   echo "Free disk at ${docker_root}: ${free_bytes} bytes; queue budget (3 x COLLECTOR_QUEUE_BYTES): ${budget} bytes"
   (( free_bytes >= budget )) || die "free disk is below the queue budget"
+
+  ensure_db_metrics_network
+  pg_monitor_role "${pg_secret_file}"
 }
 
 validate_contract

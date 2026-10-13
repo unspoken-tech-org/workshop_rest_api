@@ -17,6 +17,10 @@ rm -rf -- "${failed_dir}.staging" "${TMP_DIR}/payload.tar.gz"
 # project was not touched and must stay as it is.
 if [[ ! -f "${DEPLOY_MARKER}" ]]; then
   echo "No release switch was recorded; leaving the edge collector untouched"
+  # The failed preflight may have rotated the monitoring role password.
+  if current_dir="$(current_release_dir)"; then
+    restore_pg_monitor_role "${current_dir}" "${failed_dir}"
+  fi
   if [[ "$(current_release_dir || true)" != "${failed_dir}" ]]; then
     rm -rf -- "${failed_dir}"
   fi
@@ -43,12 +47,10 @@ for required in .env "${COMPOSE_FILE}" .secrets/qa-otlp-endpoint .secrets/api-sc
 done
 
 echo "Restoring edge release $(basename -- "${previous_dir}")"
-# The failed deploy may have rotated the monitoring role password; the restored
-# release brings its own. A release from before the postgres-exporter has none.
-if [[ -s "${previous_dir}/.secrets/pg-monitor-password" ]]; then
-  pg_monitor_role "${previous_dir}/.secrets/pg-monitor-password"
-fi
 switch_current_to "${previous_dir}"
+# The failed deploy may have rotated the monitoring role password; the restored
+# release brings its own.
+restore_pg_monitor_role "${previous_dir}" "${failed_dir}"
 # Same project, previous files; recreate everything so secrets are
 # remounted from the restored release (Compose does not hash them).
 compose_in "${previous_dir}" up -d --remove-orphans --force-recreate
