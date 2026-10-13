@@ -97,6 +97,10 @@ runs:
           echo "The QA OTLP endpoint file is missing" >&2
           exit 1
         }
+        test -s "${SECRETS_DIR}/pg-monitor-password" || {
+          echo "The PostgreSQL monitoring role password file is missing" >&2
+          exit 1
+        }
         test -s "${COMPOSE_SOURCE}"
 
     - name: Pack edge release
@@ -123,7 +127,7 @@ runs:
         rm -f -- "${payload_root}/${compose_source_dir}/.env"
         install -m 600 -- "${ENV_FILE}" "${payload_root}/.env"
         install -d -m 700 -- "${payload_root}/.secrets"
-        # deploy.sh checks that both secret files exist after extraction.
+        # deploy.sh checks that every secret file exists after extraction.
         for secret_file in "${SECRETS_DIR}"/*; do
           install -m 600 -- "${secret_file}" "${payload_root}/.secrets/$(basename -- "${secret_file}")"
         done
@@ -132,6 +136,7 @@ runs:
         # print the values, and the QA endpoint is read from its file as in the VM.
         QA_OTLP_ENDPOINT="$(<"${payload_root}/.secrets/qa-otlp-endpoint")" \
           EDGE_API_SCRAPE_PASSWORD_FILE="${payload_root}/.secrets/api-scrape-password" \
+          EDGE_PG_MONITOR_PASSWORD_FILE="${payload_root}/.secrets/pg-monitor-password" \
           docker compose \
             --project-directory "${payload_root}" \
             -p "${COMPOSE_PROJECT_NAME}" \

@@ -12,8 +12,8 @@
 #   tags and release/* for the API and gateway.
 # - deploy packs the full release (Compose, collector config, .env) into an
 #   immutable release directory and switches the active release atomically. The
-#   QA OTLP endpoint and the API scrape password travel as files under .secrets/,
-#   never in the .env.
+#   QA OTLP endpoint, the API scrape password and the PostgreSQL monitoring role
+#   password travel as files under .secrets/, never in the .env.
 # - verify checks the active release again from a fresh job.
 # - finalize confirms the release when deploy and verify passed, or restores the
 #   previous release when either failed.
@@ -21,7 +21,9 @@
 # The VM is reached through Tailscale (tag:ci) with the host key pinned from
 # PROD_SSH_KNOWN_HOSTS, as in deploy-api-prod.yml. The workshop-metrics network
 # must already exist on the VM (created by the PRD API Compose); deploy.sh fails
-# before switching otherwise. Delivery to QA is not a gate: the PRD -> QA ACL is
+# before switching otherwise. deploy.sh also connects the workshop-db container to
+# the internal workshop-db-metrics network (no restart) and creates or updates the
+# workshop_metrics role (pg_monitor) with OBS_PRD_PG_MONITOR_PASSWORD. Delivery to QA is not a gate: the PRD -> QA ACL is
 # deferred, so the queue may grow until it lands.
 # ===========================================================
 
@@ -142,6 +144,7 @@ jobs:
             QA_OTLP_ENDPOINT=100.64.0.1:4317 \
             API_SCRAPE_TARGET="${API_SCRAPE_TARGET}" \
             EDGE_API_SCRAPE_PASSWORD_FILE=/nonexistent/api-scrape-password \
+            EDGE_PG_MONITOR_PASSWORD_FILE=/nonexistent/pg-monitor-password \
             docker compose \
               --project-directory . \
               -p "${COMPOSE_PROJECT_NAME}" \
@@ -178,11 +181,12 @@ jobs:
       - name: Prepare release environment
         env:
           API_SCRAPE_PASSWORD: ${{ secrets.OBS_PRD_API_SCRAPE_PASSWORD }}
+          PG_MONITOR_PASSWORD: ${{ secrets.OBS_PRD_PG_MONITOR_PASSWORD }}
           QA_OTLP_ENDPOINT: ${{ secrets.OBS_QA_OTLP_ENDPOINT }}
         run: |
           set -Eeuo pipefail
           for variable in \
-            API_SCRAPE_PASSWORD QA_OTLP_ENDPOINT \
+            API_SCRAPE_PASSWORD PG_MONITOR_PASSWORD QA_OTLP_ENDPOINT \
             API_SCRAPE_TARGET API_SCRAPE_USERNAME COLLECTOR_QUEUE_BYTES; do
             [[ -n "${!variable:-}" ]] || {
               echo "Missing required ${variable} value" >&2
@@ -197,11 +201,18 @@ jobs:
             echo "OBS_PRD_API_SCRAPE_PASSWORD must be a single line" >&2
             exit 1
           }
+          # Same rule as pg_monitor_role in common.sh: the value goes literally into
+          # SQL and the exporter DSN.
+          [[ "${PG_MONITOR_PASSWORD}" =~ ^[A-Za-z0-9._~-]{24,128}$ ]] || {
+            echo "OBS_PRD_PG_MONITOR_PASSWORD must have 24 to 128 characters from [A-Za-z0-9._~-]" >&2
+            exit 1
+          }
           [[ "${COLLECTOR_QUEUE_BYTES}" =~ ^[1-9][0-9]*$ ]] || {
             echo "COLLECTOR_QUEUE_BYTES must be a positive integer" >&2
             exit 1
           }
           echo "::add-mask::${API_SCRAPE_PASSWORD}"
+          echo "::add-mask::${PG_MONITOR_PASSWORD}"
           echo "::add-mask::${QA_OTLP_ENDPOINT}"
 
           umask 077
@@ -219,6 +230,7 @@ jobs:
           rm -rf -- "${secrets_dir}"
           mkdir -m 700 -- "${secrets_dir}"
           printf '%s' "${API_SCRAPE_PASSWORD}" > "${secrets_dir}/api-scrape-password"
+          printf '%s' "${PG_MONITOR_PASSWORD}" > "${secrets_dir}/pg-monitor-password"
           printf '%s' "${QA_OTLP_ENDPOINT}" > "${secrets_dir}/qa-otlp-endpoint"
 
       - name: Require pinned host key

@@ -23,11 +23,13 @@
 #   API_SCRAPE_TARGET              host:porta da API de PRD na rede workshop-metrics
 #   API_SCRAPE_USERNAME            identidade de leitura mínima (padrão metrics-scraper)
 #   EDGE_API_SCRAPE_PASSWORD_FILE  caminho do arquivo com a senha de scrape
+#   EDGE_PG_MONITOR_PASSWORD_FILE  caminho do arquivo com a senha do papel workshop_metrics
 #   COLLECTOR_QUEUE_BYTES          limite em bytes da fila de cada sinal (64 MiB)
 #
-# Redes: edge-otlp, edge-probe, edge-node e edge-docker são internas e sem saída;
-# edge-egress é a única saída, rumo à QA pela Tailscale; workshop-metrics é
-# compartilhada somente com a API de PRD, para o scrape. A restrição de quem pode
+# Redes: edge-otlp, edge-probe, edge-node, edge-docker e edge-pg são internas e sem
+# saída; edge-egress é a única saída, rumo à QA pela Tailscale; workshop-metrics é
+# compartilhada somente com a API de PRD, para o scrape, e workshop-db-metrics
+# somente com o banco de PRD, para o postgres-exporter. A restrição de quem pode
 # enviar à QA fica na ACL do tailnet (lado da QA).
 #
 # Host e containers: node-exporter (mesmos coletores da QA, para o dashboard Hosts)
@@ -35,9 +37,9 @@
 # GET). Só o containers-collector alcança a API do Docker, e ele não tem rota para a
 # internet: envia OTLP ao Collector de borda, que tem credenciais e saída, mas não
 # tem acesso ao socket.
-# PostgreSQL ainda não entra aqui: exige a rede do banco (workshop-network, hoje
-# fora do alcance desta borda) e um usuário de monitoramento com pg_monitor, que
-# depende de um passo de criação de papel ainda não automatizado.
+# PostgreSQL: postgres-exporter, com o papel workshop_metrics (pg_monitor). Alcança o
+# banco pela rede interna workshop-db-metrics, que o deploy cria e conecta ao
+# container workshop-db sem reiniciá-lo; o deploy também cria ou atualiza o papel.
 
 name: workshop-edge
 
@@ -76,6 +78,8 @@ services:
       # Scrape do node-exporter do próprio projeto. Não tem acesso à API do Docker:
       # ela fica só com containers-collector (ver abaixo).
       - edge-node
+      # Scrape do postgres-exporter. O Collector não alcança o banco.
+      - edge-pg
     # Sem depends_on do node-exporter: o Collector sobe sem ele. Se o node-exporter
     # falhar, o deploy reprova pela prontidão e pelo verify.sh (up{job="node-exporter"}).
     depends_on:
@@ -252,6 +256,46 @@ services:
           cpus: "0.25"
           memory: 64M
 
+  # PostgreSQL de PRD com o papel workshop_metrics (pg_monitor, criado pelo deploy). Sem
+  # as métricas padrão nem os coletores roles e stat_activity, que rotulam séries com
+  # usuários, papéis e application_name; ficam banco, conexões, transações, locks,
+  # WAL, arquivamento (pgBackRest) e settings. Conecta ao banco postgres: os coletores
+  # usados leem visões do cluster. Só o exporter entra em workshop-db-metrics; o
+  # Collector o raspa por edge-pg. Nenhuma das duas redes tem saída.
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e
+    command:
+      - --disable-default-metrics
+      - --no-collector.roles
+      - --no-collector.stat_activity
+    environment:
+      DATA_SOURCE_URI: workshop-db:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: workshop_metrics
+      DATA_SOURCE_PASS_FILE: /run/secrets/pg_monitor_password
+    secrets:
+      - pg_monitor_password
+    networks:
+      - edge-pg
+      - workshop-db-metrics
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:9187/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 64M
+
   # Única via até a API do Docker, por allowlist de rotas (Caddy): GET de
   # /containers/json, /containers/{id}/json, /containers/{id}/stats, /events,
   # /version e /_ping; o resto recebe 403. O socket é montado só aqui. O :ro do
@@ -294,6 +338,9 @@ secrets:
   # Caminho absoluto fora da release, definido no ambiente do deploy.
   api_scrape_password:
     file: ${EDGE_API_SCRAPE_PASSWORD_FILE:?EDGE_API_SCRAPE_PASSWORD_FILE is required}
+  # Senha do papel workshop_metrics; mesmo tratamento da senha de scrape.
+  pg_monitor_password:
+    file: ${EDGE_PG_MONITOR_PASSWORD_FILE:?EDGE_PG_MONITOR_PASSWORD_FILE is required}
 
 networks:
   # OTLP do projeto: containers-collector → Collector de borda; sem saída e sem
@@ -313,6 +360,10 @@ networks:
   edge-docker:
     driver: bridge
     internal: true
+  # Somente Collector ↔ postgres-exporter; sem saída.
+  edge-pg:
+    driver: bridge
+    internal: true
   # Única saída do projeto: Collector → QA pelo IP Tailscale.
   edge-egress:
     driver: bridge
@@ -322,6 +373,14 @@ networks:
   # use and was left in place": é o comportamento esperado, não um erro.
   workshop-metrics:
     name: workshop-metrics
+    external: true
+  # Rede interna só do banco e do postgres-exporter. O deploy a cria e conecta o
+  # workshop-db em tempo de execução (docker network connect, sem reinício); o Compose
+  # da API não a declara, porque mudar as redes do banco ali o recriaria no próximo
+  # deploy da API. Se o workshop-db for recriado, a conexão some até o próximo deploy
+  # desta borda (alerta WorkshopPostgresDown).
+  workshop-db-metrics:
+    name: workshop-db-metrics
     external: true
 
 volumes:

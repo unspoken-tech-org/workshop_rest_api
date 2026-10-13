@@ -1,5 +1,6 @@
 # Collector de borda da VM de produção (projeto Compose workshop-edge). Faz o
-# scrape autenticado da API de PRD e o scrape do node-exporter do host, mede a si
+# scrape autenticado da API de PRD e o scrape do node-exporter do host e do
+# postgres-exporter do banco, mede a si
 # mesmo e recebe OTLP do próprio projeto: hoje, o Collector de containers
 # (containers-collector), que é o único com acesso à API do Docker e não tem saída.
 # Tudo sai por um único exporter OTLP/gRPC para o Collector interno da QA, com fila
@@ -65,6 +66,18 @@ receivers:
           static_configs:
             - targets:
                 - node-exporter:9100
+
+  # PostgreSQL de PRD, pelo postgres-exporter do próprio projeto (rede edge-pg). Na QA
+  # o job vira workshop/postgres-exporter.
+  prometheus/postgres:
+    config:
+      scrape_configs:
+        - job_name: postgres-exporter
+          scrape_interval: 30s
+          scrape_timeout: 10s
+          static_configs:
+            - targets:
+                - postgres-exporter:9187
 
   # OTLP do próprio projeto. Único produtor hoje: containers-collector (métricas de
   # containers), pela rede edge-otlp. O Java Agent e o Alloy entram nas fases
@@ -186,13 +199,14 @@ processors:
       - key: service.instance.id
         action: delete
 
-  # Só a série up (de cada alvo: API e node-exporter) segue para o endpoint de saúde
+  # Só a série up de cada alvo (API, node-exporter e postgres-exporter) e pg_up (o
+  # exporter consegue consultar o banco) seguem para o endpoint de saúde
   # (scrape-health). Esse endpoint é interno, mas as redes do projeto o alcançam; por
   # isso não pode expor as métricas autenticadas da API.
   filter/scrape-health:
     error_mode: ignore
     metric_conditions:
-      - 'metric.name != "up"'
+      - 'metric.name != "up" and metric.name != "pg_up"'
 
 exporters:
   # Único destino: o Collector interno da QA, no IP Tailscale informado no deploy
@@ -230,8 +244,8 @@ exporters:
       max_elapsed_time: 0s
 
   # Endpoint interno de saúde do scrape, lido por verify.sh a partir do probe
-  # (edge-probe). Expõe só as séries up de cada alvo (workshop-api e node-exporter) e
-  # target_info, que o exporter gera a partir do resource; nenhuma porta é publicada.
+  # (edge-probe). Expõe só as séries up de cada alvo (workshop-api, node-exporter e
+  # postgres-exporter), pg_up e target_info, que o exporter gera a partir do resource; nenhuma porta é publicada.
   prometheus/scrape-health:
     endpoint: 0.0.0.0:8889
 
@@ -268,6 +282,7 @@ service:
         - prometheus/api
         - prometheus/self
         - prometheus/node
+        - prometheus/postgres
         - otlp
       processors:
         - memory_limiter
@@ -281,6 +296,7 @@ service:
       receivers:
         - prometheus/api
         - prometheus/node
+        - prometheus/postgres
       processors:
         - memory_limiter
         - filter/scrape-health

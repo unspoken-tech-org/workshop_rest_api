@@ -14,6 +14,13 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose-observability-edge-prd.yml}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-workshop-edge}"
 # Rede externa criada pelo Compose da API de PRD (interna). O scrape passa por ela.
 METRICS_NETWORK=workshop-metrics
+# Banco de PRD (container_name em apps/api/compose/production.yml) e a rede interna
+# que só ele e o postgres-exporter compartilham. Esta borda cria a rede e a conecta
+# ao banco; o Compose da API não a declara.
+DB_CONTAINER=workshop-db
+DB_METRICS_NETWORK=workshop-db-metrics
+# Papel de leitura do postgres-exporter (pg_monitor), mantido por pg_monitor_role.
+PG_MONITOR_ROLE=workshop_metrics
 TMP_DIR="${DEPLOY_DIR}/.tmp"
 RELEASES_DIR="${DEPLOY_DIR}/releases"
 CURRENT_LINK="${DEPLOY_DIR}/current"
@@ -42,8 +49,10 @@ validate_release_id() {
 # Compose sempre roda no diretório real do release: os bind mounts mudam de
 # caminho a cada deploy e os containers são recriados com a configuração nova.
 # Volumes e redes dependem só do nome do projeto e sobrevivem à troca.
-# QA_OTLP_ENDPOINT e o caminho da senha de scrape não vêm do .env: saem de
-# .secrets/ do próprio release e entram só nesta invocação do Compose.
+# QA_OTLP_ENDPOINT e os caminhos das senhas (scrape e papel do PostgreSQL) não vêm
+# do .env: saem de .secrets/ do próprio release e entram só nesta invocação do
+# Compose. Um release anterior ao postgres-exporter não tem a senha do papel, mas o
+# Compose dele também não a referencia.
 compose_in() {
   local release_dir="$1"
   local qa_otlp_endpoint
@@ -52,11 +61,83 @@ compose_in() {
   qa_otlp_endpoint="$(<"${release_dir}/.secrets/qa-otlp-endpoint")"
   QA_OTLP_ENDPOINT="${qa_otlp_endpoint}" \
     EDGE_API_SCRAPE_PASSWORD_FILE="${release_dir}/.secrets/api-scrape-password" \
+    EDGE_PG_MONITOR_PASSWORD_FILE="${release_dir}/.secrets/pg-monitor-password" \
     docker compose \
       --project-directory "${release_dir}" \
       -p "${COMPOSE_PROJECT_NAME}" \
       -f "${release_dir}/${COMPOSE_FILE}" \
       "$@"
+}
+
+# Rede interna do banco: criada se faltar e conectada ao workshop-db sem reiniciá-lo.
+# Idempotente. Se o banco for recriado pelo Compose da API, a conexão some e volta
+# no próximo deploy desta borda.
+ensure_db_metrics_network() {
+  local attached
+
+  [[ "$(docker inspect --format '{{.State.Status}}' "${DB_CONTAINER}" 2>/dev/null || true)" == running ]] || \
+    die "container ${DB_CONTAINER} is not running"
+  if ! docker network inspect "${DB_METRICS_NETWORK}" >/dev/null 2>&1; then
+    docker network create --driver bridge --internal "${DB_METRICS_NETWORK}" >/dev/null
+    echo "Created internal network ${DB_METRICS_NETWORK}"
+  fi
+  [[ "$(docker network inspect --format '{{.Internal}}' "${DB_METRICS_NETWORK}")" == true ]] || \
+    die "network ${DB_METRICS_NETWORK} exists but is not internal"
+  attached="$(docker inspect --format "{{if index .NetworkSettings.Networks \"${DB_METRICS_NETWORK}\"}}yes{{end}}" "${DB_CONTAINER}")"
+  if [[ "${attached}" != yes ]]; then
+    docker network connect "${DB_METRICS_NETWORK}" "${DB_CONTAINER}"
+    echo "Connected ${DB_CONTAINER} to ${DB_METRICS_NETWORK}"
+  fi
+}
+
+# Cria ou atualiza o papel do postgres-exporter com a senha do release: LOGIN,
+# membro de pg_monitor (com herança), sem outros privilégios e com até 3 conexões.
+# Idempotente. O SQL vai por stdin ao psql do próprio container, que conecta pelo
+# socket local como POSTGRES_USER: a senha não entra em argv. A saída do psql é
+# descartada, porque um erro pode ecoar o comando. A sessão desliga o registro de
+# comandos (inclusive do que falhar) e o pg_stat_statements de comandos utilitários,
+# para a senha não chegar ao log nem às estatísticas do PostgreSQL.
+pg_monitor_role() {
+  local secret_file="$1"
+  local password
+
+  password="$(<"${secret_file}")"
+  # Charset sem aspas nem barras: o valor entra literal no SQL e no DSN.
+  [[ "${password}" =~ ^[A-Za-z0-9._~-]{24,128}$ ]] || \
+    die "the pg-monitor password must have 24 to 128 characters from [A-Za-z0-9._~-]"
+  # shellcheck disable=SC2016  # as variáveis expandem dentro do container
+  docker exec -i "${DB_CONTAINER}" \
+    sh -c 'exec psql -X -q -v ON_ERROR_STOP=1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"' <<SQL >/dev/null 2>&1 || \
+    die "could not create or update the ${PG_MONITOR_ROLE} role (psql output hidden: it may echo the statement)"
+SET log_min_error_statement = panic;
+SET log_statement = 'none';
+SET log_min_duration_statement = -1;
+SET log_min_duration_sample = -1;
+SET log_transaction_sample_rate = 0;
+SET pg_stat_statements.track_utility = off;
+SET client_min_messages = warning;
+SELECT 'CREATE ROLE ${PG_MONITOR_ROLE}' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${PG_MONITOR_ROLE}')\gexec
+ALTER ROLE ${PG_MONITOR_ROLE} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS INHERIT CONNECTION LIMIT 3 PASSWORD '${password}';
+GRANT pg_monitor TO ${PG_MONITOR_ROLE} WITH INHERIT TRUE;
+SQL
+  echo "PostgreSQL role ${PG_MONITOR_ROLE} is up to date (pg_monitor)"
+}
+
+# Rollback: reaplica a senha do release restaurado quando ela difere da do release
+# que falhou. Não é fatal: restaurar a borda não pode depender da saúde do banco; se
+# falhar, WorkshopPostgresDown avisa.
+restore_pg_monitor_role() {
+  local release_dir="$1"
+  local failed_dir="$2"
+  local secret_file="${release_dir}/.secrets/pg-monitor-password"
+
+  # Release de antes do postgres-exporter: não há senha a restaurar.
+  [[ -s "${secret_file}" ]] || return 0
+  if cmp -s -- "${secret_file}" "${failed_dir}/.secrets/pg-monitor-password"; then
+    return 0
+  fi
+  (pg_monitor_role "${secret_file}") || \
+    echo "edge ${SCRIPT_NAME:-script}: warning: could not restore the ${PG_MONITOR_ROLE} password" >&2
 }
 
 current_release_dir() {
