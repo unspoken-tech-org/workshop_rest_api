@@ -221,9 +221,10 @@ exporters:
     timeout: 10s
     # Fila persistente com limite em bytes (COLLECTOR_QUEUE_BYTES), cheia a
     # recusa chega ao receiver em vez de descarte silencioso depois do aceite.
-    # Dimensionamento: 6 MB/h com todos os sinais (taxa de referência do plano);
-    # 4 horas somam ~24 MB. Há uma fila por sinal, cada uma com 64 MiB (192 MiB
-    # no pior caso de disco): mais de 2× a janela, mesmo com um sinal só.
+    # Dimensionamento: ~40 MB/h só de métricas, medido em 14/10/2026 com host,
+    # containers e PostgreSQL; 4 horas somam ~160 MB. Há uma fila por sinal,
+    # cada uma com 256 MiB (768 MiB no pior caso de disco): ~6,6 h de métricas,
+    # próximo da janela fora de ordem de 6 h do Prometheus da QA.
     sending_queue:
       enabled: true
       storage: file_storage/queue
