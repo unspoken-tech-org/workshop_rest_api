@@ -4,8 +4,13 @@ set -euo pipefail
 DEPLOY_DIR="${DEPLOY_DIR:-/home/workshop/deploy/gateway_stack}"
 cd "${DEPLOY_DIR}"
 
+# docker inspect evita o pipe com grep -q, que sob pipefail falha por SIGPIPE
+container_running() {
+  [ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null)" = "true" ]
+}
+
 echo ">>> Checking caddy-gateway container..."
-if ! docker ps | grep -q caddy-gateway; then
+if ! container_running caddy-gateway; then
   echo "caddy-gateway not running"
   exit 1
 fi
@@ -38,13 +43,13 @@ if [ "$STATUS" != "200" ]; then
 fi
 
 echo ">>> Tunnels (warning if not running):"
-if docker ps | grep -q cloudflared-gateway-prod; then
+if container_running cloudflared-gateway-prod; then
   echo "Tunnel Prod OK"
 else
   echo "Tunnel Prod Missing (WARNING)"
 fi
 
-if docker ps | grep -q cloudflared-gateway-qa; then
+if container_running cloudflared-gateway-qa; then
   echo "Tunnel QA OK"
 else
   echo "Tunnel QA Missing (WARNING)"
