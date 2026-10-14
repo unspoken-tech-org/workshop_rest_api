@@ -405,3 +405,18 @@ groups:
         annotations:
           summary: "Arquivamento de WAL do PostgreSQL de PRD falhando"
           description: "O archive_command (pgBackRest) falhou nos últimos 15 minutos. Verifique o repositório de backup antes que o PITR perca cobertura."
+
+  # Sinal de vida da cadeia de alertas (dead man's switch): sempre disparado. O
+  # Alertmanager o envia só ao Healthchecks.io, que avisa por fora da VM de QA
+  # quando os pings param (VM, Prometheus, Alertmanager ou rede fora).
+  - name: watchdog
+    interval: 1m
+    rules:
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          severity: none
+          owner: platform
+        annotations:
+          summary: "Sinal de vida da cadeia de alertas"
+          description: "Sempre disparado; a ausência de pings no Healthchecks.io indica que Prometheus ou Alertmanager pararam de notificar."

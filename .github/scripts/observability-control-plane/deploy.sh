@@ -32,7 +32,7 @@ chmod 600 -- "${staging_dir}/.env"
 # as non-root users: the files must be world-readable, while the 700 release
 # and .secrets directories keep them private on the host.
 chmod 700 -- "${staging_dir}/.secrets"
-for secret_name in cloudflare_tunnel_token api_scrape_password telegram_bot_token telegram_chat_id; do
+for secret_name in cloudflare_tunnel_token api_scrape_password telegram_bot_token telegram_chat_id healthchecks_ping_url; do
   secret_file="${staging_dir}/.secrets/${secret_name}"
   test -s "${secret_file}" || die "payload has no ${secret_name} secret file"
   chmod 444 -- "${secret_file}"
