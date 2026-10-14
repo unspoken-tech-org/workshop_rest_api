@@ -15,10 +15,13 @@
 
 # /actuator/prometheus só é raspado pela rede interna (Collector de borda),
 # nunca pelas entradas públicas. O matcher de path do Caddy normaliza o
-# caminho e ignora maiúsculas/minúsculas.
+# caminho e ignora maiúsculas/minúsculas. O Spring descarta parâmetros de
+# matriz (`;x=1`), que o matcher de path não remove; o regex cobre esses casos.
 (block_metrics) {
     @metrics path /actuator/prometheus /actuator/prometheus/*
     respond @metrics 404
+    @metrics_matrix path_regexp (?i)^/actuator(;[^/]*)?/+prometheus(;[^/]*)?(/.*)?$
+    respond @metrics_matrix 404
 }
 
 # ============================================
