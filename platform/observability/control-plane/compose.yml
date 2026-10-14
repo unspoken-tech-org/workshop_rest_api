@@ -270,9 +270,10 @@ services:
     secrets:
       - telegram_bot_token
       - telegram_chat_id
+      - healthchecks_ping_url
     networks:
       - cp-backend
-      # Saída para a API do Telegram.
+      # Saída para a API do Telegram e para o Healthchecks.io.
       - cp-alert-egress
     restart: unless-stopped
     security_opt:
@@ -512,7 +513,7 @@ networks:
   # Saída do cloudflared para a Cloudflare.
   cp-egress:
     driver: bridge
-  # Saída do Alertmanager para o Telegram.
+  # Saída do Alertmanager para o Telegram e o Healthchecks.io.
   cp-alert-egress:
     driver: bridge
   # Somente Prometheus ↔ blackbox (raspagem de /probe e das métricas do próprio blackbox).
@@ -539,6 +540,8 @@ secrets:
     file: ./.secrets/telegram_bot_token
   telegram_chat_id:
     file: ./.secrets/telegram_chat_id
+  healthchecks_ping_url:
+    file: ./.secrets/healthchecks_ping_url
 
 volumes:
   alertmanager_data:

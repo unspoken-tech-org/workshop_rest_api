@@ -12,6 +12,14 @@ route:
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 12h
+  routes:
+    # Watchdog só vai ao Healthchecks.io, a cada minuto; nunca ao Telegram.
+    - receiver: healthchecks
+      matchers:
+        - alertname="Watchdog"
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 1m
 
 receivers:
   - name: telegram
@@ -19,6 +27,12 @@ receivers:
       - bot_token_file: /run/secrets/telegram_bot_token
         chat_id_file: /run/secrets/telegram_chat_id
         send_resolved: true
+  # Dead man's switch: a URL de ping do Healthchecks.io chega como secret em
+  # arquivo; o check avisa por canal próprio quando os pings param.
+  - name: healthchecks
+    webhook_configs:
+      - url_file: /run/secrets/healthchecks_ping_url
+        send_resolved: false
 
 inhibit_rules:
   - source_matchers:

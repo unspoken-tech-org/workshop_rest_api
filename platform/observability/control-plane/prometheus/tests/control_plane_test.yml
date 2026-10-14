@@ -745,3 +745,17 @@ tests:
               description: "O archive_command (pgBackRest) falhou nos últimos 15 minutos. Verifique o repositório de backup antes que o PITR perca cobertura."
       - eval_time: 35m
         alertname: WorkshopPostgresWalArchiveFailing
+
+  - name: watchdog fica sempre disparado
+    interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels:
+              severity: none
+              owner: platform
+            exp_annotations:
+              summary: "Sinal de vida da cadeia de alertas"
+              description: "Sempre disparado; a ausência de pings no Healthchecks.io indica que Prometheus ou Alertmanager pararam de notificar."
