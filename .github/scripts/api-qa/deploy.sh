@@ -26,6 +26,14 @@ chmod 700 config/observability
 mv "${DEPLOY_DIR}/.tmp/scrape_password_hash" config/observability/scrape_password_hash
 chmod 444 config/observability/scrape_password_hash
 
+# Setup DB password (file secret, never container env; the containers run as
+# non-root users, so the file is world-readable inside the private
+# config/secrets directory)
+mkdir -p config/secrets
+chmod 700 config/secrets
+mv "${DEPLOY_DIR}/.tmp/db_password" config/secrets/db_password
+chmod 444 config/secrets/db_password
+
 # Setup pgbackrest config
 if [ -f "${DEPLOY_DIR}/.tmp/pgbackrest.conf" ]; then
   DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)

@@ -96,16 +96,11 @@ runs:
           exit 1
         }
 
+        # Only non-secret values; secrets go to the files below.
         {
           echo "DB_NAME=${DB_NAME}"
           echo "DB_USERNAME=${DB_USERNAME}"
-          echo "DB_PASSWORD=${DB_PASSWORD}"
           echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
-          echo "PGBACKREST_S3_BUCKET=${PGBACKREST_S3_BUCKET}"
-          echo "PGBACKREST_S3_ENDPOINT=${PGBACKREST_S3_ENDPOINT}"
-          echo "PGBACKREST_S3_REGION=${PGBACKREST_S3_REGION}"
-          echo "PGBACKREST_S3_KEY=${PGBACKREST_S3_KEY}"
-          echo "PGBACKREST_S3_KEY_SECRET=${PGBACKREST_S3_KEY_SECRET}"
         } > /tmp/.env
         chmod 600 /tmp/.env
 
@@ -116,8 +111,32 @@ runs:
 
         ( umask 077 && printf '%s' "${SCRAPE_PASSWORD_HASH}" > /tmp/scrape_password_hash )
 
+        # DB password and pgBackRest repository reach the containers as files,
+        # never as container env (the edge containers collector reads inspect).
+        for value in "${DB_PASSWORD}" "${PGBACKREST_S3_BUCKET}" "${PGBACKREST_S3_ENDPOINT}" \
+          "${PGBACKREST_S3_REGION}" "${PGBACKREST_S3_KEY}" "${PGBACKREST_S3_KEY_SECRET}"; do
+          [[ -n "${value}" && "${value}" != *$'\n'* && "${value}" != *$'\r'* ]] || {
+            echo "database and pgBackRest secrets must be non-empty single-line values" >&2
+            exit 1
+          }
+        done
+        ( umask 077 && printf '%s' "${DB_PASSWORD}" > /tmp/db_password )
+        (
+          umask 077
+          {
+            echo "[global]"
+            echo "repo1-type=s3"
+            echo "repo1-s3-bucket=${PGBACKREST_S3_BUCKET}"
+            echo "repo1-s3-endpoint=${PGBACKREST_S3_ENDPOINT}"
+            echo "repo1-s3-region=${PGBACKREST_S3_REGION}"
+            echo "repo1-s3-key=${PGBACKREST_S3_KEY}"
+            echo "repo1-s3-key-secret=${PGBACKREST_S3_KEY_SECRET}"
+          } > /tmp/pgbackrest-repo1.conf
+        )
+
         echo "Deploy files prepared:"
-        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash
+        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
+          /tmp/db_password /tmp/pgbackrest-repo1.conf
 
     - name: Upload files to server
       shell: bash
@@ -141,18 +160,15 @@ runs:
           "${COMPOSE_SOURCE}" > "${COMPOSE_PAYLOAD}"
 
         # Parse the payload with representative values before changing the server.
-        mkdir -p "${PAYLOAD_ROOT}/config/keys" "${PAYLOAD_ROOT}/config/observability"
+        mkdir -p "${PAYLOAD_ROOT}/config/keys" "${PAYLOAD_ROOT}/config/observability" \
+          "${PAYLOAD_ROOT}/config/secrets"
         printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/config/observability/scrape_password_hash"
+        printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/config/secrets/db_password"
+        printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/config/secrets/pgbackrest-repo1.conf"
         touch "${PAYLOAD_ROOT}/Dockerfile.pgbackrest"
         printf '%s\n' \
           'DB_NAME=workshop_db' \
-          'DB_USERNAME=workshop_admin' \
-          'DB_PASSWORD=validation-only' \
-          'PGBACKREST_S3_BUCKET=validation-bucket' \
-          'PGBACKREST_S3_ENDPOINT=https://validation.invalid' \
-          'PGBACKREST_S3_REGION=us-east-1' \
-          'PGBACKREST_S3_KEY=validation-key' \
-          'PGBACKREST_S3_KEY_SECRET=validation-secret' > "${PAYLOAD_ROOT}/.env"
+          'DB_USERNAME=workshop_admin' > "${PAYLOAD_ROOT}/.env"
         docker compose --project-directory "${PAYLOAD_ROOT}" \
           --env-file "${PAYLOAD_ROOT}/.env" \
           -f "${COMPOSE_PAYLOAD}" config --quiet
@@ -169,6 +185,7 @@ runs:
 
         scp -o ConnectTimeout=30 \
           /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
+          /tmp/db_password /tmp/pgbackrest-repo1.conf \
           "${DEPLOY_SCRIPT}" \
           "apps/api/infra/pgbackrest/pgbackrest.conf" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"

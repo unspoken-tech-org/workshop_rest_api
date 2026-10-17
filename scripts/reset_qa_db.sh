@@ -23,7 +23,8 @@ fi
 
 DB_NAME=$(grep '^DB_NAME=' "${QA_ENV_FILE}" | cut -d'=' -f2-)
 DB_USER=$(grep '^DB_USERNAME=' "${QA_ENV_FILE}" | cut -d'=' -f2-)
-DB_PASS=$(grep '^DB_PASSWORD=' "${QA_ENV_FILE}" | cut -d'=' -f2-)
+# The deploy keeps the DB password as a file secret, not in .env.
+DB_PASS=$(cat "${DEPLOY_DIR}/config/secrets/db_password")
 
 PGPASS_FILE=$(mktemp /tmp/pgpass_reset.XXXXXX)
 chmod 600 "${PGPASS_FILE}"

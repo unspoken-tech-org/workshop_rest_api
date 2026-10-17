@@ -24,6 +24,16 @@ chmod 700 config/observability
 mv "${DEPLOY_DIR}/.tmp/scrape_password_hash" config/observability/scrape_password_hash 2>/dev/null || mv .tmp/scrape_password_hash config/observability/scrape_password_hash
 chmod 444 config/observability/scrape_password_hash
 
+# Setup DB password and pgBackRest repository (file secrets, never container env;
+# the containers run as non-root users, so the files are world-readable inside
+# the private config/secrets directory)
+mkdir -p config/secrets
+chmod 700 config/secrets
+mv "${DEPLOY_DIR}/.tmp/db_password" config/secrets/db_password
+chmod 444 config/secrets/db_password
+mv "${DEPLOY_DIR}/.tmp/pgbackrest-repo1.conf" config/secrets/pgbackrest-repo1.conf
+chmod 444 config/secrets/pgbackrest-repo1.conf
+
 # Setup pgbackrest config
 if [ -f "${DEPLOY_DIR}/.tmp/pgbackrest.conf" ]; then
   DB_USER=$(grep '^DB_USERNAME=' .env | cut -d'=' -f2)
@@ -63,6 +73,13 @@ docker --config "${DEPLOY_DIR}/.tmp/docker" tag "${REGISTRY}/${IMAGE_NAME}:${IMA
 # Restart the service
 docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans workshop_spring_app
 docker compose -f "${COMPOSE_FILE}" ps
+
+# A recreated workshop-db loses the runtime-only workshop-db-metrics network that
+# the edge deploy attaches (postgres-exporter); reattach it when the network exists.
+if docker network inspect workshop-db-metrics >/dev/null 2>&1 && \
+  [ -z "$(docker inspect --format '{{if index .NetworkSettings.Networks "workshop-db-metrics"}}yes{{end}}' workshop-db)" ]; then
+  docker network connect workshop-db-metrics workshop-db || echo "WARNING: could not reattach workshop-db to workshop-db-metrics"
+fi
 
 # Health check
 ATTEMPTS=30
