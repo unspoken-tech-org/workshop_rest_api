@@ -1,16 +1,31 @@
 #!/bin/bash
 set -euo pipefail
-cd /home/workshop/deploy/workshop_rest_api
+DEPLOY_DIR="${DEPLOY_DIR:-/home/workshop/deploy/workshop_rest_api}"
+cd "${DEPLOY_DIR}"
 
-LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-workshop_rest_api_prod}"
-COMPOSE_FILE="docker-compose-production.yml"
+LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-workshop_rest_api-workshop_spring_app}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose-production.yml}"
 OVERRIDE_FILE="${COMPOSE_FILE%.yml}.override.yml"
 PREVIOUS_OVERRIDE="${OVERRIDE_FILE}.previous"
 export IMAGE_TAG="${IMAGE_TAG:-latest}"
 
-if ! docker image inspect "${LOCAL_IMAGE_NAME}:backup" >/dev/null 2>&1; then
-  echo "No backup image found to restore, skipping rollback"
+# deploy.sh writes its run id to this marker only when it swaps the API. A marker from
+# another run (or no run id) is not ours: exit without touching it.
+if [ ! -f .api-swapped ] || [ -z "${DEPLOY_RUN_ID:-}" ] || [ "$(cat .api-swapped)" != "${DEPLOY_RUN_ID}" ]; then
+  echo "API not swapped by this run: nothing to roll back"
   exit 0
+fi
+
+# Without a backup nothing can be reverted: fail before changing anything
+if ! docker image inspect "${LOCAL_IMAGE_NAME}:backup" >/dev/null 2>&1; then
+  echo "API was swapped but no backup image exists: cannot roll back" >&2
+  exit 1
+fi
+
+# Restore the compose file deploy.sh replaced
+if [ -f "${COMPOSE_FILE}.previous" ]; then
+  mv "${COMPOSE_FILE}.previous" "${COMPOSE_FILE}"
+  echo "Compose file restored"
 fi
 
 docker tag "${LOCAL_IMAGE_NAME}:backup" "${LOCAL_IMAGE_NAME}:${IMAGE_TAG}"
@@ -25,6 +40,13 @@ else
   echo "Rollback executed (alias :${IMAGE_TAG})"
 fi
 
+# A workshop-db recreated by this compose run loses the workshop-db-metrics network
+# that the edge deploy attaches (see deploy.sh); reattach it when the network exists.
+if docker network inspect workshop-db-metrics >/dev/null 2>&1 && \
+  [ -z "$(docker inspect --format '{{if index .NetworkSettings.Networks "workshop-db-metrics"}}yes{{end}}' workshop-db)" ]; then
+  docker network connect workshop-db-metrics workshop-db || echo "WARNING: could not reattach workshop-db to workshop-db-metrics"
+fi
+
 # Health check pos-rollback (parity with deploy.sh)
 ATTEMPTS=30
 SLEEP=5
@@ -32,12 +54,15 @@ for i in $(seq 1 $ATTEMPTS); do
   STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
   echo "[$i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
   if [ "$STATUS" = "healthy" ]; then
+    # The swap is reverted, so the marker and snapshot no longer apply
+    rm -f .api-swapped "${COMPOSE_FILE}.previous"
     echo "API is healthy after rollback"
     exit 0
   fi
   sleep $SLEEP
 done
 
+rm -f .api-swapped "${COMPOSE_FILE}.previous"
 echo "API did not become healthy after rollback"
 docker logs --tail=200 workshop-api || true
 exit 1
