@@ -29,6 +29,9 @@ inputs:
   image-tag:
     description: 'Image tag to be deployed'
     required: true
+  image-digest:
+    description: 'Digest (sha256:...) of the image built for this deploy'
+    required: true
   deploy-script:
     description: 'Path to deploy.sh in the repository'
     required: true
@@ -190,10 +193,10 @@ runs:
           "apps/api/infra/pgbackrest/pgbackrest.conf" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
-        # Upload compose file to deploy dir
+        # Stage the compose file; deploy.sh snapshots the current one before swapping
         scp -o ConnectTimeout=30 \
           "${COMPOSE_PAYLOAD}" \
-          "${SSH_TARGET}:${DEPLOY_DIR}/${COMPOSE_FILE}"
+          "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/${COMPOSE_FILE}"
 
         # Upload Dockerfile for PostgreSQL image build (first deploy only)
         scp -o ConnectTimeout=30 \
@@ -216,6 +219,8 @@ runs:
         LOCAL_IMAGE_NAME: ${{ inputs.local-image-name }}
         COMPOSE_FILE: ${{ inputs.compose-file }}
         IMAGE_TAG: ${{ inputs.image-tag }}
+        IMAGE_DIGEST: ${{ inputs.image-digest }}
+        DEPLOY_RUN_ID: ${{ github.run_id }}
       run: |
         set -e
 
@@ -227,4 +232,6 @@ runs:
               LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME}" \
               COMPOSE_FILE="${COMPOSE_FILE}" \
               IMAGE_TAG="${IMAGE_TAG}" \
+              IMAGE_DIGEST="${IMAGE_DIGEST}" \
+              DEPLOY_RUN_ID="${DEPLOY_RUN_ID}" \
               bash "${DEPLOY_DIR}/.tmp/deploy.sh"

@@ -9,7 +9,7 @@
 # Remote scripts (executed on the QA VM):
 #   .github/scripts/api-qa/deploy.sh       -> pull, retag, restart, healthcheck
 #   .github/scripts/api-qa/rollback.sh     -> restore :backup image
-#   .github/scripts/api-qa/verify.sh       -> pgbackrest + container status
+#   .github/scripts/api-qa/verify.sh       -> container status + API canary
 #   .github/scripts/api-qa/cleanup.sh      -> Docker image prune
 # ===========================================================
 
@@ -58,6 +58,7 @@ jobs:
       packages: write
     outputs:
       deployed-image-tag: ${{ steps.prep.outputs.tag }}
+      deployed-image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Harden Runner
@@ -95,12 +96,18 @@ jobs:
           INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
         run: |
           TAG="${INPUT_REF//\//-}"
+          # The tag reaches remote shell commands; allow only Docker tag characters.
+          [[ "${TAG}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]] || {
+            echo "ref does not form a valid image tag" >&2
+            exit 1
+          }
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Build and push image
+        id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
@@ -112,6 +119,16 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # The deploy pulls by this digest, so a moved tag cannot change what runs.
+      - name: Check image digest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "build-push-action returned no image digest" >&2
+            exit 1
+          }
 
       - name: Print build banner
         uses: ./.github/actions/shared/print-banner
@@ -140,6 +157,17 @@ jobs:
         with:
           egress-policy: audit
 
+      # A bad digest must fail here, not inside the deploy step, so the
+      # rollback below never runs for a deploy that never reached the server.
+      - name: Check image digest
+        env:
+          IMAGE_DIGEST: ${{ needs.build.outputs.deployed-image-digest }}
+        run: |
+          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "IMAGE_DIGEST must be sha256:<64 hex>" >&2
+            exit 1
+          }
+
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -167,6 +195,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy via SSH
+        id: deploy
         uses: ./.github/actions/api-qa/deploy-via-ssh-api-qa
         with:
           ssh-target: ${{ env.SSH_TARGET }}
@@ -177,6 +206,7 @@ jobs:
           compose-file: ${{ env.COMPOSE_FILE }}
           compose-source: ${{ env.COMPOSE_SOURCE }}
           image-tag: ${{ needs.build.outputs.deployed-image-tag }}
+          image-digest: ${{ needs.build.outputs.deployed-image-digest }}
           deploy-script: ${{ env.DEPLOY_SCRIPT }}
           db-name: ${{ secrets.QA_DB_NAME }}
           db-username: ${{ secrets.QA_DB_USERNAME }}
@@ -187,14 +217,17 @@ jobs:
           scrape-password-hash: ${{ secrets.QA_OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
 
       - name: Rollback on failure
-        if: failure()
+        if: failure() && steps.deploy.outcome == 'failure'
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.deployed-image-tag }}
+          DEPLOY_RUN_ID: ${{ github.run_id }}
         run: |
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
           scp -o ConnectTimeout=30 \
             "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/rollback.sh"
           ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/rollback.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/rollback.sh'"
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/rollback.sh' && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' IMAGE_TAG='${IMAGE_TAG}' DEPLOY_RUN_ID='${DEPLOY_RUN_ID}' '${DEPLOY_DIR}/.tmp/rollback.sh'"
 
   # ===========================================
   # JOB 3: VERIFY
@@ -203,7 +236,7 @@ jobs:
     name: Verify Deployment
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    needs: deploy
+    needs: [build, deploy]
     permissions:
       contents: read
 
@@ -233,15 +266,36 @@ jobs:
           known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
 
       - name: Verify via SSH
+        id: verify
         run: |
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
           scp -o ConnectTimeout=30 \
             "${VERIFY_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
+          rc=0
           ssh -o ConnectTimeout=30 \
-            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/verify.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/verify.sh'"
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/verify.sh' && DEPLOY_DIR='${DEPLOY_DIR}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/verify.sh'" || rc=$?
+          # Exit 42 is the API canary failing: only that code enables the rollback.
+          if [ "${rc}" = 42 ]; then
+            echo "canary_failed=true" >> "$GITHUB_OUTPUT"
+          fi
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "rm -f '${DEPLOY_DIR}/.tmp/verify.sh'"
+          exit "${rc}"
+
+      # Rolls back only when the API canary failed; other verify failures keep the new API running.
+      - name: Rollback on failure
+        if: failure() && steps.verify.outputs.canary_failed == 'true'
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.deployed-image-tag }}
+          DEPLOY_RUN_ID: ${{ github.run_id }}
+        run: |
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
+          scp -o ConnectTimeout=30 \
+            "${ROLLBACK_SCRIPT}" "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/rollback.sh"
+          ssh -o ConnectTimeout=30 \
+            "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/rollback.sh' && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' IMAGE_TAG='${IMAGE_TAG}' DEPLOY_RUN_ID='${DEPLOY_RUN_ID}' '${DEPLOY_DIR}/.tmp/rollback.sh'"
 
   # ===========================================
   # JOB 4: CLEANUP
@@ -296,4 +350,4 @@ jobs:
         uses: ./.github/actions/shared/print-banner
         with:
           prefix: DEPLOY
-          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}
+          image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}@${{ needs.build.outputs.deployed-image-digest }}
