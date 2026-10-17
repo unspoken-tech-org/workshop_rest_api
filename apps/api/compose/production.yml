@@ -12,13 +12,11 @@ services:
       PGTZ: America/Sao_Paulo
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      PGBACKREST_REPO1_TYPE: s3
-      PGBACKREST_REPO1_S3_BUCKET: ${PGBACKREST_S3_BUCKET}
-      PGBACKREST_REPO1_S3_ENDPOINT: ${PGBACKREST_S3_ENDPOINT}
-      PGBACKREST_REPO1_S3_REGION: ${PGBACKREST_S3_REGION}
-      PGBACKREST_REPO1_S3_KEY: ${PGBACKREST_S3_KEY}
-      PGBACKREST_REPO1_S3_KEY_SECRET: ${PGBACKREST_S3_KEY_SECRET}
+      # Segredos chegam como arquivos, nunca por variável de ambiente: o inspect
+      # do container (Config.Env) é lido pelo coletor de containers da borda.
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      # Repositório S3 do pgBackRest (repo1-*) em arquivo incluído pelo pgbackrest.conf.
+      PGBACKREST_CONFIG_INCLUDE_PATH: /run/secrets/pgbackrest
     ports:
       - "127.0.0.1:5432:5432"
     command:
@@ -35,6 +33,11 @@ services:
       - "archive_timeout=60s"
       - "-c"
       - "archive_command=pgbackrest --stanza=workshop archive-push %p"
+    secrets:
+      - source: db_password
+        target: db_password
+      - source: pgbackrest_repo
+        target: /run/secrets/pgbackrest/repo1.conf
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB && psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c 'SELECT 1' > /dev/null" ]
       interval: 10s
@@ -77,14 +80,15 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://workshop_db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: production
-      # Hash bcrypt da identidade de scrape lido como arquivo (configtree),
-      # nunca por variável de ambiente; o .env não guarda o hash.
+      # Senha do banco e hash bcrypt da identidade de scrape lidos como arquivos
+      # (configtree), nunca por variável de ambiente; o .env não guarda o hash.
       SPRING_CONFIG_IMPORT: configtree:/run/secrets/
       JAVA_TOOL_OPTIONS: -Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo
       TZ: America/Sao_Paulo
     secrets:
+      - source: db_password
+        target: SPRING_DATASOURCE_PASSWORD
       - source: api_scrape_password_hash
         target: OBSERVABILITY_SCRAPE_PASSWORD_HASH
     volumes:
@@ -110,6 +114,10 @@ volumes:
   db_data:
 
 secrets:
+  db_password:
+    file: ./config/secrets/db_password
+  pgbackrest_repo:
+    file: ./config/secrets/pgbackrest-repo1.conf
   api_scrape_password_hash:
     file: ./config/observability/scrape_password_hash
 

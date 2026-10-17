@@ -76,10 +76,10 @@ runs:
           exit 1
         }
 
+        # Only non-secret values; the DB password goes to the file below.
         {
           echo "DB_NAME=${DB_NAME}"
           echo "DB_USERNAME=${DB_USERNAME}"
-          echo "DB_PASSWORD=${DB_PASSWORD}"
           echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
         } > /tmp/.env
         chmod 600 /tmp/.env
@@ -91,8 +91,16 @@ runs:
 
         ( umask 077 && printf '%s' "${SCRAPE_PASSWORD_HASH}" > /tmp/scrape_password_hash )
 
+        # The DB password reaches the containers as a file, never as container env.
+        [[ -n "${DB_PASSWORD}" && "${DB_PASSWORD}" != *$'\n'* && "${DB_PASSWORD}" != *$'\r'* ]] || {
+          echo "db-password must be a non-empty single-line value" >&2
+          exit 1
+        }
+        ( umask 077 && printf '%s' "${DB_PASSWORD}" > /tmp/db_password )
+
         echo "Deploy files prepared:"
-        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash
+        ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
+          /tmp/db_password
 
     - name: Upload files to server
       shell: bash
@@ -114,12 +122,13 @@ runs:
         cp -- "${COMPOSE_SOURCE}" "${COMPOSE_PAYLOAD}"
 
         # Parse the payload with representative values before changing the server.
-        mkdir -p "${PAYLOAD_ROOT}/config/qa_keys" "${PAYLOAD_ROOT}/config/observability"
+        mkdir -p "${PAYLOAD_ROOT}/config/qa_keys" "${PAYLOAD_ROOT}/config/observability" \
+          "${PAYLOAD_ROOT}/config/secrets"
         printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/config/observability/scrape_password_hash"
+        printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/config/secrets/db_password"
         printf '%s\n' \
           'DB_NAME=workshop_db_qa' \
           'DB_USERNAME=workshop_admin_qa' \
-          'DB_PASSWORD=validation-only' \
           'IMAGE_TAG=validation' > "${PAYLOAD_ROOT}/.env"
         docker compose --project-directory "${PAYLOAD_ROOT}" \
           --env-file "${PAYLOAD_ROOT}/.env" \
@@ -134,6 +143,7 @@ runs:
 
         scp -o ConnectTimeout=30 \
           /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
+          /tmp/db_password \
           "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
