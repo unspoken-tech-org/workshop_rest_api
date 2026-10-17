@@ -112,7 +112,7 @@ networks:
     name: workshop-ingress
     driver: bridge
   # Scrape de /actuator/prometheus pelo Prometheus do plano de controle, que entra
-  # nesta rede como externa, e envio de OTLP (traces) da API ao Collector de QA
+  # nesta rede como externa, e envio de OTLP (traces) da API e do gateway ao Collector de QA
   # (otel-collector-qa-api); sem saída.
   workshop-metrics:
     name: workshop-metrics

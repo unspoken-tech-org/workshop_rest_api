@@ -26,6 +26,25 @@
     respond @metrics_matrix 404
 }
 
+# Tracing: um span SERVER por requisição da API, exportado por OTLP/HTTP ao
+# Collector da rede workshop-metrics (OTEL_EXPORTER_OTLP_* no compose). O
+# traceparent, o tracestate e o baggage do cliente são descartados antes do span:
+# a origem não escolhe trace_id nem amostragem, o Caddy é sempre a raiz e propaga
+# um traceparent novo à API. Dentro de route a ordem é a escrita, então o bloqueio
+# de métricas fica antes do reverse_proxy.
+(api_proxy) {
+    route {
+        request_header -traceparent
+        request_header -tracestate
+        request_header -baggage
+        tracing {
+            span api
+        }
+        import block_metrics
+        reverse_proxy {args[0]}
+    }
+}
+
 # ============================================
 # HTTP Listener (port 80)
 # For traffic coming from Cloudflare Tunnel
@@ -35,8 +54,7 @@
     # Matcher for Production API
     @api_prod host api.eletroluk.com
     handle @api_prod {
-        import block_metrics
-        reverse_proxy workshop-api:8080
+        import api_proxy workshop-api:8080
     }
 
     # Matcher for Grafana Unified (all environments)
@@ -60,8 +78,7 @@
 # Production API (HTTPS)
 api.eletroluk.com {
     import log
-    import block_metrics
-    reverse_proxy workshop-api:8080
+    import api_proxy workshop-api:8080
     tls {
         dns cloudflare {env.CF_API_TOKEN}
     }

@@ -28,7 +28,7 @@
 #
 # Redes: edge-otlp, edge-probe, edge-node, edge-docker e edge-pg são internas e sem
 # saída; edge-egress é a única saída, rumo à QA pela Tailscale; workshop-metrics é
-# compartilhada somente com a API de PRD, para o scrape, e workshop-db-metrics
+# compartilhada com a API de PRD (scrape e traces) e com o gateway (traces), e workshop-db-metrics
 # somente com o banco de PRD, para o postgres-exporter. A restrição de quem pode
 # enviar à QA fica na ACL do tailnet (lado da QA).
 #

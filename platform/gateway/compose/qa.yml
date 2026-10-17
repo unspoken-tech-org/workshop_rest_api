@@ -12,12 +12,18 @@ services:
     environment:
       - CF_API_TOKEN=${CF_API_TOKEN}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
+      # Tracing (snippet api_proxy do Caddyfile): OTLP/HTTP ao Collector da homologação, pela rede
+      # workshop-metrics. Sem o Collector a requisição segue; só o span se perde.
+      - OTEL_SERVICE_NAME=caddy-gateway
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector-qa-api:4318
     volumes:
       - ./platform/gateway/caddy/Caddyfile-gateway-qa:/etc/caddy/Caddyfile
       - caddy_data_qa:/data
       - caddy_config_qa:/config
     networks:
       - workshop-ingress
+      - workshop-metrics
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://127.0.0.1:2019/config/ || exit 1"]
       interval: 30s
@@ -43,3 +49,7 @@ networks:
   workshop-ingress:
     name: workshop-ingress
     driver: bridge
+  # Rede interna criada pelo Compose da API de QA; o Caddy só envia traces ao Collector.
+  workshop-metrics:
+    name: workshop-metrics
+    external: true

@@ -1,7 +1,8 @@
 # Collector dedicado à homologação (VM de QA, projeto observability-control-plane-qa).
-# Recebe por OTLP/HTTP somente a API de QA, pela rede qa-metrics (workshop-metrics), onde
-# responde pelo nome do serviço otel-collector-qa-api. Só traces; métricas vêm do scrape
-# do Prometheus e os logs saem pelo stdout coletado pelo Alloy.
+# Recebe por OTLP/HTTP somente a API e o gateway (Caddy) de QA, pela rede qa-metrics
+# (workshop-metrics), onde responde pelo nome do serviço otel-collector-qa-api. Só
+# traces; métricas vêm do scrape do Prometheus e os logs saem pelo stdout coletado
+# pelo Alloy.
 #
 # Não é o Collector interno do plano de controle: esse carimba tudo como production e
 # recebe a produção pela Tailscale. Este carimba qa e não tem rota para a produção.
