@@ -73,7 +73,7 @@ services:
       - edge-probe
       # Saída para a QA.
       - edge-egress
-      # Scrape de /actuator/prometheus da API de PRD.
+      # Scrape de /actuator/prometheus e traces OTLP do Java Agent da API de PRD.
       - workshop-metrics
       # Scrape do node-exporter do próprio projeto. Não tem acesso à API do Docker:
       # ela fica só com containers-collector (ver abaixo).

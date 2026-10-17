@@ -80,16 +80,34 @@ EXPECTED_IMAGE_ID=$(docker image inspect --format '{{.Id}}' "${IMAGE_REF}")
 
 # Backup the image the running API container uses, not the tag: :latest may have
 # moved since. rollback.sh restores :backup only when this run swaps the API.
+# The backup tag and the compose file that runs it are one pair: set_backup moves both,
+# so rollback never pairs the backup image with a compose file that needs the agent.
+BACKUP_SNAPSHOT="${COMPOSE_FILE}.backup"
+set_backup() {
+  # Stage the snapshot before the tag moves: if the copy fails, the old pair stays.
+  if [ -f "${COMPOSE_FILE}" ]; then
+    cp -p "${COMPOSE_FILE}" "${BACKUP_SNAPSHOT}.tmp"
+  else
+    rm -f "${BACKUP_SNAPSHOT}.tmp"
+  fi
+  docker tag "$1" "${LOCAL_IMAGE_NAME}:backup"
+  if [ -f "${BACKUP_SNAPSHOT}.tmp" ]; then
+    mv "${BACKUP_SNAPSHOT}.tmp" "${BACKUP_SNAPSHOT}"
+  else
+    # First deploy: no compose file to pair, so a stale snapshot must not survive
+    rm -f "${BACKUP_SNAPSHOT}"
+  fi
+}
 PREV_ID=$(docker inspect --format '{{.Image}}' workshop-api 2>/dev/null || true)
-# Redeploying the running image (e.g. a re-run) keeps the existing backup
+# Redeploying the running image (e.g. a re-run) keeps the existing backup and its snapshot
 if [ -n "${PREV_ID}" ] && [ "${PREV_ID}" = "${EXPECTED_IMAGE_ID}" ]; then
   echo "workshop-api already runs ${IMAGE_REF}, keeping the existing backup"
 elif [ -n "${PREV_ID}" ]; then
-  docker tag "${PREV_ID}" "${LOCAL_IMAGE_NAME}:backup"
-  echo "Backup created from workshop-api: ${LOCAL_IMAGE_NAME}:backup"
+  set_backup "${PREV_ID}"
+  echo "Backup created from workshop-api: ${LOCAL_IMAGE_NAME}:backup (paired with ${BACKUP_SNAPSHOT})"
 elif docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
-  docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"
-  echo "Backup created: ${LOCAL_IMAGE_NAME}:backup"
+  set_backup "${LOCAL_IMAGE_NAME}:latest"
+  echo "Backup created: ${LOCAL_IMAGE_NAME}:backup (paired with ${BACKUP_SNAPSHOT})"
 else
   echo "No previous image found, skipping backup"
 fi

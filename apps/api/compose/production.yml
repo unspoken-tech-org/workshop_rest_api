@@ -84,7 +84,15 @@ services:
       # Senha do banco e hash bcrypt da identidade de scrape lidos como arquivos
       # (configtree), nunca por variável de ambiente; o .env não guarda o hash.
       SPRING_CONFIG_IMPORT: configtree:/run/secrets/
-      JAVA_TOOL_OPTIONS: -Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo
+      # Java Agent (OpenTelemetry): jar e javaagent.properties vêm da imagem (/otel).
+      # Tirar o -javaagent desliga a instrumentação. OTEL_RESOURCE_ATTRIBUTES não é
+      # definido aqui: service.version vem do build e o Collector carimba o ambiente.
+      # otel-collector é o Collector de borda (projeto workshop-edge), na rede workshop-metrics.
+      JAVA_TOOL_OPTIONS: >-
+        -Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.javaagent.configuration-file=/otel/javaagent.properties
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       TZ: America/Sao_Paulo
     secrets:
       - source: db_password
@@ -128,8 +136,9 @@ networks:
   workshop-ingress:
     name: workshop-ingress
     driver: bridge
-  # Somente o scrape de /actuator/prometheus pelo Edge Collector de produção
-  # (projeto workshop-edge), que entra nesta rede como externa; sem saída.
+  # Scrape de /actuator/prometheus pelo Edge Collector de produção (projeto
+  # workshop-edge), que entra nesta rede como externa, e envio de OTLP (traces) da API
+  # a esse Collector pelo alias otel-collector; sem saída.
   workshop-metrics:
     name: workshop-metrics
     driver: bridge

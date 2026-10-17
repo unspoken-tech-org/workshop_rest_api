@@ -22,10 +22,20 @@ if ! docker image inspect "${LOCAL_IMAGE_NAME}:backup" >/dev/null 2>&1; then
   exit 1
 fi
 
-# Restore the compose file deploy.sh replaced
-if [ -f "${COMPOSE_FILE}.previous" ]; then
+# Restore the compose file that runs the backup image: the snapshot paired with it
+# (cp, not mv: the pair lives as long as the backup tag does). .previous is only the
+# fallback for backups made before paired snapshots; with neither, refuse rather than
+# pair the backup image with the new compose file (it needs the agent image).
+BACKUP_SNAPSHOT="${COMPOSE_FILE}.backup"
+if [ -f "${BACKUP_SNAPSHOT}" ]; then
+  cp -p "${BACKUP_SNAPSHOT}" "${COMPOSE_FILE}"
+  echo "Compose file restored from the snapshot paired with the backup"
+elif [ -f "${COMPOSE_FILE}.previous" ]; then
   mv "${COMPOSE_FILE}.previous" "${COMPOSE_FILE}"
-  echo "Compose file restored"
+  echo "Compose file restored from .previous (backup without paired snapshot)"
+else
+  echo "No compose snapshot for the backup image: cannot roll back" >&2
+  exit 1
 fi
 
 docker tag "${LOCAL_IMAGE_NAME}:backup" "${LOCAL_IMAGE_NAME}:${IMAGE_TAG}"

@@ -79,9 +79,10 @@ receivers:
             - targets:
                 - postgres-exporter:9187
 
-  # OTLP do próprio projeto. Único produtor hoje: containers-collector (métricas de
-  # containers), pela rede edge-otlp. O Java Agent e o Alloy entram nas fases
-  # seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por isso o
+  # OTLP do próprio projeto e da API de PRD. Produtores: containers-collector (métricas
+  # de containers), pela rede edge-otlp, e a API de PRD (traces do Java Agent), pela
+  # workshop-metrics, onde este Collector responde ao endpoint otel-collector. O Alloy
+  # entra nas fases seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por isso o
   # alcance real é o conjunto de redes anexadas a este serviço; por isso não há
   # porta publicada no host.
   otlp:
@@ -99,6 +100,24 @@ processors:
     check_interval: 1s
     limit_mib: 192
     spike_limit_mib: 48
+
+  # Descarta o ruído (R25a), em duas condições (o span cai se qualquer uma casar):
+  # 1) o SERVER de /actuator/* (cada scrape de /actuator/prometheus e cada
+  #    /actuator/health, a cada 15 s); 2) o CLIENT de banco sem operação nem statement,
+  #    nas duas convenções: db.operation/db.statement (agent 2.32 por padrão) e
+  #    db.operation.name/db.query.text (estável). É o span de obtenção de conexão feito
+  #    sob a requisição; o agent emite o statement vazio, por isso a condição também
+  #    casa "". Spans com operação (SELECT, INSERT...) passam. Roda antes da redaction,
+  #    que remove url.path, db.statement e db.query.text. Os filhos INTERNAL/CLIENT que
+  #    sobram de um SERVER descartado chegam sem pai: filtro sem estado não sabe quem foi
+  #    descartado; descartá-los exigiria tail sampling, fora desta fase. Sem o atributo,
+  #    IsMatch devolve falso.
+  filter/noise:
+    error_mode: ignore
+    traces:
+      span:
+        - 'kind == SPAN_KIND_SERVER and (IsMatch(attributes["url.path"], "^/actuator(/|$)") or IsMatch(attributes["http.route"], "^/actuator(/|$)"))'
+        - 'kind == SPAN_KIND_CLIENT and (attributes["db.system"] != nil or attributes["db.system.name"] != nil) and (attributes["db.operation"] == nil and attributes["db.operation.name"] == nil) and ((attributes["db.statement"] == nil or attributes["db.statement"] == "") and (attributes["db.query.text"] == nil or attributes["db.query.text"] == ""))'
 
   # Mesma lista do Collector interno da QA (defesa em profundidade).
   attributes/redact:
@@ -273,6 +292,7 @@ service:
         - otlp
       processors:
         - memory_limiter
+        - filter/noise
         - resource/redact
         - resource/production
         - attributes/redact
