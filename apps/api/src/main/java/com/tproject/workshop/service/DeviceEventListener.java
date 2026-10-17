@@ -1,7 +1,6 @@
 package com.tproject.workshop.service;
 
 import com.tproject.workshop.events.DeviceViewedEvent;
-import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Device;
 import com.tproject.workshop.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,11 +26,14 @@ public class DeviceEventListener {
     @Async
     public void onDeviceViewed(DeviceViewedEvent event) {
         log.info("Device {} viewed, updating lastViewedAt", event.getDeviceId());
-        Device device = deviceRepository.findById(event.getDeviceId())
-                .orElseThrow(() -> new NotFoundException(
-                        String.format("Aparelho com id %d não encontrado para atualizar a data de visualização", event.getDeviceId())));
+        // Async listener: an exception here has no caller to answer and would be logged as ERROR without requestId.
+        Optional<Device> device = deviceRepository.findById(event.getDeviceId());
+        if (device.isEmpty()) {
+            log.warn("Device {} not found, lastViewedAt not updated", event.getDeviceId());
+            return;
+        }
 
-        device.setLastViewedAt(Timestamp.from(Instant.now()));
-        deviceRepository.save(device);
+        device.get().setLastViewedAt(Timestamp.from(Instant.now()));
+        deviceRepository.save(device.get());
     }
-} 
+}
