@@ -80,3 +80,33 @@ docker compose -f "${COMPOSE_FILE}" ps
 
 # Everything passed: the snapshot and the swap marker are no longer needed for rollback.
 rm -f "${COMPOSE_FILE}.previous" .api-swapped
+
+# Telemetry canary runs last: a request straight to the API (401 without credentials,
+# never filtered as noise) must reach the collector as an accepted OTLP/HTTP span
+# within 60 s. Exit 43 fails the job without rollback: the API keeps serving when the
+# telemetry path is down. The gateway also sends OTLP/HTTP spans, so the check proves
+# the path is open, not which producer used it.
+echo ">>> Checking telemetry canary..."
+COLLECTOR_PROBE=$(docker ps -q --filter label=com.docker.compose.project=observability-control-plane-qa \
+  --filter label=com.docker.compose.service=otel-collector-qa-api-probe | head -n 1)
+collector_spans() {
+  local metrics
+  metrics=$(docker exec "${COLLECTOR_PROBE}" wget -q -T 5 -O - http://otel-collector-qa-api:8888/metrics) || return 1
+  printf '%s\n' "${metrics}" \
+    | awk '/^otelcol_receiver_accepted_spans(_total)?\{/ && /receiver="otlp"/ && /transport="http"/ { s += $NF } END { printf "%d\n", s }'
+}
+if [ -z "${COLLECTOR_PROBE}" ] || ! SPANS_BEFORE=$(collector_spans); then
+  echo "ERROR: telemetry canary could not read the collector metrics" >&2
+  exit 43
+fi
+docker exec workshop-api-qa wget -q -T 10 -O /dev/null http://localhost:8080/v1/brand >/dev/null 2>&1 || true
+for _ in $(seq 1 12); do
+  sleep 5
+  SPANS_AFTER=$(collector_spans) || continue
+  if [ "${SPANS_AFTER}" -gt "${SPANS_BEFORE}" ]; then
+    echo "Telemetry canary OK"
+    exit 0
+  fi
+done
+echo "ERROR: no span from workshop-api-qa reached the collector within 60 s" >&2
+exit 43
