@@ -18,7 +18,7 @@
 # monta o docker.sock nem entra nas redes funcionais de QA. A única exceção é a
 # rede interna workshop-metrics, criada pelo Compose da API de QA, onde o
 # Prometheus raspa /actuator/prometheus com a identidade de scrape e o Collector de
-# QA (otel-collector-qa-api) recebe os traces da API de QA (a API de QA precisa ser
+# QA (otel-collector-qa-api) recebe os traces da API e do gateway de QA (a API de QA precisa ser
 # implantada antes, para a rede existir). Só o OTLP é publicado, e
 # só no IP Tailscale: portas do Docker contornam a cadeia INPUT do host, então
 # a restrição de origem (VM de produção) fica na ACL do tailnet. O Grafana sai
@@ -132,7 +132,7 @@ services:
           cpus: "0.05"
           memory: 16M
 
-  # Collector da homologação: recebe por OTLP/HTTP somente a API de QA, pela
+  # Collector da homologação: recebe por OTLP/HTTP somente a API e o gateway de QA, pela
   # workshop-metrics, pelo nome do serviço otel-collector-qa-api. Envia os traces ao
   # Tempo pela cp-backend. Não é o otel-collector acima: esse carimba tudo como
   # production. Sem porta publicada, sem saída e sem file_storage (fila em memória, sem

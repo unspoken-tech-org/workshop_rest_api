@@ -80,9 +80,9 @@ receivers:
                 - postgres-exporter:9187
 
   # OTLP do próprio projeto e da API de PRD. Produtores: containers-collector (métricas
-  # de containers), pela rede edge-otlp, e a API de PRD (traces do Java Agent), pela
-  # workshop-metrics, onde este Collector responde ao endpoint otel-collector. O Alloy
-  # entra nas fases seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por isso o
+  # de containers), pela rede edge-otlp, e a API de PRD (traces do Java Agent) e o gateway
+  # (traces do Caddy), pela workshop-metrics, onde este Collector responde ao endpoint
+  # otel-collector. O Alloy entra nas fases seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por isso o
   # alcance real é o conjunto de redes anexadas a este serviço; por isso não há
   # porta publicada no host.
   otlp:

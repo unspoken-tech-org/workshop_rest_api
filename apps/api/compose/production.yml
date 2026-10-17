@@ -138,7 +138,7 @@ networks:
     driver: bridge
   # Scrape de /actuator/prometheus pelo Edge Collector de produção (projeto
   # workshop-edge), que entra nesta rede como externa, e envio de OTLP (traces) da API
-  # a esse Collector pelo alias otel-collector; sem saída.
+  # e do gateway (Caddy) a esse Collector pelo alias otel-collector; sem saída.
   workshop-metrics:
     name: workshop-metrics
     driver: bridge
