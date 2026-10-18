@@ -646,6 +646,29 @@ tests:
       - eval_time: 25m
         alertname: OTelCollectorExportFailures
 
+  # Série nova de um sinal no exporter que já tinha falha antiga de outro sinal: o
+  # unless compara o nome (rótulo metric) e não deixa a série antiga mascarar a nova.
+  - name: primeira falha de spans com falha antiga de pontos de métrica no mesmo exporter alerta após o for
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_metric_points_total{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",deployment_environment_name="production"}'
+        values: '1x40'
+      - series: 'otelcol_exporter_send_failed_spans_total{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",deployment_environment_name="production"}'
+        values: '_x20 1x20'
+    alert_rule_test:
+      - eval_time: 29m
+        alertname: OTelCollectorExportFailures
+      - eval_time: 31m
+        alertname: OTelCollectorExportFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_grpc/qa
+            exp_annotations:
+              summary: "Falha de exportação no Collector"
+              description: "O exporter otlp_grpc/qa falha continuamente há mais de 10 minutos."
+
   - name: amostra mais velha que a janela fora de ordem alerta sem espera
     interval: 1m
     input_series:

@@ -24,7 +24,8 @@ groups:
       # pega a primeira falha: a série nasce com valor 1 e rate() ainda não tem dois
       # pontos. O offset é o for mais 5 min, para a série nova sustentar o alerta até
       # o for. A flag promql-delayed-name-removal (compose) evita a colisão de rótulos
-      # do rate() entre os nomes.
+      # do rate() entre os nomes. O unless ignora __name__: o label_replace copia o
+      # nome para o rótulo metric, para a série de um sinal não mascarar a de outro.
       - alert: OTelCollectorExportFailures
         expr: |
           sum by (exporter) (
@@ -32,8 +33,8 @@ groups:
           ) > 0
           or
           sum by (exporter) (
-            {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"} > 0
-              unless {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"} offset 15m
+            label_replace({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"} > 0, "metric", "$1", "__name__", "(.+)")
+              unless label_replace({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"} offset 15m, "metric", "$1", "__name__", "(.+)")
           )
         for: 10m
         labels:
@@ -51,8 +52,8 @@ groups:
           ) > 0
           or
           sum by (exporter) (
-            {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"} > 0
-              unless {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"} offset 10m
+            label_replace({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"} > 0, "metric", "$1", "__name__", "(.+)")
+              unless label_replace({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"} offset 10m, "metric", "$1", "__name__", "(.+)")
           )
         for: 5m
         labels:
@@ -106,8 +107,8 @@ groups:
           ) > 0
           or
           sum by (receiver) (
-            {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"} > 0
-              unless {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"} offset 10m
+            label_replace({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"} > 0, "metric", "$1", "__name__", "(.+)")
+              unless label_replace({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"} offset 10m, "metric", "$1", "__name__", "(.+)")
           )
         for: 5m
         labels:
