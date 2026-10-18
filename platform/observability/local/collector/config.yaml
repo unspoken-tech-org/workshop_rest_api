@@ -49,6 +49,23 @@ processors:
     limit_mib: 384
     spike_limit_mib: 96
 
+  # Caminho de requisições da API que não casaram rota (R25): bot batendo em URL
+  # inexistente, ou 401/403 barrado pelo Spring Security antes do controller. Sem
+  # http.route, o url.path é a única pista do que foi batido. Por isso a cópia
+  # sobrevive ao attributes/redact, que apaga o url.path. Só SERVER da API. A query
+  # string não entra (vem de url.query, não copiado). Truncado em 200 caracteres por
+  # regex, que conta caracteres e não corta UTF-8 no meio. As condições ficam em cada
+  # statement, e a truncagem só roda onde o atributo existe. Sequências de 5+ dígitos
+  # viram {n}: um 401 em rota real (ex.: /v1/customer/<CPF>) também chega sem rota.
+  transform/unmatched_path:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - set(span.attributes["workshop.unmatched_path"], span.attributes["url.path"]) where span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "workshop-api" and span.attributes["url.path"] != nil and (span.attributes["http.route"] == nil or span.attributes["http.route"] == "/*")
+          - replace_pattern(span.attributes["workshop.unmatched_path"], "[0-9]{5,}", "{n}") where span.attributes["workshop.unmatched_path"] != nil
+          - replace_pattern(span.attributes["workshop.unmatched_path"], "(?s)^(.{200}).*$", "$1") where span.attributes["workshop.unmatched_path"] != nil
+
   # Defesa em profundidade: a API e o Flutter são a barreira principal.
   attributes/redact:
     actions:
@@ -212,6 +229,7 @@ service:
         - memory_limiter
         - resource/redact
         - resource/local
+        - transform/unmatched_path
         - attributes/redact
       exporters:
         - otlp_grpc/tempo

@@ -131,7 +131,7 @@ docker run --rm \
   grafana/loki:3.7.8 -config.file=/etc/loki/config.yaml -verify-config
 docker run --rm --entrypoint promtool -w /etc/prometheus \
   -v "$PWD/platform/observability/local/prometheus:/etc/prometheus:ro" \
-  prom/prometheus:v3.13.4 test rules tests/observability_test.yml
+  prom/prometheus:v3.13.4 test rules --enable-feature=promql-delayed-name-removal tests/observability_test.yml
 docker run --rm --entrypoint amtool \
   -v "$PWD/platform/observability/local/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro" \
   prom/alertmanager:v0.34.1 check-config /etc/alertmanager/alertmanager.yml

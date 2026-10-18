@@ -1,4 +1,4 @@
-# Execução: promtool test rules tests/control_plane_test.yml
+# Execução: promtool test rules --enable-feature=promql-delayed-name-removal tests/control_plane_test.yml
 # (a partir de platform/observability/control-plane/prometheus). As regras
 # herdadas do laboratório local são cobertas por local/prometheus/tests.
 rule_files:
@@ -601,6 +601,50 @@ tests:
             exp_annotations:
               summary: "Fila do Collector acima de 80%"
               description: "A fila do exporter otlp_grpc/qa está acima de 80% da capacidade."
+
+  # Duas séries de nomes diferentes no mesmo exporter: sem a flag, rate() deixava
+  # rótulos iguais e a regra falhava com "same labelset".
+  - name: falhas simultâneas de spans e pontos de métrica no mesmo exporter alertam sem erro
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_spans_total{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",deployment_environment_name="production"}'
+        values: '0+10x30'
+      - series: 'otelcol_exporter_send_failed_metric_points_total{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",deployment_environment_name="production"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OTelCollectorExportFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_grpc/qa
+            exp_annotations:
+              summary: "Falha de exportação no Collector"
+              description: "O exporter otlp_grpc/qa falha continuamente há mais de 10 minutos."
+
+  # Primeira falha: a série nasce com valor 1 e rate() não tem dois pontos. Dispara
+  # quando a série nova sustenta o for (10 min) e resolve quando a janela de 15 min passa.
+  - name: primeira falha de exportação com série nova alerta após o for
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_spans_total{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",deployment_environment_name="production"}'
+        values: '_x5 1x30'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: OTelCollectorExportFailures
+      - eval_time: 16m
+        alertname: OTelCollectorExportFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_grpc/qa
+            exp_annotations:
+              summary: "Falha de exportação no Collector"
+              description: "O exporter otlp_grpc/qa falha continuamente há mais de 10 minutos."
+      - eval_time: 25m
+        alertname: OTelCollectorExportFailures
 
   - name: amostra mais velha que a janela fora de ordem alerta sem espera
     interval: 1m

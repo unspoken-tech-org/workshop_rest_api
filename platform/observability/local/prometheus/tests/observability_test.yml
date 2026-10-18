@@ -1,4 +1,4 @@
-# Execução: promtool test rules tests/observability_test.yml
+# Execução: promtool test rules --enable-feature=promql-delayed-name-removal tests/observability_test.yml
 # (a partir de platform/observability/local/prometheus)
 rule_files:
   - ../rules/observability.yml
@@ -24,6 +24,47 @@ tests:
             exp_annotations:
               summary: "Falha de exportação no Collector"
               description: "O exporter otlp_http/loki falha continuamente há mais de 10 minutos."
+
+  # Primeira falha de exportação com série nova (valor 1, sem rate()): alerta após o for.
+  - name: primeira falha de exportação de log com série nova alerta após o for
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_log_records{exporter="otlp_http/loki"}'
+        values: '_x5 1x30'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: OTelCollectorExportFailures
+      - eval_time: 16m
+        alertname: OTelCollectorExportFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_http/loki
+            exp_annotations:
+              summary: "Falha de exportação no Collector"
+              description: "O exporter otlp_http/loki falha continuamente há mais de 10 minutos."
+
+  # Primeira perda de log do Alloy com série nova: alerta na hora (sem for) e some
+  # quando a janela de 10 min passa.
+  - name: primeira perda de log do Alloy com série nova alerta e depois resolve
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_log_records_total{job="alloy",instance="alloy-c:12345",exporter="otlp_grpc/otelcol.exporter.otlp.collector"}'
+        values: '_x5 1x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AlloyLogsDropped
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              instance: alloy-c:12345
+            exp_annotations:
+              summary: "Alloy descartando logs"
+              description: "O Alloy em alloy-c:12345 descartou logs nos últimos 5 minutos (Collector recusando ou indisponível)."
+      - eval_time: 16m
+        alertname: AlloyLogsDropped
 
   - name: pressão de memória usa RSS contra o limite do memory_limiter
     interval: 1m
