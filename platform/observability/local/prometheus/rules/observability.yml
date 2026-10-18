@@ -29,8 +29,8 @@ groups:
           ) > 0
           or
           sum by (exporter) (
-            {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"} > 0
-              unless {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"} offset 15m
+            label_replace({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"} > 0, "metric", "$1", "__name__", "(.+)")
+              unless label_replace({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"} offset 15m, "metric", "$1", "__name__", "(.+)")
           )
         for: 10m
         labels:
@@ -48,8 +48,8 @@ groups:
           ) > 0
           or
           sum by (exporter) (
-            {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"} > 0
-              unless {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"} offset 10m
+            label_replace({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"} > 0, "metric", "$1", "__name__", "(.+)")
+              unless label_replace({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"} offset 10m, "metric", "$1", "__name__", "(.+)")
           )
         for: 5m
         labels:
@@ -91,7 +91,8 @@ groups:
       # sufixo _total e os mesmos nomes de fila das do Collector, por isso as
       # regras de fila acima filtram o job. Descarte é perda definitiva: sem for. A
       # primeira perda nasce com a série: a cláusula de offset (10 min) a cobre, como
-      # nas demais falhas raras.
+      # nas demais falhas raras. O label_replace copia o nome para o rótulo metric,
+      # porque o unless ignora __name__ e o enqueue antigo mascararia o send novo.
       - alert: AlloyLogsDropped
         expr: |
           sum by (instance) (increase(otelcol_exporter_enqueue_failed_log_records_total{job="alloy"}[5m])) > 0
@@ -99,8 +100,8 @@ groups:
           sum by (instance) (increase(otelcol_exporter_send_failed_log_records_total{job="alloy"}[5m])) > 0
             or
           sum by (instance) (
-            {__name__=~"otelcol_exporter_(enqueue|send)_failed_log_records_total", job="alloy"} > 0
-              unless {__name__=~"otelcol_exporter_(enqueue|send)_failed_log_records_total", job="alloy"} offset 10m
+            label_replace({__name__=~"otelcol_exporter_(enqueue|send)_failed_log_records_total", job="alloy"} > 0, "metric", "$1", "__name__", "(.+)")
+              unless label_replace({__name__=~"otelcol_exporter_(enqueue|send)_failed_log_records_total", job="alloy"} offset 10m, "metric", "$1", "__name__", "(.+)")
           )
         labels:
           severity: critical
@@ -117,8 +118,8 @@ groups:
           ) > 0
           or
           sum by (receiver) (
-            {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"} > 0
-              unless {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"} offset 10m
+            label_replace({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"} > 0, "metric", "$1", "__name__", "(.+)")
+              unless label_replace({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"} offset 10m, "metric", "$1", "__name__", "(.+)")
           )
         for: 5m
         labels:

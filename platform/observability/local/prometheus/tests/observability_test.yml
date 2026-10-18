@@ -66,6 +66,29 @@ tests:
       - eval_time: 16m
         alertname: AlloyLogsDropped
 
+  # Perda nova por envio no Alloy que já tinha descarte antigo por fila: o unless
+  # compara o nome (rótulo metric) e o enqueue antigo não mascara o send novo.
+  - name: primeira perda por envio com descarte antigo por fila no Alloy alerta na hora
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_enqueue_failed_log_records_total{job="alloy",instance="alloy-c:12345",exporter="otlp_grpc/otelcol.exporter.otlp.collector"}'
+        values: '1x40'
+      - series: 'otelcol_exporter_send_failed_log_records_total{job="alloy",instance="alloy-c:12345",exporter="otlp_grpc/otelcol.exporter.otlp.collector"}'
+        values: '_x20 1x20'
+    alert_rule_test:
+      - eval_time: 19m
+        alertname: AlloyLogsDropped
+      - eval_time: 20m
+        alertname: AlloyLogsDropped
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              instance: alloy-c:12345
+            exp_annotations:
+              summary: "Alloy descartando logs"
+              description: "O Alloy em alloy-c:12345 descartou logs nos últimos 5 minutos (Collector recusando ou indisponível)."
+
   - name: pressão de memória usa RSS contra o limite do memory_limiter
     interval: 1m
     input_series:
