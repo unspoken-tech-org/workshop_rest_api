@@ -36,7 +36,9 @@ public final class RequestLogSanitizer {
 
     /**
      * Requested path of a request that matched no route, without the query string.
-     * Control characters (CR, LF, ...) are replaced so the path cannot forge log lines.
+     * Control characters (CR, LF, ...) are replaced so the path cannot forge log lines,
+     * and runs of 5+ digits become {@code {n}}: a 401 on a real route is also unmatched,
+     * so the path could carry a CPF or phone number.
      * Empty when a route matched, since the parameterized route is logged instead.
      */
     public static Optional<String> unmatchedPath(HttpServletRequest request) {
@@ -44,7 +46,9 @@ public final class RequestLogSanitizer {
             return Optional.empty();
         }
 
-        String path = request.getRequestURI().replaceAll("\\p{Cntrl}", "_");
+        String path = request.getRequestURI()
+                .replaceAll("\\p{Cntrl}", "_")
+                .replaceAll("[0-9]{5,}", "{n}");
         return Optional.of(path.length() > MAX_UNMATCHED_PATH_LENGTH
                 ? path.substring(0, MAX_UNMATCHED_PATH_LENGTH)
                 : path);

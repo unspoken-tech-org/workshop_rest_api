@@ -60,4 +60,11 @@ class RequestLogSanitizerTest {
 
         assertThat(RequestLogSanitizer.unmatchedPath(request)).contains("/probe__INFO forged=true");
     }
+
+    @Test
+    void shouldMaskLongDigitRunsInUnmatchedPath() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customer/31781477051/device/123");
+
+        assertThat(RequestLogSanitizer.unmatchedPath(request)).contains("/v1/customer/{n}/device/123");
+    }
 }
