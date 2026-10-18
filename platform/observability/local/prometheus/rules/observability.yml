@@ -17,12 +17,21 @@ groups:
           summary: "Alvo de observabilidade indisponível"
           description: "{{ $labels.job }} em {{ $labels.instance }} está indisponível há mais de 10 minutos."
 
-      # Os três sinais: spans, pontos de métrica e registros de log.
+      # Os três sinais: spans, pontos de métrica e registros de log. A segunda parte
+      # pega a primeira falha: a série nasce com valor 1 e rate() ainda não tem dois
+      # pontos. O offset é o for mais 5 min, para a série nova sustentar o alerta até
+      # o for. A flag promql-delayed-name-removal (compose) evita a colisão de rótulos
+      # do rate() entre os nomes.
       - alert: OTelCollectorExportFailures
         expr: |
           sum by (exporter) (
             rate({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"}[5m])
           ) > 0
+          or
+          sum by (exporter) (
+            {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"} > 0
+              unless {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)"} offset 15m
+          )
         for: 10m
         labels:
           severity: critical
@@ -31,11 +40,17 @@ groups:
           summary: "Falha de exportação no Collector"
           description: "O exporter {{ $labels.exporter }} falha continuamente há mais de 10 minutos."
 
+      # Mesma cláusula de série nova da falha de exportação, com offset = for + 5 min.
       - alert: OTelCollectorEnqueueFailures
         expr: |
           sum by (exporter) (
             rate({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"}[5m])
           ) > 0
+          or
+          sum by (exporter) (
+            {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"} > 0
+              unless {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)"} offset 10m
+          )
         for: 5m
         labels:
           severity: critical
@@ -74,12 +89,19 @@ groups:
       # Recusado pelo Collector (fila cheia ou retry esgotado), o Alloy descarta
       # o log: loki.source.docker não reenvia (R26d). As métricas do Alloy têm o
       # sufixo _total e os mesmos nomes de fila das do Collector, por isso as
-      # regras de fila acima filtram o job. Descarte é perda definitiva: sem for.
+      # regras de fila acima filtram o job. Descarte é perda definitiva: sem for. A
+      # primeira perda nasce com a série: a cláusula de offset (10 min) a cobre, como
+      # nas demais falhas raras.
       - alert: AlloyLogsDropped
         expr: |
           sum by (instance) (increase(otelcol_exporter_enqueue_failed_log_records_total{job="alloy"}[5m])) > 0
             or
           sum by (instance) (increase(otelcol_exporter_send_failed_log_records_total{job="alloy"}[5m])) > 0
+            or
+          sum by (instance) (
+            {__name__=~"otelcol_exporter_(enqueue|send)_failed_log_records_total", job="alloy"} > 0
+              unless {__name__=~"otelcol_exporter_(enqueue|send)_failed_log_records_total", job="alloy"} offset 10m
+          )
         labels:
           severity: critical
           owner: platform
@@ -93,6 +115,11 @@ groups:
           sum by (receiver) (
             rate({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"}[5m])
           ) > 0
+          or
+          sum by (receiver) (
+            {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"} > 0
+              unless {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)"} offset 10m
+          )
         for: 5m
         labels:
           severity: critical

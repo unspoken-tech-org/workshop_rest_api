@@ -119,6 +119,21 @@ processors:
         - 'kind == SPAN_KIND_SERVER and (IsMatch(attributes["url.path"], "^/actuator(/|$)") or IsMatch(attributes["http.route"], "^/actuator(/|$)"))'
         - 'kind == SPAN_KIND_CLIENT and (attributes["db.system"] != nil or attributes["db.system.name"] != nil) and (attributes["db.operation"] == nil and attributes["db.operation.name"] == nil) and ((attributes["db.statement"] == nil or attributes["db.statement"] == "") and (attributes["db.query.text"] == nil or attributes["db.query.text"] == ""))'
 
+  # Caminho de requisições da API que não casaram rota (R25): bot batendo em URL
+  # inexistente, ou 401/403 barrado pelo Spring Security antes do controller. Sem
+  # http.route, o url.path é a única pista do que foi batido. Por isso a cópia
+  # sobrevive ao attributes/redact, que apaga o url.path. Só SERVER da API. A query
+  # string não entra (vem de url.query, não copiado). Truncado em 200 caracteres por
+  # regex, que conta caracteres e não corta UTF-8 no meio. As condições ficam em cada
+  # statement: conditions no grupo é ignorado nesta versão do Collector.
+  transform/unmatched_path:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - set(span.attributes["workshop.unmatched_path"], span.attributes["url.path"]) where span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "workshop-api" and span.attributes["url.path"] != nil and (span.attributes["http.route"] == nil or span.attributes["http.route"] == "/*")
+          - replace_pattern(span.attributes["workshop.unmatched_path"], "(?s)^(.{200}).*$", "$1") where span.attributes["workshop.unmatched_path"] != nil
+
   # Mesma lista do Collector interno da QA (defesa em profundidade).
   attributes/redact:
     actions:
@@ -295,6 +310,7 @@ service:
         - filter/noise
         - resource/redact
         - resource/production
+        - transform/unmatched_path
         - attributes/redact
       exporters:
         - otlp_grpc/qa

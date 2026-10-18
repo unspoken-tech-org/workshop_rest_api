@@ -289,6 +289,8 @@ services:
       - --storage.tsdb.retention.time=15d
       - --storage.tsdb.retention.size=8GB
       - --web.enable-otlp-receiver
+      # Sem ela, rate() sobre séries de nomes diferentes colide rótulos (ver rules/).
+      - --enable-feature=promql-delayed-name-removal
     volumes:
       - ./platform/observability/control-plane/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./platform/observability/control-plane/prometheus/rules:/etc/prometheus/rules:ro

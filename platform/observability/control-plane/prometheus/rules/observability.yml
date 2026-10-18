@@ -19,12 +19,21 @@ groups:
           summary: "Alvo de observabilidade indisponível"
           description: "{{ $labels.job }} em {{ $labels.instance }} está indisponível há mais de 10 minutos."
 
-      # Os três sinais: spans, pontos de métrica e registros de log.
+      # Os três sinais: spans, pontos de métrica e registros de log. A segunda parte
+      # pega a primeira falha: a série nasce com valor 1 e rate() ainda não tem dois
+      # pontos. O offset é o for mais 5 min, para a série nova sustentar o alerta até
+      # o for. A flag promql-delayed-name-removal (compose) evita a colisão de rótulos
+      # do rate() entre os nomes.
       - alert: OTelCollectorExportFailures
         expr: |
           sum by (exporter) (
             rate({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"}[5m])
           ) > 0
+          or
+          sum by (exporter) (
+            {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"} > 0
+              unless {__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"} offset 15m
+          )
         for: 10m
         labels:
           severity: critical
@@ -33,11 +42,17 @@ groups:
           summary: "Falha de exportação no Collector"
           description: "O exporter {{ $labels.exporter }} falha continuamente há mais de 10 minutos."
 
+      # Mesma cláusula de série nova da falha de exportação, com offset = for + 5 min.
       - alert: OTelCollectorEnqueueFailures
         expr: |
           sum by (exporter) (
             rate({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"}[5m])
           ) > 0
+          or
+          sum by (exporter) (
+            {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"} > 0
+              unless {__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)(_total)?"} offset 10m
+          )
         for: 5m
         labels:
           severity: critical
@@ -88,6 +103,11 @@ groups:
           sum by (receiver) (
             rate({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"}[5m])
           ) > 0
+          or
+          sum by (receiver) (
+            {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"} > 0
+              unless {__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"} offset 10m
+          )
         for: 5m
         labels:
           severity: critical
