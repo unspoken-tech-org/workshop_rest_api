@@ -43,4 +43,46 @@ class RequestResponseLoggingFilterTest {
             appender.stop();
         }
     }
+
+    @Test
+    void shouldNotLogPathWhenRouteMatched() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customers/31781477051");
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/v1/customers/{id}");
+
+        ILoggingEvent event = logAccess(request, 200);
+
+        assertThat(event.getMDCPropertyMap()).doesNotContainKey("path");
+    }
+
+    @Test
+    void shouldLogRequestedPathWithoutQueryStringWhenNoRouteMatched() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin/login");
+        request.setQueryString("token=secret");
+
+        ILoggingEvent event = logAccess(request, 401);
+
+        assertThat(event.getMDCPropertyMap()).containsEntry("path", "/admin/login");
+        assertThat(event.getMDCPropertyMap().get("path")).doesNotContain("token", "secret", "?");
+    }
+
+    private static ILoggingEvent logAccess(MockHttpServletRequest request, int status) throws Exception {
+        Logger accessLogger = (Logger) LoggerFactory.getLogger("http.access");
+        Level previousLevel = accessLogger.getLevel();
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        accessLogger.addAppender(appender);
+        accessLogger.setLevel(Level.INFO);
+
+        try {
+            new RequestResponseLoggingFilter().doFilter(request, new MockHttpServletResponse(), (servletRequest, servletResponse) ->
+                    ((MockHttpServletResponse) servletResponse).setStatus(status));
+
+            assertThat(appender.list).hasSize(1);
+            return appender.list.get(0);
+        } finally {
+            accessLogger.detachAppender(appender);
+            accessLogger.setLevel(previousLevel);
+            appender.stop();
+        }
+    }
 }

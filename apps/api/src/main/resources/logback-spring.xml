@@ -54,6 +54,7 @@
                 <includeMdcKeyName>httpPath</includeMdcKeyName>
                 <includeMdcKeyName>httpStatus</includeMdcKeyName>
                 <includeMdcKeyName>durationMs</includeMdcKeyName>
+                <includeMdcKeyName>path</includeMdcKeyName>
                 
                 <!-- Custom field names -->
                 <fieldNames>
