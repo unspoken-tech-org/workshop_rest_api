@@ -89,7 +89,7 @@ processors:
   # sobrevive ao attributes/redact, que apaga o url.path. Só SERVER da API. A query
   # string não entra (vem de url.query, não copiado). Truncado em 200 caracteres por
   # regex, que conta caracteres e não corta UTF-8 no meio. As condições ficam em cada
-  # statement: conditions no grupo é ignorado nesta versão do Collector.
+  # statement, e a truncagem só roda onde o atributo existe.
   transform/unmatched_path:
     error_mode: ignore
     trace_statements:

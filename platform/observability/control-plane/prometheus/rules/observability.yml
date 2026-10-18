@@ -1,7 +1,8 @@
 # Nomes conferidos no Collector contrib 0.161.0. O Collector interno é raspado
 # (sem sufixo _total); a telemetria da borda de PRD chega por OTLP
 # (job workshop/otelcol-contrib) e os counters ganham _total. Revalidar após
-# cada upgrade do Collector com `promtool test rules` (tests/).
+# cada upgrade do Collector com `promtool test rules
+# --enable-feature=promql-delayed-name-removal` (tests/).
 groups:
   - name: control-plane-health
     interval: 30s
