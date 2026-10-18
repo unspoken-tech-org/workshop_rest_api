@@ -73,6 +73,8 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
         MDC.put("httpPath", path);
         MDC.put("httpStatus", String.valueOf(status));
         MDC.put("durationMs", String.valueOf(durationMs));
+        // Only requests without a matched route carry their path (scans, 401/403 before mapping).
+        RequestLogSanitizer.unmatchedPath(request).ifPresent(unmatched -> MDC.put("path", unmatched));
 
         try {
             boolean isError = status >= 400;
@@ -89,6 +91,7 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
             MDC.remove("httpPath");
             MDC.remove("httpStatus");
             MDC.remove("durationMs");
+            MDC.remove("path");
         }
     }
 }

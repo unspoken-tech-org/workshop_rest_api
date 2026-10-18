@@ -28,4 +28,43 @@ class RequestLogSanitizerTest {
         assertThat(RequestLogSanitizer.route(new ServletWebRequest(request))).isEqualTo("route=unmatched");
         assertThat(RequestLogSanitizer.route(request)).isEqualTo("unmatched");
     }
+
+    @Test
+    void shouldExposeRequestedPathWithoutQueryStringWhenNoRouteMatched() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/wp-admin/setup.php");
+        request.setQueryString("token=secret");
+
+        assertThat(RequestLogSanitizer.unmatchedPath(request)).contains("/wp-admin/setup.php");
+    }
+
+    @Test
+    void shouldNotExposePathWhenRouteMatched() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customers/31781477051");
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/v1/customers/{id}");
+
+        assertThat(RequestLogSanitizer.unmatchedPath(request)).isEmpty();
+    }
+
+    @Test
+    void shouldTruncateUnmatchedPathToMaxLength() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/" + "a".repeat(300));
+
+        assertThat(RequestLogSanitizer.unmatchedPath(request).orElseThrow())
+                .hasSize(RequestLogSanitizer.MAX_UNMATCHED_PATH_LENGTH)
+                .startsWith("/aaa");
+    }
+
+    @Test
+    void shouldReplaceControlCharactersInUnmatchedPath() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/probe\r\nINFO forged=true");
+
+        assertThat(RequestLogSanitizer.unmatchedPath(request)).contains("/probe__INFO forged=true");
+    }
+
+    @Test
+    void shouldMaskLongDigitRunsInUnmatchedPath() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customer/31781477051/device/123");
+
+        assertThat(RequestLogSanitizer.unmatchedPath(request)).contains("/v1/customer/{n}/device/123");
+    }
 }

@@ -55,7 +55,9 @@ services:
       workshop_db_qa:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://workshop_db_qa:5432/${DB_NAME}
+      # Host pelo container_name (com hífen): nome com underscore não é válido em URI
+      # e o agent registra server.address errado nos spans JDBC.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://workshop-db-qa:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_PROFILES_ACTIVE: qa
       # Senha do banco e hash bcrypt da identidade de scrape lidos como arquivos
