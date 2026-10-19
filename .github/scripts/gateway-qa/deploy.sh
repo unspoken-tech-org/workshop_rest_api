@@ -12,6 +12,14 @@ chmod 600 "${DEPLOY_DIR}/.tmp/docker/config.json" 2>/dev/null || true
 mv "${DEPLOY_DIR}/.tmp/.env" ./ 2>/dev/null || true
 chmod 600 .env
 
+# Setup file secrets (Compose mounts them at /run/secrets/ in the gateway)
+mkdir -p secrets
+chmod 700 secrets
+for secret_name in cf_api_token admin_email; do
+  mv "${DEPLOY_DIR}/.tmp/${secret_name}" "secrets/${secret_name}"
+  chmod 400 "secrets/${secret_name}"
+done
+
 # Backup the CURRENT image before pulling the new one
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
   docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"

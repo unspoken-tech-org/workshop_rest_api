@@ -10,8 +10,6 @@ services:
       - "127.0.0.1:80:80"
       - "127.0.0.1:443:443"
     environment:
-      - CF_API_TOKEN=${CF_API_TOKEN}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
       # Tracing (snippet api_proxy do Caddyfile): OTLP/HTTP ao Collector da homologação, pela rede
       # workshop-metrics. Sem o Collector a requisição segue; só o span se perde.
       - OTEL_SERVICE_NAME=caddy-gateway
@@ -21,6 +19,11 @@ services:
       - ./platform/gateway/caddy/Caddyfile-gateway-qa:/etc/caddy/Caddyfile
       - caddy_data_qa:/data
       - caddy_config_qa:/config
+    # Token da Cloudflare (desafio DNS) e e-mail do ACME como arquivo, fora do env do container;
+    # o Caddyfile os lê por {file./run/secrets/...}.
+    secrets:
+      - cf_api_token
+      - admin_email
     networks:
       - workshop-ingress
       - workshop-metrics
@@ -40,6 +43,12 @@ services:
     command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - workshop-ingress
+
+secrets:
+  cf_api_token:
+    file: ./secrets/cf_api_token
+  admin_email:
+    file: ./secrets/admin_email
 
 volumes:
   caddy_data_qa:
