@@ -3,7 +3,7 @@ set -euo pipefail
 cd "${DEPLOY_DIR}"
 
 # Cleanup secrets/credentials on exit (success or failure)
-trap 'rm -f /tmp/.env ~/.docker/config.json' EXIT
+trap 'rm -f /tmp/.env /tmp/cf_api_token /tmp/admin_email ~/.docker/config.json' EXIT
 
 # Setup GHCR auth (config.json copied by the deploy-via-ssh-gateway composite)
 mkdir -p ~/.docker
@@ -17,6 +17,14 @@ if [ -f /tmp/.env ]; then
   mv /tmp/.env ./.env
   chmod 600 .env
 fi
+
+# Setup file secrets (Compose mounts them at /run/secrets/ in the gateway)
+mkdir -p secrets
+chmod 700 secrets
+for secret_name in cf_api_token admin_email; do
+  mv "/tmp/${secret_name}" "secrets/${secret_name}"
+  chmod 400 "secrets/${secret_name}"
+done
 
 LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-workshop/caddy-gateway}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose-gateway.yml}"

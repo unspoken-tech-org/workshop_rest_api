@@ -59,17 +59,26 @@ runs:
       run: |
         set -e
 
+        # The Cloudflare token and the ACME email go to the files below, never to container env.
         {
-          echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
-          echo "CF_API_TOKEN=${CF_API_TOKEN}"
           echo "CF_API_TOKEN_QA=${CF_API_TOKEN_QA}"
           echo "CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}"
           echo "CLOUDFLARE_TUNNEL_TOKEN_QA=${CLOUDFLARE_TUNNEL_TOKEN_QA}"
         } > /tmp/.env
         chmod 600 /tmp/.env
 
+        for secret_name in CF_API_TOKEN ADMIN_EMAIL; do
+          secret_value="${!secret_name}"
+          [[ -n "${secret_value}" && "${secret_value}" != *$'\n'* && "${secret_value}" != *$'\r'* ]] || {
+            echo "${secret_name} must be a non-empty single-line value" >&2
+            exit 1
+          }
+        done
+        ( umask 077 && printf '%s' "${CF_API_TOKEN}" > /tmp/cf_api_token )
+        ( umask 077 && printf '%s' "${ADMIN_EMAIL}" > /tmp/admin_email )
+
         echo "Deploy files prepared:"
-        ls -la /tmp/.env
+        ls -la /tmp/.env /tmp/cf_api_token /tmp/admin_email
 
     - name: Upload files to server
       shell: bash
@@ -87,7 +96,7 @@ runs:
         chmod 700 ~/.docker
 
         scp -o ConnectTimeout=30 \
-          /tmp/.env "${DEPLOY_SCRIPT}" \
+          /tmp/.env /tmp/cf_api_token /tmp/admin_email "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:/tmp/"
 
         scp -o ConnectTimeout=30 \
