@@ -1,5 +1,5 @@
 {
-    email {env.ADMIN_EMAIL}
+    email {file./run/secrets/admin_email}
     auto_https disable_redirects
     servers {
         trusted_proxies static 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
@@ -70,6 +70,6 @@ api-qa.eletroluk.com {
     import log
     import api_proxy workshop-api-qa:8080
     tls {
-        dns cloudflare {env.CF_API_TOKEN}
+        dns cloudflare {file./run/secrets/cf_api_token}
     }
 }

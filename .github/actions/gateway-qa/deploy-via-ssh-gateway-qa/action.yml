@@ -57,12 +57,22 @@ runs:
       run: |
         set -e
 
+        # Only the tunnel token, read by Compose for the cloudflared command.
         {
-          echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
-          echo "CF_API_TOKEN=${CF_API_TOKEN}"
           echo "CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}"
         } > /tmp/.env
         chmod 600 /tmp/.env
+
+        # The Cloudflare token and the ACME email reach Caddy as files, never as container env.
+        for secret_name in CF_API_TOKEN ADMIN_EMAIL; do
+          secret_value="${!secret_name}"
+          [[ -n "${secret_value}" && "${secret_value}" != *$'\n'* && "${secret_value}" != *$'\r'* ]] || {
+            echo "${secret_name} must be a non-empty single-line value" >&2
+            exit 1
+          }
+        done
+        ( umask 077 && printf '%s' "${CF_API_TOKEN}" > /tmp/cf_api_token )
+        ( umask 077 && printf '%s' "${ADMIN_EMAIL}" > /tmp/admin_email )
 
         echo "Gateway QA deploy files prepared"
 
@@ -93,9 +103,10 @@ runs:
         mkdir -p "${PAYLOAD_ROOT}/infra/caddy"
         cp -- "${CADDYFILE_SOURCE}" "${PAYLOAD_ROOT}/infra/caddy/Caddyfile-gateway-qa"
         touch "${PAYLOAD_ROOT}/infra/caddy/Dockerfile"
+        mkdir -p "${PAYLOAD_ROOT}/secrets"
+        printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/secrets/cf_api_token"
+        printf '%s' 'admin@example.invalid' > "${PAYLOAD_ROOT}/secrets/admin_email"
         printf '%s\n' \
-          'ADMIN_EMAIL=admin@example.invalid' \
-          'CF_API_TOKEN=validation-token' \
           'CLOUDFLARE_TUNNEL_TOKEN=validation-token' > "${PAYLOAD_ROOT}/.env"
         docker compose --project-directory "${PAYLOAD_ROOT}" \
           --env-file "${PAYLOAD_ROOT}/.env" \
@@ -117,7 +128,7 @@ runs:
         chmod 700 ~/.docker
 
         scp -o ConnectTimeout=30 \
-          /tmp/.env \
+          /tmp/.env /tmp/cf_api_token /tmp/admin_email \
           "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
