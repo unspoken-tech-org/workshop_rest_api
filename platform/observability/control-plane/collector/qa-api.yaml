@@ -1,12 +1,13 @@
 # Collector dedicado à homologação (VM de QA, projeto observability-control-plane-qa).
-# Recebe por OTLP/HTTP somente a API e o gateway (Caddy) de QA, pela rede qa-metrics
-# (workshop-metrics), onde responde pelo nome do serviço otel-collector-qa-api. Só
-# traces; métricas vêm do scrape do Prometheus e os logs saem pelo stdout coletado
-# pelo Alloy.
+# Recebe por OTLP/HTTP os traces da API e do gateway (Caddy) de QA, pela rede qa-metrics
+# (workshop-metrics), e os logs do stdout desses dois containers, pelo Alloy na rede
+# cp-logs; nas duas responde pelo nome do serviço otel-collector-qa-api. Métricas vêm
+# do scrape do Prometheus.
 #
 # Não é o Collector interno do plano de controle: esse carimba tudo como production e
 # recebe a produção pela Tailscale. Este carimba qa e não tem rota para a produção.
-# Nenhuma porta é publicada; a origem é a rede qa-metrics, interna e sem saída.
+# Nenhuma porta é publicada; as origens são as redes qa-metrics e cp-logs, internas e
+# sem saída.
 #
 # O ambiente é reescrito pela origem (resource/qa): o que a API declarar não vale.
 # A redaction repete a da borda e a do Collector interno (defesa em profundidade). A
@@ -19,7 +20,8 @@ extensions:
     endpoint: 0.0.0.0:13133
 
 receivers:
-  # Só HTTP: a API de QA exporta por http/protobuf (apps/api/otel/javaagent.properties).
+  # Só HTTP: a API de QA exporta por http/protobuf (apps/api/otel/javaagent.properties),
+  # e o Alloy usa o otelcol.exporter.otlphttp.
   otlp:
     protocols:
       http:
@@ -158,7 +160,7 @@ processors:
         action: delete
 
 exporters:
-  # Único destino: o Tempo, pela rede cp-backend (interna, sem saída). Sem TLS: o
+  # Traces: o Tempo, pela rede cp-backend (interna, sem saída). Sem TLS: o
   # tráfego fica entre dois containers da mesma rede interna.
   otlp_grpc/tempo:
     endpoint: tempo:4317
@@ -174,6 +176,26 @@ exporters:
       sizer: bytes
       queue_size: 16777216
       # Lote montado na saída da fila, não por processor (R26a).
+      batch:
+        flush_timeout: 5s
+        sizer: items
+        min_size: 512
+        max_size: 1024
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 0s
+
+  # Logs do Alloy (stdout da API e do gateway de QA), pela cp-backend. Mesma fila em
+  # memória e mesmo retry do Tempo, com fila própria de 16 MiB.
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+    timeout: 10s
+    sending_queue:
+      enabled: true
+      sizer: bytes
+      queue_size: 16777216
       batch:
         flush_timeout: 5s
         sizer: items
@@ -213,3 +235,13 @@ service:
         - attributes/redact
       exporters:
         - otlp_grpc/tempo
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resource/redact
+        - resource/qa
+        - attributes/redact
+      exporters:
+        - otlp_http/loki

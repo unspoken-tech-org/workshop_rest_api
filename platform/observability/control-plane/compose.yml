@@ -14,8 +14,10 @@
 # Senhas e tokens chegam aos containers como secrets em arquivo, nunca como
 # variável de ambiente do container.
 #
-# Isolamento da homologação: projeto, redes e volumes próprios; nenhum serviço
-# monta o docker.sock nem entra nas redes funcionais de QA. A única exceção é a
+# Isolamento da homologação: projeto, redes e volumes próprios; só o
+# docker-logs-proxy monta o docker.sock (somente leitura, allowlist por nome, para o
+# Alloy ler o stdout da API e do gateway de QA), e nenhum serviço entra nas redes
+# funcionais de QA. A única exceção é a
 # rede interna workshop-metrics, criada pelo Compose da API de QA, onde o
 # Prometheus raspa /actuator/prometheus com a identidade de scrape e o Collector de
 # QA (otel-collector-qa-api) recebe os traces da API e do gateway de QA (a API de QA precisa ser
@@ -148,8 +150,12 @@ services:
       # qa-metrics e na cp-backend.
       - cp-backend
       - qa-metrics
+      # Somente para receber os logs do Alloy.
+      - cp-logs
     depends_on:
       tempo:
+        condition: service_healthy
+      loki-probe:
         condition: service_healthy
     restart: unless-stopped
     read_only: true
@@ -198,6 +204,93 @@ services:
         limits:
           cpus: "0.05"
           memory: 16M
+
+  # Logs da API e do gateway de QA: lê o stdout dos dois containers pelo
+  # docker-logs-proxy e envia por OTLP/HTTP ao otel-collector-qa-api (que carimba qa e
+  # grava no Loki). Sem rota para a internet: só as redes internas cp-docker-logs e
+  # cp-logs. As posições de leitura ficam no volume alloy_data, para um reinício não
+  # reenviar os logs já lidos; o diretório da imagem já pertence ao usuário 473, que
+  # o volume novo herda.
+  alloy:
+    image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    user: "473:473"
+    command:
+      - run
+      - --disable-reporting
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./platform/observability/control-plane/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    networks:
+      - cp-docker-logs
+      - cp-logs
+    depends_on:
+      docker-logs-proxy:
+        condition: service_healthy
+      otel-collector-qa-api-probe:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      # /-/ready só responde 200 depois que todos os componentes carregaram.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/12345 && printf 'GET /-/ready HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+
+  # Único serviço com o docker.sock: allowlist somente leitura da API do Docker para
+  # o Alloy (docker-logs-proxy/Caddyfile), na rede interna cp-docker-logs. Separado do
+  # docker-api-proxy da borda: este libera logs, aquele não.
+  docker-logs-proxy:
+    image: caddy:2.11.6-alpine@sha256:c776e0c6413b544d0459665e54ec7b8b2a15000c0cbee8b254da0067b1d184ff
+    volumes:
+      - ./platform/observability/control-plane/docker-logs-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - cp-docker-logs
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /data:size=8m,noexec,nosuid,nodev
+      - /config:size=8m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # O binário traz a file capability cap_net_bind_service; sem ela no conjunto
+    # permitido, o exec falha com no-new-privileges (como no Caddy da plataforma).
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 64M
 
   loki-probe:
     image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
@@ -598,6 +691,14 @@ networks:
   qa-metrics:
     name: workshop-metrics
     external: true
+  # Somente Alloy ↔ docker-logs-proxy.
+  cp-docker-logs:
+    driver: bridge
+    internal: true
+  # Somente Alloy ↔ otel-collector-qa-api (logs).
+  cp-logs:
+    driver: bridge
+    internal: true
 
 # Valores do .env do deploy; o Compose os entrega como arquivo em /run/secrets.
 secrets:
@@ -616,6 +717,7 @@ secrets:
 
 volumes:
   alertmanager_data:
+  alloy_data:
   grafana_data:
   loki_data:
   otel_collector_queue:

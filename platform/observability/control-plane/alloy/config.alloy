@@ -1,0 +1,136 @@
+// Alloy da homologação (VM de QA): lê o stdout da API e do gateway de QA e envia
+// por OTLP/HTTP ao Collector de QA (otel-collector-qa-api), que carimba qa, repete a
+// redaction e grava no Loki. Mesma ponte Alloy → OTLP → Collector do laboratório
+// local (platform/observability/local/alloy/config.alloy).
+//
+// O acesso ao Docker é feito pelo docker-logs-proxy, somente leitura e com
+// allowlist por nome. A allowlist abaixo repete a do proxy: aqui escolhe os alvos,
+// lá impede a leitura de qualquer outro container.
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+discovery.docker "containers" {
+	host             = "tcp://docker-logs-proxy:2375"
+	refresh_interval = "15s"
+}
+
+discovery.relabel "containers" {
+	targets = discovery.docker.containers.targets
+
+	// Allowlist por nome: só a API e o gateway de QA.
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(workshop-api-qa|caddy-gateway-qa)"
+		action        = "keep"
+	}
+
+	// O loki.source.docker chama o inspect e os logs pelo id do alvo; com o nome no
+	// lugar do id, o proxy consegue aplicar a allowlist (o Docker aceita os dois).
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "__meta_docker_container_id"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container_name"
+	}
+
+	// Mesmo service.name dos traces (otel.service.name e OTEL_SERVICE_NAME), para
+	// correlacionar logs e traces no Grafana.
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/workshop-api-qa"
+		replacement   = "workshop-api"
+		target_label  = "service_name"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/caddy-gateway-qa"
+		replacement   = "caddy-gateway"
+		target_label  = "service_name"
+	}
+}
+
+loki.source.docker "containers" {
+	host       = "tcp://docker-logs-proxy:2375"
+	targets    = discovery.relabel.containers.output
+	forward_to = [loki.process.qa.receiver]
+}
+
+loki.process "qa" {
+	// Ruído do Caddy (Fase 4, leitura de 19/10/2026 na PRD): o healthcheck do
+	// container consulta o admin a cada 30 s, e as sondas de /actuator/* somavam
+	// ~85% do volume do gateway.
+	stage.drop {
+		expression          = "\"logger\":\"admin\\.api\",\"msg\":\"received request\""
+		drop_counter_reason = "caddy_admin_healthcheck"
+	}
+
+	stage.drop {
+		expression          = "\"logger\":\"http\\.log\\.access[^\"]*\".*\"uri\":\"/actuator(/|\\?|\")"
+		drop_counter_reason = "caddy_actuator_probe"
+	}
+
+	// Query string fora do access log do Caddy, como url.query nos traces.
+	stage.replace {
+		expression = "\"uri\":\"[^\"?]*(\\?[^\"]*)\""
+		replace    = ""
+	}
+
+	// Defesa complementar à sanitização na origem. Casa formato chave=valor,
+	// "Chave: valor" e JSON ("chave":"valor"), incluindo "Bearer <token>".
+	// Só o grupo capturado (o valor) é substituído.
+	stage.replace {
+		expression = "(?i)\"?(?:password|passwd|secret|token|access_token|refresh_token|authorization|cookie|x-api-key|api[-_]key|cpf)\"?\\s*[:=]\\s*\\[?\"?(?:bearer\\s+)?([^\",;\\s}\\]]+)"
+		replace    = "[REDACTED]"
+	}
+
+	forward_to = [otelcol.receiver.loki.containers.receiver]
+}
+
+otelcol.receiver.loki "containers" {
+	output {
+		logs = [otelcol.processor.transform.resource.input]
+	}
+}
+
+// Os labels Loki chegam como atributos do log; viram atributos de recurso padrão,
+// iguais aos da aplicação. O ambiente não é definido aqui: o Collector de QA o
+// reescreve pela origem.
+otelcol.processor.transform "resource" {
+	error_mode = "ignore"
+
+	log_statements {
+		context    = "log"
+		statements = [
+			`set(resource.attributes["service.name"], attributes["service_name"]) where attributes["service_name"] != nil`,
+			`set(resource.attributes["container.name"], attributes["container_name"]) where attributes["container_name"] != nil`,
+			`delete_key(attributes, "service_name")`,
+			`delete_key(attributes, "container_name")`,
+			`delete_key(attributes, "loki.attribute.labels")`,
+			`set(resource.attributes["log.source"], "docker")`,
+		]
+	}
+
+	output {
+		logs = [otelcol.exporter.otlphttp.collector.input]
+	}
+}
+
+// Sem TLS: o tráfego fica entre dois containers da rede interna cp-logs.
+otelcol.exporter.otlphttp "collector" {
+	client {
+		endpoint = "http://otel-collector-qa-api:4318"
+
+		tls {
+			insecure = true
+		}
+	}
+}
