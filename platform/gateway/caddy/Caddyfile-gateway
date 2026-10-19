@@ -1,5 +1,5 @@
 {
-    email {env.ADMIN_EMAIL}
+    email {file./run/secrets/admin_email}
     # Disable automatic HTTP to HTTPS redirects to prevent redirect loops
     # when traffic comes from Cloudflare Tunnel via HTTP
     auto_https disable_redirects
@@ -80,7 +80,7 @@ api.eletroluk.com {
     import log
     import api_proxy workshop-api:8080
     tls {
-        dns cloudflare {env.CF_API_TOKEN}
+        dns cloudflare {file./run/secrets/cf_api_token}
     }
 }
 
@@ -89,6 +89,6 @@ grafana.eletroluk.com {
     import log
     reverse_proxy grafana-unified:3000
     tls {
-        dns cloudflare {env.CF_API_TOKEN}
+        dns cloudflare {file./run/secrets/cf_api_token}
     }
 }

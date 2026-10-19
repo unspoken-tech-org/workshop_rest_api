@@ -14,10 +14,15 @@ fi
 
 docker tag "${LOCAL_IMAGE_NAME}:backup" "${LOCAL_IMAGE_NAME}:latest"
 
-# Restore previous compose and Caddyfile (snapshotted by deploy workflow sync step)
+# Restore previous compose, .env and Caddyfile (snapshotted by deploy workflow sync step)
 if [ -f "${COMPOSE_FILE}.previous" ]; then
   echo "Restoring previous compose file"
   mv "${COMPOSE_FILE}.previous" "${COMPOSE_FILE}"
+fi
+if [ -f ".env.previous" ]; then
+  echo "Restoring previous .env"
+  mv ".env.previous" ".env"
+  chmod 600 .env
 fi
 if [ -f "infra/caddy/Caddyfile-gateway.previous" ]; then
   echo "Restoring previous Caddyfile"

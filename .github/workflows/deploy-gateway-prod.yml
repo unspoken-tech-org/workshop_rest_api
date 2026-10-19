@@ -170,19 +170,22 @@ jobs:
             "${PAYLOAD_ROOT}/infra/caddy/Caddyfile-gateway"
           cp -- platform/gateway/caddy/Dockerfile \
             "${PAYLOAD_ROOT}/infra/caddy/Dockerfile"
+          mkdir -p "${PAYLOAD_ROOT}/secrets"
+          printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/secrets/cf_api_token"
+          printf '%s' 'admin@example.invalid' > "${PAYLOAD_ROOT}/secrets/admin_email"
           printf '%s\n' \
-            'ADMIN_EMAIL=admin@example.invalid' \
-            'CF_API_TOKEN=validation-token' \
             'CF_API_TOKEN_QA=validation-token' \
             'CLOUDFLARE_TUNNEL_TOKEN=validation-token' \
             'CLOUDFLARE_TUNNEL_TOKEN_QA=validation-token' > "${PAYLOAD_ROOT}/.env"
           docker compose --project-directory "${PAYLOAD_ROOT}" \
             --env-file "${PAYLOAD_ROOT}/.env" \
             -f "${COMPOSE_PAYLOAD}" config --quiet
-          # Snapshot previous versions (for rollback)
+          # Snapshot previous versions (for rollback; .env too, since the previous
+          # compose may still read values from it)
           ssh -o ConnectTimeout=30 "${SSH_TARGET}" \
             "mkdir -p '${DEPLOY_DIR}/infra/caddy' && cd ${DEPLOY_DIR} && \
              [ -f ${COMPOSE_FILE} ] && cp -p ${COMPOSE_FILE} ${COMPOSE_FILE}.previous || true && \
+             [ -f .env ] && cp -p .env .env.previous || true && \
              [ -f infra/caddy/Caddyfile-gateway ] && cp -p infra/caddy/Caddyfile-gateway infra/caddy/Caddyfile-gateway.previous || true"
           # Sync new versions
           scp -o ConnectTimeout=30 \
