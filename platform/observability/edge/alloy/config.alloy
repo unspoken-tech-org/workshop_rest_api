@@ -1,0 +1,136 @@
+// Alloy da borda de PRD: lê o stdout da API e do gateway de produção e envia por
+// OTLP/HTTP ao Collector de borda (otel-collector), que carimba production, repete a
+// redaction e exporta à QA com a fila persistente de 4 horas. O Alloy não envia
+// logs direto à QA nem ao Loki. Mesma ponte do Alloy da QA
+// (platform/observability/control-plane/alloy/config.alloy), com outros nomes de
+// container e outro destino.
+//
+// O acesso ao Docker é feito pelo docker-logs-proxy, somente leitura e com
+// allowlist por nome. A allowlist abaixo repete a do proxy: aqui escolhe os alvos,
+// lá impede a leitura de qualquer outro container. O cloudflared-gateway-prod fica
+// de fora: o token do tunnel está na linha de comando e o inspect o devolveria.
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+discovery.docker "containers" {
+	host             = "tcp://docker-logs-proxy:2375"
+	refresh_interval = "15s"
+}
+
+discovery.relabel "containers" {
+	targets = discovery.docker.containers.targets
+
+	// Allowlist por nome: só a API e o gateway de PRD.
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(workshop-api|caddy-gateway)"
+		action        = "keep"
+	}
+
+	// O loki.source.docker chama o inspect e os logs pelo id do alvo; com o nome no
+	// lugar do id, o proxy consegue aplicar a allowlist (o Docker aceita os dois).
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "__meta_docker_container_id"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container_name"
+	}
+
+	// Mesmo service.name dos traces (otel.service.name e OTEL_SERVICE_NAME), para
+	// correlacionar logs e traces no Grafana. Em PRD o nome do container já é o
+	// nome do serviço.
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "service_name"
+	}
+}
+
+loki.source.docker "containers" {
+	host       = "tcp://docker-logs-proxy:2375"
+	targets    = discovery.relabel.containers.output
+	forward_to = [loki.process.production.receiver]
+}
+
+loki.process "production" {
+	// Ruído do Caddy (Fase 4, leitura de 19/10/2026 na PRD): o healthcheck do
+	// container consulta o admin a cada 30 s, e as sondas de /actuator/* somavam
+	// ~85% do volume do gateway.
+	stage.drop {
+		expression          = "\"logger\":\"admin\\.api\",\"msg\":\"received request\""
+		drop_counter_reason = "caddy_admin_healthcheck"
+	}
+
+	stage.drop {
+		expression          = "\"logger\":\"http\\.log\\.access[^\"]*\".*\"uri\":\"/actuator(/|\\?|\")"
+		drop_counter_reason = "caddy_actuator_probe"
+	}
+
+	// Query string fora do access log do Caddy, como url.query nos traces.
+	stage.replace {
+		expression = "\"uri\":\"[^\"?]*(\\?[^\"]*)\""
+		replace    = ""
+	}
+
+	// Defesa complementar à sanitização na origem. Casa formato chave=valor,
+	// "Chave: valor" e JSON ("chave":"valor"), incluindo "Bearer <token>".
+	// Só o grupo capturado (o valor) é substituído.
+	stage.replace {
+		expression = "(?i)\"?(?:password|passwd|secret|token|access_token|refresh_token|authorization|cookie|x-api-key|api[-_]key|cpf)\"?\\s*[:=]\\s*\\[?\"?(?:bearer\\s+)?([^\",;\\s}\\]]+)"
+		replace    = "[REDACTED]"
+	}
+
+	forward_to = [otelcol.receiver.loki.containers.receiver]
+}
+
+otelcol.receiver.loki "containers" {
+	output {
+		logs = [otelcol.processor.transform.resource.input]
+	}
+}
+
+// Os labels Loki chegam como atributos do log; viram atributos de recurso padrão,
+// iguais aos da aplicação. O ambiente não é definido aqui: o Collector de borda o
+// reescreve pela origem.
+otelcol.processor.transform "resource" {
+	error_mode = "ignore"
+
+	log_statements {
+		context    = "log"
+		statements = [
+			`set(resource.attributes["service.name"], attributes["service_name"]) where attributes["service_name"] != nil`,
+			`set(resource.attributes["container.name"], attributes["container_name"]) where attributes["container_name"] != nil`,
+			`delete_key(attributes, "service_name")`,
+			`delete_key(attributes, "container_name")`,
+			`delete_key(attributes, "loki.attribute.labels")`,
+			`set(resource.attributes["log.source"], "docker")`,
+		]
+	}
+
+	output {
+		logs = [otelcol.exporter.otlphttp.collector.input]
+	}
+}
+
+// Sem TLS: o tráfego fica entre dois containers da rede interna edge-otlp. A fila
+// persistente é a do Collector de borda; a deste exporter é a padrão, em memória e
+// com retry, e cobre um reinício do Collector. A posição de leitura (alloy_data)
+// avança antes do envio: se o Alloy reiniciar com o Collector fora, os logs na fila
+// em memória se perdem.
+otelcol.exporter.otlphttp "collector" {
+	client {
+		endpoint = "http://otel-collector:4318"
+
+		tls {
+			insecure = true
+		}
+	}
+}

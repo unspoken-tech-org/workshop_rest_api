@@ -1,8 +1,9 @@
 # Collector de borda da VM de produção (projeto Compose workshop-edge). Faz o
 # scrape autenticado da API de PRD e o scrape do node-exporter do host e do
 # postgres-exporter do banco, mede a si
-# mesmo e recebe OTLP do próprio projeto: hoje, o Collector de containers
-# (containers-collector), que é o único com acesso à API do Docker e não tem saída.
+# mesmo e recebe OTLP do próprio projeto: o Collector de containers
+# (containers-collector) e o Alloy (logs Docker da API e do gateway), os únicos com
+# acesso à API do Docker, ambos sem saída.
 # Tudo sai por um único exporter OTLP/gRPC para o Collector interno da QA, com fila
 # persistente em disco: a fila absorve a indisponibilidade da QA (meta de 4 horas)
 # e sobrevive a reinícios do container.
@@ -82,7 +83,8 @@ receivers:
   # OTLP do próprio projeto e da API de PRD. Produtores: containers-collector (métricas
   # de containers), pela rede edge-otlp, e a API de PRD (traces do Java Agent) e o gateway
   # (traces do Caddy), pela workshop-metrics, onde este Collector responde ao endpoint
-  # otel-collector. O Alloy entra nas fases seguintes. Os endpoints escutam em 0.0.0.0 dentro do container, por isso o
+  # otel-collector, e o Alloy (logs Docker da API e do gateway), pela edge-otlp. Os
+  # endpoints escutam em 0.0.0.0 dentro do container, por isso o
   # alcance real é o conjunto de redes anexadas a este serviço; por isso não há
   # porta publicada no host.
   otlp:

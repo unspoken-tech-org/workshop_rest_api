@@ -26,17 +26,22 @@
 #   EDGE_PG_MONITOR_PASSWORD_FILE  caminho do arquivo com a senha do papel workshop_metrics
 #   COLLECTOR_QUEUE_BYTES          limite em bytes da fila de cada sinal (64 MiB)
 #
-# Redes: edge-otlp, edge-probe, edge-node, edge-docker e edge-pg são internas e sem
-# saída; edge-egress é a única saída, rumo à QA pela Tailscale; workshop-metrics é
+# Redes: edge-otlp, edge-probe, edge-node, edge-docker, edge-docker-logs e edge-pg
+# são internas e sem saída; edge-egress é a única saída, rumo à QA pela Tailscale;
+# workshop-metrics é
 # compartilhada com a API de PRD (scrape e traces) e com o gateway (traces), e workshop-db-metrics
 # somente com o banco de PRD, para o postgres-exporter. A restrição de quem pode
 # enviar à QA fica na ACL do tailnet (lado da QA).
 #
 # Host e containers: node-exporter (mesmos coletores da QA, para o dashboard Hosts)
 # e containers-collector, que lê containers por docker-api-proxy (allowlist de rotas
-# GET). Só o containers-collector alcança a API do Docker, e ele não tem rota para a
-# internet: envia OTLP ao Collector de borda, que tem credenciais e saída, mas não
-# tem acesso ao socket.
+# GET). Além do Alloy (abaixo), só o containers-collector alcança a API do Docker, e
+# ele não tem rota para a internet: envia OTLP ao Collector de borda, que tem
+# credenciais e saída, mas não tem acesso ao socket.
+# Logs: Alloy, que lê o stdout da API e do gateway de PRD por docker-logs-proxy
+# (allowlist por nome, só ping, versão, listas e inspect e logs desses dois
+# containers) e envia OTLP ao Collector de borda pela edge-otlp, sem saída própria.
+# Os dois proxies montam o socket, cada um na sua rede interna.
 # PostgreSQL: postgres-exporter, com o papel workshop_metrics (pg_monitor). Alcança o
 # banco pela rede interna workshop-db-metrics, que o deploy cria e conecta ao
 # container workshop-db sem reiniciá-lo; o deploy também cria ou atualiza o papel.
@@ -68,7 +73,7 @@ services:
       - ./platform/observability/edge/collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
       - edge_collector_queue:/var/lib/otelcol/file_storage
     networks:
-      # Ingresso OTLP do próprio projeto (hoje, o containers-collector).
+      # Ingresso OTLP do próprio projeto (containers-collector e Alloy).
       - edge-otlp
       - edge-probe
       # Saída para a QA.
@@ -296,9 +301,10 @@ services:
           cpus: "0.10"
           memory: 64M
 
-  # Única via até a API do Docker, por allowlist de rotas (Caddy): GET de
-  # /containers/json, /containers/{id}/json, /containers/{id}/stats, /events,
-  # /version e /_ping; o resto recebe 403. O socket é montado só aqui. O :ro do
+  # Via do containers-collector até a API do Docker, por allowlist de rotas (Caddy):
+  # GET de /containers/json, /containers/{id}/json, /containers/{id}/stats, /events,
+  # /version e /_ping; o resto recebe 403. O socket é montado só aqui e no
+  # docker-logs-proxy (Alloy). O :ro do
   # bind não restringe a API (a restrição é a allowlist no Caddyfile). Sem porta
   # publicada: só a rede edge-docker. A imagem é a Caddy já fixada na plataforma.
   docker-api-proxy:
@@ -334,6 +340,94 @@ services:
           cpus: "0.10"
           memory: 64M
 
+  # Logs da API e do gateway de PRD: lê o stdout dos dois containers pelo
+  # docker-logs-proxy e envia por OTLP/HTTP ao Collector de borda (que carimba
+  # production e exporta à QA pela fila persistente). Sem rota para a internet: só as
+  # redes internas edge-docker-logs e edge-otlp. As posições de leitura ficam no
+  # volume alloy_data, para um reinício não reenviar os logs já lidos; o diretório da
+  # imagem já pertence ao usuário 473, que o volume novo herda. Mesma imagem e
+  # limites do Alloy da QA.
+  alloy:
+    image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    user: "473:473"
+    command:
+      - run
+      - --disable-reporting
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./platform/observability/edge/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    networks:
+      - edge-docker-logs
+      - edge-otlp
+    depends_on:
+      docker-logs-proxy:
+        condition: service_healthy
+      otel-collector-probe:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      # /-/ready só responde 200 depois que todos os componentes carregaram.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/12345 && printf 'GET /-/ready HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+
+  # Allowlist somente leitura da API do Docker para o Alloy
+  # (docker-logs-proxy/Caddyfile), na rede interna edge-docker-logs. Separado do
+  # docker-api-proxy: este libera logs de dois containers, aquele não libera logs.
+  docker-logs-proxy:
+    image: caddy:2.11.6-alpine@sha256:c776e0c6413b544d0459665e54ec7b8b2a15000c0cbee8b254da0067b1d184ff
+    volumes:
+      - ./platform/observability/edge/docker-logs-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - edge-docker-logs
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /data:size=8m,noexec,nosuid,nodev
+      - /config:size=8m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # O binário traz a file capability cap_net_bind_service; sem ela no conjunto
+    # permitido, o exec falha com no-new-privileges (como no Caddy da plataforma).
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 64M
+
 secrets:
   # Caminho absoluto fora da release, definido no ambiente do deploy.
   api_scrape_password:
@@ -343,8 +437,8 @@ secrets:
     file: ${EDGE_PG_MONITOR_PASSWORD_FILE:?EDGE_PG_MONITOR_PASSWORD_FILE is required}
 
 networks:
-  # OTLP do projeto: containers-collector → Collector de borda; sem saída e sem
-  # porta publicada.
+  # OTLP do projeto: containers-collector e Alloy → Collector de borda; sem saída e
+  # sem porta publicada.
   edge-otlp:
     driver: bridge
     internal: true
@@ -358,6 +452,10 @@ networks:
     internal: true
   # Somente containers-collector ↔ allowlist da API do Docker; sem saída.
   edge-docker:
+    driver: bridge
+    internal: true
+  # Somente Alloy ↔ docker-logs-proxy; sem saída.
+  edge-docker-logs:
     driver: bridge
     internal: true
   # Somente Collector ↔ postgres-exporter; sem saída.
@@ -384,4 +482,5 @@ networks:
     external: true
 
 volumes:
+  alloy_data:
   edge_collector_queue:

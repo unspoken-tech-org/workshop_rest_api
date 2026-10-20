@@ -1,0 +1,77 @@
+# Allowlist da API do Docker para o Alloy da borda (logs da API e do gateway de PRD).
+# Só GET nas rotas de que o discovery.docker e o loki.source.docker precisam: ping,
+# versão, lista de containers e de redes, e o inspect e os logs dos containers
+# permitidos, por nome. Qualquer outra rota recebe 403. O socket fica montado
+# somente neste container e no docker-api-proxy, cada um na sua rede interna.
+# Separado do docker-api-proxy: aquele serve o docker_stats e não libera logs.
+#
+# Allowlist por nome, não por label: o Alloy reescreve o id do alvo para o nome do
+# container (config.alloy), então o inspect e os logs chegam aqui como
+# /containers/<nome>/... e só os nomes abaixo passam. Os logs do banco, do
+# cloudflared e dos containers da observabilidade ficam fora mesmo que o Alloy seja
+# mal configurado.
+#
+# O inspect devolve Config.Env dos containers permitidos; o loki.source.docker exige
+# essa rota (lê Config.Tty antes de abrir os logs). Os dois não levam segredo no env:
+# a senha do banco (#93) e o token da Cloudflare e o e-mail do ACME (#103) vão como
+# file secrets. Um segredo novo no env desses containers fica visível ao Alloy.
+#
+# Defesa antes da allowlist: path com ".." ou "//" recebe 403 (o upstream recebe o
+# path sem a limpeza do Caddy; a checagem lê o placeholder cru). Query no inspect
+# também recebe 403, e na lista só size é recusado (faz o Docker calcular o
+# tamanho do filesystem de cada container).
+{
+	admin off
+	auto_https off
+}
+
+:2375 {
+	# O cliente Docker pode prefixar a versão da API (/v1.xx); o prefixo é opcional.
+	@allowed {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/(_ping|version|containers/json|networks)$
+	}
+	@container {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/(workshop-api|caddy-gateway)/(json|logs)$
+	}
+	@traversal expression {http.request.orig_uri.path}.contains("..") || {http.request.orig_uri.path}.contains("//")
+	@inspect_query {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/[^/]+/json$
+		expression {http.request.orig_uri.query} != ""
+	}
+	@list_size {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/json$
+		query size=*
+	}
+
+	handle @traversal {
+		respond 403
+	}
+
+	handle @inspect_query {
+		respond 403
+	}
+
+	handle @list_size {
+		respond 403
+	}
+
+	handle @allowed {
+		reverse_proxy unix//var/run/docker.sock
+	}
+
+	handle @container {
+		reverse_proxy unix//var/run/docker.sock {
+			# Os logs com follow são uma resposta em stream: sem buffer, senão o
+			# Alloy espera o fim da resposta.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond 403
+	}
+}
