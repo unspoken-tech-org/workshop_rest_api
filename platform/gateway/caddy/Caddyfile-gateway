@@ -11,7 +11,13 @@
 (log) {
     log {
         output stderr
-        format json
+        # O IP do cliente fica só em request.client_ip (resolvido pelos
+        # trusted_proxies); os headers de origem do IP saem por duplicarem o dado.
+        format filter {
+            wrap json
+            request>headers>Cf-Connecting-Ip delete
+            request>headers>X-Forwarded-For delete
+        }
     }
 }
 
