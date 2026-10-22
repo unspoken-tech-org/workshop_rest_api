@@ -326,6 +326,7 @@ services:
       - -config.file=/etc/loki/config.yaml
     volumes:
       - ./platform/observability/control-plane/loki/config.yaml:/etc/loki/config.yaml:ro
+      - ./platform/observability/control-plane/loki/rules:/etc/loki/rules/fake:ro
       - loki_data:/loki
     networks:
       - cp-backend

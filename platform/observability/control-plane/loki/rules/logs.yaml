@@ -1,0 +1,51 @@
+# Regras do ruler do Loki (tenant fake, auth desligado). Valem para os logs de PRD
+# e de QA, que chegam ao mesmo Loki. As métricas do Alloy (detecção rápida de
+# coleta parada) ficam no Prometheus; aqui só o que depende do conteúdo dos logs.
+groups:
+  - name: docker-logs-proxy
+    interval: 1m
+    rules:
+      # O proxy só registra recusas (log_skip nas rotas permitidas). Filtra por
+      # status, não por nível: cada início do Caddy emite três linhas warn sem request.
+      - alert: DockerLogsProxyRefusals
+        expr: |
+          sum by (deployment_environment_name) (
+            count_over_time({service_name="docker-logs-proxy"} | json | status = 403 [10m])
+          ) > 0
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "docker-logs-proxy recusou requisições"
+          description: "O docker-logs-proxy de {{ $labels.deployment_environment_name }} recusou {{ $value }} requisição(ões) nos últimos 10 minutos; só o Alloy alcança o proxy."
+
+  # Rede de segurança do caminho inteiro (Alloy, Collectors, fila e Loki). Sem as
+  # sondas, a API e o gateway ficam horas sem nenhuma linha: medido em 22/10/2026,
+  # lacuna máxima de 7 h em PRD e 14 h na QA. Por isso 24 h em PRD e 72 h na QA
+  # (fim de semana sem homologação).
+  - name: logs-absent
+    interval: 5m
+    rules:
+      - alert: ProductionLogsAbsent
+        expr: |
+          absent_over_time({service_name="workshop-api", deployment_environment_name="production"}[24h])
+          or
+          absent_over_time({service_name="caddy-gateway", deployment_environment_name="production"}[24h])
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Logs de PRD ausentes no Loki"
+          description: "Nenhuma linha de {{ $labels.service_name }} de produção chegou ao Loki nas últimas 24 horas."
+
+      - alert: QaLogsAbsent
+        expr: |
+          absent_over_time({service_name="workshop-api", deployment_environment_name="qa"}[72h])
+          or
+          absent_over_time({service_name="caddy-gateway", deployment_environment_name="qa"}[72h])
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Logs da QA ausentes no Loki"
+          description: "Nenhuma linha de {{ $labels.service_name }} da QA chegou ao Loki nas últimas 72 horas."
