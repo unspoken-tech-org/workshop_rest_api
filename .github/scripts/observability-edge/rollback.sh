@@ -53,6 +53,7 @@ switch_current_to "${previous_dir}"
 restore_pg_monitor_role "${previous_dir}" "${failed_dir}"
 # Same project, previous files; recreate everything so secrets are
 # remounted from the restored release (Compose does not hash them).
+stop_alloy
 compose_in "${previous_dir}" up -d --remove-orphans --force-recreate
 compose_in "${previous_dir}" ps
 rm -rf -- "${failed_dir}"

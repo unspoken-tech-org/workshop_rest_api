@@ -52,6 +52,7 @@ echo "Activated control-plane release ${RELEASE_ID}"
 
 # Compose does not hash secret sources, so a kept container would still read
 # the previous release's secrets (or none, after a failed creation).
+stop_alloy
 compose_in "${release_dir}" up -d --remove-orphans --force-recreate
 compose_in "${release_dir}" ps
 wait_until_ready "${release_dir}"
