@@ -120,11 +120,14 @@ otelcol.processor.transform "resource" {
 	}
 }
 
-// Sem TLS: o tráfego fica entre dois containers da rede interna edge-otlp. A fila
-// persistente é a do Collector de borda; a deste exporter é a padrão, em memória e
-// com retry, e cobre um reinício do Collector. A posição de leitura (alloy_data)
-// avança antes do envio: se o Alloy reiniciar com o Collector fora, os logs na fila
-// em memória se perdem.
+// Fila do exporter em disco, no volume alloy_data (sobrevive ao reinício e ao
+// --force-recreate do deploy). Sem directory: o padrão fica em --storage.path.
+// Componente public-preview no v1.20.1, liberado por --stability.level no compose.
+otelcol.storage.file "queue" { }
+
+// Sem TLS: o tráfego fica entre dois containers da rede interna edge-otlp. A posição
+// de leitura (alloy_data) avança antes do envio; a fila em disco guarda o que ainda
+// não foi entregue, para um reinício com o Collector fora não perder logs.
 otelcol.exporter.otlphttp "collector" {
 	client {
 		endpoint = "http://otel-collector:4318"
@@ -132,5 +135,14 @@ otelcol.exporter.otlphttp "collector" {
 		tls {
 			insecure = true
 		}
+	}
+
+	// Retry sem prazo, como no Collector de borda: o padrão desiste após 5 minutos.
+	retry_on_failure {
+		max_elapsed_time = "0s"
+	}
+
+	sending_queue {
+		storage = otelcol.storage.file.queue.handler
 	}
 }
