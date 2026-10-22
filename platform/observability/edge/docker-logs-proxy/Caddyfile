@@ -1,5 +1,5 @@
 # Allowlist da API do Docker para o Alloy da borda (logs da API e do gateway de PRD).
-# Só GET nas rotas de que o discovery.docker e o loki.source.docker precisam: ping,
+# Só GET (e HEAD no ping) nas rotas de que o discovery.docker e o loki.source.docker precisam: ping,
 # versão, lista de containers e de redes, e o inspect e os logs dos containers
 # permitidos, por nome. Qualquer outra rota recebe 403. O socket fica montado
 # somente neste container e no docker-api-proxy, cada um na sua rede interna.
@@ -40,6 +40,12 @@
 		method GET
 		path_regexp ^(/v[0-9.]+)?/(_ping|version|containers/json|networks)$
 	}
+	# O cliente Docker negocia a versão com HEAD /_ping e só depois tenta GET; sem
+	# esta rota, cada início do Alloy deixa recusas no log.
+	@ping_head {
+		method HEAD
+		path_regexp ^(/v[0-9.]+)?/_ping$
+	}
 	@container {
 		method GET
 		path_regexp ^(/v[0-9.]+)?/containers/(workshop-api|caddy-gateway|workshop-edge-docker-logs-proxy-1)/(json|logs)$
@@ -66,6 +72,11 @@
 
 	handle @list_size {
 		respond 403
+	}
+
+	handle @ping_head {
+		log_skip
+		reverse_proxy unix//var/run/docker.sock
 	}
 
 	handle @allowed {
