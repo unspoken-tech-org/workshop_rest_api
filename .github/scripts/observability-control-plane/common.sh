@@ -51,6 +51,18 @@ compose_in() {
     "$@"
 }
 
+# Para o Alloy antes de um up --force-recreate. O Compose recria o docker-logs-proxy
+# antes dele; com o proxy fora, o discovery perde os alvos, e o loki.source.docker
+# apaga a posição de um alvo que some com o componente rodando. O Alloy novo leria
+# de novo todo o log retido dos containers. Parado antes, ele grava a posição e o
+# novo retoma dela. Sem container do Alloy (primeiro deploy), não faz nada.
+stop_alloy() {
+  docker ps -q \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" \
+    --filter "label=com.docker.compose.service=alloy" \
+    | xargs -r docker stop >/dev/null
+}
+
 current_release_dir() {
   [[ -L "${CURRENT_LINK}" ]] || return 1
   readlink -f -- "${CURRENT_LINK}"

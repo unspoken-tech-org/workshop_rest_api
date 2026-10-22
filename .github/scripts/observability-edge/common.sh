@@ -69,6 +69,18 @@ compose_in() {
       "$@"
 }
 
+# Para o Alloy antes de um up --force-recreate. O Compose recria o docker-logs-proxy
+# antes dele; com o proxy fora, o discovery perde os alvos, e o loki.source.docker
+# apaga a posição de um alvo que some com o componente rodando. O Alloy novo leria
+# de novo todo o log retido dos containers. Parado antes, ele grava a posição e o
+# novo retoma dela. Sem container do Alloy (primeiro deploy), não faz nada.
+stop_alloy() {
+  docker ps -q \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" \
+    --filter "label=com.docker.compose.service=alloy" \
+    | xargs -r docker stop >/dev/null
+}
+
 # Rede interna do banco: criada se faltar e conectada ao workshop-db sem reiniciá-lo.
 # Idempotente. Se o banco for recriado pelo Compose da API, a conexão some e volta
 # no próximo deploy desta borda.
