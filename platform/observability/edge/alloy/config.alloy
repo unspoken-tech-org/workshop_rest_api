@@ -23,10 +23,10 @@ discovery.docker "containers" {
 discovery.relabel "containers" {
 	targets = discovery.docker.containers.targets
 
-	// Allowlist por nome: só a API e o gateway de PRD.
+	// Allowlist por nome: a API e o gateway de PRD e as recusas do docker-logs-proxy.
 	rule {
 		source_labels = ["__meta_docker_container_name"]
-		regex         = "/(workshop-api|caddy-gateway)"
+		regex         = "/(workshop-api|caddy-gateway|workshop-edge-docker-logs-proxy-1)"
 		action        = "keep"
 	}
 
@@ -50,6 +50,13 @@ discovery.relabel "containers" {
 	rule {
 		source_labels = ["__meta_docker_container_name"]
 		regex         = "/(.*)"
+		target_label  = "service_name"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/workshop-edge-docker-logs-proxy-1"
+		replacement   = "docker-logs-proxy"
 		target_label  = "service_name"
 	}
 }
