@@ -20,12 +20,21 @@
 # path sem a limpeza do Caddy; a checagem lê o placeholder cru). Query no inspect
 # também recebe 403, e na lista só size é recusado (faz o Docker calcular o
 # tamanho do filesystem de cada container).
+#
+# Access log só das recusas: as rotas permitidas usam log_skip, então cada linha
+# do log é um 403. O Alloy coleta o stdout deste container (o próprio nome está
+# na allowlist de logs), e uma recusa fica visível no Loki.
 {
 	admin off
 	auto_https off
 }
 
 :2375 {
+	log {
+		output stdout
+		format json
+	}
+
 	# O cliente Docker pode prefixar a versão da API (/v1.xx); o prefixo é opcional.
 	@allowed {
 		method GET
@@ -33,7 +42,7 @@
 	}
 	@container {
 		method GET
-		path_regexp ^(/v[0-9.]+)?/containers/(workshop-api|caddy-gateway)/(json|logs)$
+		path_regexp ^(/v[0-9.]+)?/containers/(workshop-api|caddy-gateway|workshop-edge-docker-logs-proxy-1)/(json|logs)$
 	}
 	@traversal expression {http.request.orig_uri.path}.contains("..") || {http.request.orig_uri.path}.contains("//")
 	@inspect_query {
@@ -60,10 +69,12 @@
 	}
 
 	handle @allowed {
+		log_skip
 		reverse_proxy unix//var/run/docker.sock
 	}
 
 	handle @container {
+		log_skip
 		reverse_proxy unix//var/run/docker.sock {
 			# Os logs com follow são uma resposta em stream: sem buffer, senão o
 			# Alloy espera o fim da resposta.

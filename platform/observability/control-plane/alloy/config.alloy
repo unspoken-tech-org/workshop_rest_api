@@ -20,10 +20,10 @@ discovery.docker "containers" {
 discovery.relabel "containers" {
 	targets = discovery.docker.containers.targets
 
-	// Allowlist por nome: só a API e o gateway de QA.
+	// Allowlist por nome: a API e o gateway de QA e as recusas do docker-logs-proxy.
 	rule {
 		source_labels = ["__meta_docker_container_name"]
-		regex         = "/(workshop-api-qa|caddy-gateway-qa)"
+		regex         = "/(workshop-api-qa|caddy-gateway-qa|observability-control-plane-qa-docker-logs-proxy-1)"
 		action        = "keep"
 	}
 
@@ -54,6 +54,13 @@ discovery.relabel "containers" {
 		source_labels = ["__meta_docker_container_name"]
 		regex         = "/caddy-gateway-qa"
 		replacement   = "caddy-gateway"
+		target_label  = "service_name"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/observability-control-plane-qa-docker-logs-proxy-1"
+		replacement   = "docker-logs-proxy"
 		target_label  = "service_name"
 	}
 }
