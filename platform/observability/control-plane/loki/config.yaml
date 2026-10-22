@@ -62,6 +62,14 @@ compactor:
 
 ruler:
   alertmanager_url: http://alertmanager:9093
+  # Regras versionadas em loki/rules, montadas só leitura no diretório do tenant
+  # fake (auth desligado). O rule_path é o rascunho do ruler, no volume.
+  storage:
+    type: local
+    local:
+      directory: /etc/loki/rules
+  rule_path: /loki/rules-temp
+  enable_api: true
 
 analytics:
   reporting_enabled: false
