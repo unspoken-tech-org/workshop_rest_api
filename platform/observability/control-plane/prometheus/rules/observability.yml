@@ -267,6 +267,17 @@ groups:
           summary: "Prometheus rejeitando amostras fora de ordem"
           description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
 
+      # Linhas recusadas pelo Loki (fora da janela de 6 horas no replay, limite
+      # de taxa, linha grande demais): perda de logs, sem retry no Collector.
+      - alert: LokiDiscardedSamples
+        expr: sum by (reason) (increase(loki_discarded_samples_total{job="loki"}[10m])) > 0
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Loki descartando linhas de log"
+          description: "O Loki recusou linhas de log nos últimos 10 minutos (motivo {{ $labels.reason }})."
+
   # Host e containers de PRD, chegados pela borda (jobs workshop/node-exporter e
   # workshop/docker-stats). As regras de ausência só valem com a borda atualizada:
   # antes do deploy dos novos coletores, a ausência é o estado real.

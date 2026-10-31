@@ -18,6 +18,12 @@ common:
     kvstore:
       store: inmemory
 
+# Replay da fila da borda após queda PRD → QA: o Loki só aceita linha até
+# max_chunk_age/2 atrás da mais nova do stream (padrão 2h, janela de 1 h). Com
+# 12h a janela é de 6 horas, a mesma do out_of_order_time_window do Prometheus.
+ingester:
+  max_chunk_age: 12h
+
 schema_config:
   configs:
     - from: 2024-01-01
