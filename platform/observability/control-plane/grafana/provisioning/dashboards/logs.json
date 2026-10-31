@@ -1,0 +1,714 @@
+{
+  "uid": "logs",
+  "title": "Logs",
+  "tags": [
+    "workshop",
+    "observability",
+    "logs"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "type": "custom",
+        "name": "env",
+        "label": "Ambiente",
+        "query": "Produção : production,QA : qa",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 0
+      },
+      {
+        "type": "custom",
+        "name": "service",
+        "label": "Serviço",
+        "query": "workshop-api,caddy-gateway,docker-logs-proxy",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 0
+      },
+      {
+        "type": "textbox",
+        "name": "busca",
+        "label": "Busca",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Volume",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Linhas por serviço",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 9,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (deployment_environment_name, service_name) (count_over_time({service_namespace=\"workshop\", deployment_environment_name=~\"$env\", service_name=~\"$service\"} |~ \"(?i)$busca\" [$__auto]))",
+          "legendFormat": "{{service_name}} ({{deployment_environment_name}})",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Linhas por nível",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 1,
+        "w": 9,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (detected_level) (count_over_time({service_namespace=\"workshop\", deployment_environment_name=~\"$env\", service_name=~\"$service\"} |~ \"(?i)$busca\" [$__auto]))",
+          "legendFormat": "{{detected_level}}",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "description": "Nível detectado pelo Loki na ingestão (detected_level)."
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Erros e avisos no período",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({service_namespace=\"workshop\", deployment_environment_name=~\"$env\", service_name=~\"$service\"} | detected_level=\"error\" [$__range]))",
+          "legendFormat": "Erros",
+          "queryType": "instant"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({service_namespace=\"workshop\", deployment_environment_name=~\"$env\", service_name=~\"$service\"} | detected_level=\"warn\" [$__range]))",
+          "legendFormat": "Avisos",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Erros"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Gateway e proxy",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Acessos do gateway por status",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (deployment_environment_name, status) (count_over_time({service_name=\"caddy-gateway\", deployment_environment_name=~\"$env\"} | json logger, status | logger=~\"http\\\\.log\\\\.access.*\" [$__auto]))",
+          "legendFormat": "{{status}} ({{deployment_environment_name}})",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "description": "Access log do Caddy (logger http.log.access.*), um registro por requisição."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Recusas do docker-logs-proxy (403)",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (deployment_environment_name) (count_over_time({service_name=\"docker-logs-proxy\", deployment_environment_name=~\"$env\"} | json | status = 403 [$__auto]))",
+          "legendFormat": "{{deployment_environment_name}}",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "description": "Mesmo sinal do alerta DockerLogsProxyRefusals: o proxy só registra recusas, e só o Alloy deveria alcançá-lo."
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Coleta (Alloy)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Alloy no ar",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 4,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (deployment_environment_name) (up{job=\"workshop/alloy\", deployment_environment_name=~\"$env\"})",
+          "legendFormat": "{{deployment_environment_name}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "sem dados",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "fora",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "no ar",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      },
+      "description": "Sem dados por mais de 10 minutos dispara AlloyProductionMetricsAbsent ou AlloyQaMetricsAbsent."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Linhas lidas do Docker",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 19,
+        "w": 10,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (deployment_environment_name) (rate(loki_source_docker_target_entries_total{job=\"workshop/alloy\", deployment_environment_name=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{deployment_environment_name}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "description": "Linhas por segundo que o Alloy leu dos containers."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Envio de logs ao Collector",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 19,
+        "w": 10,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (deployment_environment_name) (rate(otelcol_exporter_sent_log_records_total{job=\"workshop/alloy\", deployment_environment_name=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "enviados ({{deployment_environment_name}})",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (deployment_environment_name) (rate(otelcol_exporter_send_failed_log_records_total{job=\"workshop/alloy\", deployment_environment_name=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "falha permanente ({{deployment_environment_name}})",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (deployment_environment_name) (rate(otelcol_exporter_enqueue_failed_log_records_total{job=\"workshop/alloy\", deployment_environment_name=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "fila cheia ({{deployment_environment_name}})",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "description": "Registros por segundo. As séries de falha só existem depois da primeira falha."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Fila de logs do Alloy (fração da capacidade)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (deployment_environment_name) (otelcol_exporter_queue_size{job=\"workshop/alloy\", deployment_environment_name=~\"$env\", data_type=\"logs\"}) / max by (deployment_environment_name) (otelcol_exporter_queue_capacity{job=\"workshop/alloy\", deployment_environment_name=~\"$env\", data_type=\"logs\"})",
+          "legendFormat": "{{deployment_environment_name}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "description": "Fila em disco do exporter. Acima de 0 sem envio por 10 minutos dispara AlloyLogsQueueBacklog."
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Componentes do Alloy fora de healthy",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (deployment_environment_name, health_type) (alloy_component_controller_running_components{job=\"workshop/alloy\", deployment_environment_name=~\"$env\", health_type!=\"healthy\"})",
+          "legendFormat": "{{health_type}} ({{deployment_environment_name}})",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "description": "Vazio é o esperado. Acima de 0 por 10 minutos dispara AlloyComponentUnhealthy."
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Linhas",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "type": "logs",
+      "title": "Linhas WARN/ERROR",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_namespace=\"workshop\", deployment_environment_name=~\"$env\", service_name=~\"$service\"} | detected_level=~\"warn|error\" |~ \"(?i)$busca\"",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "prettifyLogMessage": false,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 16,
+      "type": "logs",
+      "title": "Todas as linhas",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_namespace=\"workshop\", deployment_environment_name=~\"$env\", service_name=~\"$service\"} |~ \"(?i)$busca\"",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "prettifyLogMessage": false,
+        "dedupStrategy": "none"
+      },
+      "description": "Filtradas por Ambiente, Serviço e Busca (regex, sem diferenciar maiúsculas)."
+    }
+  ]
+}
