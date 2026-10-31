@@ -8,11 +8,10 @@
 #   - workshop-db: PostgreSQL (porta 5445)
 #   - workshop-api: Aplicação Spring Boot (porta 8080)
 #   - loki: Agregador de logs (porta 3100)
-#   - promtail: Coletor de logs dos containers
 #   - grafana: Dashboard de visualização (porta 3000)
 #
-# LEGADO: espelha a stack atual de PRD (Loki 2.9 + Promtail), mantida até o
-# cutover da Fase 4 do plano de observabilidade. A stack OTLP (Collector,
+# LEGADO: Loki 2.9 e Grafana sem coletor; o Promtail saiu junto com a stack
+# legada de PRD na Fase 4 do plano de observabilidade. A stack OTLP (Collector,
 # Alloy, Loki 3, Prometheus 3, Tempo) e a API sobre base sintética ficam em
 # platform/observability/local (ver o README desse diretório).
 
@@ -75,20 +74,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-  promtail:
-    image: grafana/promtail:2.9.2
-    container_name: promtail
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./platform/observability/promtail/local.yaml:/etc/promtail/config.yaml:ro
-    command: -config.file=/etc/promtail/config.yaml
-    depends_on:
-      - loki
-    networks:
-      - workshop-local-network
-    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:10.2.3
