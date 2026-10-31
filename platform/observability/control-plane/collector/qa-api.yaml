@@ -1,8 +1,8 @@
 # Collector dedicado à homologação (VM de QA, projeto observability-control-plane-qa).
 # Recebe por OTLP/HTTP os traces da API e do gateway (Caddy) de QA, pela rede qa-metrics
 # (workshop-metrics), e os logs do stdout desses dois containers, pelo Alloy na rede
-# cp-logs; nas duas responde pelo nome do serviço otel-collector-qa-api. Métricas vêm
-# do scrape do Prometheus.
+# cp-logs; nas duas responde pelo nome do serviço otel-collector-qa-api. As métricas da
+# API e do gateway vêm do scrape do Prometheus; por OTLP chegam só as do próprio Alloy.
 #
 # Não é o Collector interno do plano de controle: esse carimba tudo como production e
 # recebe a produção pela Tailscale. Este carimba qa e não tem rota para a produção.
@@ -84,6 +84,13 @@ processors:
       - key: service.namespace
         value: workshop
         action: upsert
+
+  # Política de dados da borda: service.instance.id nunca vira label de métrica (no
+  # Prometheus ele viraria o label "instance"; no Alloy é o hostname do container).
+  resource/metrics-labels:
+    attributes:
+      - key: service.instance.id
+        action: delete
 
   # Caminho de requisições da API que não casaram rota (R25): bot batendo em URL
   # inexistente, ou 401/403 barrado pelo Spring Security antes do controller. Sem
@@ -207,6 +214,26 @@ exporters:
       max_interval: 30s
       max_elapsed_time: 0s
 
+  # Métricas do Alloy, pela cp-backend. Mesma fila em memória e mesmo retry do Tempo,
+  # com fila própria de 16 MiB.
+  otlp_http/prometheus:
+    metrics_endpoint: http://prometheus:9090/api/v1/otlp/v1/metrics
+    timeout: 10s
+    sending_queue:
+      enabled: true
+      sizer: bytes
+      queue_size: 16777216
+      batch:
+        flush_timeout: 5s
+        sizer: items
+        min_size: 512
+        max_size: 1024
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 0s
+
 service:
   extensions:
     - health_check
@@ -235,6 +262,17 @@ service:
         - attributes/redact
       exporters:
         - otlp_grpc/tempo
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resource/redact
+        - resource/qa
+        - resource/metrics-labels
+        - attributes/redact
+      exporters:
+        - otlp_http/prometheus
     logs:
       receivers:
         - otlp

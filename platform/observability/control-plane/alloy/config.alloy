@@ -131,6 +131,43 @@ otelcol.processor.transform "resource" {
 	}
 }
 
+// Métricas do próprio Alloy, para os alertas do grupo alloy
+// (control-plane/prometheus/rules/observability.yml). O exporter.self lê em memória,
+// sem porta nova, e as séries saem pelo mesmo exporter e pela mesma fila dos logs.
+// O Collector de QA carimba o ambiente e o namespace: o job chega como workshop/alloy.
+prometheus.exporter.self "alloy" { }
+
+prometheus.scrape "alloy" {
+	targets         = prometheus.exporter.self.alloy.targets
+	scrape_interval = "15s"
+	forward_to      = [prometheus.relabel.alloy.receiver]
+}
+
+prometheus.relabel "alloy" {
+	// Só as séries dos alertas, mais a versão (alloy_build_info) e o volume lido
+	// (loki_source_docker_target_entries_total), para consulta.
+	rule {
+		source_labels = ["__name__"]
+		regex         = "up|alloy_build_info|alloy_component_controller_running_components|prometheus_sd_refresh_failures_total|loki_source_docker_target_entries_total|otelcol_exporter_(sent|send_failed|enqueue_failed)_log_records_total|otelcol_exporter_queue_(size|capacity)"
+		action        = "keep"
+	}
+
+	// O alvo do exporter.self traz job="integrations/self", que prevalece sobre o
+	// job_name do scrape; o job vira o service.name no OTLP.
+	rule {
+		target_label = "job"
+		replacement  = "alloy"
+	}
+
+	forward_to = [otelcol.receiver.prometheus.alloy.receiver]
+}
+
+otelcol.receiver.prometheus "alloy" {
+	output {
+		metrics = [otelcol.exporter.otlphttp.collector.input]
+	}
+}
+
 // Fila do exporter em disco, no volume alloy_data (sobrevive ao reinício e ao
 // --force-recreate do deploy). Sem directory: o padrão fica em --storage.path.
 // Componente public-preview no v1.20.1, liberado por --stability.level no compose.
