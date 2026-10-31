@@ -269,8 +269,16 @@ groups:
 
       # Linhas recusadas pelo Loki (fora da janela de 6 horas no replay, limite
       # de taxa, linha grande demais): perda de logs, sem retry no Collector.
+      # O contador só nasce no primeiro descarte, já com valor, e o increase()
+      # não o vê: a segunda parte pega a série nova (offset = janela, sem for).
       - alert: LokiDiscardedSamples
-        expr: sum by (reason) (increase(loki_discarded_samples_total{job="loki"}[10m])) > 0
+        expr: |
+          sum by (reason) (increase(loki_discarded_samples_total{job="loki"}[10m])) > 0
+          or
+          sum by (reason) (
+            loki_discarded_samples_total{job="loki"} > 0
+              unless loki_discarded_samples_total{job="loki"} offset 10m
+          )
         labels:
           severity: warning
           owner: platform
