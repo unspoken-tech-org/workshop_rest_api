@@ -314,10 +314,8 @@ docker compose --project-directory . -p workshop_rest_api -f environments/local/
 open http://localhost:3000  # admin/admin
 ```
 
-`environments/local/compose.yml` is the legacy stack (Loki 2.9 + Promtail), kept until the OTLP cutover. The OTLP
+`environments/local/compose.yml` is the legacy stack (Loki 2.9 + Grafana, no collector since Promtail was retired). The OTLP
 stack (Collector, Alloy, Loki 3, Prometheus 3, Tempo) lives in `platform/observability/local/` (see its README).
-
-> **Note:** The application must run as a Docker container for Promtail to capture logs.
 
 ### Service Endpoints (with Observability)
 
@@ -459,7 +457,7 @@ uploading it, while `COMPOSE_FILE` and `DEPLOY_DIR` continue to identify the exi
 |-----------|--------------------|
 | API | `apps/api/compose/{production,qa,local}.yml`, `apps/api/docker/`, `apps/api/infra/pgbackrest/` |
 | Gateway | `platform/gateway/compose/`, `platform/gateway/caddy/` |
-| Observability | `platform/observability/{compose,loki,promtail,grafana}/` |
+| Observability | `platform/observability/{control-plane,edge,local,loki}/` |
 | Full local stack | `environments/local/compose.yml` |
 
 The API image is built with the repository root as Buildx context (`context: .`) and
@@ -520,10 +518,7 @@ workshop_rest_api/
 │   ├── compose/                 # Stacks de gateway (produção e QA)
 │   └── caddy/                   # Caddyfile e Dockerfile
 ├── platform/observability/
-│   ├── compose/                 # Stacks Loki/Promtail/Grafana
-│   ├── loki/                    # Configurações Loki
-│   ├── promtail/                # Configurações Promtail
-│   └── grafana/                 # Provisionamento de datasources
+│   └── loki/                    # Configuração do Loki legado (stack local)
 ├── environments/local/compose.yml # Stack local completo
 └── .github/
     ├── actions/
