@@ -63,7 +63,7 @@ env:
   # Read-only scrape identity, the same one the QA Prometheus uses.
   API_SCRAPE_USERNAME: metrics-scraper
   # 512 MiB per signal (~11 h of metrics at the 45 MB/h hourly peak measured over
-  # 7 days on 2026-10-31; 4 h use ~35%). The VM checks free disk against 3 x
+  # 14 days on 2026-10-31; 4 h use ~35%). The VM checks free disk against 3 x
   # this value.
   COLLECTOR_QUEUE_BYTES: '536870912'
 
