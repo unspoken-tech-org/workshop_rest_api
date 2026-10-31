@@ -826,3 +826,133 @@ tests:
             exp_annotations:
               summary: "Sinal de vida da cadeia de alertas"
               description: "Sempre disparado; a ausência de pings no Healthchecks.io indica que Prometheus ou Alertmanager pararam de notificar."
+
+  # Alloy (job workshop/alloy): ausência por ambiente, sem um satisfazer o outro.
+  - name: alloy de PRD ausente alerta critical e a QA presente não alerta
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/alloy",deployment_environment_name="production"}'
+        values: '1x3'
+      - series: 'up{job="workshop/alloy",deployment_environment_name="qa"}'
+        values: '1x40'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: AlloyProductionMetricsAbsent
+      - eval_time: 19m
+        alertname: AlloyProductionMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/alloy
+              deployment_environment_name: production
+            exp_annotations:
+              summary: "Métricas do Alloy de PRD ausentes"
+              description: "Nenhuma amostra do Alloy de PRD chegou nos últimos 10 minutos: o Alloy ou o Collector de borda estão parados, ou a borda não alcança a QA."
+      - eval_time: 19m
+        alertname: AlloyQaMetricsAbsent
+
+  - name: alloy de QA ausente alerta warning
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/alloy",deployment_environment_name="production"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: AlloyQaMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/alloy
+              deployment_environment_name: qa
+            exp_annotations:
+              summary: "Métricas do Alloy de QA ausentes"
+              description: "Nenhuma amostra do Alloy de QA chegou nos últimos 10 minutos: o Alloy ou o otel-collector-qa-api estão parados."
+      - eval_time: 6m
+        alertname: AlloyProductionMetricsAbsent
+
+  - name: componente do alloy não saudável alerta após 10 minutos
+    interval: 1m
+    input_series:
+      - series: 'alloy_component_controller_running_components{job="workshop/alloy",deployment_environment_name="production",controller_path="/",health_type="healthy"}'
+        values: '7x30'
+      - series: 'alloy_component_controller_running_components{job="workshop/alloy",deployment_environment_name="production",controller_path="/",health_type="unhealthy"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AlloyComponentUnhealthy
+      - eval_time: 15m
+        alertname: AlloyComponentUnhealthy
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              deployment_environment_name: production
+              health_type: unhealthy
+            exp_annotations:
+              summary: "Componente do Alloy não saudável"
+              description: "O Alloy de production tem componente em estado unhealthy há mais de 10 minutos."
+
+  # Refresh a cada 15 s: 4 falhas por minuto com o proxy fora.
+  - name: alloy sem acesso ao docker alerta e contador parado não alerta
+    interval: 1m
+    input_series:
+      - series: 'prometheus_sd_refresh_failures_total{job="workshop/alloy",deployment_environment_name="qa",component_id="discovery.docker.containers",mechanism="docker"}'
+        values: '0+4x30'
+      - series: 'prometheus_sd_refresh_failures_total{job="workshop/alloy",deployment_environment_name="production",component_id="discovery.docker.containers",mechanism="docker"}'
+        values: '3x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: AlloyDockerDiscoveryFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              deployment_environment_name: qa
+            exp_annotations:
+              summary: "Alloy sem acesso ao Docker"
+              description: "O Alloy de qa não consegue listar os containers pelo docker-logs-proxy há mais de 10 minutos."
+
+  - name: fila de logs do alloy parada alerta e com envio ativo não alerta
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_queue_size{job="workshop/alloy",deployment_environment_name="production",exporter="otlp_http/otelcol.exporter.otlphttp.collector",data_type="logs"}'
+        values: '5+5x30'
+      - series: 'otelcol_exporter_queue_size{job="workshop/alloy",deployment_environment_name="production",exporter="otlp_http/otelcol.exporter.otlphttp.collector",data_type="metrics"}'
+        values: '0x30'
+      - series: 'otelcol_exporter_sent_log_records_total{job="workshop/alloy",deployment_environment_name="production",exporter="otlp_http/otelcol.exporter.otlphttp.collector"}'
+        values: '9000x30'
+      - series: 'otelcol_exporter_queue_size{job="workshop/alloy",deployment_environment_name="qa",exporter="otlp_http/otelcol.exporter.otlphttp.collector",data_type="logs"}'
+        values: '2x30'
+      - series: 'otelcol_exporter_sent_log_records_total{job="workshop/alloy",deployment_environment_name="qa",exporter="otlp_http/otelcol.exporter.otlphttp.collector"}'
+        values: '0+50x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: AlloyLogsQueueBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              deployment_environment_name: production
+            exp_annotations:
+              summary: "Fila de logs do Alloy acumulando"
+              description: "A fila de logs do Alloy de production tem dados e nada foi enviado há mais de 15 minutos (Collector recusando ou fora)."
+
+  # Erro permanente de envio do Alloy: mesmo alerta genérico do Collector.
+  - name: falha permanente de envio do alloy alerta pelo alerta genérico
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_log_records_total{job="workshop/alloy",deployment_environment_name="production",exporter="otlp_http/otelcol.exporter.otlphttp.collector"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OTelCollectorExportFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              exporter: otlp_http/otelcol.exporter.otlphttp.collector
+            exp_annotations:
+              summary: "Falha de exportação no Collector"
+              description: "O exporter otlp_http/otelcol.exporter.otlphttp.collector falha continuamente há mais de 10 minutos."
