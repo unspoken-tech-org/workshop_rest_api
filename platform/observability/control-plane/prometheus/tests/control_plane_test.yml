@@ -687,6 +687,25 @@ tests:
               summary: "Prometheus rejeitando amostras fora de ordem"
               description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
 
+  - name: linha recusada pelo Loki alerta sem espera
+    interval: 1m
+    input_series:
+      - series: 'loki_discarded_samples_total{job="loki",instance="loki:3100",reason="too_far_behind",tenant="fake"}'
+        values: '0 0 0 2 2 2'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: LokiDiscardedSamples
+      - eval_time: 4m
+        alertname: LokiDiscardedSamples
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              reason: too_far_behind
+            exp_annotations:
+              summary: "Loki descartando linhas de log"
+              description: "O Loki recusou linhas de log nos últimos 10 minutos (motivo too_far_behind)."
+
   # PostgreSQL de PRD (job workshop/postgres-exporter).
   - name: métricas do PostgreSQL de PRD ausentes alertam após 5 minutos e voltam ao normal
     interval: 1m
