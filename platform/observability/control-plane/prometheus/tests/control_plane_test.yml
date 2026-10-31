@@ -706,6 +706,28 @@ tests:
               summary: "Loki descartando linhas de log"
               description: "O Loki recusou linhas de log nos últimos 10 minutos (motivo too_far_behind)."
 
+  # A série nasce no primeiro descarte (após restart do Loki), já com valor 1.
+  - name: primeiro descarte do Loki em série nova alerta sem espera
+    interval: 1m
+    input_series:
+      - series: 'loki_discarded_samples_total{job="loki",instance="loki:3100",reason="too_far_behind",tenant="fake"}'
+        values: '_x3 1x20'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: LokiDiscardedSamples
+      - eval_time: 4m
+        alertname: LokiDiscardedSamples
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              reason: too_far_behind
+            exp_annotations:
+              summary: "Loki descartando linhas de log"
+              description: "O Loki recusou linhas de log nos últimos 10 minutos (motivo too_far_behind)."
+      - eval_time: 20m
+        alertname: LokiDiscardedSamples
+
   # PostgreSQL de PRD (job workshop/postgres-exporter).
   - name: métricas do PostgreSQL de PRD ausentes alertam após 5 minutos e voltam ao normal
     interval: 1m
