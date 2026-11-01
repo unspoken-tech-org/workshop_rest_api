@@ -624,6 +624,24 @@ groups:
           summary: "Arquivamento de WAL do PostgreSQL de PRD falhando"
           description: "O archive_command (pgBackRest) falhou nos últimos 15 minutos. Verifique o repositório de backup antes que o PITR perca cobertura."
 
+      # Arquivamento parado sem falha registrada (archive_command travado): com
+      # archive_timeout de 60 s, cada minuto com escrita fecha um segmento, que fica
+      # em pg_wal até ser arquivado. De 17/10 a 01/11/2026 o pg_wal de PRD não passou
+      # de 6 segmentos, nem nos backups full e nos deploys. Com o arquivamento em
+      # dia, um pico de escrita é arquivado em segundos e a idade fica baixa. A idade
+      # sozinha não serve: sem escrita não há WAL, e ela passa de 24 h no fim de semana.
+      - alert: WorkshopPostgresWalArchiveStalled
+        expr: |
+          pg_wal_segments{job="workshop/postgres-exporter"} > 12
+            and pg_stat_archiver_last_archive_age{job="workshop/postgres-exporter"} > 1800
+        for: 15m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: "Arquivamento de WAL do PostgreSQL de PRD parado"
+          description: "Há {{ $value }} segmentos em pg_wal e nenhum WAL arquivado há mais de 30 minutos, sem falha registrada. Verifique o archive_command (pgBackRest) e o repositório antes que o PITR perca cobertura."
+
   # Alloy da QA e da borda de PRD (job workshop/alloy), por OTLP pelo Collector de
   # cada ambiente, que carimba deployment_environment_name. Erro permanente de envio
   # cai no OTelCollectorExportFailures (mesmos nomes de métrica, sem filtro de job).
