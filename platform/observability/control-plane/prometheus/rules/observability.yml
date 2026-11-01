@@ -208,6 +208,183 @@ groups:
           summary: "API de produção lenta na sonda externa"
           description: "A sonda de {{ $labels.instance }} levou mais de 5 segundos para concluir com sucesso há mais de 10 minutos."
 
+  # SLOs da API de PRD (aprovados em 01/11/2026, janela de 28 dias): 99,5% das
+  # requisições de negócio sem 5xx e 99% abaixo de 500 ms (bucket 0.5). Ficam
+  # fora /actuator/* e a uri UNKNOWN (401 antes do roteamento). Sem tráfego a
+  # razão é NaN e nada dispara: a API fora do ar fica com a sonda e o
+  # WorkshopApiMetricsAbsent, porque a métrica do servidor não vê a falha. A
+  # série de cada uri/status nasce no primeiro 5xx, que o rate() não conta.
+  - name: workshop-api-slo
+    interval: 1m
+    rules:
+      - record: workshop_api:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",status=~"5.."}[5m])) or vector(0))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[5m]))
+      - record: workshop_api:slo_slow:ratio_rate5m
+        expr: |
+          1 - sum(rate(http_server_requests_seconds_bucket{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",le="0.5"}[5m]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[5m]))
+      - record: workshop_api:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",status=~"5.."}[30m])) or vector(0))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[30m]))
+      - record: workshop_api:slo_slow:ratio_rate30m
+        expr: |
+          1 - sum(rate(http_server_requests_seconds_bucket{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",le="0.5"}[30m]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[30m]))
+      - record: workshop_api:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",status=~"5.."}[1h])) or vector(0))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[1h]))
+      - record: workshop_api:slo_slow:ratio_rate1h
+        expr: |
+          1 - sum(rate(http_server_requests_seconds_bucket{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",le="0.5"}[1h]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[1h]))
+      - record: workshop_api:slo_errors:ratio_rate2h
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",status=~"5.."}[2h])) or vector(0))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[2h]))
+      - record: workshop_api:slo_slow:ratio_rate2h
+        expr: |
+          1 - sum(rate(http_server_requests_seconds_bucket{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",le="0.5"}[2h]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[2h]))
+      - record: workshop_api:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",status=~"5.."}[6h])) or vector(0))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[6h]))
+      - record: workshop_api:slo_slow:ratio_rate6h
+        expr: |
+          1 - sum(rate(http_server_requests_seconds_bucket{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",le="0.5"}[6h]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[6h]))
+      - record: workshop_api:slo_errors:ratio_rate1d
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",status=~"5.."}[1d])) or vector(0))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[1d]))
+      - record: workshop_api:slo_slow:ratio_rate1d
+        expr: |
+          1 - sum(rate(http_server_requests_seconds_bucket{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",le="0.5"}[1d]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[1d]))
+      - record: workshop_api:slo_errors:ratio_rate3d
+        expr: |
+          (sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",status=~"5.."}[3d])) or vector(0))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[3d]))
+      - record: workshop_api:slo_slow:ratio_rate3d
+        expr: |
+          1 - sum(rate(http_server_requests_seconds_bucket{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN",le="0.5"}[3d]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[3d]))
+      - record: workshop_api:slo_requests:increase1h
+        expr: sum(increase(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[1h]))
+      - record: workshop_api:slo_requests:increase6h
+        expr: sum(increase(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[6h]))
+      - record: workshop_api:slo_requests:increase1d
+        expr: sum(increase(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[1d]))
+      - record: workshop_api:slo_requests:increase3d
+        expr: sum(increase(http_server_requests_seconds_count{job="workshop/workshop-api",uri!~"/actuator/.*|UNKNOWN"}[3d]))
+
+      # Burn rate multi-janela (SRE workbook): o rápido consome 2% do orçamento
+      # em 1 h ou 5% em 6 h; o lento, 10% em 1 dia ou tudo em 3 dias. A janela
+      # longa exige requisições suficientes (20, 40, 70 e 210) para que um 5xx
+      # isolado não passe do limiar: a base é de ~210 requisições por dia.
+      - alert: WorkshopApiErrorBudgetBurnFast
+        expr: |
+          (
+            workshop_api:slo_errors:ratio_rate1h > (14.4 * 0.005)
+              and workshop_api:slo_errors:ratio_rate5m > (14.4 * 0.005)
+              and workshop_api:slo_requests:increase1h >= 20
+          )
+          or
+          (
+            workshop_api:slo_errors:ratio_rate6h > (6 * 0.005)
+              and workshop_api:slo_errors:ratio_rate30m > (6 * 0.005)
+              and workshop_api:slo_requests:increase6h >= 40
+          )
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+          slo: availability
+        annotations:
+          summary: "API de produção consumindo rápido o orçamento de erros"
+          description: "A taxa de 5xx da API consome o orçamento do SLO de 99,5% a 6 vezes ou mais o ritmo sustentável (janelas de 1 h ou 6 h)."
+      - alert: WorkshopApiErrorBudgetBurnSlow
+        expr: |
+          (
+            workshop_api:slo_errors:ratio_rate1d > (3 * 0.005)
+              and workshop_api:slo_errors:ratio_rate2h > (3 * 0.005)
+              and workshop_api:slo_requests:increase1d >= 70
+          )
+          or
+          (
+            workshop_api:slo_errors:ratio_rate3d > (1 * 0.005)
+              and workshop_api:slo_errors:ratio_rate6h > (1 * 0.005)
+              and workshop_api:slo_requests:increase3d >= 210
+          )
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+          slo: availability
+        annotations:
+          summary: "API de produção consumindo o orçamento de erros"
+          description: "A taxa de 5xx da API consome o orçamento do SLO de 99,5% acima do ritmo sustentável (janelas de 1 ou 3 dias)."
+      - alert: WorkshopApiLatencyBudgetBurnFast
+        expr: |
+          (
+            workshop_api:slo_slow:ratio_rate1h > (14.4 * 0.01)
+              and workshop_api:slo_slow:ratio_rate5m > (14.4 * 0.01)
+              and workshop_api:slo_requests:increase1h >= 20
+          )
+          or
+          (
+            workshop_api:slo_slow:ratio_rate6h > (6 * 0.01)
+              and workshop_api:slo_slow:ratio_rate30m > (6 * 0.01)
+              and workshop_api:slo_requests:increase6h >= 40
+          )
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+          slo: latency
+        annotations:
+          summary: "API de produção lenta consumindo rápido o orçamento de latência"
+          description: "As requisições acima de 500 ms consomem o orçamento do SLO de 99% a 6 vezes ou mais o ritmo sustentável (janelas de 1 h ou 6 h)."
+      - alert: WorkshopApiLatencyBudgetBurnSlow
+        expr: |
+          (
+            workshop_api:slo_slow:ratio_rate1d > (3 * 0.01)
+              and workshop_api:slo_slow:ratio_rate2h > (3 * 0.01)
+              and workshop_api:slo_requests:increase1d >= 70
+          )
+          or
+          (
+            workshop_api:slo_slow:ratio_rate3d > (1 * 0.01)
+              and workshop_api:slo_slow:ratio_rate6h > (1 * 0.01)
+              and workshop_api:slo_requests:increase3d >= 210
+          )
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+          slo: latency
+        annotations:
+          summary: "API de produção lenta consumindo o orçamento de latência"
+          description: "As requisições acima de 500 ms consomem o orçamento do SLO de 99% acima do ritmo sustentável (janelas de 1 ou 3 dias)."
+
   - name: prometheus-integrity
     interval: 1m
     rules:

@@ -728,6 +728,126 @@ tests:
       - eval_time: 20m
         alertname: LokiDiscardedSamples
 
+  # SLOs da API de PRD (grupo workshop-api-slo).
+  - name: 5xx acima de 14,4 vezes o orçamento alerta como crítico
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="200"}'
+        values: '0+1x90'
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="500"}'
+        values: '0+0.2x90'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: WorkshopApiErrorBudgetBurnFast
+      - eval_time: 30m
+        alertname: WorkshopApiErrorBudgetBurnFast
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              slo: availability
+            exp_annotations:
+              summary: "API de produção consumindo rápido o orçamento de erros"
+              description: "A taxa de 5xx da API consome o orçamento do SLO de 99,5% a 6 vezes ou mais o ritmo sustentável (janelas de 1 h ou 6 h)."
+
+  - name: 5xx isolado com tráfego normal não alerta
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="200"}'
+        values: '0+0.5x600'
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="500"}'
+        values: '0x299 1x300'
+    alert_rule_test:
+      - eval_time: 310m
+        alertname: WorkshopApiErrorBudgetBurnFast
+      - eval_time: 310m
+        alertname: WorkshopApiErrorBudgetBurnSlow
+      - eval_time: 9h
+        alertname: WorkshopApiErrorBudgetBurnSlow
+
+  - name: 5xx com poucas requisições na janela não alerta
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="200"}'
+        values: '0+0.1x480'
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="500"}'
+        values: '0x119 1x360'
+    alert_rule_test:
+      - eval_time: 130m
+        alertname: WorkshopApiErrorBudgetBurnFast
+      - eval_time: 7h
+        alertname: WorkshopApiErrorBudgetBurnFast
+      - eval_time: 7h
+        alertname: WorkshopApiErrorBudgetBurnSlow
+
+  - name: 5xx no actuator e antes do roteamento ficam fora do SLO
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="200"}'
+        values: '0+1x60'
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/actuator/health",status="503"}'
+        values: '0+1x60'
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="UNKNOWN",status="500"}'
+        values: '0+1x60'
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: WorkshopApiErrorBudgetBurnFast
+
+  - name: 5xx acima de 3 vezes o orçamento alerta como aviso
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="200"}'
+        values: '0+1x240'
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="500"}'
+        values: '0+0.02x240'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: WorkshopApiErrorBudgetBurnFast
+      - eval_time: 2h
+        alertname: WorkshopApiErrorBudgetBurnSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              slo: availability
+            exp_annotations:
+              summary: "API de produção consumindo o orçamento de erros"
+              description: "A taxa de 5xx da API consome o orçamento do SLO de 99,5% acima do ritmo sustentável (janelas de 1 ou 3 dias)."
+
+  - name: requisições acima de 500 ms alertam como crítico
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="200"}'
+        values: '0+1x90'
+      - series: 'http_server_requests_seconds_bucket{job="workshop/workshop-api",uri="/v1/technician",status="200",le="0.5"}'
+        values: '0+0.8x90'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: WorkshopApiErrorBudgetBurnFast
+      - eval_time: 30m
+        alertname: WorkshopApiLatencyBudgetBurnFast
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              slo: latency
+            exp_annotations:
+              summary: "API de produção lenta consumindo rápido o orçamento de latência"
+              description: "As requisições acima de 500 ms consomem o orçamento do SLO de 99% a 6 vezes ou mais o ritmo sustentável (janelas de 1 h ou 6 h)."
+
+  - name: latência dentro do orçamento não alerta
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="workshop/workshop-api",uri="/v1/technician",status="200"}'
+        values: '0+1x300'
+      - series: 'http_server_requests_seconds_bucket{job="workshop/workshop-api",uri="/v1/technician",status="200",le="0.5"}'
+        values: '0+0.995x300'
+    alert_rule_test:
+      - eval_time: 4h
+        alertname: WorkshopApiLatencyBudgetBurnFast
+      - eval_time: 4h
+        alertname: WorkshopApiLatencyBudgetBurnSlow
+
   # PostgreSQL de PRD (job workshop/postgres-exporter).
   - name: métricas do PostgreSQL de PRD ausentes alertam após 5 minutos e voltam ao normal
     interval: 1m
