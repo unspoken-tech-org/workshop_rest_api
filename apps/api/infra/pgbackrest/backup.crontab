@@ -1,0 +1,5 @@
+# BEGIN workshop pgbackrest (managed by deploy-api-prod; edits are overwritten)
+0 3 * * 0 DEPLOY_DIR_PLACEHOLDER/bin/pgbackrest-backup.sh full 2>&1 | logger -t workshop-backup
+0 20 * * 1-6 DEPLOY_DIR_PLACEHOLDER/bin/pgbackrest-backup.sh diff 2>&1 | logger -t workshop-backup
+0 4 * * * docker exec -u postgres workshop-db pgbackrest --stanza=workshop expire 2>&1 | logger -t workshop-backup
+# END workshop pgbackrest

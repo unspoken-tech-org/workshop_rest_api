@@ -71,6 +71,12 @@ inputs:
   scrape-password-hash:
     description: 'Bcrypt hash of the /actuator/prometheus scrape identity'
     required: true
+  healthchecks-backup-full-url:
+    description: 'Healthchecks ping URL of the weekly full backup'
+    required: true
+  healthchecks-backup-diff-url:
+    description: 'Healthchecks ping URL of the daily diff backup'
+    required: true
 
 runs:
   using: composite
@@ -90,6 +96,8 @@ runs:
         PGBACKREST_S3_KEY: ${{ inputs.pgbackrest-s3-key }}
         PGBACKREST_S3_KEY_SECRET: ${{ inputs.pgbackrest-s3-key-secret }}
         SCRAPE_PASSWORD_HASH: ${{ inputs.scrape-password-hash }}
+        HC_BACKUP_FULL_URL: ${{ inputs.healthchecks-backup-full-url }}
+        HC_BACKUP_DIFF_URL: ${{ inputs.healthchecks-backup-diff-url }}
       run: |
         set -e
 
@@ -113,6 +121,16 @@ runs:
         chmod 644 /tmp/public.pem
 
         ( umask 077 && printf '%s' "${SCRAPE_PASSWORD_HASH}" > /tmp/scrape_password_hash )
+
+        # Backup ping URLs carry the check token: file secrets, never in the crontab.
+        for url in "${HC_BACKUP_FULL_URL}" "${HC_BACKUP_DIFF_URL}"; do
+          if [[ ! "${url}" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "healthchecks-backup-*-url must be a single-line https URL" >&2
+            exit 1
+          fi
+        done
+        ( umask 077 && printf '%s' "${HC_BACKUP_FULL_URL}" > /tmp/healthchecks-backup-full-url \
+          && printf '%s' "${HC_BACKUP_DIFF_URL}" > /tmp/healthchecks-backup-diff-url )
 
         # DB password and pgBackRest repository reach the containers as files,
         # never as container env (the edge containers collector reads inspect).
@@ -139,7 +157,8 @@ runs:
 
         echo "Deploy files prepared:"
         ls -la /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
-          /tmp/db_password /tmp/pgbackrest-repo1.conf
+          /tmp/db_password /tmp/pgbackrest-repo1.conf \
+          /tmp/healthchecks-backup-full-url /tmp/healthchecks-backup-diff-url
 
     - name: Upload files to server
       shell: bash
@@ -156,6 +175,8 @@ runs:
         # apps/api, while the production host keeps Dockerfile.pgbackrest at its root.
         test -s "${COMPOSE_SOURCE}"
         test -s "apps/api/infra/pgbackrest/pgbackrest.conf"
+        test -s "apps/api/infra/pgbackrest/backup.sh"
+        test -s "apps/api/infra/pgbackrest/backup.crontab"
         test -s "apps/api/docker/Dockerfile.pgbackrest"
         PAYLOAD_ROOT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/api-prod-payload.XXXXXX")"
         COMPOSE_PAYLOAD="${PAYLOAD_ROOT}/${COMPOSE_FILE}"
@@ -189,8 +210,11 @@ runs:
         scp -o ConnectTimeout=30 \
           /tmp/.env /tmp/private-pkcs8.pem /tmp/public.pem /tmp/scrape_password_hash \
           /tmp/db_password /tmp/pgbackrest-repo1.conf \
+          /tmp/healthchecks-backup-full-url /tmp/healthchecks-backup-diff-url \
           "${DEPLOY_SCRIPT}" \
           "apps/api/infra/pgbackrest/pgbackrest.conf" \
+          "apps/api/infra/pgbackrest/backup.sh" \
+          "apps/api/infra/pgbackrest/backup.crontab" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
         # Stage the compose file; deploy.sh snapshots the current one before swapping
