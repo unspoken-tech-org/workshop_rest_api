@@ -64,6 +64,33 @@ elif [ -f ".tmp/pgbackrest.conf" ]; then
   chmod 644 /srv/pgbackrest/conf/pgbackrest.conf
 fi
 
+# Backup schedule: the script reads its Healthchecks ping URLs from file secrets.
+# The managed crontab block is replaced as a whole; lines of the old hand-written
+# schedule (pgbackrest called straight from cron) are dropped so no backup runs twice.
+mkdir -p bin
+mv "${DEPLOY_DIR}/.tmp/backup.sh" bin/pgbackrest-backup.sh
+chmod 755 bin/pgbackrest-backup.sh
+for type in full diff; do
+  mv "${DEPLOY_DIR}/.tmp/healthchecks-backup-${type}-url" "config/secrets/healthchecks-backup-${type}-url"
+  chmod 400 "config/secrets/healthchecks-backup-${type}-url"
+done
+sed "s#DEPLOY_DIR_PLACEHOLDER#${DEPLOY_DIR}#g" "${DEPLOY_DIR}/.tmp/backup.crontab" > "${DEPLOY_DIR}/.tmp/backup.crontab.rendered"
+{
+  crontab -l 2>/dev/null | awk '
+    /^# BEGIN workshop pgbackrest/ { skip = 1; next }
+    /^# END workshop pgbackrest/ { skip = 0; next }
+    skip { next }
+    /workshop-db pgbackrest --stanza=workshop/ { next }
+    /^# (Backup Full|Backup Diff|Expire) \(/ { next }
+    { print }'
+  cat "${DEPLOY_DIR}/.tmp/backup.crontab.rendered"
+} | crontab -
+if [ "$(crontab -l | grep -c 'pgbackrest-backup.sh')" != 2 ]; then
+  echo "crontab does not hold the two managed backup entries" >&2
+  exit 1
+fi
+echo "Backup schedule installed"
+
 # Build PostgreSQL image locally if it doesn't exist
 PG_IMAGE="workshop/postgres16-pgbackrest:latest"
 if ! docker image inspect "${PG_IMAGE}" >/dev/null 2>&1; then

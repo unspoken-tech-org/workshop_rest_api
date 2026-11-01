@@ -280,6 +280,8 @@ jobs:
           pgbackrest-s3-key: ${{ secrets.PGBACKREST_S3_KEY }}
           pgbackrest-s3-key-secret: ${{ secrets.PGBACKREST_S3_KEY_SECRET }}
           scrape-password-hash: ${{ secrets.OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
+          healthchecks-backup-full-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_FULL_URL }}
+          healthchecks-backup-diff-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_DIFF_URL }}
 
       - name: Rollback on failure
         if: failure() && steps.deploy.outcome == 'failure'
