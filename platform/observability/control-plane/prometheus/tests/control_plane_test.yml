@@ -974,6 +974,52 @@ tests:
       - eval_time: 35m
         alertname: WorkshopPostgresWalArchiveFailing
 
+  # Idade sobe 60 s por minuto (sem arquivar); os segmentos sobem de 5 para 20.
+  - name: wal acumulando sem arquivar alerta critical
+    interval: 1m
+    input_series:
+      - series: 'pg_wal_segments{job="workshop/postgres-exporter"}'
+        values: '5x10 6+1x14 20x30'
+      - series: 'pg_stat_archiver_last_archive_age{job="workshop/postgres-exporter"}'
+        values: '60+60x60'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: WorkshopPostgresWalArchiveStalled
+      - eval_time: 45m
+        alertname: WorkshopPostgresWalArchiveStalled
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              job: workshop/postgres-exporter
+            exp_annotations:
+              summary: "Arquivamento de WAL do PostgreSQL de PRD parado"
+              description: "Há 20 segmentos em pg_wal e nenhum WAL arquivado há mais de 30 minutos, sem falha registrada. Verifique o archive_command (pgBackRest) e o repositório antes que o PITR perca cobertura."
+
+  # Pico de escrita com o arquivamento em dia: muitos segmentos, idade baixa.
+  - name: pico de wal com arquivamento em dia não alerta
+    interval: 1m
+    input_series:
+      - series: 'pg_wal_segments{job="workshop/postgres-exporter"}'
+        values: '40x60'
+      - series: 'pg_stat_archiver_last_archive_age{job="workshop/postgres-exporter"}'
+        values: '30x60'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: WorkshopPostgresWalArchiveStalled
+
+  # Banco ocioso: idade alta (fim de semana) sem WAL acumulado.
+  - name: banco ocioso com idade alta não alerta
+    interval: 1m
+    input_series:
+      - series: 'pg_wal_segments{job="workshop/postgres-exporter"}'
+        values: '5x60'
+      - series: 'pg_stat_archiver_last_archive_age{job="workshop/postgres-exporter"}'
+        values: '100000+60x60'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: WorkshopPostgresWalArchiveStalled
+
   - name: watchdog fica sempre disparado
     interval: 1m
     input_series: []
