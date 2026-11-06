@@ -5,7 +5,9 @@ plugins {
 }
 
 group = 'com.tproject'
-version = '1.3.1'
+// O deploy passa a versão por -PappVersion (ARG SERVICE_VERSION do Dockerfile).
+// Builds locais ficam com o valor abaixo, para não parecerem uma release.
+version = providers.gradleProperty('appVersion').getOrElse('0.0.0-SNAPSHOT')
 
 subprojects {
     group = rootProject.group

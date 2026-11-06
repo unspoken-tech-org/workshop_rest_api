@@ -20,6 +20,9 @@ springBoot {
 }
 
 processResources {
+    // O filtro abaixo não entra no cache do Gradle; sem isto, trocar a versão
+    // manteria o application.yml já processado.
+    inputs.property('appVersion', project.version.toString())
     filesMatching('**/application*.yml') {
         filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [
             'project.version': project.version.toString()

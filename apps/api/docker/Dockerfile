@@ -17,8 +17,10 @@ RUN chmod +x gradlew && ./gradlew :apps:api:dependencies --no-daemon || true
 COPY apps/api/src/main apps/api/src/main
 
 # Compila o JAR executável da aplicação e separa o Boot JAR do artefato
-# `-plain`, sem acoplar a imagem a uma versão específica.
-RUN ./gradlew :apps:api:bootJar --no-daemon -x test && \
+# `-plain`, sem acoplar a imagem a uma versão específica. A mesma versão de
+# service.version (estágio final) vai para app.version e para os logs.
+ARG SERVICE_VERSION=unknown
+RUN ./gradlew :apps:api:bootJar --no-daemon -x test -PappVersion="${SERVICE_VERSION}" && \
     boot_jar="$(find apps/api/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' -print -quit)" && \
     test -n "$boot_jar" && cp "$boot_jar" /app/workshop.jar
 
