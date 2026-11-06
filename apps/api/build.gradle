@@ -37,6 +37,10 @@ configurations {
     }
 }
 
+// O Spring Boot 3.5 gerencia o rest-assured 5.x e o Groovy 4; o rest-assured 6 precisa do Groovy 5.
+ext['rest-assured.version'] = '6.3.0'
+ext['groovy.version'] = '5.0.8'
+
 dependencyManagement {
     imports {
         mavenBom "org.testcontainers:testcontainers-bom:1.21.4"
