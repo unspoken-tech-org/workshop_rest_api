@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -59,7 +58,7 @@ public interface CustomerController {
     @ApiResponse(responseCode = "201", description = "Customer created successfully")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    CustomerOutputDto create(@RequestBody @NotNull @Valid InputCustomerDtoRecord inputCustomerDto);
+    CustomerOutputDto create(@RequestBody @Valid InputCustomerDtoRecord inputCustomerDto);
 
     @Operation(
             summary = "Update customer",
@@ -69,5 +68,5 @@ public interface CustomerController {
     @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     CustomerOutputDto update(
             @Parameter(description = "Customer identifier") @PathVariable("id") int id,
-            @RequestBody @NotNull @Valid InputCustomerDtoRecord inputCustomerDto);
+            @RequestBody @Valid InputCustomerDtoRecord inputCustomerDto);
 }
