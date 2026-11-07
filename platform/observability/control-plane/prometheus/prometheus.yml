@@ -53,10 +53,17 @@ scrape_configs:
       - targets:
           - tempo:3200
 
+  # Métricas do apiserver interno e o info de feature toggles do Grafana não
+  # são usadas em regras nem dashboards e eram ~15% das séries (medido em
+  # 07/11/2026: 2.399 de 15.691).
   - job_name: grafana
     static_configs:
       - targets:
           - grafana:3000
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: grafana_apiserver_.*|grafana_feature_toggles_info
+        action: drop
 
   - job_name: alertmanager
     static_configs:
