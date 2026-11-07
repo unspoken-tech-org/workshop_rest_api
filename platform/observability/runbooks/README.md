@@ -47,6 +47,30 @@ Inibições:
 | [Falha de backup](falha-backup.md) | `WorkshopBackup*`, `WorkshopPostgresWalArchiveFailing`, `WorkshopPostgresWalArchiveStalled`, checks de backup do Healthchecks.io |
 | [QA ou monitoramento fora](qa-monitoramento.md) | `Watchdog` (aviso do Healthchecks.io), `ObservabilityTargetDown`, `PrometheusRuleEvaluationFailures` |
 
+## Manutenção planejada
+
+Antes de reboot, upgrade ou deploy de PRD, silencie os alertas de produção na VM de
+QA. Use uma duração curta, do tamanho da janela:
+
+```bash
+docker exec observability-control-plane-qa-alertmanager-1 amtool silence add \
+  --alertmanager.url=http://localhost:9093 environment=production \
+  --duration=1h --author=<responsável> --comment="manutenção: <motivo>"
+```
+
+O comando imprime o id do silêncio. Ao terminar, confira em PRD que API e banco
+estão `healthy` e que as séries voltaram, e então expire o silêncio:
+
+```bash
+docker exec observability-control-plane-qa-alertmanager-1 amtool silence expire \
+  --alertmanager.url=http://localhost:9093 <id>
+```
+
+- O matcher `environment=production` não alcança o `Watchdog`
+  (`environment=monitoring`). Não use matcher mais amplo.
+- Se a manutenção sair do previsto, expire o silêncio na hora, para os alertas
+  voltarem a avisar.
+
 ## Regras gerais
 
 - Acesso às VMs só por Tailscale SSH. Diagnóstico em PRD é só leitura; correção em
