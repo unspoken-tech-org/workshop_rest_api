@@ -43,6 +43,8 @@ configurations {
 // O Spring Boot 3.5 gerencia o rest-assured 5.x e o Groovy 4; o rest-assured 6 precisa do Groovy 5.
 ext['rest-assured.version'] = '6.3.0'
 ext['groovy.version'] = '5.0.8'
+// O Spring Boot 3.5.16 gerencia o Jackson 2.21.4, que tem alertas de segurança corrigidos na 2.21.7.
+ext['jackson-bom.version'] = '2.21.8'
 
 dependencyManagement {
     imports {
