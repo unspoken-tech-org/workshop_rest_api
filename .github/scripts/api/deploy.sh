@@ -90,6 +90,8 @@ if [ "$(crontab -l | grep -c 'pgbackrest-backup.sh')" != 2 ]; then
   exit 1
 fi
 echo "Backup schedule installed"
+# First textfile for the edge node-exporter; later runs of the script refresh it.
+bin/pgbackrest-backup.sh metrics || echo "Backup metrics not written yet; the next backup run writes them" >&2
 
 # Build PostgreSQL image locally if it doesn't exist
 PG_IMAGE="workshop/postgres16-pgbackrest:latest"

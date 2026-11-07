@@ -8,9 +8,49 @@ set -uo pipefail
 
 TYPE="${1:-}"
 case "${TYPE}" in
-  full|diff) ;;
-  *) echo "usage: $0 full|diff" >&2; exit 2 ;;
+  full|diff|metrics) ;;
+  *) echo "usage: $0 full|diff|metrics" >&2; exit 2 ;;
 esac
+
+pgbackrest_info() {
+  docker exec -u postgres workshop-db pgbackrest --stanza=workshop --output=json info
+}
+
+# Textfile for the node-exporter of the PRD edge (--collector.textfile), complementing
+# Healthchecks: the latest backup without error of each type, read from `pgbackrest
+# info`. Under /srv because /home/workshop is closed to the exporter's user (nobody).
+# A failed info leaves the old file in place, so the age alerts in QA keep counting.
+METRICS_DIR="/srv/pgbackrest/metrics"
+write_metrics() {
+  local info
+  info="$(pgbackrest_info)" || { echo "pgbackrest info failed: metrics not updated" >&2; return 1; }
+  mkdir -p "${METRICS_DIR}" && chmod 755 "${METRICS_DIR}" || return 1
+  jq -er '
+    .[0] as $s
+    | def last_ok($t): [$s.backup[] | select(.type == $t and (.error | not))] | last;
+    def gauge($name; $help; f):
+      "# HELP \($name) \($help)", "# TYPE \($name) gauge",
+      (("full", "diff") as $t | last_ok($t) | select(. != null)
+        | "\($name){type=\"\($t)\"} \(f)");
+    gauge("workshop_pgbackrest_last_backup_timestamp_seconds";
+      "Stop time of the latest backup without error, by type."; .timestamp.stop),
+    gauge("workshop_pgbackrest_last_backup_duration_seconds";
+      "Duration of the latest backup without error, by type."; .timestamp.stop - .timestamp.start),
+    gauge("workshop_pgbackrest_last_backup_repository_bytes";
+      "Bytes the latest backup without error added to the repository, by type."; .info.repository.delta),
+    "# HELP workshop_pgbackrest_stanza_status_code Status code of the stanza in pgbackrest info (0 is ok).",
+    "# TYPE workshop_pgbackrest_stanza_status_code gauge",
+    "workshop_pgbackrest_stanza_status_code \($s.status.code)"
+  ' <<<"${info}" > "${METRICS_DIR}/pgbackrest.prom.tmp" \
+    && chmod 644 "${METRICS_DIR}/pgbackrest.prom.tmp" \
+    && mv "${METRICS_DIR}/pgbackrest.prom.tmp" "${METRICS_DIR}/pgbackrest.prom" \
+    || { rm -f "${METRICS_DIR}/pgbackrest.prom.tmp"; echo "backup metrics not written" >&2; return 1; }
+}
+
+if [[ "${TYPE}" == metrics ]]; then
+  write_metrics
+  exit
+fi
 
 SECRETS_DIR="$(cd "$(dirname "$0")/.." && pwd)/config/secrets"
 PING_URL="$(cat "${SECRETS_DIR}/healthchecks-backup-${TYPE}-url")" || exit 1
@@ -27,9 +67,8 @@ fail() {
   exit 1
 }
 
-pgbackrest_info() {
-  docker exec -u postgres workshop-db pgbackrest --stanza=workshop --output=json info
-}
+# Every run refreshes the metrics, whatever its outcome; this never changes the exit code.
+trap 'write_metrics || true' EXIT
 
 ping_hc /start
 
