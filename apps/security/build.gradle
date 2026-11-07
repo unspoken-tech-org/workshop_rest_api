@@ -6,7 +6,7 @@ plugins {
 // A implementação continua em apps/api até que o contrato entre os projetos
 // seja definido e validado. Coordenadas são herdadas do projeto raiz.
 java {
-    sourceCompatibility = '21'
+    sourceCompatibility = '25'
 }
 
 repositories {

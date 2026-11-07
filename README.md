@@ -269,14 +269,14 @@ production data stability.
 
 | Layer             | Technology      | Version     | Purpose                                         |
 |-------------------|-----------------|-------------|-------------------------------------------------|
-| **Runtime**       | Java            | 21 LTS      | Modern language features, virtual threads ready |
+| **Runtime**       | Java            | 25 LTS      | Modern language features, virtual threads ready |
 | **Framework**     | Spring Boot     | 3.1.8       | Production-ready application framework          |
 | **Persistence**   | Spring Data JPA | -           | ORM for write operations                        |
 | **Persistence**   | Spring JDBC     | -           | Native SQL for read operations                  |
 | **Database**      | PostgreSQL      | 16          | Advanced SQL features (LATERAL, JSON)           |
 | **Migrations**    | Flyway          | 11.11.0     | Version-controlled schema management            |
 | **Backup**        | pgBackRest      | -           | WAL archiving, point-in-time recovery           |
-| **Build**         | Gradle          | 8.4         | Dependency management, build automation         |
+| **Build**         | Gradle          | 9.8.2       | Dependency management, build automation         |
 | **Container**     | Docker          | Multi-stage | Optimized production images                     |
 | **CI/CD**         | GitHub Actions  | -           | Automated deployment pipeline                   |
 | **Observability** | Grafana + Loki  | 10.2 / 2.9  | Log aggregation and dashboards                  |
@@ -347,7 +347,7 @@ stack (Collector, Alloy, Loki 3, Prometheus 3, Tempo) lives in `platform/observa
 ### Prerequisites
 
 - Docker & Docker Compose
-- Java 21 (for local development)
+- Java 25 (for local development)
 - Git
 
 ### One Command Start

@@ -20,18 +20,20 @@ springBoot {
 }
 
 processResources {
+    // Lida na configuração: acessar Task.project na execução está deprecado no Gradle 9.
+    def appVersion = project.version.toString()
     // O filtro abaixo não entra no cache do Gradle; sem isto, trocar a versão
     // manteria o application.yml já processado.
-    inputs.property('appVersion', project.version.toString())
+    inputs.property('appVersion', appVersion)
     filesMatching('**/application*.yml') {
         filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [
-            'project.version': project.version.toString()
+            'project.version': appVersion
         ])
     }
 }
 
 java {
-    sourceCompatibility = '21'
+    sourceCompatibility = '25'
 }
 
 configurations {
@@ -118,6 +120,9 @@ tasks.named('test') {
 tasks.register('integrationTests', Test) {
     group = "tproject"
     description = 'Runs the integration tests.'
+    // Gradle 9 no longer wires custom Test tasks to the test source set; without this the task is NO-SOURCE.
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform() {
         includeTags("integration")
         excludeTags("unit")
