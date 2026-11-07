@@ -3,17 +3,28 @@ global:
 
 # Canal externo: Telegram (decisão de 06/10/2026), independente de produção.
 # Token do bot e chat ID chegam como secrets em arquivo, fora deste diretório.
+#
+# Cada alerta traz owner, service, environment e severity (Fase 6, item 8):
+#   environment: production (PRD), qa (homologação) ou monitoring (a própria
+#   cadeia de observabilidade: Prometheus, Loki, Collectors);
+#   service: workshop-api, postgres, backup, host, telemetry ou monitoring.
+# O agrupamento usa esses rótulos: um incidente de um serviço num ambiente vira
+# uma mensagem só, e a repetição varia pela severidade.
 route:
   receiver: telegram
   group_by:
     - alertname
-    - job
+    - service
+    - environment
     - severity
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 12h
   routes:
-    # Watchdog só vai ao Healthchecks.io, a cada minuto; nunca ao Telegram.
+    # Watchdog só vai ao Healthchecks.io, a cada minuto; nunca ao Telegram. Fica
+    # antes de tudo e nenhuma inibição o alcança (severity none, sem par nas
+    # regras abaixo). Não crie silêncio que o case: a ausência de pings é o aviso
+    # de que a QA ou o Alertmanager pararam.
     - receiver: healthchecks
       matchers:
         - alertname="Watchdog"
@@ -21,8 +32,38 @@ route:
       group_interval: 1m
       repeat_interval: 1m
 
+    # Dono platform (hoje o único). Um dono novo ganha a própria subárvore aqui;
+    # alerta sem dono cai na raiz e ainda chega ao Telegram.
+    - matchers:
+        - owner="platform"
+      receiver: telegram
+      routes:
+        # Críticos de qualquer ambiente: entrega rápida e repetição de 1 h até a
+        # recuperação. Destinatário secundário: o mesmo bot e o mesmo chat do
+        # Telegram (decisão do responsável em 07/11/2026, risco aceito); o receiver
+        # é separado para trocar o destino sem mexer nas rotas.
+        - receiver: telegram-critical
+          matchers:
+            - severity="critical"
+          group_wait: 10s
+          group_interval: 2m
+          repeat_interval: 1h
+
+        # Avisos da homologação: a QA pode ser reiniciada a qualquer momento.
+        - receiver: telegram
+          matchers:
+            - environment="qa"
+          repeat_interval: 24h
+
+        # Demais avisos (PRD e monitoramento) seguem a rota do dono: 12 h.
+
 receivers:
   - name: telegram
+    telegram_configs:
+      - bot_token_file: /run/secrets/telegram_bot_token
+        chat_id_file: /run/secrets/telegram_chat_id
+        send_resolved: true
+  - name: telegram-critical
     telegram_configs:
       - bot_token_file: /run/secrets/telegram_bot_token
         chat_id_file: /run/secrets/telegram_chat_id
@@ -34,12 +75,41 @@ receivers:
       - url_file: /run/secrets/healthchecks_ping_url
         send_resolved: false
 
+# Nenhuma regra alcança o Watchdog: todas exigem alertname diferente dele.
 inhibit_rules:
+  # Crítico cala o aviso do mesmo serviço no mesmo ambiente (burn rate rápido x
+  # lento, banco fora x conexões, disco crítico x baixo no mesmo ponto de montagem).
   - source_matchers:
       - severity="critical"
     target_matchers:
       - severity="warning"
+      - alertname!="Watchdog"
     equal:
-      - alertname
-      - job
-      - instance
+      - service
+      - environment
+      - mountpoint
+
+  # Borda de PRD fora (VM, Collector de borda ou caminho até a QA): as ausências
+  # que dependem dela são consequência. A sonda pública não depende da borda e
+  # segue alertando, o que distingue VM fora de borda fora.
+  - source_matchers:
+      - alertname="WorkshopEdgeTelemetryAbsent"
+    target_matchers:
+      - environment="production"
+      - alertname=~"WorkshopHostMetricsAbsent|WorkshopHostScrapeFailing|WorkshopContainerMetricsAbsent|WorkshopApiContainerAbsent|WorkshopDbContainerAbsent|WorkshopApiMetricsAbsent|WorkshopApiScrapeFailing|WorkshopPostgresMetricsAbsent|WorkshopPostgresDown|WorkshopBackupMetricsAbsent|AlloyProductionMetricsAbsent|ProductionLogsAbsent"
+
+  # Container ausente explica o scrape e a consulta que falham dentro dele.
+  - source_matchers:
+      - alertname="WorkshopApiContainerAbsent"
+    target_matchers:
+      - alertname="WorkshopApiScrapeFailing"
+  - source_matchers:
+      - alertname="WorkshopDbContainerAbsent"
+    target_matchers:
+      - alertname="WorkshopPostgresDown"
+
+  # API fora na sonda pública: o scrape pela borda falhando é o mesmo incidente.
+  - source_matchers:
+      - alertname="WorkshopApiProductionDown"
+    target_matchers:
+      - alertname="WorkshopApiScrapeFailing"

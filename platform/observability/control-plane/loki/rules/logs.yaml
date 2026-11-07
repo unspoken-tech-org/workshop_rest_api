@@ -15,9 +15,12 @@ groups:
         labels:
           severity: warning
           owner: platform
+          service: telemetry
+          environment: "{{ $labels.deployment_environment_name }}"
         annotations:
           summary: "docker-logs-proxy recusou requisições"
           description: "O docker-logs-proxy de {{ $labels.deployment_environment_name }} recusou {{ $value }} requisição(ões) nos últimos 10 minutos; só o Alloy alcança o proxy."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   # Rede de segurança do caminho inteiro (Alloy, Collectors, fila e Loki). Sem as
   # sondas, a API e o gateway ficam horas sem nenhuma linha: medido em 22/10/2026,
@@ -34,9 +37,12 @@ groups:
         labels:
           severity: warning
           owner: platform
+          service: telemetry
+          environment: production
         annotations:
           summary: "Logs de PRD ausentes no Loki"
           description: "Nenhuma linha de {{ $labels.service_name }} de produção chegou ao Loki nas últimas 24 horas."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
 
       - alert: QaLogsAbsent
         expr: |
@@ -46,6 +52,9 @@ groups:
         labels:
           severity: warning
           owner: platform
+          service: telemetry
+          environment: qa
         annotations:
           summary: "Logs da QA ausentes no Loki"
           description: "Nenhuma linha de {{ $labels.service_name }} da QA chegou ao Loki nas últimas 72 horas."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
