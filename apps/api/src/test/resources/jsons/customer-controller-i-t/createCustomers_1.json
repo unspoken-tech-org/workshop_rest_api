@@ -4,13 +4,19 @@
     "cpf": "75386544020",
     "gender": "masculino",
     "email": "joao@example.com",
-    "createdAt": "2026-06-12T11:15:40.861355",
+    "createdAt": "2026-11-07T12:31:40.961949",
     "phones": [
         {
             "id": 6,
             "number": "11999991111",
             "name": "Celular Principal",
             "main": true
+        },
+        {
+            "id": 7,
+            "number": "11555552222",
+            "name": "Trabalho",
+            "main": false
         }
     ],
     "customerDevices": [
