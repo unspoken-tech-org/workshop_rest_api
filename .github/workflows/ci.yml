@@ -1,7 +1,7 @@
 # ===========================================================
 # Workflow: Continuous Integration (Test & Security Scans)
 # ===========================================================
-# Runs unit tests, compiles the application and performs
+# Runs unit and integration tests, compiles the application and performs
 # vulnerability scanning on repository dependencies using Trivy.
 # ===========================================================
 
@@ -84,7 +84,38 @@ jobs:
         run: ./gradlew :apps:api:bootJar -x test
 
   # ===========================================
-  # JOB 2: SECURITY SCAN (TRIVY)
+  # JOB 2: INTEGRATION TESTS (TESTCONTAINERS)
+  # ===========================================
+  # The hosted runner ships with Docker, which Testcontainers
+  # uses to start the PostgreSQL container for the tests.
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Java 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Run Integration Tests
+        run: ./gradlew :apps:api:integrationTests
+
+  # ===========================================
+  # JOB 3: SECURITY SCAN (TRIVY)
   # ===========================================
   security-scan:
     name: Trivy Vulnerability Scan
@@ -102,7 +133,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run Trivy vulnerability scanner (Filesystem)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'

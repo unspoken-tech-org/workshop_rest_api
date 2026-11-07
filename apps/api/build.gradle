@@ -103,6 +103,12 @@ tasks.named('bootBuildImage') {
     builder = 'paketobuildpacks/builder-jammy-base:latest'
 }
 
+// Same default locale as QA/PRD (LC_ALL=C.UTF-8), so default validation messages match production
+tasks.withType(Test).configureEach {
+    systemProperty 'user.language', 'en'
+    systemProperty 'user.country', ''
+}
+
 tasks.named('test') {
     useJUnitPlatform {
         excludeTags("integration")
