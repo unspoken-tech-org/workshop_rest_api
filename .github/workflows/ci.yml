@@ -19,7 +19,6 @@ on:
       - 'apps/api/**'
       - 'apps/security/**'
       - 'platform/**'
-      - 'environments/local/**'
       - 'build.gradle'
       - 'settings.gradle'
       - 'gradle/**'
