@@ -4,8 +4,14 @@
     "cpf": "75386544020",
     "gender": "feminino",
     "email": "maria@example.com",
-    "createdAt": "2026-06-12T11:15:40.958054",
+    "createdAt": "2026-11-07T12:31:41.078847",
     "phones": [
+        {
+            "id": 2,
+            "number": "44988098766",
+            "name": "Trabalho",
+            "main": false
+        },
         {
             "id": 6,
             "number": "44900998877",

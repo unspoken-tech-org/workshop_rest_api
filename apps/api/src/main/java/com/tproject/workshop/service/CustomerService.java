@@ -134,6 +134,9 @@ public class CustomerService {
             createCustomerPhones(savedCustomer, phones);
         }
 
+        // The JDBC read below does not see changes still pending in the persistence context
+        customerRepository.flush();
+
         return findById(savedCustomer.getIdCustomer());
     }
 
