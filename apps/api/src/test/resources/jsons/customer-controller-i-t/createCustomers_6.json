@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "phones: não deve estar vazio"
+        "message": "phones: must not be empty"
     }
 }
