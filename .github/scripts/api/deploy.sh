@@ -94,7 +94,7 @@ echo "Backup schedule installed"
 bin/pgbackrest-backup.sh metrics || echo "Backup metrics not written yet; the next backup run writes them" >&2
 
 # Build PostgreSQL image locally if it doesn't exist
-PG_IMAGE="workshop/postgres16-pgbackrest:latest"
+PG_IMAGE="workshop/postgres16-pgbackrest:16.15-pgbackrest-2.60.0"
 if ! docker image inspect "${PG_IMAGE}" >/dev/null 2>&1; then
   echo "PostgreSQL image ${PG_IMAGE} not found, building from Dockerfile.pgbackrest..."
   docker build -f "${DEPLOY_DIR}/Dockerfile.pgbackrest" -t "${PG_IMAGE}" "${DEPLOY_DIR}"

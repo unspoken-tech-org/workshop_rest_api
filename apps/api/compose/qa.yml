@@ -1,7 +1,7 @@
 services:
   workshop_db_qa:
     container_name: workshop-db-qa
-    image: workshop/postgres16-pgbackrest:latest
+    image: workshop/postgres16-pgbackrest:16.15-pgbackrest-2.60.0
     restart: always
     environment:
       LC_ALL: C.UTF-8

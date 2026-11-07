@@ -8,11 +8,11 @@ PRUNE_AGE_HOURS="${PRUNE_AGE_HOURS:-168}"
 echo ">>> Pruning dangling images..."
 timeout 60 docker image prune -f
 
-# Rollback images (:latest, *backup) and the PostgreSQL image, matched by ID: several tags can point to one image
+# Rollback images (:latest, *backup) and every PostgreSQL image tag (the previous one serves rollback), matched by ID: several tags can point to one image
 PROTECTED_IDS=$(docker image ls --no-trunc --format '{{.ID}}' \
   --filter "reference=${LOCAL_IMAGE_NAME}:latest" \
   --filter "reference=${LOCAL_IMAGE_NAME}:*backup" \
-  --filter "reference=workshop/postgres16-pgbackrest:latest")
+  --filter "reference=workshop/postgres16-pgbackrest:*")
 
 # Images used by any container, running or stopped: removing one of its tags would break compose up and rollback
 CONTAINER_IDS=$(docker ps -aq)
