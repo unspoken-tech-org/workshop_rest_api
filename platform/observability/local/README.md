@@ -125,7 +125,7 @@ docker run --rm -e API_SCRAPE_USERNAME=u -e API_SCRAPE_TARGET=h:1 -e COLLECTOR_Q
   validate --config=file:/etc/otelcol-contrib/config.yaml
 docker run --rm \
   -v "$PWD/platform/observability/local/alloy/config.alloy:/etc/alloy/config.alloy:ro" \
-  grafana/alloy:v1.20.1 validate /etc/alloy/config.alloy
+  grafana/alloy:v1.21.3 validate /etc/alloy/config.alloy
 docker run --rm \
   -v "$PWD/platform/observability/local/loki/config.yaml:/etc/loki/config.yaml:ro" \
   grafana/loki:3.7.8 -config.file=/etc/loki/config.yaml -verify-config
