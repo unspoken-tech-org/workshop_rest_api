@@ -7,6 +7,46 @@ rule_files:
 evaluation_interval: 1m
 
 tests:
+  # Borda de PRD: fonte da inibição das ausências derivadas no Alertmanager. Dispara
+  # antes delas (6 minutos contra 7 dos containers e 15 do host e do banco).
+  - name: telemetria da borda de PRD ausente alerta antes das ausências derivadas e volta ao normal
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_queue_capacity{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",data_type="metrics",deployment_environment_name="production"}'
+        values: '1000x3 _x20 1000x20'
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-api",deployment_environment_name="production"}'
+        values: '1x3 _x20 1x20'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: WorkshopEdgeTelemetryAbsent
+      - eval_time: 9m
+        alertname: WorkshopEdgeTelemetryAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: telemetry
+              environment: production
+              job: workshop/otelcol-contrib
+            exp_annotations:
+              summary: "Telemetria da borda de PRD ausente"
+              description: "Nenhuma métrica do Collector de borda de PRD chegou nos últimos 5 minutos: a VM de PRD, o Collector de borda ou o caminho até a QA estão fora. As ausências de host, containers, banco, API e Alloy de PRD ficam inibidas enquanto este alerta dispara."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
+      # O container da API ainda não alerta quando a borda já alertou.
+      - eval_time: 9m
+        alertname: WorkshopApiContainerAbsent
+      - eval_time: 30m
+        alertname: WorkshopEdgeTelemetryAbsent
+
+  - name: borda de PRD enviando não alerta ausência
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_queue_capacity{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",data_type="metrics",deployment_environment_name="production"}'
+        values: '1000x40'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: WorkshopEdgeTelemetryAbsent
+
   # Host e containers de PRD (jobs workshop/node-exporter e workshop/docker-stats).
   - name: métricas do host de PRD ausentes alertam após 5 minutos e voltam ao normal
     interval: 1m
@@ -22,10 +62,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: production
               job: workshop/node-exporter
             exp_annotations:
               summary: "Métricas do host de PRD ausentes"
               description: "Nenhuma amostra do node-exporter de PRD chegou ao Prometheus nos últimos 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
       - eval_time: 44m
         alertname: WorkshopHostMetricsAbsent
 
@@ -52,10 +95,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: production
               job: workshop/node-exporter
             exp_annotations:
               summary: "Scrape do node-exporter de PRD falhando"
               description: "O Collector de borda não consegue raspar o node-exporter do host há mais de 5 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
       - eval_time: 25m
         alertname: WorkshopHostScrapeFailing
 
@@ -75,10 +121,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: host
+              environment: production
               mountpoint: /
             exp_annotations:
               summary: "Disco do host de PRD abaixo de 30% livre"
               description: "O ponto de montagem / tem menos de 30% livre há mais de 15 minutos. Reveja retenção de backups e logs antes que o PostgreSQL de PRD seja afetado."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/disco-cheio.md"
       - eval_time: 17m
         alertname: WorkshopHostFilesystemCritical
 
@@ -98,10 +147,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: host
+              environment: production
               mountpoint: /
             exp_annotations:
               summary: "Disco do host de PRD abaixo de 15% livre"
               description: "O ponto de montagem / tem menos de 15% livre há mais de 5 minutos. Libere espaço antes que o PostgreSQL de PRD fique sem espaço."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/disco-cheio.md"
 
   - name: disco do host de PRD que volta acima de 30% deixa de alertar
     interval: 1m
@@ -117,10 +169,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: host
+              environment: production
               mountpoint: /
             exp_annotations:
               summary: "Disco do host de PRD abaixo de 15% livre"
               description: "O ponto de montagem / tem menos de 15% livre há mais de 5 minutos. Libere espaço antes que o PostgreSQL de PRD fique sem espaço."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/disco-cheio.md"
       - eval_time: 25m
         alertname: WorkshopHostFilesystemCritical
       - eval_time: 25m
@@ -153,10 +208,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: production
               job: workshop/docker-stats
             exp_annotations:
               summary: "Métricas de containers de PRD ausentes"
               description: "Nenhum container de PRD foi reportado nos últimos 10 minutos. Verifique o containers-collector e a allowlist da API do Docker na VM de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
 
   - name: containers de PRD reportados não alertam ausência
     interval: 1m
@@ -189,11 +247,14 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: workshop-api
+              environment: production
               job: workshop/docker-stats
               container_name: workshop-api
             exp_annotations:
               summary: "Container da API de PRD ausente"
               description: "O container workshop-api não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
       - eval_time: 40m
         alertname: WorkshopApiContainerAbsent
 
@@ -213,11 +274,14 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: postgres
+              environment: production
               job: workshop/docker-stats
               container_name: workshop-db
             exp_annotations:
               summary: "Container do PostgreSQL de PRD ausente"
               description: "O container workshop-db não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/postgresql.md"
       - eval_time: 40m
         alertname: WorkshopDbContainerAbsent
 
@@ -235,10 +299,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: workshop-api
+              environment: production
               container_name: workshop-api
             exp_annotations:
               summary: "Container de PRD reiniciando"
               description: "workshop-api reiniciou 3 vezes ou mais nos últimos 30 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
       - eval_time: 40m
         alertname: WorkshopContainerRestarting
 
@@ -265,12 +332,15 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: host
+              environment: qa
               job: node-exporter
               instance: node-exporter:9100
               mountpoint: /
             exp_annotations:
               summary: "Disco da VM de QA abaixo de 30% livre"
               description: "Reduza retenção ou ingestão da observabilidade antes de afetar a homologação."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/disco-cheio.md"
       - eval_time: 18m
         alertname: QaHostFilesystemCritical
       - eval_time: 30m
@@ -279,12 +349,15 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: host
+              environment: qa
               job: node-exporter
               instance: node-exporter:9100
               mountpoint: /
             exp_annotations:
               summary: "Disco da VM de QA abaixo de 15% livre"
               description: "Pare ou descarte telemetria antes que o PostgreSQL de QA fique sem espaço."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/disco-cheio.md"
 
   - name: amostra fora da janela fora de ordem alerta sem espera
     interval: 1m
@@ -300,9 +373,12 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: monitoring
+              environment: monitoring
             exp_annotations:
               summary: "Prometheus rejeitando amostras fora de ordem"
               description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
 
   - name: Tunnel e node-exporter fora do ar entram no alerta de alvo
     interval: 1m
@@ -316,11 +392,14 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: monitoring
+              environment: monitoring
               job: cloudflared
               instance: cloudflared:2000
             exp_annotations:
               summary: "Alvo de observabilidade indisponível"
               description: "cloudflared em cloudflared:2000 está indisponível há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
 
   # 600 MB < 0,8 × 768 MiB (644 MB): sem alerta; 700 MB dispara.
   - name: pressão de memória abaixo de 80% de 768 MiB não alerta
@@ -344,11 +423,14 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: telemetry
+              environment: monitoring
               job: otel-collector-internal
               instance: otel-collector:8888
             exp_annotations:
               summary: "Collector próximo do limite de memória"
               description: "O uso RSS do Collector excede 80% do limite do memory_limiter (768 MiB)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   - name: scrape da API de QA falhando alerta warning, sem afetar os alertas de PRD
     interval: 1m
@@ -362,12 +444,15 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: workshop-api
+              environment: qa
               job: workshop/workshop-api-qa
               instance: workshop-api-qa:8080
               deployment_environment_name: qa
             exp_annotations:
               summary: "Scrape da API de QA falhando"
               description: "O Prometheus não consegue raspar /actuator/prometheus da API de QA há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
       - eval_time: 15m
         alertname: WorkshopApiScrapeFailing
       # A série de QA não satisfaz a ausência das métricas de PRD.
@@ -377,10 +462,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: workshop-api
+              environment: production
               job: workshop/workshop-api
             exp_annotations:
               summary: "Métricas da API ausentes"
               description: "Nenhuma amostra de up da API chegou ao Prometheus nos últimos 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
 
   - name: blackbox fora do ar entra no alerta de alvo
     interval: 1m
@@ -394,11 +482,14 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: monitoring
+              environment: monitoring
               job: blackbox
               instance: blackbox:9115
             exp_annotations:
               summary: "Alvo de observabilidade indisponível"
               description: "blackbox em blackbox:9115 está indisponível há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
 
   # Sonda externa da API de produção (job workshop/workshop-api-prod-probe).
   - name: API de produção fora do ar na sonda alerta após 3 minutos
@@ -415,12 +506,15 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: workshop-api
+              environment: production
               job: workshop/workshop-api-prod-probe
               instance: https://api.eletroluk.com/actuator/health
               deployment_environment_name: production
             exp_annotations:
               summary: "API de produção indisponível na sonda externa"
               description: "https://api.eletroluk.com/actuator/health não respondeu de forma saudável há mais de 3 minutos. A sonda sai da VM de QA pela internet pública e pela Cloudflare: falha de rede da QA também dispara este alerta."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
 
   - name: falha de um minuto na sonda da API de produção não alerta
     interval: 1m
@@ -454,10 +548,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: workshop-api
+              environment: production
               job: workshop/workshop-api-prod-probe
             exp_annotations:
               summary: "Sonda da API de produção sem resultados"
               description: "Nenhum resultado da sonda da API de produção chegou ao Prometheus há mais de 5 minutos. A indisponibilidade da API não está sendo detectada."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
 
   # Série que para de chegar (blackbox fora do ar no meio do período) também é ausência.
   - name: sonda que deixa de publicar resultados alerta ausência
@@ -474,10 +571,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: workshop-api
+              environment: production
               job: workshop/workshop-api-prod-probe
             exp_annotations:
               summary: "Sonda da API de produção sem resultados"
               description: "Nenhum resultado da sonda da API de produção chegou ao Prometheus há mais de 5 minutos. A indisponibilidade da API não está sendo detectada."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
 
   - name: sonda com resultados recentes não alerta ausência
     interval: 1m
@@ -504,12 +604,15 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: workshop-api
+              environment: production
               job: workshop/workshop-api-prod-probe
               instance: https://api.eletroluk.com/actuator/health
               deployment_environment_name: production
             exp_annotations:
               summary: "API de produção lenta na sonda externa"
               description: "A sonda de https://api.eletroluk.com/actuator/health levou mais de 5 segundos para concluir com sucesso há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/alta-latencia.md"
 
   - name: sonda rápida com sucesso não alerta lentidão
     interval: 1m
@@ -564,11 +667,14 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: monitoring
               job: otel-collector-internal
               exporter: otlp_http/prometheus
             exp_annotations:
               summary: "Fila do Collector acumulando"
               description: "A fila do exporter otlp_http/prometheus (otel-collector-internal) tem dados e nada foi enviado há mais de 15 minutos (destino indisponível)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   - name: fila cheia da borda de PRD alerta descarte e ocupação
     interval: 1m
@@ -586,21 +692,27 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: monitoring
               exporter: otlp_grpc/qa
             exp_annotations:
               summary: "Fila do Collector descartando dados"
               description: "O exporter otlp_grpc/qa não consegue enfileirar dados (fila cheia)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
       - eval_time: 20m
         alertname: OTelCollectorQueueNearlyFull
         exp_alerts:
           - exp_labels:
               severity: warning
               owner: platform
+              service: telemetry
+              environment: monitoring
               job: workshop/otelcol-contrib
               exporter: otlp_grpc/qa
             exp_annotations:
               summary: "Fila do Collector acima de 80%"
               description: "A fila do exporter otlp_grpc/qa está acima de 80% da capacidade."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   # Duas séries de nomes diferentes no mesmo exporter: sem a flag, rate() deixava
   # rótulos iguais e a regra falhava com "same labelset".
@@ -618,10 +730,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: monitoring
               exporter: otlp_grpc/qa
             exp_annotations:
               summary: "Falha de exportação no Collector"
               description: "O exporter otlp_grpc/qa falha continuamente há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   # Primeira falha: a série nasce com valor 1 e rate() não tem dois pontos. Dispara
   # quando a série nova sustenta o for (10 min) e resolve quando a janela de 15 min passa.
@@ -639,10 +754,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: monitoring
               exporter: otlp_grpc/qa
             exp_annotations:
               summary: "Falha de exportação no Collector"
               description: "O exporter otlp_grpc/qa falha continuamente há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
       - eval_time: 25m
         alertname: OTelCollectorExportFailures
 
@@ -664,10 +782,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: monitoring
               exporter: otlp_grpc/qa
             exp_annotations:
               summary: "Falha de exportação no Collector"
               description: "O exporter otlp_grpc/qa falha continuamente há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   - name: amostra mais velha que a janela fora de ordem alerta sem espera
     interval: 1m
@@ -683,9 +804,12 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: monitoring
+              environment: monitoring
             exp_annotations:
               summary: "Prometheus rejeitando amostras fora de ordem"
               description: "Amostras chegaram fora da janela de 6 horas e foram descartadas."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
 
   - name: linha recusada pelo Loki alerta sem espera
     interval: 1m
@@ -701,10 +825,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: monitoring
+              environment: monitoring
               reason: too_far_behind
             exp_annotations:
               summary: "Loki descartando linhas de log"
               description: "O Loki recusou linhas de log nos últimos 10 minutos (motivo too_far_behind)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
 
   # A série nasce no primeiro descarte (após restart do Loki), já com valor 1.
   - name: primeiro descarte do Loki em série nova alerta sem espera
@@ -721,10 +848,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: monitoring
+              environment: monitoring
               reason: too_far_behind
             exp_annotations:
               summary: "Loki descartando linhas de log"
               description: "O Loki recusou linhas de log nos últimos 10 minutos (motivo too_far_behind)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
       - eval_time: 20m
         alertname: LokiDiscardedSamples
 
@@ -745,10 +875,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: workshop-api
+              environment: production
               slo: availability
             exp_annotations:
               summary: "API de produção consumindo rápido o orçamento de erros"
               description: "A taxa de 5xx da API consome o orçamento do SLO de 99,5% a 6 vezes ou mais o ritmo sustentável (janelas de 1 h ou 6 h)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
 
   - name: 5xx isolado com tráfego normal não alerta
     interval: 1m
@@ -809,10 +942,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: workshop-api
+              environment: production
               slo: availability
             exp_annotations:
               summary: "API de produção consumindo o orçamento de erros"
               description: "A taxa de 5xx da API consome o orçamento do SLO de 99,5% acima do ritmo sustentável (janelas de 1 ou 3 dias)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
 
   - name: requisições acima de 500 ms alertam como crítico
     interval: 1m
@@ -830,10 +966,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: workshop-api
+              environment: production
               slo: latency
             exp_annotations:
               summary: "API de produção lenta consumindo rápido o orçamento de latência"
               description: "As requisições acima de 500 ms consomem o orçamento do SLO de 99% a 6 vezes ou mais o ritmo sustentável (janelas de 1 h ou 6 h)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/alta-latencia.md"
 
   - name: latência dentro do orçamento não alerta
     interval: 1m
@@ -863,10 +1002,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: postgres
+              environment: production
               job: workshop/postgres-exporter
             exp_annotations:
               summary: "Métricas do PostgreSQL de PRD ausentes"
               description: "Nenhuma amostra do postgres-exporter de PRD chegou ao Prometheus nos últimos 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/postgresql.md"
       - eval_time: 44m
         alertname: WorkshopPostgresMetricsAbsent
 
@@ -886,10 +1028,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: postgres
+              environment: production
               job: workshop/postgres-exporter
             exp_annotations:
               summary: "PostgreSQL de PRD inacessível ao monitoramento"
               description: "O postgres-exporter não consegue consultar o PostgreSQL de PRD há mais de 3 minutos. Verifique o container workshop-db, a rede workshop-db-metrics e o papel workshop_metrics."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/postgresql.md"
       - eval_time: 30m
         alertname: WorkshopPostgresDown
 
@@ -905,10 +1050,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: postgres
+              environment: production
               job: workshop/postgres-exporter
             exp_annotations:
               summary: "PostgreSQL de PRD inacessível ao monitoramento"
               description: "O postgres-exporter não consegue consultar o PostgreSQL de PRD há mais de 3 minutos. Verifique o container workshop-db, a rede workshop-db-metrics e o papel workshop_metrics."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/postgresql.md"
 
   - name: conexões do PostgreSQL de PRD acima de 80% alertam após 10 minutos
     interval: 1m
@@ -928,9 +1076,12 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: postgres
+              environment: production
             exp_annotations:
               summary: "PostgreSQL de PRD acima de 80% das conexões"
               description: "As conexões abertas passam de 80% de max_connections há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/postgresql.md"
 
   - name: deadlock no PostgreSQL de PRD alerta por banco
     interval: 1m
@@ -946,10 +1097,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: postgres
+              environment: production
               datname: workshop
             exp_annotations:
               summary: "Deadlock no PostgreSQL de PRD"
               description: "O banco workshop registrou deadlock nos últimos 15 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/postgresql.md"
       - eval_time: 35m
         alertname: WorkshopPostgresDeadlocks
 
@@ -967,10 +1121,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: backup
+              environment: production
               job: workshop/postgres-exporter
             exp_annotations:
               summary: "Arquivamento de WAL do PostgreSQL de PRD falhando"
               description: "O archive_command (pgBackRest) falhou nos últimos 15 minutos. Verifique o repositório de backup antes que o PITR perca cobertura."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
       - eval_time: 35m
         alertname: WorkshopPostgresWalArchiveFailing
 
@@ -991,10 +1148,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: backup
+              environment: production
               job: workshop/postgres-exporter
             exp_annotations:
               summary: "Arquivamento de WAL do PostgreSQL de PRD parado"
               description: "Há 20 segmentos em pg_wal e nenhum WAL arquivado há mais de 30 minutos, sem falha registrada. Verifique o archive_command (pgBackRest) e o repositório antes que o PITR perca cobertura."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
 
   # Pico de escrita com o arquivamento em dia: muitos segmentos, idade baixa.
   - name: pico de wal com arquivamento em dia não alerta
@@ -1030,9 +1190,12 @@ tests:
           - exp_labels:
               severity: none
               owner: platform
+              service: monitoring
+              environment: monitoring
             exp_annotations:
               summary: "Sinal de vida da cadeia de alertas"
               description: "Sempre disparado; a ausência de pings no Healthchecks.io indica que Prometheus ou Alertmanager pararam de notificar."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
 
   # Alloy (job workshop/alloy): ausência por ambiente, sem um satisfazer o outro.
   - name: alloy de PRD ausente alerta critical e a QA presente não alerta
@@ -1051,11 +1214,14 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: production
               job: workshop/alloy
               deployment_environment_name: production
             exp_annotations:
               summary: "Métricas do Alloy de PRD ausentes"
               description: "Nenhuma amostra do Alloy de PRD chegou nos últimos 10 minutos: o Alloy ou o Collector de borda estão parados, ou a borda não alcança a QA."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
       - eval_time: 19m
         alertname: AlloyQaMetricsAbsent
 
@@ -1071,11 +1237,14 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: telemetry
+              environment: qa
               job: workshop/alloy
               deployment_environment_name: qa
             exp_annotations:
               summary: "Métricas do Alloy de QA ausentes"
               description: "Nenhuma amostra do Alloy de QA chegou nos últimos 10 minutos: o Alloy ou o otel-collector-qa-api estão parados."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
       - eval_time: 6m
         alertname: AlloyProductionMetricsAbsent
 
@@ -1095,11 +1264,14 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: telemetry
+              environment: production
               deployment_environment_name: production
               health_type: unhealthy
             exp_annotations:
               summary: "Componente do Alloy não saudável"
               description: "O Alloy de production tem componente em estado unhealthy há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   # Refresh a cada 15 s: 4 falhas por minuto com o proxy fora.
   - name: alloy sem acesso ao docker alerta e contador parado não alerta
@@ -1116,10 +1288,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: telemetry
+              environment: qa
               deployment_environment_name: qa
             exp_annotations:
               summary: "Alloy sem acesso ao Docker"
               description: "O Alloy de qa não consegue listar os containers pelo docker-logs-proxy há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   - name: fila de logs do alloy parada alerta e com envio ativo não alerta
     interval: 1m
@@ -1141,10 +1316,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: telemetry
+              environment: production
               deployment_environment_name: production
             exp_annotations:
               summary: "Fila de logs do Alloy acumulando"
               description: "A fila de logs do Alloy de production tem dados e nada foi enviado há mais de 15 minutos (Collector recusando ou fora)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   # Erro permanente de envio do Alloy: mesmo alerta genérico do Collector.
   - name: falha permanente de envio do alloy alerta pelo alerta genérico
@@ -1159,10 +1337,13 @@ tests:
           - exp_labels:
               severity: critical
               owner: platform
+              service: telemetry
+              environment: monitoring
               exporter: otlp_http/otelcol.exporter.otlphttp.collector
             exp_annotations:
               summary: "Falha de exportação no Collector"
               description: "O exporter otlp_http/otelcol.exporter.otlphttp.collector falha continuamente há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
   # Backups do pgBackRest de PRD (textfile do node-exporter de PRD). Os valores são
   # o fim do último backup em segundos desde o início do teste.
@@ -1182,11 +1363,14 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: backup
+              environment: production
               job: workshop/node-exporter
               type: full
             exp_annotations:
               summary: "Backup full do pgBackRest de PRD atrasado"
               description: "O último backup full sem erro terminou há 7d 8h 0m 0s. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
       - eval_time: 176h
         alertname: WorkshopBackupStale
 
@@ -1206,10 +1390,13 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: backup
+              environment: production
               job: workshop/node-exporter
             exp_annotations:
               summary: "Nenhum backup do pgBackRest de PRD em 48 horas"
               description: "O backup mais recente sem erro (full ou diff) terminou há 2d 1h 0m 0s. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
       - eval_time: 50h
         alertname: WorkshopBackupFullStale
 
@@ -1229,21 +1416,27 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: backup
+              environment: production
               job: workshop/node-exporter
               type: full
             exp_annotations:
               summary: "Métricas de backup do pgBackRest de PRD ausentes"
               description: "O node-exporter de PRD responde, mas não expõe o último backup full há mais de 1 hora. Verifique /srv/pgbackrest/metrics/pgbackrest.prom e o bin/pgbackrest-backup.sh no host."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
       - eval_time: 31m
         alertname: WorkshopBackupMetricsUnreadable
         exp_alerts:
           - exp_labels:
               severity: warning
               owner: platform
+              service: backup
+              environment: production
               job: workshop/node-exporter
             exp_annotations:
               summary: "Textfile de backup ilegível no node-exporter de PRD"
               description: "O node-exporter de PRD não consegue ler o diretório /srv/pgbackrest/metrics ou um arquivo dele há mais de 30 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
 
   # Sem o node-exporter quem avisa é o WorkshopHostMetricsAbsent.
   - name: métricas de backup ausentes sem o node-exporter não alertam
@@ -1269,7 +1462,10 @@ tests:
           - exp_labels:
               severity: warning
               owner: platform
+              service: backup
+              environment: production
               job: workshop/node-exporter
             exp_annotations:
               summary: "Stanza do pgBackRest de PRD com erro"
               description: "O pgbackrest info da última execução registrou o código 2 na stanza workshop. Rode pgbackrest info e check no container workshop-db."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
