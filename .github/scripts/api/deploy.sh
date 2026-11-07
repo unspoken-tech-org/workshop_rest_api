@@ -240,9 +240,9 @@ fi
 echo "workshop-api runs ${IMAGE_REF}"
 docker compose -f "${COMPOSE_FILE}" ps
 
-# Health check
-ATTEMPTS=30
-SLEEP=5
+# Health check: same 150s budget, polled every 2s to match start_interval.
+ATTEMPTS=75
+SLEEP=2
 for i in $(seq 1 $ATTEMPTS); do
   STATUS=$(docker inspect --format='{{json .State.Health.Status}}' workshop-api 2>/dev/null | tr -d '"')
   echo "[$i/$ATTEMPTS] workshop-api health: ${STATUS:-unknown}"
