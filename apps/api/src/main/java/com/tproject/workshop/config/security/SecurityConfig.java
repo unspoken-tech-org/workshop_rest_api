@@ -22,6 +22,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
+import java.util.stream.Stream;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -32,6 +35,16 @@ public class SecurityConfig {
     private final CorsProperties corsProperties;
 
     static final String METRICS_ROLE = "METRICS";
+
+    private static final String[] PUBLIC_PATHS = {"/api/auth/**", "/actuator/health"};
+
+    private static final String[] SPRINGDOC_PATHS = {
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/v3/api-docs/**",
+            "/swagger-resources/**",
+            "/webjars/**"
+    };
 
     /**
      * Scrape identity with least privilege: a single technical user (HTTP Basic,
@@ -67,7 +80,14 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            // Same default as SpringDoc: the docs paths are public only where it is on.
+            @Value("${springdoc.api-docs.enabled:true}") boolean springdocEnabled) throws Exception {
+        String[] publicPaths = springdocEnabled
+                ? Stream.concat(Arrays.stream(PUBLIC_PATHS), Arrays.stream(SPRINGDOC_PATHS))
+                        .toArray(String[]::new)
+                : PUBLIC_PATHS;
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -95,15 +115,7 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/actuator/health",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/webjars/**"
-                        ).permitAll()
+                        .requestMatchers(publicPaths).permitAll()
                         // Only health is public; /actuator/prometheus is handled by
                         // the scrape chain above and info reveals build details.
                         .requestMatchers("/actuator/**").hasRole("ADMIN")

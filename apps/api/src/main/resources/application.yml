@@ -31,6 +31,14 @@ server:
     session:
       timeout: 30
 
+# SpringDoc (OpenAPI JSON e Swagger UI) fica fechado por padrão: só o perfil
+# local o religa. Um perfil novo já nasce sem a documentação exposta.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 # Métricas ficam disponíveis no mesmo servidor HTTP da API, mas o endpoint
 # prometheus só aceita a identidade de scrape (ROLE_METRICS). Apenas health
 # é público; info exige ROLE_ADMIN.
