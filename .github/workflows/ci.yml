@@ -27,21 +27,11 @@ on:
       - 'gradlew.bat'
       - '.github/**'
       - 'scripts/**'
+  # No paths filter on pull_request: the jobs below are required checks on
+  # main, and a workflow that does not trigger leaves them stuck as "Expected".
   pull_request:
     branches:
       - main
-    paths:
-      - 'apps/api/**'
-      - 'apps/security/**'
-      - 'platform/**'
-      - 'environments/local/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - 'gradle/**'
-      - 'gradlew'
-      - 'gradlew.bat'
-      - '.github/**'
-      - 'scripts/**'
 
 permissions:
   contents: read
