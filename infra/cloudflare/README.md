@@ -40,7 +40,9 @@ produção. O escopo mínimo é:
 
 - `Cloudflare Tunnel: Edit` no account que hospeda o Tunnel;
 - `Access: Apps and Policies: Edit` no mesmo account;
-- `DNS: Edit` somente para a zona `eletroluk.com`.
+- `DNS: Edit` somente para a zona `eletroluk.com`;
+- `Zone WAF: Edit` somente para a zona `eletroluk.com` (custom rule e rate
+  limit de `waf.tf`).
 
 O provider v5 usa `cloudflare_dns_record`,
 `cloudflare_zero_trust_tunnel_cloudflared*` e os recursos
