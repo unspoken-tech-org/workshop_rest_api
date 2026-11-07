@@ -1197,6 +1197,36 @@ tests:
               description: "Sempre disparado; a ausência de pings no Healthchecks.io indica que Prometheus ou Alertmanager pararam de notificar."
               runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
 
+  # Falha de entrega ao Telegram: a primeira falha já dispara (séries nascem zeradas),
+  # o reinício do Alertmanager não engana o increase() e outra integração não conta.
+  - name: falha de entrega ao Telegram alerta e volta ao normal
+    interval: 1m
+    input_series:
+      - series: 'alertmanager_notifications_failed_total{job="alertmanager",instance="alertmanager:9093",integration="telegram",reason="clientError"}'
+        values: '0x10 1x10 0x5 0x20'
+      - series: 'alertmanager_notifications_failed_total{job="alertmanager",instance="alertmanager:9093",integration="telegram",reason="serverError"}'
+        values: '0x60'
+      - series: 'alertmanager_notifications_failed_total{job="alertmanager",instance="alertmanager:9093",integration="webhook",reason="clientError"}'
+        values: '0x5 3x55'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: AlertmanagerTelegramFailing
+      - eval_time: 12m
+        alertname: AlertmanagerTelegramFailing
+        exp_alerts:
+          - exp_labels:
+              job: alertmanager
+              severity: warning
+              owner: platform
+              service: monitoring
+              environment: monitoring
+            exp_annotations:
+              summary: "Entrega ao Telegram falhando"
+              description: "O Alertmanager registrou falhas de envio ao Telegram nos últimos 15 minutos; os alertas podem não estar chegando ao canal."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
+      - eval_time: 50m
+        alertname: AlertmanagerTelegramFailing
+
   # Alloy (job workshop/alloy): ausência por ambiente, sem um satisfazer o outro.
   - name: alloy de PRD ausente alerta critical e a QA presente não alerta
     interval: 1m

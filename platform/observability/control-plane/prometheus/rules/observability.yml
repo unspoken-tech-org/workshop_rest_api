@@ -23,6 +23,25 @@ groups:
           description: "{{ $labels.job }} em {{ $labels.instance }} está indisponível há mais de 10 minutos."
           runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
 
+      # O canal (Telegram) recusando ou sem resposta: o Watchdog não vê, porque vai
+      # ao Healthchecks.io. O contador só sobe quando o Alertmanager desiste da
+      # notificação, depois das novas tentativas (~um group_interval da rota: 2 min
+      # nos críticos, 5 min nos avisos); uma falha passageira que a nova tentativa
+      # resolve não conta. As séries nascem zeradas, então a primeira desistência já
+      # entra no increase(). Só conta quando há o que entregar: um token revogado com
+      # o canal quieto aparece no próximo alerta.
+      - alert: AlertmanagerTelegramFailing
+        expr: sum by (job) (increase(alertmanager_notifications_failed_total{job="alertmanager",integration="telegram"}[15m])) > 0
+        labels:
+          severity: warning
+          owner: platform
+          service: monitoring
+          environment: monitoring
+        annotations:
+          summary: "Entrega ao Telegram falhando"
+          description: "O Alertmanager registrou falhas de envio ao Telegram nos últimos 15 minutos; os alertas podem não estar chegando ao canal."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
+
       # Os três sinais: spans, pontos de métrica e registros de log. A segunda parte
       # pega a primeira falha: a série nasce com valor 1 e rate() ainda não tem dois
       # pontos. O offset é o for mais 5 min, para a série nova sustentar o alerta até

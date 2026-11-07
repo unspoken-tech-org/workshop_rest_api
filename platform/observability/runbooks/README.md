@@ -15,6 +15,7 @@ destes arquivos pela annotation `runbook_url`. A mensagem do Telegram traz o lin
 | Rota | Receiver | Espera / intervalo / repetição |
 |---|---|---|
 | `alertname="Watchdog"` | `healthchecks` (Healthchecks.io) | 0s / 1m / 1m |
+| `alertname="AlertmanagerTelegramFailing"` | `healthchecks-fail` (`/fail` do mesmo check) | 0s / 5m / 4h |
 | `owner="platform"`, `severity="critical"` | `telegram-critical` | 10s / 2m / 1h |
 | `owner="platform"`, `environment="qa"` | `telegram` | 30s / 5m / 24h |
 | `owner="platform"`, demais avisos | `telegram` | 30s / 5m / 12h |
@@ -45,7 +46,7 @@ Inibições:
 | [Collector/Alloy parado](collector-alloy.md) | `OTelCollector*`, `Alloy*`, `DockerLogsProxyRefusals` |
 | [Queda de ingestão](queda-ingestao.md) | `WorkshopEdgeTelemetryAbsent`, `WorkshopHostMetricsAbsent`, `WorkshopHostScrapeFailing`, `WorkshopContainerMetricsAbsent`, `PrometheusOutOfOrderSamplesRejected`, `LokiDiscardedSamples`, `ProductionLogsAbsent`, `QaLogsAbsent` |
 | [Falha de backup](falha-backup.md) | `WorkshopBackup*`, `WorkshopPostgresWalArchiveFailing`, `WorkshopPostgresWalArchiveStalled`, checks de backup do Healthchecks.io |
-| [QA ou monitoramento fora](qa-monitoramento.md) | `Watchdog` (aviso do Healthchecks.io), `ObservabilityTargetDown`, `PrometheusRuleEvaluationFailures` |
+| [QA ou monitoramento fora](qa-monitoramento.md) | `Watchdog` (aviso do Healthchecks.io), `ObservabilityTargetDown`, `PrometheusRuleEvaluationFailures`, `AlertmanagerTelegramFailing` |
 
 ## Regras gerais
 
