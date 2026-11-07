@@ -105,7 +105,11 @@ fi
 
 # Pull by digest; the local compose tag is set only after the Flyway gate
 docker --config "${DEPLOY_DIR}/.tmp/docker" pull "${IMAGE_REF}"
-EXPECTED_IMAGE_ID=$(docker image inspect --format '{{.Id}}' "${IMAGE_REF}")
+# Tag at once: pulled by digest the image has no tag, so any image prune on the host
+# (another stack's cleanup, for one) would delete it before the gate below runs
+CANDIDATE="${LOCAL_IMAGE_NAME}:candidate"
+docker tag "${IMAGE_REF}" "${CANDIDATE}"
+EXPECTED_IMAGE_ID=$(docker image inspect --format '{{.Id}}' "${CANDIDATE}")
 
 # Backup the image the running API container uses, not the tag: :latest may have
 # moved since. rollback.sh restores :backup only when this run swaps the API.
@@ -143,7 +147,7 @@ fi
 
 # Flyway gate: the migrations in the NEW image must match the database history
 # before the API is swapped. A rollback restores the image only, never the schema.
-if ! JAR_LISTING=$(docker run --rm --network none --entrypoint unzip "${IMAGE_REF}" -l /app/app.jar); then
+if ! JAR_LISTING=$(docker run --rm --network none --entrypoint unzip "${CANDIDATE}" -l /app/app.jar); then
   echo "Could not list migrations in ${IMAGE_REF}" >&2
   exit 1
 fi
@@ -210,7 +214,7 @@ else
 fi
 
 # Retag after the Flyway gate, so a failed gate never moves :latest
-docker tag "${IMAGE_REF}" "${LOCAL_IMAGE_NAME}:latest"
+docker tag "${CANDIDATE}" "${LOCAL_IMAGE_NAME}:latest"
 
 # Mark that this run swapped the API: rollback.sh reverts only when the marker holds this run id
 printf '%s\n' "${DEPLOY_RUN_ID}" > .api-swapped
