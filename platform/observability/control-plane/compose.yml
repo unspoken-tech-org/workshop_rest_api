@@ -380,8 +380,9 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      # Retenção por tempo e tamanho, provisória até medir a taxa de PRD.
-      - --storage.tsdb.retention.time=15d
+      # 30 dias cobrem a janela de 28 dias dos SLOs. Em 07/11/2026 o TSDB
+      # crescia ~66 MB/dia (989 MB em 15 dias); o teto de tamanho fica como guarda.
+      - --storage.tsdb.retention.time=30d
       - --storage.tsdb.retention.size=8GB
       - --web.enable-otlp-receiver
       # Sem ela, rate() sobre séries de nomes diferentes colide rótulos (ver rules/).
