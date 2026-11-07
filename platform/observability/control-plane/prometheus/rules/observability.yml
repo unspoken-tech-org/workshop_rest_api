@@ -642,6 +642,70 @@ groups:
           summary: "Arquivamento de WAL do PostgreSQL de PRD parado"
           description: "Há {{ $value }} segmentos em pg_wal e nenhum WAL arquivado há mais de 30 minutos, sem falha registrada. Verifique o archive_command (pgBackRest) e o repositório antes que o PITR perca cobertura."
 
+  # Backups do pgBackRest de PRD, pelo textfile que o bin/pgbackrest-backup.sh grava a
+  # partir do `pgbackrest info` em cada execução e o node-exporter da borda expõe.
+  # Complementam o Healthchecks.io, que continua o alarme primário (fora de PRD e QA);
+  # por isso warning. Agenda: full domingo 03:00 e diff seg–sáb 20:00; o maior
+  # intervalo entre dois backups é de domingo 03:00 a segunda 20:00 (41 h).
+  - name: prd-backup
+    interval: 1m
+    rules:
+      # node-exporter de pé sem as séries do arquivo: falta o diretório, o arquivo ou o
+      # deploy da API que o cria. Sem o node-exporter, avisa o WorkshopHostMetricsAbsent.
+      - alert: WorkshopBackupMetricsAbsent
+        expr: |
+          absent_over_time(workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter", type="full"}[1h])
+            and on () (max(up{job="workshop/node-exporter"}) == 1)
+        for: 30m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Métricas de backup do pgBackRest de PRD ausentes"
+          description: "O node-exporter de PRD responde, mas não expõe o último backup full há mais de 1 hora. Verifique /srv/pgbackrest/metrics/pgbackrest.prom e o bin/pgbackrest-backup.sh no host."
+
+      - alert: WorkshopBackupMetricsUnreadable
+        expr: node_textfile_scrape_error{job="workshop/node-exporter"} == 1
+        for: 30m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Textfile de backup ilegível no node-exporter de PRD"
+          description: "O node-exporter de PRD não consegue ler o diretório /srv/pgbackrest/metrics ou um arquivo dele há mais de 30 minutos."
+
+      # Semanal: 7 dias mais 6 horas de folga.
+      - alert: WorkshopBackupFullStale
+        expr: time() - workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter", type="full"} > 7 * 86400 + 6 * 3600
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Backup full do pgBackRest de PRD atrasado"
+          description: "O último backup full sem erro terminou há {{ $value | humanizeDuration }}. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+
+      # Full ou diff: nenhum backup novo além do maior intervalo da agenda (41 h).
+      - alert: WorkshopBackupStale
+        expr: time() - max without (type) (workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter"}) > 48 * 3600
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Nenhum backup do pgBackRest de PRD em 48 horas"
+          description: "O backup mais recente sem erro (full ou diff) terminou há {{ $value | humanizeDuration }}. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+
+      - alert: WorkshopBackupStanzaError
+        expr: workshop_pgbackrest_stanza_status_code{job="workshop/node-exporter"} != 0
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: "Stanza do pgBackRest de PRD com erro"
+          description: "O pgbackrest info da última execução registrou o código {{ $value }} na stanza workshop. Rode pgbackrest info e check no container workshop-db."
+
   # Alloy da QA e da borda de PRD (job workshop/alloy), por OTLP pelo Collector de
   # cada ambiente, que carimba deployment_environment_name. Erro permanente de envio
   # cai no OTelCollectorExportFailures (mesmos nomes de métrica, sem filtro de job).

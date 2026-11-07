@@ -238,6 +238,9 @@ services:
       - --collector.meminfo
       - --collector.loadavg
       - --collector.pressure
+      # Backups do pgBackRest, gravados pelo bin/pgbackrest-backup.sh do deploy da API.
+      - --collector.textfile
+      - --collector.textfile.directory=/host/srv/pgbackrest/metrics
     volumes:
       - /:/host:ro,rslave
     networks:

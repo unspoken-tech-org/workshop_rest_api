@@ -1163,3 +1163,113 @@ tests:
             exp_annotations:
               summary: "Falha de exportação no Collector"
               description: "O exporter otlp_http/otelcol.exporter.otlphttp.collector falha continuamente há mais de 10 minutos."
+
+  # Backups do pgBackRest de PRD (textfile do node-exporter de PRD). Os valores são
+  # o fim do último backup em segundos desde o início do teste.
+  - name: backup full atrasado alerta e diff recente não dispara o de 48 horas
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="full"}'
+        values: '0x10600'
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="diff"}'
+        values: '0+60x10600'
+    alert_rule_test:
+      - eval_time: 174h
+        alertname: WorkshopBackupFullStale
+      - eval_time: 176h
+        alertname: WorkshopBackupFullStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/node-exporter
+              type: full
+            exp_annotations:
+              summary: "Backup full do pgBackRest de PRD atrasado"
+              description: "O último backup full sem erro terminou há 7d 8h 0m 0s. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+      - eval_time: 176h
+        alertname: WorkshopBackupStale
+
+  - name: nenhum backup em 48 horas alerta
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="full"}'
+        values: '0x3000'
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="diff"}'
+        values: '3600x3000'
+    alert_rule_test:
+      - eval_time: 49h
+        alertname: WorkshopBackupStale
+      - eval_time: 50h
+        alertname: WorkshopBackupStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Nenhum backup do pgBackRest de PRD em 48 horas"
+              description: "O backup mais recente sem erro (full ou diff) terminou há 2d 1h 0m 0s. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+      - eval_time: 50h
+        alertname: WorkshopBackupFullStale
+
+  - name: métricas de backup ausentes com o node-exporter de pé alertam
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/node-exporter"}'
+        values: '1x60'
+      - series: 'node_textfile_scrape_error{job="workshop/node-exporter"}'
+        values: '1x60'
+    alert_rule_test:
+      - eval_time: 29m
+        alertname: WorkshopBackupMetricsAbsent
+      - eval_time: 31m
+        alertname: WorkshopBackupMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/node-exporter
+              type: full
+            exp_annotations:
+              summary: "Métricas de backup do pgBackRest de PRD ausentes"
+              description: "O node-exporter de PRD responde, mas não expõe o último backup full há mais de 1 hora. Verifique /srv/pgbackrest/metrics/pgbackrest.prom e o bin/pgbackrest-backup.sh no host."
+      - eval_time: 31m
+        alertname: WorkshopBackupMetricsUnreadable
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Textfile de backup ilegível no node-exporter de PRD"
+              description: "O node-exporter de PRD não consegue ler o diretório /srv/pgbackrest/metrics ou um arquivo dele há mais de 30 minutos."
+
+  # Sem o node-exporter quem avisa é o WorkshopHostMetricsAbsent.
+  - name: métricas de backup ausentes sem o node-exporter não alertam
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/node-exporter"}'
+        values: '0x60'
+    alert_rule_test:
+      - eval_time: 45m
+        alertname: WorkshopBackupMetricsAbsent
+
+  - name: stanza do pgbackrest com erro alerta
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_stanza_status_code{job="workshop/node-exporter"}'
+        values: '0x10 2x30'
+    alert_rule_test:
+      - eval_time: 24m
+        alertname: WorkshopBackupStanzaError
+      - eval_time: 27m
+        alertname: WorkshopBackupStanzaError
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Stanza do pgBackRest de PRD com erro"
+              description: "O pgbackrest info da última execução registrou o código 2 na stanza workshop. Rode pgbackrest info e check no container workshop-db."
