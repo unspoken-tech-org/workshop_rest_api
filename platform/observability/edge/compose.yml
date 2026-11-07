@@ -311,7 +311,7 @@ services:
   # bind não restringe a API (a restrição é a allowlist no Caddyfile). Sem porta
   # publicada: só a rede edge-docker. A imagem é a Caddy já fixada na plataforma.
   docker-api-proxy:
-    image: caddy:2.11.6-alpine@sha256:c776e0c6413b544d0459665e54ec7b8b2a15000c0cbee8b254da0067b1d184ff
+    image: caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
     volumes:
       - ./platform/observability/edge/docker-api-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -400,7 +400,7 @@ services:
   # (docker-logs-proxy/Caddyfile), na rede interna edge-docker-logs. Separado do
   # docker-api-proxy: este libera logs de dois containers, aquele não libera logs.
   docker-logs-proxy:
-    image: caddy:2.11.6-alpine@sha256:c776e0c6413b544d0459665e54ec7b8b2a15000c0cbee8b254da0067b1d184ff
+    image: caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
     volumes:
       - ./platform/observability/edge/docker-logs-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
