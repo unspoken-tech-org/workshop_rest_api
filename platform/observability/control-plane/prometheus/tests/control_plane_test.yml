@@ -790,6 +790,82 @@ tests:
               description: "O exporter otlp_grpc/qa falha continuamente há mais de 10 minutos."
               runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
 
+  - name: recusa contínua no receiver alerta após o for
+    interval: 1m
+    input_series:
+      - series: 'otelcol_receiver_refused_metric_points_total{job="workshop/otelcol-contrib",receiver="otlp",transport="grpc",deployment_environment_name="production"}'
+        values: '0+10x20'
+      - series: 'otelcol_receiver_refused_spans_total{job="workshop/otelcol-contrib",receiver="otlp",transport="http",deployment_environment_name="production"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: OTelCollectorReceiverRefused
+      - eval_time: 7m
+        alertname: OTelCollectorReceiverRefused
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: telemetry
+              environment: monitoring
+              receiver: otlp
+            exp_annotations:
+              summary: "Collector recusando dados"
+              description: "O receiver otlp está recusando dados (pressão de memória ou backpressure)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
+
+  # Primeira recusa: a série nasce com valor 1 e rate() não tem dois pontos. Dispara
+  # quando a série nova sustenta o for (5 min) e resolve quando o offset de 10 min a alcança.
+  - name: primeira recusa com série nova alerta após o for e resolve
+    interval: 1m
+    input_series:
+      - series: 'otelcol_receiver_refused_log_records{job="otel-collector-internal",instance="otel-collector:8888",receiver="otlp",transport="grpc"}'
+        values: '_x5 1x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: OTelCollectorReceiverRefused
+      - eval_time: 11m
+        alertname: OTelCollectorReceiverRefused
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: telemetry
+              environment: monitoring
+              receiver: otlp
+            exp_annotations:
+              summary: "Collector recusando dados"
+              description: "O receiver otlp está recusando dados (pressão de memória ou backpressure)."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/collector-alloy.md"
+      - eval_time: 16m
+        alertname: OTelCollectorReceiverRefused
+
+  - name: falha de avaliação de regra alerta após o for e resolve
+    interval: 1m
+    input_series:
+      - series: 'prometheus_rule_evaluation_failures_total{job="prometheus",instance="prometheus:9090",rule_group="/etc/prometheus/rules/observability.yml;telemetry"}'
+        values: '0x3 1+1x10 11x20'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: PrometheusRuleEvaluationFailures
+      - eval_time: 10m
+        alertname: PrometheusRuleEvaluationFailures
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: monitoring
+              environment: monitoring
+              job: prometheus
+              instance: prometheus:9090
+              rule_group: /etc/prometheus/rules/observability.yml;telemetry
+            exp_annotations:
+              summary: "Falha ao avaliar regra do Prometheus"
+              description: "O Prometheus registrou falha de avaliação de regras nos últimos 5 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/qa-monitoramento.md"
+      - eval_time: 22m
+        alertname: PrometheusRuleEvaluationFailures
+
   - name: amostra mais velha que a janela fora de ordem alerta sem espera
     interval: 1m
     input_series:
