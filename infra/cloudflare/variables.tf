@@ -68,3 +68,29 @@ variable "grafana_access_session_duration" {
     error_message = "grafana_access_session_duration must be a positive duration in minutes or hours, for example 8h."
   }
 }
+
+variable "api_hostnames" {
+  description = "Public API hostnames whose scanner paths are blocked at the edge."
+  type        = set(string)
+  default     = ["api.eletroluk.com", "api-qa.eletroluk.com"]
+  nullable    = false
+
+  validation {
+    condition = length(var.api_hostnames) > 0 && alltrue([
+      for host in var.api_hostnames : can(regex("^[a-z0-9.-]+\\.eletroluk\\.com$", host))
+    ])
+    error_message = "api_hostnames must list at least one hostname in the eletroluk.com zone."
+  }
+}
+
+variable "rate_limit_requests_per_10s" {
+  description = "Requests per IP in 10 s (Free plan period) before Cloudflare blocks that IP for 10 s."
+  type        = number
+  default     = 100
+  nullable    = false
+
+  validation {
+    condition     = var.rate_limit_requests_per_10s >= 50 && floor(var.rate_limit_requests_per_10s) == var.rate_limit_requests_per_10s
+    error_message = "rate_limit_requests_per_10s must be an integer of at least 50."
+  }
+}
