@@ -437,6 +437,7 @@ services:
       - telegram_bot_token
       - telegram_chat_id
       - healthchecks_ping_url
+      - healthchecks_fail_url
     networks:
       - cp-backend
       # Saída para a API do Telegram e para o Healthchecks.io.
@@ -717,6 +718,8 @@ secrets:
     file: ./.secrets/telegram_chat_id
   healthchecks_ping_url:
     file: ./.secrets/healthchecks_ping_url
+  healthchecks_fail_url:
+    file: ./.secrets/healthchecks_fail_url
 
 volumes:
   alertmanager_data:

@@ -228,6 +228,8 @@ jobs:
           printf '%s' "${TELEGRAM_BOT_TOKEN}" > "${secrets_dir}/telegram_bot_token"
           printf '%s' "${TELEGRAM_CHAT_ID}" > "${secrets_dir}/telegram_chat_id"
           printf '%s' "${HEALTHCHECKS_PING_URL}" > "${secrets_dir}/healthchecks_ping_url"
+          # Same check, /fail endpoint: AlertmanagerTelegramFailing marks it down.
+          printf '%s/fail' "${HEALTHCHECKS_PING_URL%/}" > "${secrets_dir}/healthchecks_fail_url"
 
       - name: Connect to the QA VM
         uses: ./.github/actions/observability-control-plane/connect
