@@ -2,6 +2,7 @@
 # Workflow: Deploy Gateway (QA) — VM Dedicada
 # ===========================================================
 # Orchestrates: build GHCR -> deploy via SSH -> verify -> cleanup
+# (deploy, verify and cleanup run as steps of one job: one runner, one tunnel)
 # Trigger: manual workflow_dispatch only
 # ===========================================================
 
@@ -98,8 +99,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Registry cache, one ref per environment (arm64). The gha cache shared the default
+          # scope with the API build, was overwritten by it and never read back (xcaddy
+          # recompiled every run) while its mode=max export cost ~2 min.
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-qa
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-qa,mode=max,image-manifest=true,oci-mediatypes=true
 
       - name: Print build banner
         uses: ./.github/actions/shared/print-banner
@@ -113,7 +117,8 @@ jobs:
   deploy:
     name: Deploy to QA VM
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Deploy, verify and cleanup share one job (former budgets 25 + 15 + 5).
+    timeout-minutes: 40
     needs: build
     permissions:
       contents: read
@@ -139,8 +144,10 @@ jobs:
           ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
 
       - name: Setup SSH Known Hosts
+        id: known-hosts
         uses: ./.github/actions/shared/setup-ssh-known-hosts
         with:
+          multiplex: 'true'
           host: ${{ secrets.QA_TS_TAILSCALE_IP }}
           known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
 
@@ -176,42 +183,7 @@ jobs:
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/rollback.sh' && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' '${DEPLOY_DIR}/.tmp/rollback.sh'"
 
-  # ===========================================
-  # JOB 3: VERIFY
-  # ===========================================
-  verify:
-    name: Verify Deployment
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    needs: deploy
-    permissions:
-      contents: read
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      - name: Setup Tailscale
-        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
-        with:
-          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
-          tags: tag:ci
-          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
-
-      - name: Setup SSH Known Hosts
-        uses: ./.github/actions/shared/setup-ssh-known-hosts
-        with:
-          host: ${{ secrets.QA_TS_TAILSCALE_IP }}
-          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
-
+      # Rollback above covers only the deploy steps; a verify failure keeps the new gateway, as before.
       - name: Verify via SSH
         run: |
           ssh -o ConnectTimeout=30 \
@@ -223,44 +195,9 @@ jobs:
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "rm -f '${DEPLOY_DIR}/.tmp/verify.sh'"
 
-  # ===========================================
-  # JOB 4: CLEANUP
-  # ===========================================
-  cleanup:
-    name: Cleanup
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    needs: [build, verify]
-    if: always()
-    permissions:
-      contents: read
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      - name: Setup Tailscale
-        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
-        with:
-          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
-          tags: tag:ci
-          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
-
-      - name: Setup SSH Known Hosts
-        uses: ./.github/actions/shared/setup-ssh-known-hosts
-        with:
-          host: ${{ secrets.QA_TS_TAILSCALE_IP }}
-          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
-
+      # Same as the former cleanup job (if: always()), but only once SSH is set up.
       - name: Cleanup via SSH
+        if: always() && steps.known-hosts.outcome == 'success'
         run: |
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"
