@@ -61,7 +61,7 @@ fi
 
 # Build PostgreSQL image locally if it doesn't exist
 # (image not on GHCR — built from Dockerfile.pgbackrest on first deploy)
-PG_IMAGE="workshop/postgres16-pgbackrest:latest"
+PG_IMAGE="workshop/postgres16-pgbackrest:16.15-pgbackrest-2.60.0"
 if ! docker image inspect "${PG_IMAGE}" >/dev/null 2>&1; then
   echo "PostgreSQL image ${PG_IMAGE} not found, building from Dockerfile.pgbackrest..."
   docker build -f "${DEPLOY_DIR}/Dockerfile.pgbackrest" -t "${PG_IMAGE}" "${DEPLOY_DIR}"
