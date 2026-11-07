@@ -11,6 +11,12 @@ inputs:
     description: 'Optional pre-configured known_hosts content from secrets'
     required: false
     default: ''
+  multiplex:
+    description: >
+      'true' reuses one SSH connection for every ssh/scp to the host for the rest of the job
+      (ControlMaster), so only the first call pays the handshake over the tunnel.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -33,3 +39,24 @@ runs:
         chmod 600 ~/.ssh/known_hosts
         echo "known_hosts configured successfully:"
         ls -la ~/.ssh/known_hosts
+
+    - name: Configure SSH connection multiplexing
+      if: inputs.multiplex == 'true'
+      shell: bash
+      env:
+        SSH_HOST: ${{ inputs.host }}
+      run: |
+        set -e
+        [[ "${SSH_HOST}" =~ ^[A-Za-z0-9.:-]+$ ]] || {
+          echo "host must be an IP or hostname" >&2
+          exit 1
+        }
+        # The master closes after 120s idle; the runner ends it with the job anyway.
+        {
+          echo "Host ${SSH_HOST}"
+          echo "  ControlMaster auto"
+          echo "  ControlPath ~/.ssh/cm-%C"
+          echo "  ControlPersist 120"
+        } >> ~/.ssh/config
+        chmod 600 ~/.ssh/config
+        echo "SSH multiplexing enabled for the target host"

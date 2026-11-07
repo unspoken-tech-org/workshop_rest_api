@@ -2,6 +2,7 @@
 # Workflow: Deploy Spring Boot API to QA (VM Dedicada)
 # ===========================================================
 # Orchestrates: build GHCR -> deploy via SSH -> verify -> cleanup
+# (deploy, verify and cleanup run as steps of one job: one runner, one tunnel)
 # Local dependencies:
 #   .github/actions/api-qa/deploy-via-ssh-api-qa -> upload + run deploy.sh
 #   .github/actions/shared/print-banner          -> standardized status log
@@ -100,17 +101,6 @@ jobs:
             echo "::warning::no successful CI run for ${COMMIT_SHA}; deploying to QA anyway"
           fi
 
-      - name: Setup Java 25
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: "25"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-
-      - name: Build with Gradle (skip tests)
-        run: ./gradlew :apps:api:build -x test
 
       - name: Login to GHCR
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
@@ -156,8 +146,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.commit.outputs.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Registry cache: one ref per environment (PRD amd64, QA arm64), shared across
+          # tags and branches and outside the 10 GB Actions cache, where per-ref scopes
+          # were never read back.
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-qa
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-qa,mode=max,image-manifest=true,oci-mediatypes=true
 
       # The deploy pulls by this digest, so a moved tag cannot change what runs.
       - name: Check image digest
@@ -181,7 +174,8 @@ jobs:
   deploy:
     name: Deploy to QA
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Deploy, verify and cleanup share one job (former budgets 25 + 15 + 5).
+    timeout-minutes: 40
     needs: build
     environment:
       name: qa
@@ -221,8 +215,10 @@ jobs:
           ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
 
       - name: Setup SSH Known Hosts
+        id: known-hosts
         uses: ./.github/actions/shared/setup-ssh-known-hosts
         with:
+          multiplex: 'true'
           host: ${{ secrets.QA_TS_TAILSCALE_IP }}
           known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
 
@@ -268,42 +264,6 @@ jobs:
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/rollback.sh' && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' IMAGE_TAG='${IMAGE_TAG}' DEPLOY_RUN_ID='${DEPLOY_RUN_ID}' '${DEPLOY_DIR}/.tmp/rollback.sh'"
 
-  # ===========================================
-  # JOB 3: VERIFY
-  # ===========================================
-  verify:
-    name: Verify Deployment
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    needs: [build, deploy]
-    permissions:
-      contents: read
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.build.outputs.commit-sha }}
-
-      - name: Setup Tailscale
-        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
-        with:
-          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
-          tags: tag:ci
-          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
-
-      - name: Setup SSH Known Hosts
-        uses: ./.github/actions/shared/setup-ssh-known-hosts
-        with:
-          host: ${{ secrets.QA_TS_TAILSCALE_IP }}
-          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
-
       - name: Verify via SSH
         id: verify
         run: |
@@ -324,7 +284,7 @@ jobs:
           exit "${rc}"
 
       # Rolls back only when the API canary failed; other verify failures keep the new API running.
-      - name: Rollback on failure
+      - name: Rollback on canary failure
         if: failure() && steps.verify.outputs.canary_failed == 'true'
         env:
           IMAGE_TAG: ${{ needs.build.outputs.deployed-image-tag }}
@@ -337,44 +297,9 @@ jobs:
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "chmod +x '${DEPLOY_DIR}/.tmp/rollback.sh' && DEPLOY_DIR='${DEPLOY_DIR}' LOCAL_IMAGE_NAME='${LOCAL_IMAGE_NAME}' COMPOSE_FILE='${COMPOSE_FILE}' IMAGE_TAG='${IMAGE_TAG}' DEPLOY_RUN_ID='${DEPLOY_RUN_ID}' '${DEPLOY_DIR}/.tmp/rollback.sh'"
 
-  # ===========================================
-  # JOB 4: CLEANUP
-  # ===========================================
-  cleanup:
-    name: Cleanup
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    needs: [build, verify]
-    if: always()
-    permissions:
-      contents: read
-
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
-        with:
-          egress-policy: audit
-
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.build.outputs.commit-sha }}
-
-      - name: Setup Tailscale
-        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
-        with:
-          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
-          tags: tag:ci
-          ping: ${{ secrets.QA_TS_TAILSCALE_IP }}
-
-      - name: Setup SSH Known Hosts
-        uses: ./.github/actions/shared/setup-ssh-known-hosts
-        with:
-          host: ${{ secrets.QA_TS_TAILSCALE_IP }}
-          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
-
+      # Same as the former cleanup job (if: always()), but only once SSH is set up.
       - name: Cleanup via SSH
+        if: always() && steps.known-hosts.outcome == 'success'
         run: |
           ssh -o ConnectTimeout=30 \
             "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}/.tmp' && chmod 700 '${DEPLOY_DIR}/.tmp'"

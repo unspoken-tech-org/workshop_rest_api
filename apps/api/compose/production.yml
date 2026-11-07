@@ -109,6 +109,8 @@ services:
       timeout: 10s
       retries: 12
       start_period: 45s
+      # Checks every 2s while starting, so the deploy sees "healthy" soon after boot.
+      start_interval: 2s
     networks:
       - workshop-network
       - workshop-ingress
