@@ -22,6 +22,15 @@ if [[ ! "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
 fi
 IMAGE_REF="${REGISTRY}/${IMAGE_NAME}@${IMAGE_DIGEST}"
 
+# Approval to apply pending Flyway migrations (deploy-api-prod input allow_migrations).
+ALLOW_MIGRATIONS="${ALLOW_MIGRATIONS:-false}"
+if [[ ! "${ALLOW_MIGRATIONS}" =~ ^(true|false)$ ]]; then
+  echo "ALLOW_MIGRATIONS must be true or false" >&2
+  exit 1
+fi
+# The daily diff backup runs every 24h; 26h leaves room for a slow run.
+MAX_BACKUP_AGE_SECONDS=$(( 26 * 3600 ))
+
 # Setup .env
 mv "${DEPLOY_DIR}/.tmp/.env" ./ 2>/dev/null || mv .tmp/.env ./ 2>/dev/null || true
 chmod 600 .env
@@ -206,9 +215,33 @@ PENDING=""
 for v in ${IMAGE_VERSIONS}; do
   if [ -z "${APPLIED[$v]:-}" ]; then PENDING="${PENDING} ${v}"; fi
 done
+# Pending migrations change the schema, and a rollback reverts the image only: they
+# need an explicit approval (allow_migrations=true, a workflow_dispatch input) and a
+# recent pgBackRest backup to restore from. A tag push has no inputs, so it blocks.
 if [ -n "${PENDING}" ]; then
   echo "Pending migrations (in image, not applied):${PENDING}"
   echo "WARNING: rolling back the image does NOT revert schema changes"
+  if [ "${ALLOW_MIGRATIONS}" != "true" ]; then
+    echo "Pending migrations need explicit approval; nothing was swapped." >&2
+    echo "Re-run via workflow_dispatch: gh workflow run deploy-api-prod.yml --ref ${IMAGE_TAG:-vX.Y.Z} -f ref=${IMAGE_TAG:-vX.Y.Z} -f allow_migrations=true" >&2
+    exit 1
+  fi
+  if [ "${DB_RUNNING}" = "missing" ]; then
+    echo "allow_migrations=true; no database yet, so no backup to require"
+  else
+    # Stop time of the latest backup without error, of any type (full, diff or incr).
+    if ! LAST_BACKUP=$(docker exec -u postgres workshop-db pgbackrest --stanza=workshop --output=json info \
+      | jq -er '[.[0].backup[] | select(.error | not) | .timestamp.stop] | max // empty'); then
+      echo "Could not read the latest pgBackRest backup; refusing to apply migrations" >&2
+      exit 1
+    fi
+    BACKUP_AGE=$(( $(date +%s) - LAST_BACKUP ))
+    if [ "${BACKUP_AGE}" -ge "${MAX_BACKUP_AGE_SECONDS}" ]; then
+      echo "Latest pgBackRest backup is $(( BACKUP_AGE / 3600 ))h old (limit $(( MAX_BACKUP_AGE_SECONDS / 3600 ))h); run a backup before applying migrations" >&2
+      exit 1
+    fi
+    echo "allow_migrations=true; latest pgBackRest backup is $(( BACKUP_AGE / 3600 ))h old"
+  fi
 else
   echo "No pending migrations"
 fi
