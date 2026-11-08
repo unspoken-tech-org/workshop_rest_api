@@ -1,0 +1,15 @@
+# Trivy accepted findings for the CI gate (fs scan, CRITICAL,HIGH, ignore-unfixed).
+# Every entry needs a `statement` (reason) and an `expired_at` (review date):
+# after that date the entry stops applying and the gate fails until it is
+# reviewed again. Scope entries with `paths` so a new finding is never hidden.
+
+secrets:
+  - id: private-key
+    paths:
+      - "apps/api/src/main/resources/keys/private-pkcs8.pem"
+    statement: >-
+      Dev-only RSA key used by the local profile (application-local.yml,
+      classpath:keys/). QA and PRD load their own key from a mounted file
+      provided by the deploy secrets, never this one. Kept versioned on purpose
+      (.gitignore exception for dev/test keys).
+    expired_at: 2027-02-08
