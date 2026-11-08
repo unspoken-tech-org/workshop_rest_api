@@ -37,13 +37,22 @@ docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
 docker compose -f "${COMPOSE_FILE}" up -d --force-recreate --remove-orphans caddy-gateway-qa
 docker compose -f "${COMPOSE_FILE}" ps
 
-# Health check
+# Health check (R2): Caddy and the tunnel must both report healthy. A container
+# without a healthcheck never counts as ready.
+health_status() {
+  docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$1" 2>/dev/null || echo missing
+}
 ATTEMPTS=30
 SLEEP=5
 for i in $(seq 1 $ATTEMPTS); do
-  STATUS=$(docker inspect --format='{{json .State.Health.Status}}' caddy-gateway-qa 2>/dev/null | tr -d '"')
-  echo "[$i/$ATTEMPTS] caddy-gateway-qa health: ${STATUS:-unknown}"
-  if [ "$STATUS" = "healthy" ]; then
+  CADDY_STATUS=$(health_status caddy-gateway-qa)
+  TUNNEL_STATUS=$(health_status cloudflared-gateway-qa)
+  echo "[$i/$ATTEMPTS] caddy-gateway-qa health: ${CADDY_STATUS}, cloudflared-gateway-qa health: ${TUNNEL_STATUS}"
+  if [ "$CADDY_STATUS" = "none" ] || [ "$TUNNEL_STATUS" = "none" ]; then
+    echo "A gateway container has no healthcheck: it cannot be verified (R2)" >&2
+    break
+  fi
+  if [ "$CADDY_STATUS" = "healthy" ] && [ "$TUNNEL_STATUS" = "healthy" ]; then
     echo "Gateway QA is healthy"
     exit 0
   fi

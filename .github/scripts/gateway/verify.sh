@@ -9,12 +9,20 @@ container_running() {
   [ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null)" = "true" ]
 }
 
-echo ">>> Checking caddy-gateway container..."
-if ! container_running caddy-gateway; then
-  echo "caddy-gateway not running"
-  exit 1
-fi
-echo "caddy-gateway running"
+# R2: container without a healthcheck, or not healthy, fails the verification.
+require_healthy() {
+  local status
+  status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$1" 2>/dev/null || echo missing)
+  if [ "${status}" != "healthy" ]; then
+    echo "$1 health is ${status}, expected healthy"
+    exit 1
+  fi
+  echo "$1 is healthy"
+}
+
+echo ">>> Checking gateway containers health..."
+require_healthy caddy-gateway
+require_healthy cloudflared-gateway-prod
 
 echo ">>> Caddy version:"
 docker exec caddy-gateway caddy version
@@ -43,22 +51,17 @@ if [ "$STATUS" != "200" ]; then
 fi
 
 echo ">>> Caddy metrics (internal site :9180, scraped by the edge collector):"
-# Lido para variável: grep -q no pipe falharia por SIGPIPE sob pipefail.
+# Lido para variável e passado por here-string: grep -q num pipe falharia por
+# SIGPIPE sob pipefail.
 METRICS=$(docker exec caddy-gateway curl -sf http://127.0.0.1:9180/metrics || true)
-if printf '%s\n' "$METRICS" | grep -q '^caddy_config_last_reload_successful '; then
+if grep -q '^caddy_config_last_reload_successful ' <<< "$METRICS"; then
   echo "Caddy metrics endpoint OK"
 else
   echo "Caddy metrics endpoint not responding on :9180/metrics"
   exit 1
 fi
 
-echo ">>> Tunnels (warning if not running):"
-if container_running cloudflared-gateway-prod; then
-  echo "Tunnel Prod OK"
-else
-  echo "Tunnel Prod Missing (WARNING)"
-fi
-
+echo ">>> QA tunnel on this host (warning if not running):"
 if container_running cloudflared-gateway-qa; then
   echo "Tunnel QA OK"
 else
