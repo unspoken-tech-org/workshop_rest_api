@@ -9,7 +9,7 @@ destes arquivos pela annotation `runbook_url`. A mensagem do Telegram traz o lin
 |---|---|
 | `owner` | `platform` (único dono hoje) |
 | `environment` | `production` (PRD), `qa` (homologação), `monitoring` (a própria cadeia de observabilidade) |
-| `service` | `workshop-api`, `postgres`, `backup`, `host`, `telemetry`, `monitoring` |
+| `service` | `workshop-api`, `gateway`, `postgres`, `backup`, `host`, `telemetry`, `monitoring` |
 | `severity` | `critical`, `warning`, `none` (só o `Watchdog`) |
 
 | Rota | Receiver | Espera / intervalo / repetição |
@@ -30,9 +30,10 @@ Inibições:
 
 - crítico cala o aviso do mesmo `service`, `environment` e `mountpoint`;
 - `WorkshopEdgeTelemetryAbsent` cala as ausências de host, containers, banco, API,
-  Alloy e logs de PRD, que dependem da borda;
+  gateway, Alloy e logs de PRD, que dependem da borda;
 - container da API ausente ou API fora na sonda calam `WorkshopApiScrapeFailing`;
   container do banco ausente cala `WorkshopPostgresDown`;
+- container da API ausente ou API fora na sonda calam `WorkshopGatewayUpstreamErrors`;
 - o `Watchdog` nunca é alvo de inibição. Não crie silêncio que o alcance.
 
 ## Alertas por runbook
@@ -40,6 +41,7 @@ Inibições:
 | Runbook | Alertas |
 |---|---|
 | [API indisponível](api-indisponivel.md) | `WorkshopApiProductionDown`, `WorkshopApiProductionProbeAbsent`, `WorkshopApiScrapeFailing`, `WorkshopApiMetricsAbsent`, `WorkshopApiContainerAbsent`, `WorkshopContainerRestarting`, `WorkshopApiErrorBudgetBurnFast`, `WorkshopApiErrorBudgetBurnSlow`, `WorkshopApiQaScrapeFailing` |
+| [Gateway (Caddy)](gateway.md) | `WorkshopGatewayScrapeFailing`, `WorkshopGatewayMetricsAbsent`, `WorkshopGatewayUpstreamErrors`, `WorkshopGatewayQaScrapeFailing` |
 | [Alta latência](alta-latencia.md) | `WorkshopApiProductionSlow`, `WorkshopApiLatencyBudgetBurnFast`, `WorkshopApiLatencyBudgetBurnSlow` |
 | [PostgreSQL](postgresql.md) | `WorkshopPostgresDown`, `WorkshopPostgresMetricsAbsent`, `WorkshopDbContainerAbsent`, `WorkshopPostgresConnectionsHigh`, `WorkshopPostgresDeadlocks` |
 | [Disco cheio](disco-cheio.md) | `WorkshopHostFilesystemLow`, `WorkshopHostFilesystemCritical`, `QaHostFilesystemLow`, `QaHostFilesystemCritical` |

@@ -7,7 +7,7 @@ global:
 # Cada alerta traz owner, service, environment e severity (Fase 6, item 8):
 #   environment: production (PRD), qa (homologação) ou monitoring (a própria
 #   cadeia de observabilidade: Prometheus, Loki, Collectors);
-#   service: workshop-api, postgres, backup, host, telemetry ou monitoring.
+#   service: workshop-api, gateway, postgres, backup, host, telemetry ou monitoring.
 # O agrupamento usa esses rótulos: um incidente de um serviço num ambiente vira
 # uma mensagem só, e a repetição varia pela severidade.
 route:
@@ -113,7 +113,7 @@ inhibit_rules:
       - alertname="WorkshopEdgeTelemetryAbsent"
     target_matchers:
       - environment="production"
-      - alertname=~"WorkshopHostMetricsAbsent|WorkshopHostScrapeFailing|WorkshopContainerMetricsAbsent|WorkshopApiContainerAbsent|WorkshopDbContainerAbsent|WorkshopApiMetricsAbsent|WorkshopApiScrapeFailing|WorkshopPostgresMetricsAbsent|WorkshopPostgresDown|WorkshopBackupMetricsAbsent|AlloyProductionMetricsAbsent|ProductionLogsAbsent"
+      - alertname=~"WorkshopHostMetricsAbsent|WorkshopHostScrapeFailing|WorkshopContainerMetricsAbsent|WorkshopApiContainerAbsent|WorkshopDbContainerAbsent|WorkshopApiMetricsAbsent|WorkshopApiScrapeFailing|WorkshopGatewayMetricsAbsent|WorkshopGatewayScrapeFailing|WorkshopPostgresMetricsAbsent|WorkshopPostgresDown|WorkshopBackupMetricsAbsent|AlloyProductionMetricsAbsent|ProductionLogsAbsent"
 
   # Container ausente explica o scrape e a consulta que falham dentro dele.
   - source_matchers:
@@ -130,3 +130,9 @@ inhibit_rules:
       - alertname="WorkshopApiProductionDown"
     target_matchers:
       - alertname="WorkshopApiScrapeFailing"
+
+  # API sem container ou fora na sonda: os 502/503/504 do gateway são consequência.
+  - source_matchers:
+      - alertname=~"WorkshopApiContainerAbsent|WorkshopApiProductionDown"
+    target_matchers:
+      - alertname="WorkshopGatewayUpstreamErrors"

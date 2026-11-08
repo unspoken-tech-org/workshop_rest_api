@@ -1575,3 +1575,110 @@ tests:
               summary: "Stanza do pgBackRest de PRD com erro"
               description: "O pgbackrest info da última execução registrou o código 2 na stanza workshop. Rode pgbackrest info e check no container workshop-db."
               runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+
+  - name: gateway de PRD fora do scrape alerta após 5 minutos e volta ao normal
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/caddy-gateway"}'
+        values: '0x10 1x30'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WorkshopGatewayScrapeFailing
+      - eval_time: 10m
+        alertname: WorkshopGatewayScrapeFailing
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: gateway
+              environment: production
+              job: workshop/caddy-gateway
+            exp_annotations:
+              summary: "Scrape do gateway de PRD falhando"
+              description: "O Collector de borda não consegue raspar o :9180/metrics do caddy-gateway há mais de 5 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+      - eval_time: 25m
+        alertname: WorkshopGatewayScrapeFailing
+      - eval_time: 30m
+        alertname: WorkshopGatewayMetricsAbsent
+
+  # A série de QA não satisfaz a ausência das métricas de PRD, e vice-versa.
+  - name: gateway de QA fora do scrape alerta warning e não cala a ausência de PRD
+    interval: 1m
+    input_series:
+      - series: 'up{job="workshop/caddy-gateway-qa",instance="caddy-gateway-qa:9180",deployment_environment_name="qa"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopGatewayQaScrapeFailing
+      - eval_time: 15m
+        alertname: WorkshopGatewayQaScrapeFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: gateway
+              environment: qa
+              job: workshop/caddy-gateway-qa
+              instance: caddy-gateway-qa:9180
+              deployment_environment_name: qa
+            exp_annotations:
+              summary: "Scrape do gateway de QA falhando"
+              description: "O Prometheus não consegue raspar o :9180/metrics do caddy-gateway-qa há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+      - eval_time: 15m
+        alertname: WorkshopGatewayScrapeFailing
+      - eval_time: 20m
+        alertname: WorkshopGatewayMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: gateway
+              environment: production
+              job: workshop/caddy-gateway
+            exp_annotations:
+              summary: "Métricas do gateway de PRD ausentes"
+              description: "Nenhuma amostra de up do gateway de PRD chegou ao Prometheus nos últimos 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+
+  # Troca do container da API num deploy: alguns 502 de uma vez e nada depois.
+  - name: rajada curta de 502 do gateway de PRD não alerta
+    interval: 1m
+    input_series:
+      - series: 'caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway",code="502",handler="subroute",method="GET",server="srv0"}'
+        values: '0x5 8x40'
+      - series: 'caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway",code="200",handler="subroute",method="GET",server="srv0"}'
+        values: '0+10x45'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: WorkshopGatewayUpstreamErrors
+      - eval_time: 20m
+        alertname: WorkshopGatewayUpstreamErrors
+
+  - name: 502 e 504 contínuos do gateway de PRD alertam após 10 minutos e voltam ao normal
+    interval: 1m
+    input_series:
+      - series: 'caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway",code="502",handler="subroute",method="GET",server="srv0"}'
+        values: '0+1x30 30x20'
+      - series: 'caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway",code="504",handler="subroute",method="GET",server="srv0"}'
+        values: '0+1x30 30x20'
+      - series: 'caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway-qa",code="502",handler="subroute",method="GET",server="srv0"}'
+        values: '0+5x50'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: WorkshopGatewayUpstreamErrors
+      - eval_time: 20m
+        alertname: WorkshopGatewayUpstreamErrors
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: gateway
+              environment: production
+            exp_annotations:
+              summary: "Gateway de PRD respondendo 502/503/504"
+              description: "O caddy-gateway de PRD respondeu 10 requisições 502/503/504 nos últimos 5 minutos, de forma contínua há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+      - eval_time: 45m
+        alertname: WorkshopGatewayUpstreamErrors
