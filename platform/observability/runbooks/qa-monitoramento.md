@@ -1,7 +1,9 @@
 # QA ou monitoramento fora
 
 **Sinais:** aviso por e-mail do Healthchecks.io de que o `Watchdog` parou;
-`ObservabilityTargetDown` e `PrometheusRuleEvaluationFailures` (avisos).
+`ObservabilityTargetDown` e `PrometheusRuleEvaluationFailures` (avisos);
+`AlertmanagerTelegramFailing`, que chega como um par de e-mails do mesmo check
+(fora e, em até ~2 min, de volta) com `/fail` no log do Healthchecks.io.
 **Dono:** `platform`.
 
 ## Impacto
@@ -24,8 +26,11 @@ Risco aceito: com PRD e QA fora juntas, só o `Watchdog` e os checks de backup a
    `alertmanager` e `cloudflared` fora de `healthy`.
 3. Alertmanager de pé e Watchdog parado: a saída para o Healthchecks
    (`cp-alert-egress`) ou o segredo em arquivo.
-4. Telegram sem mensagens com o Watchdog ok: token ou chat inválidos; veja o log do
-   Alertmanager (`docker logs --tail 100 alertmanager`), sem colar o token.
+4. Telegram sem mensagens com o Watchdog ok, ou `/fail` no log do check: token ou
+   chat inválidos, ou a API do Telegram recusando; veja
+   `alertmanager_notifications_failed_total{integration="telegram"}` por `reason` e o
+   log do Alertmanager (`docker logs --tail 100 alertmanager`), sem colar o token.
+   Com o canal quieto, um token revogado só aparece no próximo alerta.
 5. Falha de avaliação: `rule_group` no `/rules` do Prometheus (pelo Grafana).
 
 ## Mitigação

@@ -166,7 +166,7 @@ otelcol.receiver.prometheus "alloy" {
 
 // Fila do exporter em disco, no volume alloy_data (sobrevive ao reinício e ao
 // --force-recreate do deploy). Sem directory: o padrão fica em --storage.path.
-// Componente public-preview no v1.20.1, liberado por --stability.level no compose.
+// Componente public-preview no v1.21.3, liberado por --stability.level no compose.
 otelcol.storage.file "queue" { }
 
 // Sem TLS: o tráfego fica entre dois containers da rede interna edge-otlp. A posição

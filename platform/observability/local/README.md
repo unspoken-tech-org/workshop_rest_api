@@ -121,11 +121,11 @@ docker compose --project-directory . -p workshop-observability-local -f platform
 docker run --rm -e API_SCRAPE_USERNAME=u -e API_SCRAPE_TARGET=h:1 -e COLLECTOR_QUEUE_BYTES=1 \
   --tmpfs /var/lib/otelcol/file_storage:uid=10001 \
   -v "$PWD/platform/observability/local/collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro" \
-  otel/opentelemetry-collector-contrib:0.161.0 \
+  otel/opentelemetry-collector-contrib:0.165.0 \
   validate --config=file:/etc/otelcol-contrib/config.yaml
 docker run --rm \
   -v "$PWD/platform/observability/local/alloy/config.alloy:/etc/alloy/config.alloy:ro" \
-  grafana/alloy:v1.20.1 validate /etc/alloy/config.alloy
+  grafana/alloy:v1.21.3 validate /etc/alloy/config.alloy
 docker run --rm \
   -v "$PWD/platform/observability/local/loki/config.yaml:/etc/loki/config.yaml:ro" \
   grafana/loki:3.7.8 -config.file=/etc/loki/config.yaml -verify-config

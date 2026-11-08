@@ -36,7 +36,7 @@
 
 ## Docker/Local Dev
 - Start API DB: `docker compose --project-directory . -p workshop_rest_api -f apps/api/compose/local.yml up -d`
-- Full stack (DB + observability): `docker compose --project-directory . -p workshop_rest_api -f environments/local/compose.yml up -d --build`
+- Local observability stack (API on synthetic DB + OTLP stack): `docker compose --project-directory . -p workshop-observability-local -f platform/observability/local/compose.yml --profile api up -d --build --wait` (see `platform/observability/local/README.md`)
 - Stop and clear API DB: `docker compose --project-directory . -p workshop_rest_api -f apps/api/compose/local.yml down --volumes`
 
 ## CI/CD (GitHub Actions + Tailscale)

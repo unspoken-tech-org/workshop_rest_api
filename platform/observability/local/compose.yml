@@ -8,7 +8,7 @@
 
 services:
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.161.0@sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1
+    image: otel/opentelemetry-collector-contrib:0.165.0@sha256:e40d61f10c9a617cca1ffd1be4d7e2b3a4b0f0001798ff07e58cabe82e618cea
     command:
       - --config=file:/etc/otelcol-contrib/config.yaml
     environment:
@@ -169,7 +169,7 @@ services:
           memory: 64M
 
   alloy:
-    image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
     user: "473:473"
     command:
       - run
@@ -297,7 +297,7 @@ services:
           memory: 256M
 
   tempo:
-    image: grafana/tempo:3.1.0@sha256:3076b8dcdfb32fd6bc5ccef85e7b7313e6199b9cb84366257fc17ecb696db5fd
+    image: grafana/tempo:3.1.1@sha256:64e2fbd56d9c2b3412a4b430a58ea59e91a670b1e75f920a0c702213ad145044
     command:
       - -config.file=/etc/tempo/tempo.yaml
     ports:

@@ -32,6 +32,17 @@ route:
       group_interval: 1m
       repeat_interval: 1m
 
+    # Telegram falhando: o aviso não pode depender dele. Vai ao endpoint /fail do
+    # mesmo check do Watchdog no Healthchecks.io, que fica fora na hora e avisa por
+    # e-mail; o próximo ping do Watchdog o traz de volta. Repete a cada 4 h
+    # enquanto as falhas continuarem. Nunca ao Telegram.
+    - receiver: healthchecks-fail
+      matchers:
+        - alertname="AlertmanagerTelegramFailing"
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 4h
+
     # Dono platform (hoje o único). Um dono novo ganha a própria subárvore aqui;
     # alerta sem dono cai na raiz e ainda chega ao Telegram.
     - matchers:
@@ -74,6 +85,11 @@ receivers:
     webhook_configs:
       - url_file: /run/secrets/healthchecks_ping_url
         send_resolved: false
+  # A mesma URL de ping com /fail, montada pelo deploy a partir do mesmo secret.
+  - name: healthchecks-fail
+    webhook_configs:
+      - url_file: /run/secrets/healthchecks_fail_url
+        send_resolved: false
 
 # Nenhuma regra alcança o Watchdog: todas exigem alertname diferente dele.
 inhibit_rules:
@@ -84,6 +100,7 @@ inhibit_rules:
     target_matchers:
       - severity="warning"
       - alertname!="Watchdog"
+      - alertname!="AlertmanagerTelegramFailing"
     equal:
       - service
       - environment
