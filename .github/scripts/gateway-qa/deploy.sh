@@ -32,8 +32,9 @@ fi
 docker --config "${DEPLOY_DIR}/.tmp/docker" pull "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
 
-# Restart the service
-docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans caddy-gateway-qa
+# Restart the service. --force-recreate como em PRD: o Caddyfile é montado por bind,
+# então uma mudança só nele não troca a imagem e o compose manteria o container antigo.
+docker compose -f "${COMPOSE_FILE}" up -d --force-recreate --remove-orphans caddy-gateway-qa
 docker compose -f "${COMPOSE_FILE}" ps
 
 # Health check
