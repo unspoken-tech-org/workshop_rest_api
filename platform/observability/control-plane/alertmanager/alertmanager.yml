@@ -125,11 +125,13 @@ inhibit_rules:
     target_matchers:
       - alertname="WorkshopPostgresDown"
 
-  # API fora na sonda pública: o scrape pela borda falhando é o mesmo incidente.
+  # API fora na sonda pública: o scrape pela borda falhando, da API ou do gateway,
+  # é o mesmo incidente. A sonda (3 min) dispara antes do scrape (5 min), então um
+  # gateway de PRD fora gera um único crítico.
   - source_matchers:
       - alertname="WorkshopApiProductionDown"
     target_matchers:
-      - alertname="WorkshopApiScrapeFailing"
+      - alertname=~"WorkshopApiScrapeFailing|WorkshopGatewayScrapeFailing"
 
   # API sem container ou fora na sonda: os 502/503/504 do gateway são consequência.
   - source_matchers:
