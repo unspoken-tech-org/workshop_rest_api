@@ -1,6 +1,6 @@
 name: Deploy Gateway via SSH (QA)
 description: >
-  Prepares .env on the runner, scps to the QA VM and runs deploy-gateway-qa.sh.
+  Prepares the secret files on the runner, scps to the QA VM and runs deploy-gateway-qa.sh.
   Used exclusively by the `deploy-gateway-qa.yml` pipeline.
   Requires Setup Tailscale executed previously in the job.
 
@@ -57,14 +57,9 @@ runs:
       run: |
         set -e
 
-        # Only the tunnel token, read by Compose for the cloudflared command.
-        {
-          echo "CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}"
-        } > /tmp/.env
-        chmod 600 /tmp/.env
-
-        # The Cloudflare token and the ACME email reach Caddy as files, never as container env.
-        for secret_name in CF_API_TOKEN ADMIN_EMAIL; do
+        # The Cloudflare token, the ACME email and the tunnel token reach the containers
+        # as files, never as container env or command.
+        for secret_name in CF_API_TOKEN ADMIN_EMAIL CLOUDFLARE_TUNNEL_TOKEN; do
           secret_value="${!secret_name}"
           [[ -n "${secret_value}" && "${secret_value}" != *$'\n'* && "${secret_value}" != *$'\r'* ]] || {
             echo "${secret_name} must be a non-empty single-line value" >&2
@@ -73,6 +68,7 @@ runs:
         done
         ( umask 077 && printf '%s' "${CF_API_TOKEN}" > /tmp/cf_api_token )
         ( umask 077 && printf '%s' "${ADMIN_EMAIL}" > /tmp/admin_email )
+        ( umask 077 && printf '%s' "${CLOUDFLARE_TUNNEL_TOKEN}" > /tmp/cloudflare_tunnel_token )
 
         echo "Gateway QA deploy files prepared"
 
@@ -106,10 +102,8 @@ runs:
         mkdir -p "${PAYLOAD_ROOT}/secrets"
         printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/secrets/cf_api_token"
         printf '%s' 'admin@example.invalid' > "${PAYLOAD_ROOT}/secrets/admin_email"
-        printf '%s\n' \
-          'CLOUDFLARE_TUNNEL_TOKEN=validation-token' > "${PAYLOAD_ROOT}/.env"
+        printf '%s' 'validation-token' > "${PAYLOAD_ROOT}/secrets/cloudflare_tunnel_token"
         docker compose --project-directory "${PAYLOAD_ROOT}" \
-          --env-file "${PAYLOAD_ROOT}/.env" \
           -f "${COMPOSE_PAYLOAD}" config --quiet
 
         # Ensure deploy directory exists first
@@ -128,7 +122,7 @@ runs:
         chmod 700 ~/.docker
 
         scp -o ConnectTimeout=30 \
-          /tmp/.env /tmp/cf_api_token /tmp/admin_email \
+          /tmp/cf_api_token /tmp/admin_email /tmp/cloudflare_tunnel_token \
           "${DEPLOY_SCRIPT}" \
           "${SSH_TARGET}:${DEPLOY_DIR}/.tmp/"
 
