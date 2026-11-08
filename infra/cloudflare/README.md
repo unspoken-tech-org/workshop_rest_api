@@ -6,7 +6,8 @@ o Compose ou o Caddy; esses componentes precisam consumir os contratos abaixo.
 
 ## Contratos de origem
 
-- `grafana-obs.eletroluk.com` (nome temporário, R8) é CNAME para o hostname
+- `grafana-obs.eletroluk.com` (nome definitivo; o legado `grafana.eletroluk.com`
+  saiu do gateway de PRD, R8) é CNAME para o hostname
   `<tunnel-id>.cfargotunnel.com` do Tunnel. Não há rota pública de telemetria:
   o OTLP chega à QA só pela rede privada, e o Flutter usará a entrada HTTPS da
   API de produção.
