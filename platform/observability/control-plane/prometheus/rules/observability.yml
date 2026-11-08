@@ -214,6 +214,68 @@ groups:
           description: "O Prometheus não consegue raspar /actuator/prometheus da API de QA há mais de 10 minutos."
           runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
 
+  # Gateway Caddy: PRD pelo Collector de borda (job workshop/caddy-gateway), QA pelo
+  # Prometheus (workshop/caddy-gateway-qa). Gateway fora para o cliente já aparece na
+  # sonda pública (WorkshopApiProductionDown); estes cobrem a visão interna.
+  - name: workshop-gateway
+    interval: 30s
+    rules:
+      - alert: WorkshopGatewayScrapeFailing
+        expr: up{job="workshop/caddy-gateway"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+          service: gateway
+          environment: production
+        annotations:
+          summary: "Scrape do gateway de PRD falhando"
+          description: "O Collector de borda não consegue raspar o :9180/metrics do caddy-gateway há mais de 5 minutos."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+
+      - alert: WorkshopGatewayMetricsAbsent
+        expr: absent_over_time(up{job="workshop/caddy-gateway"}[10m])
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+          service: gateway
+          environment: production
+        annotations:
+          summary: "Métricas do gateway de PRD ausentes"
+          description: "Nenhuma amostra de up do gateway de PRD chegou ao Prometheus nos últimos 10 minutos."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+
+      # 502/503/504 do gateway: upstream (API) fora, recusando ou lento. Janela de 5m
+      # com for de 10m: a troca do container num deploy da API (segundos de 502) não
+      # dispara; só erros que se repetem por 10 minutos.
+      - alert: WorkshopGatewayUpstreamErrors
+        expr: sum(increase(caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway",code=~"502|503|504"}[5m])) >= 3
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+          service: gateway
+          environment: production
+        annotations:
+          summary: "Gateway de PRD respondendo 502/503/504"
+          description: "O caddy-gateway de PRD respondeu {{ $value | printf \"%.0f\" }} requisições 502/503/504 nos últimos 5 minutos, de forma contínua há mais de 10 minutos."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+
+      # Homologação: warning, a QA pode ser reiniciada a qualquer momento.
+      - alert: WorkshopGatewayQaScrapeFailing
+        expr: up{job="workshop/caddy-gateway-qa"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+          service: gateway
+          environment: qa
+        annotations:
+          summary: "Scrape do gateway de QA falhando"
+          description: "O Prometheus não consegue raspar o :9180/metrics do caddy-gateway-qa há mais de 10 minutos."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+
   # Sonda externa da API de produção (blackbox na VM de QA). A medição passa
   # pela internet pública e pela Cloudflare: falha de rede da QA também dispara
   # estes alertas, o que é intencional para a detecção independente de PRD.
