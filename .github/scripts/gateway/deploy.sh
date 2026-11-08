@@ -64,20 +64,29 @@ EOF
 docker compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" up -d --force-recreate caddy-gateway
 docker compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" ps
 
-# Health check via Docker healthcheck
-# Uses the Caddy Admin API at :2019/health (does not depend on backends)
+# Health check via Docker healthcheck (R2): Caddy (Admin API, does not depend on
+# backends) and the tunnel (/ready, needs an edge connection) must both report
+# healthy. A container without a healthcheck never counts as ready.
+health_status() {
+  docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$1" 2>/dev/null || echo missing
+}
 ATTEMPTS=30
 SLEEP=5
 for i in $(seq 1 $ATTEMPTS); do
-  STATUS=$(docker inspect --format='{{json .State.Health.Status}}' caddy-gateway 2>/dev/null | tr -d '"')
-  echo "[$i/$ATTEMPTS] caddy-gateway health: ${STATUS:-unknown}"
-  if [ "$STATUS" = "healthy" ]; then
-    echo "Caddy is healthy"
+  CADDY_STATUS=$(health_status caddy-gateway)
+  TUNNEL_STATUS=$(health_status cloudflared-gateway-prod)
+  echo "[$i/$ATTEMPTS] caddy-gateway health: ${CADDY_STATUS}, cloudflared-gateway-prod health: ${TUNNEL_STATUS}"
+  if [ "$CADDY_STATUS" = "none" ] || [ "$TUNNEL_STATUS" = "none" ]; then
+    echo "A gateway container has no healthcheck: it cannot be verified (R2)" >&2
+    break
+  fi
+  if [ "$CADDY_STATUS" = "healthy" ] && [ "$TUNNEL_STATUS" = "healthy" ]; then
+    echo "Caddy and tunnel are healthy"
     exit 0
   fi
   sleep $SLEEP
 done
 
-echo "Caddy did not become healthy"
+echo "Gateway did not become healthy"
 docker logs --tail=200 caddy-gateway || true
 exit 1

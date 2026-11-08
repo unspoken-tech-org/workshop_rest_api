@@ -40,9 +40,17 @@ services:
     image: cloudflare/cloudflared:2026.10.7@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
     container_name: cloudflared-gateway-qa
     restart: unless-stopped
-    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    # Métricas só no loopback do container: o healthcheck usa o endpoint /ready, que
+    # responde 200 apenas com o tunnel conectado à borda da Cloudflare (R2).
+    command: tunnel --metrics 127.0.0.1:2000 run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - workshop-ingress
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:2000", "ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 secrets:
   cf_api_token:

@@ -74,6 +74,12 @@ docker exec -u postgres "$PG_CID" bash -c 'pgbackrest info' || true
 STATUS=$(docker inspect --format="{{json .State.Health.Status}}" "$PG_CID" 2>/dev/null | tr -d '"')
 echo "PostgreSQL health: ${STATUS:-unknown}"
 
+# R2 (parity with QA): an unhealthy or healthcheck-less database fails the verification.
+if [ "${STATUS}" != "healthy" ]; then
+  echo "ERROR: PostgreSQL container is not healthy"
+  exit 1
+fi
+
 echo "=== FINAL CONTAINERS STATUS ==="
 docker compose -f docker-compose-production.yml ps
 
