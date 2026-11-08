@@ -145,6 +145,16 @@ if [[ ! "${containers_sent}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 echo "containers-collector: ${containers_sent} metric points sent to the edge collector (otlp_grpc/edge)"
 
+# Informativo: o scrape do gateway (Caddy :9180) só funciona depois do release do
+# gateway com o site de métricas; até lá up fica 0 e o deploy da borda não reprova.
+# A ausência é coberta pelos alertas do gateway no plano de controle.
+gateway_up="$(scrape_up caddy-gateway)"
+if [[ "${gateway_up}" == 1 ]]; then
+  echo "prometheus/gateway: up{job=\"caddy-gateway\"} is 1: gateway metrics are being scraped"
+else
+  echo "WARNING: prometheus/gateway: up{job=\"caddy-gateway\"} is ${gateway_up:-none}: check the :9180 metrics site of the gateway release"
+fi
+
 # Informativo: fila de exportação por tipo de dado. A entrega à QA ainda não é
 # critério de aprovação (a ACL PRD -> QA é adiada), então a fila pode crescer.
 metrics="$(collector_metrics 2>/dev/null)" || metrics=""

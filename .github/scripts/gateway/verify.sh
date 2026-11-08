@@ -42,6 +42,16 @@ if [ "$STATUS" != "200" ]; then
   exit 1
 fi
 
+echo ">>> Caddy metrics (internal site :9180, scraped by the edge collector):"
+# Lido para variável: grep -q no pipe falharia por SIGPIPE sob pipefail.
+METRICS=$(docker exec caddy-gateway curl -sf http://127.0.0.1:9180/metrics || true)
+if printf '%s\n' "$METRICS" | grep -q '^caddy_config_last_reload_successful '; then
+  echo "Caddy metrics endpoint OK"
+else
+  echo "Caddy metrics endpoint not responding on :9180/metrics"
+  exit 1
+fi
+
 echo ">>> Tunnels (warning if not running):"
 if container_running cloudflared-gateway-prod; then
   echo "Tunnel Prod OK"

@@ -103,6 +103,21 @@ scrape_configs:
         labels:
           deployment_environment_name: qa
 
+  # Gateway de QA (Caddy), pelo site interno :9180 na mesma rede workshop-metrics,
+  # sem autenticação (porta não publicada; admin :2019 só em localhost). Mesmo filtro
+  # de famílias da borda de PRD. O job difere do de PRD (workshop/caddy-gateway)
+  # pelo mesmo motivo da API.
+  - job_name: workshop/caddy-gateway-qa
+    static_configs:
+      - targets:
+          - caddy-gateway-qa:9180
+        labels:
+          deployment_environment_name: qa
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: caddy_.+|process_.+|go_goroutines|go_memstats_heap_inuse_bytes
+        action: keep
+
   # Sonda externa da API de produção: o blackbox acessa a URL pública (pela
   # Cloudflare) e o Prometheus recebe probe_success. A medição sai da VM de QA,
   # então falha de rede da QA também aparece como indisponibilidade. O job

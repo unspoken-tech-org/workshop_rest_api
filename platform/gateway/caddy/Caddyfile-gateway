@@ -6,6 +6,9 @@
     servers {
         trusted_proxies static 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
     }
+    # Métricas HTTP (caddy_http_*), expostas só no site interno :9180. Sem per_host:
+    # no listener :80, por onde o Tunnel entrega o tráfego, todo host vira "_other".
+    metrics
 }
 
 (log) {
@@ -81,5 +84,19 @@ api.eletroluk.com {
     import api_proxy workshop-api:8080
     tls {
         dns cloudflare {file./run/secrets/cf_api_token}
+    }
+}
+
+# ============================================
+# Métricas (porta 9180, sem publicação no host)
+# Raspadas pelo Collector de borda pela rede interna workshop-metrics. O admin (:2019)
+# continua só em localhost. Sem log de acesso: cada scrape geraria uma linha.
+# ============================================
+:9180 {
+    handle /metrics {
+        metrics
+    }
+    handle {
+        respond 404
     }
 }

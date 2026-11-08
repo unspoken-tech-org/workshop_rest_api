@@ -397,7 +397,7 @@ services:
       - cp-backend
       # Somente para raspar as métricas do cloudflared.
       - cp-tunnel
-      # Somente para raspar a API de QA.
+      # Somente para raspar a API e o gateway de QA.
       - qa-metrics
       # Somente para as sondas do blackbox.
       - cp-probe
