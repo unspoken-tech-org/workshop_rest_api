@@ -63,12 +63,6 @@
         import api_proxy workshop-api:8080
     }
 
-    # Matcher for Grafana Unified (all environments)
-    @grafana host grafana.eletroluk.com
-    handle @grafana {
-        reverse_proxy grafana-unified:3000
-    }
-
     # Fallback for requests without correct Host header
     handle {
         respond "Gateway: Invalid Host Header" 400
@@ -85,15 +79,6 @@
 api.eletroluk.com {
     import log
     import api_proxy workshop-api:8080
-    tls {
-        dns cloudflare {file./run/secrets/cf_api_token}
-    }
-}
-
-# Grafana Unified - All environments (HTTPS)
-grafana.eletroluk.com {
-    import log
-    reverse_proxy grafana-unified:3000
     tls {
         dns cloudflare {file./run/secrets/cf_api_token}
     }

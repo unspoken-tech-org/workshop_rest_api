@@ -25,7 +25,7 @@ variable "tunnel_name" {
 }
 
 variable "grafana_hostname" {
-  description = "Public hostname protected by Cloudflare Access for Grafana. Temporary name while the legacy grafana.eletroluk.com stays on the PRD gateway (R8)."
+  description = "Public hostname protected by Cloudflare Access for Grafana. Definitive name since the legacy grafana.eletroluk.com was retired from the PRD gateway (R8)."
   type        = string
   default     = "grafana-obs.eletroluk.com"
   nullable    = false
