@@ -87,14 +87,20 @@ services:
       # (configtree), nunca por variável de ambiente; o .env não guarda o hash.
       SPRING_CONFIG_IMPORT: configtree:/run/secrets/
       # Java Agent (OpenTelemetry): jar e javaagent.properties vêm da imagem (/otel).
-      # Tirar o -javaagent desliga a instrumentação. OTEL_RESOURCE_ATTRIBUTES não é
-      # definido aqui: service.version vem do build e o Collector carimba o ambiente.
+      # OTEL_RESOURCE_ATTRIBUTES não é definido aqui: service.version vem do build e o
+      # Collector carimba o ambiente.
       # otel-collector é o Collector de borda (projeto workshop-edge), na rede workshop-metrics.
       JAVA_TOOL_OPTIONS: >-
         -Xms256m -Xmx768m -Duser.timezone=America/Sao_Paulo
         -javaagent:/otel/opentelemetry-javaagent.jar
         -Dotel.javaagent.configuration-file=/otel/javaagent.properties
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      # Interruptores operacionais (sem editar este arquivo): o deploy grava no .env os
+      # valores das variables do repositório; sem elas, ficam os defaults (tudo ligado).
+      # OTEL_TRACES_EXPORTER=none desliga só os traces; OTEL_JAVAAGENT_ENABLED=false
+      # desliga o agent inteiro. Variáveis OTEL_* têm precedência sobre javaagent.properties.
+      OTEL_JAVAAGENT_ENABLED: ${OTEL_JAVAAGENT_ENABLED:-true}
+      OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-otlp}
       TZ: America/Sao_Paulo
     secrets:
       - source: db_password

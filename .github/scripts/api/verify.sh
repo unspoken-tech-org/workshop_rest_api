@@ -92,6 +92,16 @@ rm -f docker-compose-production.yml.previous .api-swapped
 # telemetry path is down. The gateway also sends OTLP/HTTP spans, so the check proves
 # the path is open, not which producer used it.
 echo ">>> Checking telemetry canary..."
+# Operational switches (OTEL_JAVAAGENT_ENABLED=false or OTEL_TRACES_EXPORTER=none):
+# no span is expected, so the canary is skipped with a warning. Only these two
+# variables are read from the container env; nothing else is printed.
+API_ENV=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' workshop-api) || API_ENV=""
+OTEL_AGENT_SWITCH=$(printf '%s\n' "${API_ENV}" | sed -n 's/^OTEL_JAVAAGENT_ENABLED=//p' | tail -n 1)
+OTEL_TRACES_SWITCH=$(printf '%s\n' "${API_ENV}" | sed -n 's/^OTEL_TRACES_EXPORTER=//p' | tail -n 1)
+if [ "${OTEL_AGENT_SWITCH}" = "false" ] || [ "${OTEL_TRACES_SWITCH}" = "none" ]; then
+  echo "::warning::telemetry canary skipped: OTEL_JAVAAGENT_ENABLED=${OTEL_AGENT_SWITCH:-unset} OTEL_TRACES_EXPORTER=${OTEL_TRACES_SWITCH:-unset} (operational switch)"
+  exit 0
+fi
 COLLECTOR_PROBE=$(docker ps -q --filter label=com.docker.compose.project=workshop-edge \
   --filter label=com.docker.compose.service=otel-collector-probe | head -n 1)
 collector_spans() {
