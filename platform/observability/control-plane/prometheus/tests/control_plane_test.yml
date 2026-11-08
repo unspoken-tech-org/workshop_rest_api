@@ -1692,6 +1692,33 @@ tests:
       - eval_time: 30m
         alertname: WorkshopGatewayMetricsAbsent
 
+  # Gateway de PRD fora: a sonda pública (3 min) dispara antes do scrape (5 min) e
+  # o Alertmanager cala WorkshopGatewayScrapeFailing, que vira um único crítico.
+  - name: gateway de PRD fora dispara a sonda antes do scrape do gateway
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="api-publica"}'
+        values: '1x2 0x20'
+      - series: 'up{job="workshop/caddy-gateway"}'
+        values: '1x2 0x20'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: WorkshopApiProductionDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: workshop-api
+              environment: production
+              job: workshop/workshop-api-prod-probe
+              instance: api-publica
+            exp_annotations:
+              summary: "API de produção indisponível na sonda externa"
+              description: "api-publica não respondeu de forma saudável há mais de 3 minutos. A sonda sai da VM de QA pela internet pública e pela Cloudflare: falha de rede da QA também dispara este alerta."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
+      - eval_time: 6m
+        alertname: WorkshopGatewayScrapeFailing
+
   # A série de QA não satisfaz a ausência das métricas de PRD, e vice-versa.
   - name: gateway de QA fora do scrape alerta warning e não cala a ausência de PRD
     interval: 1m
