@@ -1256,6 +1256,34 @@ tests:
       - eval_time: 60m
         alertname: WorkshopPostgresWalArchiveStalled
 
+  # Recuperação: o archive_command volta, os segmentos acumulados são arquivados e a
+  # idade cai; o alerta resolve sem esperar o for.
+  - name: wal parado volta ao normal quando o arquivamento é retomado
+    interval: 1m
+    input_series:
+      - series: 'pg_wal_segments{job="workshop/postgres-exporter"}'
+        values: '20x50 5x20'
+      - series: 'pg_stat_archiver_last_archive_age{job="workshop/postgres-exporter"}'
+        values: '1860+60x50 30x20'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: WorkshopPostgresWalArchiveStalled
+      - eval_time: 16m
+        alertname: WorkshopPostgresWalArchiveStalled
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: backup
+              environment: production
+              job: workshop/postgres-exporter
+            exp_annotations:
+              summary: "Arquivamento de WAL do PostgreSQL de PRD parado"
+              description: "Há 20 segmentos em pg_wal e nenhum WAL arquivado há mais de 30 minutos, sem falha registrada. Verifique o archive_command (pgBackRest) e o repositório antes que o PITR perca cobertura."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+      - eval_time: 52m
+        alertname: WorkshopPostgresWalArchiveStalled
+
   - name: watchdog fica sempre disparado
     interval: 1m
     input_series: []
@@ -1506,6 +1534,68 @@ tests:
       - eval_time: 50h
         alertname: WorkshopBackupFullStale
 
+  # Diff de segunda com erro ou omitido (Fase 6, item 7): o arquivo de métricas é
+  # regravado com os mesmos valores, e o Prometheus só avisa ao passar de 48 h sem
+  # backup (do full de domingo 03:00 até terça ~03:15, ~31 h depois do diff que
+  # falhou). O aviso imediato é o do Healthchecks. O diff seguinte (terça 20:00) resolve.
+  # t=0 é o fim do full de domingo; o último diff é o de sábado 20:00 (-7 h).
+  - name: diff com erro ou omitido só alerta após 48 horas sem backup e volta com o diff seguinte
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="full"}'
+        values: '0x4200'
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="diff"}'
+        values: '-25200x3900 234000x300'
+    alert_rule_test:
+      - eval_time: 41h
+        alertname: WorkshopBackupStale
+      - eval_time: 48h10m
+        alertname: WorkshopBackupStale
+      - eval_time: 48h20m
+        alertname: WorkshopBackupStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: backup
+              environment: production
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Nenhum backup do pgBackRest de PRD em 48 horas"
+              description: "O backup mais recente sem erro (full ou diff) terminou há 2d 0h 20m 0s. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+      - eval_time: 65h10m
+        alertname: WorkshopBackupStale
+
+  # Full de domingo omitido: o último full é o da semana anterior e o aviso sai 6 h 15
+  # depois do horário (domingo ~09:15). Um full manual resolve.
+  - name: full omitido alerta após 7 dias e 6 horas e volta com o full seguinte
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="full"}'
+        values: '0x10470 628200x60'
+      - series: 'workshop_pgbackrest_last_backup_timestamp_seconds{job="workshop/node-exporter",type="diff"}'
+        values: '0+60x10530'
+    alert_rule_test:
+      - eval_time: 174h10m
+        alertname: WorkshopBackupFullStale
+      - eval_time: 174h20m
+        alertname: WorkshopBackupFullStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: backup
+              environment: production
+              job: workshop/node-exporter
+              type: full
+            exp_annotations:
+              summary: "Backup full do pgBackRest de PRD atrasado"
+              description: "O último backup full sem erro terminou há 7d 6h 20m 0s. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+      - eval_time: 174h40m
+        alertname: WorkshopBackupFullStale
+
   - name: métricas de backup ausentes com o node-exporter de pé alertam
     interval: 1m
     input_series:
@@ -1681,4 +1771,151 @@ tests:
               description: "O caddy-gateway de PRD respondeu 10 requisições 502/503/504 nos últimos 5 minutos, de forma contínua há mais de 10 minutos."
               runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
       - eval_time: 45m
+        alertname: WorkshopGatewayUpstreamErrors
+
+  # Inibição no Alertmanager (alertmanager.yml): a fonte só cala o alvo se já estiver
+  # disparando quando ele dispara. Estes testes fixam essa ordem para o gateway.
+  # Borda de PRD fora: o up do gateway, que chega pela borda, some junto (sem série,
+  # o ScrapeFailing não dispara). O WorkshopEdgeTelemetryAbsent dispara aos 9 min e o
+  # WorkshopGatewayMetricsAbsent só aos 18, ainda com a borda fora; os dois resolvem
+  # com a volta da borda.
+  - name: borda de PRD fora dispara antes da ausência do gateway e os dois voltam ao normal
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_queue_capacity{job="workshop/otelcol-contrib",exporter="otlp_grpc/qa",data_type="metrics",deployment_environment_name="production"}'
+        values: '1000x3 _x26 1000x20'
+      - series: 'up{job="workshop/caddy-gateway",deployment_environment_name="production"}'
+        values: '1x3 _x26 1x20'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopEdgeTelemetryAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: telemetry
+              environment: production
+              job: workshop/otelcol-contrib
+            exp_annotations:
+              summary: "Telemetria da borda de PRD ausente"
+              description: "Nenhuma métrica do Collector de borda de PRD chegou nos últimos 5 minutos: a VM de PRD, o Collector de borda ou o caminho até a QA estão fora. As ausências de host, containers, banco, API e Alloy de PRD ficam inibidas enquanto este alerta dispara."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
+      - eval_time: 9m
+        alertname: WorkshopGatewayMetricsAbsent
+      - eval_time: 17m
+        alertname: WorkshopGatewayMetricsAbsent
+      - eval_time: 18m
+        alertname: WorkshopGatewayScrapeFailing
+      - eval_time: 25m
+        alertname: WorkshopEdgeTelemetryAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: telemetry
+              environment: production
+              job: workshop/otelcol-contrib
+            exp_annotations:
+              summary: "Telemetria da borda de PRD ausente"
+              description: "Nenhuma métrica do Collector de borda de PRD chegou nos últimos 5 minutos: a VM de PRD, o Collector de borda ou o caminho até a QA estão fora. As ausências de host, containers, banco, API e Alloy de PRD ficam inibidas enquanto este alerta dispara."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/queda-ingestao.md"
+      - eval_time: 25m
+        alertname: WorkshopGatewayMetricsAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: gateway
+              environment: production
+              job: workshop/caddy-gateway
+            exp_annotations:
+              summary: "Métricas do gateway de PRD ausentes"
+              description: "Nenhuma amostra de up do gateway de PRD chegou ao Prometheus nos últimos 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+      - eval_time: 35m
+        alertname: WorkshopEdgeTelemetryAbsent
+      - eval_time: 35m
+        alertname: WorkshopGatewayMetricsAbsent
+
+  # Container da API parado: os 502 do gateway começam junto, mas o
+  # WorkshopApiContainerAbsent (7 min) dispara antes do WorkshopGatewayUpstreamErrors
+  # (3 erros em 5 min, mais 10 min de for), que o cala.
+  - name: container da API ausente dispara antes dos 502 do gateway
+    interval: 1m
+    input_series:
+      - series: 'container_uptime_seconds{job="workshop/docker-stats",container_name="workshop-api",deployment_environment_name="production"}'
+        values: '1x3 _x30'
+      - series: 'caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway",code="502",handler="subroute",method="GET",server="srv0"}'
+        values: '0x3 2+2x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: WorkshopApiContainerAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: workshop-api
+              environment: production
+              job: workshop/docker-stats
+              container_name: workshop-api
+            exp_annotations:
+              summary: "Container da API de PRD ausente"
+              description: "O container workshop-api não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
+      - eval_time: 10m
+        alertname: WorkshopGatewayUpstreamErrors
+      - eval_time: 20m
+        alertname: WorkshopApiContainerAbsent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: workshop-api
+              environment: production
+              job: workshop/docker-stats
+              container_name: workshop-api
+            exp_annotations:
+              summary: "Container da API de PRD ausente"
+              description: "O container workshop-api não é reportado há mais de 7 minutos: está parado, foi removido ou perdeu as métricas."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
+      - eval_time: 20m
+        alertname: WorkshopGatewayUpstreamErrors
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: gateway
+              environment: production
+            exp_annotations:
+              summary: "Gateway de PRD respondendo 502/503/504"
+              description: "O caddy-gateway de PRD respondeu 10 requisições 502/503/504 nos últimos 5 minutos, de forma contínua há mais de 10 minutos."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/gateway.md"
+
+  # API fora com o container de pé (processo travado ou em loop): a sonda pública
+  # (WorkshopApiProductionDown, 3 min) dispara antes dos 502/504 do gateway.
+  - name: api fora na sonda dispara antes dos 502 do gateway
+    interval: 1m
+    input_series:
+      - series: 'probe_success{job="workshop/workshop-api-prod-probe",instance="api-publica"}'
+        values: '1x3 0x30'
+      - series: 'caddy_http_request_duration_seconds_count{job="workshop/caddy-gateway",code="504",handler="subroute",method="GET",server="srv0"}'
+        values: '0x3 2+2x30'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: WorkshopApiProductionDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+              service: workshop-api
+              environment: production
+              job: workshop/workshop-api-prod-probe
+              instance: api-publica
+            exp_annotations:
+              summary: "API de produção indisponível na sonda externa"
+              description: "api-publica não respondeu de forma saudável há mais de 3 minutos. A sonda sai da VM de QA pela internet pública e pela Cloudflare: falha de rede da QA também dispara este alerta."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/api-indisponivel.md"
+      - eval_time: 7m
+        alertname: WorkshopGatewayUpstreamErrors
+      - eval_time: 14m
         alertname: WorkshopGatewayUpstreamErrors
