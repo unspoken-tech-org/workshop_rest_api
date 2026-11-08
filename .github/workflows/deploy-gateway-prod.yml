@@ -180,9 +180,9 @@ jobs:
           mkdir -p "${PAYLOAD_ROOT}/secrets"
           printf '%s' 'validation-only' > "${PAYLOAD_ROOT}/secrets/cf_api_token"
           printf '%s' 'admin@example.invalid' > "${PAYLOAD_ROOT}/secrets/admin_email"
+          printf '%s' 'validation-token' > "${PAYLOAD_ROOT}/secrets/cloudflare_tunnel_token"
           printf '%s\n' \
             'CF_API_TOKEN_QA=validation-token' \
-            'CLOUDFLARE_TUNNEL_TOKEN=validation-token' \
             'CLOUDFLARE_TUNNEL_TOKEN_QA=validation-token' > "${PAYLOAD_ROOT}/.env"
           docker compose --project-directory "${PAYLOAD_ROOT}" \
             --env-file "${PAYLOAD_ROOT}/.env" \

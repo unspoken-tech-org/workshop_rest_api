@@ -42,7 +42,12 @@ services:
     restart: unless-stopped
     # Métricas só no loopback do container: o healthcheck usa o endpoint /ready, que
     # responde 200 apenas com o tunnel conectado à borda da Cloudflare (R2).
-    command: tunnel --metrics 127.0.0.1:2000 run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    # O token chega como arquivo, fora do comando e do env do container.
+    command: tunnel --metrics 127.0.0.1:2000 run
+    environment:
+      - TUNNEL_TOKEN_FILE=/run/secrets/cloudflare_tunnel_token
+    secrets:
+      - cloudflare_tunnel_token
     networks:
       - workshop-ingress
     healthcheck:
@@ -57,6 +62,8 @@ secrets:
     file: ./secrets/cf_api_token
   admin_email:
     file: ./secrets/admin_email
+  cloudflare_tunnel_token:
+    file: ./secrets/cloudflare_tunnel_token
 
 volumes:
   caddy_data:

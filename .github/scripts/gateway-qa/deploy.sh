@@ -8,17 +8,26 @@ trap 'rm -rf "${DEPLOY_DIR}/.tmp"' EXIT
 # Setup GHCR auth (config.json copied to secure .tmp/docker/ by composite action)
 chmod 600 "${DEPLOY_DIR}/.tmp/docker/config.json" 2>/dev/null || true
 
-# Setup .env
-mv "${DEPLOY_DIR}/.tmp/.env" ./ 2>/dev/null || true
-chmod 600 .env
+# The tunnel token is now a file secret: drop the .env that held it.
+rm -f .env
 
 # Setup file secrets (Compose mounts them at /run/secrets/ in the gateway)
 mkdir -p secrets
 chmod 700 secrets
+# cloudflared reads its token only at startup and Compose does not hash secret
+# sources: a rotated token needs the tunnel recreated explicitly.
+RECREATE_SERVICES=(caddy-gateway-qa)
+if ! cmp -s "${DEPLOY_DIR}/.tmp/cloudflare_tunnel_token" secrets/cloudflare_tunnel_token; then
+  RECREATE_SERVICES+=(cloudflared-qa)
+fi
 for secret_name in cf_api_token admin_email; do
   mv "${DEPLOY_DIR}/.tmp/${secret_name}" "secrets/${secret_name}"
   chmod 400 "secrets/${secret_name}"
 done
+# cloudflared runs as non-root and Compose bind-mounts the file with host
+# permissions: it must be world-readable; the 700 directory keeps it private.
+mv "${DEPLOY_DIR}/.tmp/cloudflare_tunnel_token" secrets/cloudflare_tunnel_token
+chmod 444 secrets/cloudflare_tunnel_token
 
 # Backup the CURRENT image before pulling the new one
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
@@ -34,7 +43,7 @@ docker tag "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" "${LOCAL_IMAGE_NAME}:latest"
 
 # Restart the service. --force-recreate como em PRD: o Caddyfile é montado por bind,
 # então uma mudança só nele não troca a imagem e o compose manteria o container antigo.
-docker compose -f "${COMPOSE_FILE}" up -d --force-recreate --remove-orphans caddy-gateway-qa
+docker compose -f "${COMPOSE_FILE}" up -d --force-recreate --remove-orphans "${RECREATE_SERVICES[@]}"
 docker compose -f "${COMPOSE_FILE}" ps
 
 # Health check (R2): Caddy and the tunnel must both report healthy. A container

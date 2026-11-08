@@ -3,7 +3,7 @@ set -euo pipefail
 cd "${DEPLOY_DIR}"
 
 # Cleanup secrets/credentials on exit (success or failure)
-trap 'rm -f /tmp/.env /tmp/cf_api_token /tmp/admin_email ~/.docker/config.json' EXIT
+trap 'rm -f /tmp/.env /tmp/cf_api_token /tmp/admin_email /tmp/cloudflare_tunnel_token ~/.docker/config.json' EXIT
 
 # Setup GHCR auth (config.json copied by the deploy-via-ssh-gateway composite)
 mkdir -p ~/.docker
@@ -21,10 +21,20 @@ fi
 # Setup file secrets (Compose mounts them at /run/secrets/ in the gateway)
 mkdir -p secrets
 chmod 700 secrets
+# cloudflared reads its token only at startup and Compose does not hash secret
+# sources: a rotated token needs the tunnel recreated explicitly.
+RECREATE_SERVICES=(caddy-gateway)
+if ! cmp -s /tmp/cloudflare_tunnel_token secrets/cloudflare_tunnel_token; then
+  RECREATE_SERVICES+=(cloudflared-prod)
+fi
 for secret_name in cf_api_token admin_email; do
   mv "/tmp/${secret_name}" "secrets/${secret_name}"
   chmod 400 "secrets/${secret_name}"
 done
+# cloudflared runs as non-root and Compose bind-mounts the file with host
+# permissions: it must be world-readable; the 700 directory keeps it private.
+mv /tmp/cloudflare_tunnel_token secrets/cloudflare_tunnel_token
+chmod 444 secrets/cloudflare_tunnel_token
 
 LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-workshop/caddy-gateway}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose-gateway.yml}"
@@ -61,7 +71,7 @@ services:
 EOF
 
 # Restart the service
-docker compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" up -d --force-recreate caddy-gateway
+docker compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" up -d --force-recreate "${RECREATE_SERVICES[@]}"
 docker compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" ps
 
 # Health check via Docker healthcheck (R2): Caddy (Admin API, does not depend on
