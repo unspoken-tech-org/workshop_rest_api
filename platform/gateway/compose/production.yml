@@ -58,7 +58,8 @@ networks:
   workshop-ingress:
     name: workshop-ingress
     driver: bridge
-  # Rede interna criada pelo Compose da API de PRD; o Caddy só envia traces ao Collector.
+  # Rede interna criada pelo Compose da API de PRD; o Caddy envia traces ao
+  # Collector e expõe /metrics na porta 9180 (sem publicação no host) ao scrape interno.
   workshop-metrics:
     name: workshop-metrics
     external: true

@@ -1,6 +1,6 @@
 # Collector de borda da VM de produção (projeto Compose workshop-edge). Faz o
-# scrape autenticado da API de PRD e o scrape do node-exporter do host e do
-# postgres-exporter do banco, mede a si
+# scrape autenticado da API de PRD e o scrape do node-exporter do host, do
+# postgres-exporter do banco e do gateway (Caddy), mede a si
 # mesmo e recebe OTLP do próprio projeto: o Collector de containers
 # (containers-collector) e o Alloy (logs Docker da API e do gateway), os únicos com
 # acesso à API do Docker, ambos sem saída.
@@ -79,6 +79,25 @@ receivers:
           static_configs:
             - targets:
                 - postgres-exporter:9187
+
+  # Gateway de PRD (Caddy), pelo site interno :9180 na rede workshop-metrics, sem
+  # autenticação: a porta não é publicada no host e o admin (:2019) segue só em
+  # localhost. Ficam as famílias caddy_*, process_* e duas do runtime Go; o resto do
+  # go_* só somaria séries. O up não passa por metric_relabel. Na QA o job vira
+  # workshop/caddy-gateway.
+  prometheus/gateway:
+    config:
+      scrape_configs:
+        - job_name: caddy-gateway
+          scrape_interval: 15s
+          scrape_timeout: 10s
+          static_configs:
+            - targets:
+                - caddy-gateway:9180
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              regex: caddy_.+|process_.+|go_goroutines|go_memstats_heap_inuse_bytes
+              action: keep
 
   # OTLP do próprio projeto e da API de PRD. Produtores: containers-collector (métricas
   # de containers), pela rede edge-otlp, e a API de PRD (traces do Java Agent) e o gateway
@@ -237,7 +256,7 @@ processors:
       - key: service.instance.id
         action: delete
 
-  # Só a série up de cada alvo (API, node-exporter e postgres-exporter) e pg_up (o
+  # Só a série up de cada alvo (API, node-exporter, postgres-exporter e gateway) e pg_up (o
   # exporter consegue consultar o banco) seguem para o endpoint de saúde
   # (scrape-health). Esse endpoint é interno, mas as redes do projeto o alcançam; por
   # isso não pode expor as métricas autenticadas da API.
@@ -284,8 +303,8 @@ exporters:
       max_elapsed_time: 0s
 
   # Endpoint interno de saúde do scrape, lido por verify.sh a partir do probe
-  # (edge-probe). Expõe só as séries up de cada alvo (workshop-api, node-exporter e
-  # postgres-exporter), pg_up e target_info, que o exporter gera a partir do resource; nenhuma porta é publicada.
+  # (edge-probe). Expõe só as séries up de cada alvo (workshop-api, node-exporter,
+  # postgres-exporter e caddy-gateway), pg_up e target_info, que o exporter gera a partir do resource; nenhuma porta é publicada.
   prometheus/scrape-health:
     endpoint: 0.0.0.0:8889
 
@@ -325,6 +344,7 @@ service:
         - prometheus/self
         - prometheus/node
         - prometheus/postgres
+        - prometheus/gateway
         - otlp
       processors:
         - memory_limiter
@@ -339,6 +359,7 @@ service:
         - prometheus/api
         - prometheus/node
         - prometheus/postgres
+        - prometheus/gateway
       processors:
         - memory_limiter
         - filter/scrape-health

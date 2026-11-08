@@ -11,6 +11,9 @@ docker exec caddy-gateway-qa caddy list-modules | grep -E "rate_limit|coraza_waf
 echo ">>> Checking Caddy admin API..."
 docker exec caddy-gateway-qa curl -sf http://127.0.0.1:2019/config/ && echo "Caddy admin API healthy" || echo "Caddy admin API not responding"
 
+echo ">>> Checking Caddy metrics (internal site :9180)..."
+docker exec caddy-gateway-qa curl -sf -o /dev/null http://127.0.0.1:9180/metrics && echo "Caddy metrics endpoint OK" || echo "Caddy metrics endpoint not responding"
+
 echo ">>> Checking cloudflared QA container..."
 docker ps | grep cloudflared-gateway-qa || echo "cloudflared-gateway-qa not running"
 
