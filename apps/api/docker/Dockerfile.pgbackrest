@@ -1,5 +1,5 @@
 # Versões fixadas: ao trocar, atualize também a tag da imagem nos composes e nos deploy.sh.
-FROM postgres:16.15-trixie@sha256:f9a7b9ebf6f56201f949db745e47bc423c0f0f8294bafe991cc10bf74b029657
+FROM postgres:18.4-trixie@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636
 
 ARG PGBACKREST_VERSION=2.60.0-1.pgdg13+1
 
