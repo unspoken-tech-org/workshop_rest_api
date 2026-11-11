@@ -28,6 +28,14 @@ on:
         description: 'Tag, branch or commit to deploy'
         required: false
         default: 'main'
+      allow_migrations:
+        description: 'Apply pending Flyway migrations (needs a pgBackRest backup < 26h)'
+        required: false
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
 
 permissions:
   contents: read
@@ -71,7 +79,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -114,7 +122,7 @@ jobs:
 
 
       - name: Login to GHCR
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -197,7 +205,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -244,7 +252,7 @@ jobs:
           known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
 
       - name: Login to GHCR
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -278,6 +286,8 @@ jobs:
           scrape-password-hash: ${{ secrets.OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
           healthchecks-backup-full-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_FULL_URL }}
           healthchecks-backup-diff-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_DIFF_URL }}
+          # A tag push has no inputs: pending migrations block until a dispatch approves them.
+          allow-migrations: ${{ github.event.inputs.allow_migrations || 'false' }}
           # Telemetry switches (repository variables; unset keeps the agent and traces on).
           otel-javaagent-enabled: ${{ vars.API_OTEL_JAVAAGENT_ENABLED || 'true' }}
           otel-traces-exporter: ${{ vars.API_OTEL_TRACES_EXPORTER || 'otlp' }}

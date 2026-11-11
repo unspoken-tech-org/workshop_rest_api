@@ -31,6 +31,13 @@ updates:
       - "dependencies"
       - "docker"
     open-pull-requests-limit: 5
+    ignore:
+      # Major do Postgres exige pg_upgrade/dump-restore e muda o PGDATA; migração planejada.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      # Mantém o Java no LTS em uso (25).
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/platform/gateway/caddy"
@@ -59,3 +66,7 @@ updates:
       - "dependencies"
       - "gradle"
     open-pull-requests-limit: 5
+    ignore:
+      # springdoc 3.x exige Spring Boot 4; liberar junto com a migração do Boot.
+      - dependency-name: "org.springdoc:*"
+        update-types: ["version-update:semver-major"]
