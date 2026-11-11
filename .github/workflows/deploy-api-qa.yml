@@ -250,6 +250,9 @@ jobs:
           jwt-private-b64: ${{ secrets.QA_JWT_RSA_PRIVATE_KEY_B64 }}
           jwt-public-b64: ${{ secrets.QA_JWT_RSA_PUBLIC_KEY_B64 }}
           scrape-password-hash: ${{ secrets.QA_OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
+          # Telemetry switches (repository variables; unset keeps the agent and traces on).
+          otel-javaagent-enabled: ${{ vars.QA_API_OTEL_JAVAAGENT_ENABLED || 'true' }}
+          otel-traces-exporter: ${{ vars.QA_API_OTEL_TRACES_EXPORTER || 'otlp' }}
 
       - name: Rollback on failure
         if: failure() && steps.deploy.outcome == 'failure'

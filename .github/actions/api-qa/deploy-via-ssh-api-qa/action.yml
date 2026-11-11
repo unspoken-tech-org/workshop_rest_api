@@ -56,6 +56,14 @@ inputs:
   scrape-password-hash:
     description: 'Bcrypt hash of the /actuator/prometheus scrape identity'
     required: true
+  otel-javaagent-enabled:
+    description: 'OTEL_JAVAAGENT_ENABLED of the API (true, or false to switch the OpenTelemetry agent off)'
+    required: false
+    default: 'true'
+  otel-traces-exporter:
+    description: 'OTEL_TRACES_EXPORTER of the API (otlp, or none to switch traces off)'
+    required: false
+    default: 'otlp'
 
 runs:
   using: composite
@@ -70,6 +78,8 @@ runs:
         JWT_PRIVATE_KEY: ${{ inputs.jwt-private-b64 }}
         JWT_PUBLIC_KEY: ${{ inputs.jwt-public-b64 }}
         SCRAPE_PASSWORD_HASH: ${{ inputs.scrape-password-hash }}
+        OTEL_JAVAAGENT_ENABLED: ${{ inputs.otel-javaagent-enabled }}
+        OTEL_TRACES_EXPORTER: ${{ inputs.otel-traces-exporter }}
       run: |
         set -e
 
@@ -79,11 +89,26 @@ runs:
           exit 1
         }
 
+        # Telemetry switches: an empty value keeps the default; a typo fails before the server.
+        OTEL_JAVAAGENT_ENABLED="${OTEL_JAVAAGENT_ENABLED:-true}"
+        OTEL_TRACES_EXPORTER="${OTEL_TRACES_EXPORTER:-otlp}"
+        [[ "${OTEL_JAVAAGENT_ENABLED}" =~ ^(true|false)$ ]] || {
+          echo "otel-javaagent-enabled must be true or false" >&2
+          exit 1
+        }
+        [[ "${OTEL_TRACES_EXPORTER}" =~ ^(otlp|none)$ ]] || {
+          echo "otel-traces-exporter must be otlp or none" >&2
+          exit 1
+        }
+        echo "Telemetry switches: OTEL_JAVAAGENT_ENABLED=${OTEL_JAVAAGENT_ENABLED} OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER}"
+
         # Only non-secret values; the DB password goes to the file below.
         {
           echo "DB_NAME=${DB_NAME}"
           echo "DB_USERNAME=${DB_USERNAME}"
           echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
+          echo "OTEL_JAVAAGENT_ENABLED=${OTEL_JAVAAGENT_ENABLED}"
+          echo "OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER}"
         } > /tmp/.env
         chmod 600 /tmp/.env
 

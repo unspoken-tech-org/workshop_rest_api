@@ -288,6 +288,9 @@ jobs:
           healthchecks-backup-diff-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_DIFF_URL }}
           # A tag push has no inputs: pending migrations block until a dispatch approves them.
           allow-migrations: ${{ github.event.inputs.allow_migrations || 'false' }}
+          # Telemetry switches (repository variables; unset keeps the agent and traces on).
+          otel-javaagent-enabled: ${{ vars.API_OTEL_JAVAAGENT_ENABLED || 'true' }}
+          otel-traces-exporter: ${{ vars.API_OTEL_TRACES_EXPORTER || 'otlp' }}
 
       - name: Rollback on failure
         if: failure() && steps.deploy.outcome == 'failure'
