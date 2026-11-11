@@ -71,7 +71,7 @@ dependencies {
     implementation 'commons-io:commons-io:2.22.0'
     implementation 'dev.mccue:guava-base:33.4.0'
     implementation 'org.apache.commons:commons-lang3:3.21.0'
-    implementation 'com.github.spullara.mustache.java:compiler:0.9.11'
+    implementation 'com.github.spullara.mustache.java:compiler:0.9.14'
     implementation 'com.google.guava:guava:33.6.0-jre'
     implementation 'org.simpleflatmapper:sfm-springjdbc:9.0.2'
     implementation 'org.simpleflatmapper:sfm-jdbc:9.0.2'
