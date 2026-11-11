@@ -66,7 +66,15 @@ updates:
       - "dependencies"
       - "gradle"
     open-pull-requests-limit: 5
+    groups:
+      # flyway-core e flyway-database-postgresql precisam andar na mesma versão.
+      flyway:
+        patterns:
+          - "org.flywaydb:*"
     ignore:
       # springdoc 3.x exige Spring Boot 4; liberar junto com a migração do Boot.
       - dependency-name: "org.springdoc:*"
+        update-types: ["version-update:semver-major"]
+      # Major do Flyway muda suporte a banco e comportamento; migração planejada.
+      - dependency-name: "org.flywaydb:*"
         update-types: ["version-update:semver-major"]
