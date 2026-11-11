@@ -28,6 +28,14 @@ on:
         description: 'Tag, branch or commit to deploy'
         required: false
         default: 'main'
+      allow_migrations:
+        description: 'Apply pending Flyway migrations (needs a pgBackRest backup < 26h)'
+        required: false
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
 
 permissions:
   contents: read
@@ -278,6 +286,8 @@ jobs:
           scrape-password-hash: ${{ secrets.OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
           healthchecks-backup-full-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_FULL_URL }}
           healthchecks-backup-diff-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_DIFF_URL }}
+          # A tag push has no inputs: pending migrations block until a dispatch approves them.
+          allow-migrations: ${{ github.event.inputs.allow_migrations || 'false' }}
 
       - name: Rollback on failure
         if: failure() && steps.deploy.outcome == 'failure'

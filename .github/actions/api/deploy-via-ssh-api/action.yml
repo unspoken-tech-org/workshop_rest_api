@@ -77,6 +77,10 @@ inputs:
   healthchecks-backup-diff-url:
     description: 'Healthchecks ping URL of the daily diff backup'
     required: true
+  allow-migrations:
+    description: 'true approves applying pending Flyway migrations; false blocks them'
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -245,8 +249,15 @@ runs:
         IMAGE_TAG: ${{ inputs.image-tag }}
         IMAGE_DIGEST: ${{ inputs.image-digest }}
         DEPLOY_RUN_ID: ${{ github.run_id }}
+        ALLOW_MIGRATIONS: ${{ inputs.allow-migrations }}
       run: |
         set -e
+
+        # The value reaches a remote shell command: accept only the two literals.
+        [[ "${ALLOW_MIGRATIONS}" =~ ^(true|false)$ ]] || {
+          echo "allow-migrations must be true or false" >&2
+          exit 1
+        }
 
         ssh -o ConnectTimeout=30 \
           "${SSH_TARGET}" \
@@ -258,4 +269,5 @@ runs:
               IMAGE_TAG="${IMAGE_TAG}" \
               IMAGE_DIGEST="${IMAGE_DIGEST}" \
               DEPLOY_RUN_ID="${DEPLOY_RUN_ID}" \
+              ALLOW_MIGRATIONS="${ALLOW_MIGRATIONS}" \
               bash "${DEPLOY_DIR}/.tmp/deploy.sh"
