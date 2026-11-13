@@ -28,8 +28,10 @@ if [[ ! "${ALLOW_MIGRATIONS}" =~ ^(true|false)$ ]]; then
   echo "ALLOW_MIGRATIONS must be true or false" >&2
   exit 1
 fi
-# The daily diff backup runs every 24h; 26h leaves room for a slow run.
-MAX_BACKUP_AGE_SECONDS=$(( 26 * 3600 ))
+# WAL is archived continuously (archive_mode=on), so a restore reaches any point
+# before the deploy; the base backup age only bounds how much WAL to replay. 48h
+# covers Monday before the 20:00 diff, when the latest is Sunday's 03:00 full.
+MAX_BACKUP_AGE_SECONDS=$(( 48 * 3600 ))
 
 # Setup .env
 mv "${DEPLOY_DIR}/.tmp/.env" ./ 2>/dev/null || mv .tmp/.env ./ 2>/dev/null || true
@@ -240,7 +242,13 @@ if [ -n "${PENDING}" ]; then
       echo "Latest pgBackRest backup is $(( BACKUP_AGE / 3600 ))h old (limit $(( MAX_BACKUP_AGE_SECONDS / 3600 ))h); run a backup before applying migrations" >&2
       exit 1
     fi
-    echo "allow_migrations=true; latest pgBackRest backup is $(( BACKUP_AGE / 3600 ))h old"
+    # Point-in-time restore depends on WAL archiving: pgbackrest check forces a WAL
+    # switch and waits for that segment to reach the repository.
+    if ! docker exec -u postgres workshop-db pgbackrest --stanza=workshop check; then
+      echo "pgBackRest WAL archiving check failed; refusing to apply migrations" >&2
+      exit 1
+    fi
+    echo "allow_migrations=true; latest pgBackRest backup is $(( BACKUP_AGE / 3600 ))h old and WAL archiving works"
   fi
 else
   echo "No pending migrations"
