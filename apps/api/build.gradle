@@ -101,6 +101,16 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+// Dev/test JWT keys (profiles local and test, read from the classpath by bootRun
+// and the tests) stay out of the packaged JARs; QA and PRD mount their own keys.
+tasks.named('bootJar') {
+    exclude 'keys/**'
+}
+
+tasks.named('jar') {
+    exclude 'keys/**'
+}
+
 tasks.named('bootBuildImage') {
     builder = 'paketobuildpacks/builder-jammy-base:latest'
 }
