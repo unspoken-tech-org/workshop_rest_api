@@ -21,7 +21,9 @@
 #   canary in the control-plane Tempo, Prometheus and Loki: it proves the queue,
 #   the exporter and the PRD -> QA grant end to end.
 # - finalize confirms the release when deploy, verify and verify-delivery passed,
-#   or restores the previous release when any of them failed.
+#   or restores the previous release when any of them failed, and writes the
+#   go/no-go record (who dispatched and approved, SHA, digests, canary, result of
+#   each gate and the decision) to the run summary.
 #
 # The VM is reached through Tailscale (tag:ci) with the host key pinned from
 # PROD_SSH_KNOWN_HOSTS, as in deploy-api-prod.yml. The workshop-metrics network
@@ -423,6 +425,8 @@ jobs:
     if: always() && needs.prepare.result == 'success'
     permissions:
       contents: read
+      # Environment approvals for the go/no-go record.
+      actions: read
 
     steps:
       - name: Harden Runner
@@ -466,6 +470,7 @@ jobs:
           known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
 
       - name: Roll back to the previous release
+        id: rollback
         if: needs.deploy.result != 'success' || needs.verify.result != 'success' || needs.verify-delivery.result != 'success'
         env:
           SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
@@ -498,6 +503,7 @@ jobs:
           exit "${status}"
 
       - name: Confirm release and prune old ones
+        id: confirm
         if: needs.deploy.result == 'success' && needs.verify.result == 'success' && needs.verify-delivery.result == 'success'
         env:
           SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
@@ -535,3 +541,50 @@ jobs:
         with:
           prefix: OBSERVABILITY-EDGE-PRD
           image-tag: ${{ needs.prepare.outputs.sha }}
+
+      # Fase 7, item 1: the run summary is the go/no-go record of this change.
+      - name: Write go/no-go record
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release-id }}
+          REQUESTED_REF: ${{ inputs.ref }}
+          DISPATCHED_BY: ${{ github.triggering_actor }}
+          COMPOSE_SOURCE: ${{ env.OBS_PRD_EDGE_COMPOSE_SOURCE }}
+          CANARY_ID: ${{ needs.verify.outputs.canary-id }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          DELIVERY_RESULT: ${{ needs.verify-delivery.result }}
+          ROLLBACK_OUTCOME: ${{ steps.rollback.outcome }}
+          CONFIRM_OUTCOME: ${{ steps.confirm.outcome }}
+        run: |
+          set -Eeuo pipefail
+          approvals="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" \
+            --jq '[.[] | "\(.user.login) (\(.state), \([.environments[].name] | join(",")))"] | join("; ")' \
+            2>/dev/null || echo unavailable)"
+          if [[ "${CONFIRM_OUTCOME}" == success ]]; then
+            decision="GO: release ${RELEASE_ID} confirmed"
+          elif [[ "${ROLLBACK_OUTCOME}" == success ]]; then
+            decision="NO-GO: previous release restored"
+          else
+            decision="NO-GO: confirm=${CONFIRM_OUTCOME:-skipped} rollback=${ROLLBACK_OUTCOME:-skipped}, check the VM"
+          fi
+          {
+            echo "## Go/no-go: observability edge (PRD)"
+            echo
+            echo "| Item | Value |"
+            echo "|---|---|"
+            echo "| Decision | ${decision} |"
+            echo "| Dispatched by | ${DISPATCHED_BY} |"
+            echo "| Environment approval | ${approvals:-none} |"
+            echo "| Requested ref | \`${REQUESTED_REF}\` |"
+            echo "| Commit | \`${SHA}\` |"
+            echo "| Release | \`${RELEASE_ID}\` |"
+            echo "| Canary | \`${CANARY_ID:-not generated}\` |"
+            echo "| deploy / verify / verify-delivery | ${DEPLOY_RESULT} / ${VERIFY_RESULT} / ${DELIVERY_RESULT} |"
+            echo
+            echo "Pinned images (${COMPOSE_SOURCE}):"
+            echo
+            sed -n 's/^[[:space:]]*image:[[:space:]]*//p' "${COMPOSE_SOURCE}" | sort -u | sed 's/^/- `/; s/$/`/'
+          } >> "${GITHUB_STEP_SUMMARY}"
