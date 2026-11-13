@@ -14,7 +14,9 @@
 #   token is read from the Terraform state with a read-only R2 credential; it,
 #   the QA API scrape password, the Telegram bot token and chat ID and the
 #   Healthchecks.io ping URL travel as files under .secrets/, never in the .env.
-# - verify checks the active release again from a fresh job.
+# - verify checks the active release again from a fresh job. With
+#   simulate_verify_failure it fails on purpose after the real check, so a
+#   rollback drill runs from main without changing code.
 # - finalize confirms the release when deploy and verify passed, or restores the
 #   previous release when either failed.
 #
@@ -38,6 +40,11 @@ on:
         options:
           - DEPLOY
           - CANCEL
+      simulate_verify_failure:
+        description: 'Rollback drill: fail verify on purpose after the real check, so finalize restores the previous release'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -303,6 +310,12 @@ jobs:
           compose-file: ${{ env.OBS_QA_COMPOSE_FILE }}
           compose-project-name: ${{ env.OBS_QA_COMPOSE_PROJECT_NAME }}
           release-id: ${{ needs.prepare.outputs.release-id }}
+
+      - name: Simulate verify failure (rollback drill)
+        if: inputs.simulate_verify_failure
+        run: |
+          echo "::error::simulate_verify_failure=true: failing verify on purpose so finalize restores the previous release"
+          exit 1
 
   finalize:
     name: Confirm or roll back release
