@@ -73,6 +73,20 @@ jobs:
       - name: Build Application JAR
         run: ./gradlew :apps:api:bootJar -x test
 
+      # The fs scan in security-scan does not read build.gradle (no lockfile) nor
+      # JARs; rootfs on the bootJar sees the libraries actually shipped.
+      - name: Trivy scan of the bootJar dependencies (gate)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: 'rootfs'
+          scan-ref: 'apps/api/build/libs'
+          scanners: 'vuln'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          trivyignores: '.trivyignore.yaml'
+          exit-code: '1'
+
   # ===========================================
   # JOB 2: INTEGRATION TESTS (TESTCONTAINERS)
   # ===========================================

@@ -13,3 +13,21 @@ secrets:
       provided by the deploy secrets, never this one. Kept versioned on purpose
       (.gitignore exception for dev/test keys).
     expired_at: 2027-02-08
+
+vulnerabilities:
+  - id: CVE-2026-47884
+    purls:
+      - "pkg:maven/org.springframework/spring-webmvc@6.2.19"
+    statement: >-
+      XsltView RCE/SSRF. The API renders no views (REST + JSON only, no XsltView
+      or template engine). Fixed only in Spring Framework 7.0.9; the open-source
+      6.2 line (Spring Boot 3.5) has no release with the fix. Goes away with the
+      Spring Boot 4 upgrade.
+    expired_at: 2027-02-08
+  - id: CVE-2026-47890
+    purls:
+      - "pkg:maven/org.springframework/spring-webmvc@6.2.19"
+    statement: >-
+      SSE stream corruption with view fragments. The API uses neither SSE nor
+      view fragments. Fixed only in Spring Framework 7.0.9; no 6.2 release.
+    expired_at: 2027-02-08
