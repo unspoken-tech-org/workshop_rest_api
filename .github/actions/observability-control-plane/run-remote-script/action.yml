@@ -5,7 +5,7 @@ description: >
 
 inputs:
   script:
-    description: 'Script to run: verify, rollback or cleanup'
+    description: 'Script to run: verify, rollback, cleanup or canary-check'
     required: true
   ssh-target:
     description: 'SSH target in the user@host format'
@@ -20,8 +20,13 @@ inputs:
     description: 'Dedicated Docker Compose project name'
     required: true
   release-id:
-    description: 'Release identifier of this run'
-    required: true
+    description: 'Release identifier of this run (not used by canary-check)'
+    required: false
+    default: ''
+  canary-id:
+    description: 'Canary id to look for (canary-check only)'
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -35,9 +40,10 @@ runs:
         COMPOSE_FILE: ${{ inputs.compose-file }}
         COMPOSE_PROJECT_NAME: ${{ inputs.compose-project-name }}
         RELEASE_ID: ${{ inputs.release-id }}
+        CANARY_ID: ${{ inputs.canary-id }}
       run: |
         set -Eeuo pipefail
-        [[ "${SCRIPT}" =~ ^(verify|rollback|cleanup)$ ]] || {
+        [[ "${SCRIPT}" =~ ^(verify|rollback|cleanup|canary-check)$ ]] || {
           echo "Unknown control-plane script: ${SCRIPT}" >&2
           exit 1
         }
@@ -47,6 +53,11 @@ runs:
         }
         [[ "${DEPLOY_DIR}" =~ ^/[A-Za-z0-9._/-]+$ && "${DEPLOY_DIR}" == *observability*control* ]] || {
           echo "DEPLOY_DIR must be the control-plane directory" >&2
+          exit 1
+        }
+        # Expandido na linha de comando remota: só hex.
+        [[ -z "${CANARY_ID}" || "${CANARY_ID}" =~ ^[0-9a-f]{32}$ ]] || {
+          echo "Invalid canary id" >&2
           exit 1
         }
         ssh_opts=(-o ConnectTimeout=30 -o StrictHostKeyChecking=yes)
@@ -64,6 +75,7 @@ runs:
             COMPOSE_FILE="${COMPOSE_FILE}" \
             COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}" \
             RELEASE_ID="${RELEASE_ID}" \
+            CANARY_ID="${CANARY_ID}" \
             bash "${DEPLOY_DIR}/.tmp/${SCRIPT}.sh" || status=$?
         ssh "${ssh_opts[@]}" "${SSH_TARGET}" \
           "rm -f '${DEPLOY_DIR}/.tmp/${SCRIPT}.sh'" || true
