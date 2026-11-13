@@ -47,6 +47,10 @@ ext['rest-assured.version'] = '6.3.0'
 ext['groovy.version'] = '5.0.8'
 // O Spring Boot 3.5.16 gerencia o Jackson 2.21.4, que tem alertas de segurança corrigidos na 2.21.7.
 ext['jackson-bom.version'] = '2.21.8'
+// O Spring Boot 3.5.16 gerencia o Tomcat 10.1.55 e o pgjdbc 42.7.11, com CVEs CRITICAL/HIGH corrigidos
+// na 10.1.58 e na 42.7.12 (vistos pelo Trivy no bootJar, no CI).
+ext['tomcat.version'] = '10.1.61'
+ext['postgresql.version'] = '42.7.14'
 
 dependencyManagement {
     imports {
