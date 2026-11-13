@@ -18,7 +18,9 @@
 #   simulate_verify_failure it fails on purpose after the real check, so a
 #   rollback drill runs from main without changing code.
 # - finalize confirms the release when deploy and verify passed, or restores the
-#   previous release when either failed.
+#   previous release when either failed, then writes the go/no-go record (who
+#   dispatched and approved, SHA, digests, result of each gate and the decision)
+#   to the run summary.
 #
 # The VM is reached through Tailscale SSH with tag:ci (no private SSH key).
 # ===========================================================
@@ -324,7 +326,9 @@ jobs:
     needs: [prepare, deploy, verify]
     # Never runs when prepare failed or the confirmation was CANCEL.
     if: always() && needs.prepare.result == 'success'
+    # actions: read lets the go/no-go record list the Environment approvals.
     permissions:
+      actions: read
       contents: read
 
     steps:
@@ -348,6 +352,7 @@ jobs:
           known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
 
       - name: Roll back to the previous release
+        id: rollback
         if: needs.deploy.result != 'success' || needs.verify.result != 'success'
         uses: ./.github/actions/observability-control-plane/run-remote-script
         with:
@@ -359,6 +364,7 @@ jobs:
           release-id: ${{ needs.prepare.outputs.release-id }}
 
       - name: Confirm release and prune old ones
+        id: confirm
         if: needs.deploy.result == 'success' && needs.verify.result == 'success'
         uses: ./.github/actions/observability-control-plane/run-remote-script
         with:
@@ -375,3 +381,48 @@ jobs:
         with:
           prefix: OBSERVABILITY-CONTROL-PLANE-QA
           image-tag: ${{ needs.prepare.outputs.sha }}
+
+      - name: Write go/no-go record
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release-id }}
+          REQUESTED_REF: ${{ inputs.ref }}
+          DISPATCHED_BY: ${{ github.triggering_actor }}
+          COMPOSE_SOURCE: ${{ env.OBS_QA_COMPOSE_SOURCE }}
+          SIMULATE_VERIFY_FAILURE: ${{ inputs.simulate_verify_failure }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          ROLLBACK_OUTCOME: ${{ steps.rollback.outcome }}
+          CONFIRM_OUTCOME: ${{ steps.confirm.outcome }}
+        run: |
+          set -Eeuo pipefail
+          approvals="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" \
+            --jq '[.[] | "\(.user.login) (\(.state), \([.environments[].name] | join(",")))"] | join("; ")' \
+            2>/dev/null || echo unavailable)"
+          if [[ "${CONFIRM_OUTCOME}" == success ]]; then
+            decision="GO: release ${RELEASE_ID} confirmed"
+          elif [[ "${ROLLBACK_OUTCOME}" == success ]]; then
+            decision="NO-GO: previous release restored"
+          else
+            decision="NO-GO: confirm=${CONFIRM_OUTCOME:-skipped} rollback=${ROLLBACK_OUTCOME:-skipped}, check the VM"
+          fi
+          {
+            echo "## Go/no-go: observability control plane (QA)"
+            echo
+            echo "| Item | Value |"
+            echo "|---|---|"
+            echo "| Decision | ${decision} |"
+            echo "| Dispatched by | ${DISPATCHED_BY} |"
+            echo "| Environment approval | ${approvals:-none} |"
+            echo "| Requested ref | \`${REQUESTED_REF}\` |"
+            echo "| Commit | \`${SHA}\` |"
+            echo "| Release | \`${RELEASE_ID}\` |"
+            echo "| Rollback drill (simulate_verify_failure) | ${SIMULATE_VERIFY_FAILURE} |"
+            echo "| deploy / verify (canary roundtrip in its log) | ${DEPLOY_RESULT} / ${VERIFY_RESULT} |"
+            echo
+            echo "Pinned images (${COMPOSE_SOURCE}):"
+            echo
+            sed -n 's/^[[:space:]]*image:[[:space:]]*//p' "${COMPOSE_SOURCE}" | sort -u | sed 's/^/- `/; s/$/`/'
+          } >> "${GITHUB_STEP_SUMMARY}"
