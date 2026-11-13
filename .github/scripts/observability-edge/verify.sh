@@ -6,6 +6,8 @@ SCRIPT_NAME=verify
 source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 
 RELEASE_ID="${RELEASE_ID:?RELEASE_ID is required}"
+# Id do canário gerado no runner: o job verify-delivery o procura nos backends da QA.
+CANARY_ID="${CANARY_ID:?CANARY_ID is required}"
 # Janela para a primeira amostra do scrape: o receiver prometheus/api raspa a
 # cada 15 s, então 12 tentativas de 5 s cobrem pelo menos uma coleta.
 METRICS_WAIT_ATTEMPTS="${METRICS_WAIT_ATTEMPTS:-12}"
@@ -13,6 +15,7 @@ METRICS_WAIT_SECONDS="${METRICS_WAIT_SECONDS:-5}"
 
 validate_contract
 validate_release_id "${RELEASE_ID}"
+[[ "${CANARY_ID}" =~ ^[0-9a-f]{32}$ ]] || die "CANARY_ID must be 32 hex characters"
 
 release_dir="$(current_release_dir)" || die "no active release"
 [[ "${release_dir}" == "${RELEASES_DIR}/${RELEASE_ID}" ]] || \
@@ -155,8 +158,26 @@ else
   echo "WARNING: prometheus/gateway: up{job=\"caddy-gateway\"} is ${gateway_up:-none}: check the :9180 metrics site of the gateway release"
 fi
 
-# Informativo: fila de exportação por tipo de dado. A entrega à QA ainda não é
-# critério de aprovação (a ACL PRD -> QA é adiada), então a fila pode crescer.
+# Canário (Fase 7, item 3): trace, métrica e log com o id do runner entram no
+# receiver OTLP do Collector de borda pela sonda da edge-otlp (busybox wget, POST
+# HTTP), o mesmo caminho do Alloy e do containers-collector. A entrega à QA, que
+# prova a fila e o exporter, é conferida pelo job verify-delivery do workflow.
+# service.name próprio: fica fora dos SLOs, alertas e dashboards.
+edge_push() {
+  compose_in "${release_dir}" exec -T containers-collector-probe \
+    wget -q -T 10 -O /dev/null --header 'Content-Type: application/json' \
+    --post-data "$2" "http://otel-collector:4318/v1/$1" || die "canary: OTLP push of $1 failed"
+}
+span_id="$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+now_ns="$(date +%s%N)"
+resource='{"attributes":[{"key":"service.name","value":{"stringValue":"observability-canary"}}]}'
+scope='{"name":"edge-verify"}'
+edge_push traces "{\"resourceSpans\":[{\"resource\":${resource},\"scopeSpans\":[{\"scope\":${scope},\"spans\":[{\"traceId\":\"${CANARY_ID}\",\"spanId\":\"${span_id}\",\"name\":\"canary\",\"kind\":1,\"startTimeUnixNano\":\"$(( now_ns - 1000000 ))\",\"endTimeUnixNano\":\"${now_ns}\",\"attributes\":[{\"key\":\"canary.release\",\"value\":{\"stringValue\":\"${RELEASE_ID}\"}}]}]}]}]}"
+edge_push metrics "{\"resourceMetrics\":[{\"resource\":${resource},\"scopeMetrics\":[{\"scope\":${scope},\"metrics\":[{\"name\":\"workshop.canary.delivery\",\"gauge\":{\"dataPoints\":[{\"asInt\":\"1\",\"timeUnixNano\":\"${now_ns}\",\"attributes\":[{\"key\":\"canary.id\",\"value\":{\"stringValue\":\"${CANARY_ID}\"}}]}]}}]}]}]}"
+edge_push logs "{\"resourceLogs\":[{\"resource\":${resource},\"scopeLogs\":[{\"scope\":${scope},\"logRecords\":[{\"timeUnixNano\":\"${now_ns}\",\"severityNumber\":9,\"severityText\":\"INFO\",\"body\":{\"stringValue\":\"edge canary ${CANARY_ID}\"},\"traceId\":\"${CANARY_ID}\",\"spanId\":\"${span_id}\"}]}]}]}"
+echo "Canary ${CANARY_ID} accepted by the edge collector (release ${RELEASE_ID})"
+
+# Informativo: fila de exportação por tipo de dado.
 metrics="$(collector_metrics 2>/dev/null)" || metrics=""
 echo "Exporter queue size per data type (information only):"
 printf '%s\n' "${metrics}" \

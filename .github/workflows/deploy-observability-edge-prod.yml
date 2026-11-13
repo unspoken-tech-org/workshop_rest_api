@@ -14,17 +14,21 @@
 #   immutable release directory and switches the active release atomically. The
 #   QA OTLP endpoint, the API scrape password and the PostgreSQL monitoring role
 #   password travel as files under .secrets/, never in the .env.
-# - verify checks the active release again from a fresh job.
-# - finalize confirms the release when deploy and verify passed, or restores the
-#   previous release when either failed.
+# - verify checks the active release again from a fresh job and pushes a canary
+#   (trace, metric and log with an id generated on the runner) into the edge
+#   collector.
+# - verify-delivery joins the tailnet as the QA VM workflows do and looks for that
+#   canary in the control-plane Tempo, Prometheus and Loki: it proves the queue,
+#   the exporter and the PRD -> QA grant end to end.
+# - finalize confirms the release when deploy, verify and verify-delivery passed,
+#   or restores the previous release when any of them failed.
 #
 # The VM is reached through Tailscale (tag:ci) with the host key pinned from
 # PROD_SSH_KNOWN_HOSTS, as in deploy-api-prod.yml. The workshop-metrics network
 # must already exist on the VM (created by the PRD API Compose); deploy.sh fails
 # before switching otherwise. deploy.sh also connects the workshop-db container to
 # the internal workshop-db-metrics network (no restart) and creates or updates the
-# workshop_metrics role (pg_monitor) with OBS_PRD_PG_MONITOR_PASSWORD. Delivery to QA is not a gate: the PRD -> QA ACL is
-# deferred, so the queue may grow until it lands.
+# workshop_metrics role (pg_monitor) with OBS_PRD_PG_MONITOR_PASSWORD.
 # ===========================================================
 
 name: Deploy Observability Edge Collector (PRD)
@@ -139,6 +143,7 @@ jobs:
           for script in common deploy verify rollback cleanup; do
             test -s ".github/scripts/observability-edge/${script}.sh"
           done
+          test -s .github/scripts/observability-control-plane/canary-check.sh
           test -s "${COMPOSE_SOURCE}"
           # Interpolation check only: placeholders, no credentials in a file.
           env \
@@ -288,6 +293,8 @@ jobs:
     needs: [prepare, deploy]
     permissions:
       contents: read
+    outputs:
+      canary-id: ${{ steps.canary.outputs.id }}
 
     steps:
       - name: Harden Runner
@@ -330,6 +337,10 @@ jobs:
           host: ${{ secrets.TS_TAILSCALE_IP }}
           known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
 
+      - name: Generate canary id
+        id: canary
+        run: echo "id=$(openssl rand -hex 16)" >> "${GITHUB_OUTPUT}"
+
       - name: Verify edge collector
         env:
           SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
@@ -337,8 +348,10 @@ jobs:
           COMPOSE_FILE: ${{ env.OBS_PRD_EDGE_COMPOSE_FILE }}
           COMPOSE_PROJECT_NAME: ${{ env.OBS_PRD_EDGE_COMPOSE_PROJECT_NAME }}
           RELEASE_ID: ${{ needs.prepare.outputs.release-id }}
+          CANARY_ID: ${{ steps.canary.outputs.id }}
         run: |
           set -Eeuo pipefail
+          [[ "${CANARY_ID}" =~ ^[0-9a-f]{32}$ ]] || { echo "Invalid canary id" >&2; exit 1; }
           ssh_opts=(-o ConnectTimeout=30 -o StrictHostKeyChecking=yes)
           # shellcheck disable=SC2029  # values are validated above and expanded on the runner on purpose
           ssh "${ssh_opts[@]}" "${SSH_TARGET}" \
@@ -355,17 +368,57 @@ jobs:
               COMPOSE_FILE="${COMPOSE_FILE}" \
               COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}" \
               RELEASE_ID="${RELEASE_ID}" \
+              CANARY_ID="${CANARY_ID}" \
               bash "${DEPLOY_DIR}/.tmp/verify.sh" || status=$?
           # shellcheck disable=SC2029  # values are validated above and expanded on the runner on purpose
           ssh "${ssh_opts[@]}" "${SSH_TARGET}" \
             "rm -f '${DEPLOY_DIR}/.tmp/verify.sh' '${DEPLOY_DIR}/.tmp/common.sh'" || true
           exit "${status}"
 
+  verify-delivery:
+    name: Verify canary delivery to QA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [prepare, verify]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout resolved commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+
+      - name: Connect to the QA VM
+        uses: ./.github/actions/observability-control-plane/connect
+        with:
+          oauth-client-id: ${{ secrets.QA_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.QA_TS_OAUTH_SECRET }}
+          tailscale-ip: ${{ secrets.QA_TS_TAILSCALE_IP }}
+          known-hosts: ${{ secrets.QA_SSH_KNOWN_HOSTS }}
+
+      # Read-only on QA: queries the active control-plane release, deploys nothing.
+      - name: Find the canary in Tempo, Prometheus and Loki
+        uses: ./.github/actions/observability-control-plane/run-remote-script
+        with:
+          script: canary-check
+          ssh-target: ${{ secrets.QA_SSH_USER }}@${{ secrets.QA_TS_TAILSCALE_IP }}
+          deploy-dir: ${{ vars.OBS_QA_DEPLOY_DIR || '/home/workshop/deploy/observability_control_plane_qa' }}
+          compose-file: docker-compose-observability-control-plane-qa.yml
+          compose-project-name: observability-control-plane-qa
+          canary-id: ${{ needs.verify.outputs.canary-id }}
+
   finalize:
     name: Confirm or roll back release
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    needs: [prepare, deploy, verify]
+    needs: [prepare, deploy, verify, verify-delivery]
     # Never runs when prepare failed or the confirmation was CANCEL.
     if: always() && needs.prepare.result == 'success'
     permissions:
@@ -413,7 +466,7 @@ jobs:
           known-hosts: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
 
       - name: Roll back to the previous release
-        if: needs.deploy.result != 'success' || needs.verify.result != 'success'
+        if: needs.deploy.result != 'success' || needs.verify.result != 'success' || needs.verify-delivery.result != 'success'
         env:
           SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
           DEPLOY_DIR: ${{ env.OBS_PRD_EDGE_DEPLOY_DIR }}
@@ -445,7 +498,7 @@ jobs:
           exit "${status}"
 
       - name: Confirm release and prune old ones
-        if: needs.deploy.result == 'success' && needs.verify.result == 'success'
+        if: needs.deploy.result == 'success' && needs.verify.result == 'success' && needs.verify-delivery.result == 'success'
         env:
           SSH_TARGET: ${{ secrets.PROD_SSH_USER }}@${{ secrets.TS_TAILSCALE_IP }}
           DEPLOY_DIR: ${{ env.OBS_PRD_EDGE_DEPLOY_DIR }}
@@ -477,7 +530,7 @@ jobs:
           exit "${status}"
 
       - name: Print final banner
-        if: needs.deploy.result == 'success' && needs.verify.result == 'success'
+        if: needs.deploy.result == 'success' && needs.verify.result == 'success' && needs.verify-delivery.result == 'success'
         uses: ./.github/actions/shared/print-banner
         with:
           prefix: OBSERVABILITY-EDGE-PRD
