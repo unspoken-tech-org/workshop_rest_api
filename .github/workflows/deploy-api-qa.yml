@@ -162,6 +162,25 @@ jobs:
             exit 1
           }
 
+      # The bootJar gate in CI sees only the JAR; this one also sees the JRE base image
+      # (Alpine packages) and the OpenTelemetry agent. It scans the pushed digest, so a
+      # failure leaves the tags in GHCR but stops the run before the deploy job.
+      - name: Trivy scan of the pushed image (gate)
+        env:
+          # The image index holds only this platform; without it Trivy asked for amd64
+          # on the arm64 runner.
+          TRIVY_PLATFORM: linux/arm64
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: 'image'
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          scanners: 'vuln'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          trivyignores: '.trivyignore.yaml'
+          exit-code: '1'
+
       - name: Print build banner
         uses: ./.github/actions/shared/print-banner
         with:
