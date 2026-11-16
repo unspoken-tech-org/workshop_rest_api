@@ -1,0 +1,41 @@
+# ===========================================================
+# Backup and restore test of the PRD database image.
+#
+# Runs scripts/restore-test-local.sh on a hosted runner: PRD image (same
+# PostgreSQL and pgBackRest versions), synthetic data, throwaway posix
+# repository, full backup + archived WAL, destroy, restore and checks.
+# No secrets and no access to PRD, QA or R2.
+# ===========================================================
+
+name: Restore Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 06:00 UTC (03:00 BRT)
+    - cron: '0 6 * * 1'
+  pull_request:
+    paths:
+      - 'apps/api/docker/Dockerfile.pgbackrest'
+      - 'scripts/restore-test-local.sh'
+      - '.github/workflows/restore-test.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: restore-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  restore-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Backup, destroy and restore
+        run: ./scripts/restore-test-local.sh
