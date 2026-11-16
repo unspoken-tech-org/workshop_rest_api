@@ -3,6 +3,8 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.dto.device.*;
 import com.tproject.workshop.enums.DeviceHistoryFieldEnum;
 import com.tproject.workshop.enums.DeviceStatusEnum;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
@@ -19,6 +21,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -29,6 +33,7 @@ public class DeviceService {
     private final ColorService colorService;
     private final TypesBrandsModelsService typeBrandModelService;
     private final TechnicianService technicianService;
+    private final ObservabilityEventRecorder eventRecorder;
 
     private static final List<DeviceStatusEnum> STATUS_THAT_RESET_URGENCY_REVISION = List.of(
             DeviceStatusEnum.PRONTO,
@@ -65,21 +70,30 @@ public class DeviceService {
         }
     }
 
-    private void revertStatusIfNeeded(Device device) {
+    private void recordStatusChange(DeviceStatusEnum previous, DeviceStatusEnum current, String origin) {
+        eventRecorder.record(ObservabilityEventCatalog.DEVICE_STATUS_CHANGED, Map.of(
+                "status.previous", previous.name().toLowerCase(Locale.ROOT),
+                "status.new", current.name().toLowerCase(Locale.ROOT),
+                "change.origin", origin));
+    }
+
+    private void revertStatusIfNeeded(Device device, String origin) {
         DeviceStatusEnum current = device.getDeviceStatus();
         if (current == DeviceStatusEnum.ENTREGUE || current == DeviceStatusEnum.DESCARTADO) {
             addHistory(device, DeviceHistoryFieldEnum.STATUS.getField(),
                     current.name(), DeviceStatusEnum.NOVO.name());
             device.setDeviceStatus(DeviceStatusEnum.NOVO);
+            recordStatusChange(current, DeviceStatusEnum.NOVO, origin);
         }
     }
 
-    private Device changeStatus(int deviceId, DeviceStatusEnum newStatus) {
+    private Device changeStatus(int deviceId, DeviceStatusEnum newStatus, String origin) {
         Device device = fetchOrThrow(deviceId);
         DeviceStatusEnum oldStatus = device.getDeviceStatus();
         if (oldStatus != newStatus) {
             addHistory(device, DeviceHistoryFieldEnum.STATUS.getField(),
                     oldStatus.name(), newStatus.name());
+            recordStatusChange(oldStatus, newStatus, origin);
         }
         device.setDeviceStatus(newStatus);
         resetUrgencyAndRevisionIfNeeded(device, newStatus);
@@ -112,13 +126,13 @@ public class DeviceService {
 
     @Transactional
     public void updateDeviceStatus(int deviceId, DeviceStatusEnum status) {
-        deviceRepository.save(changeStatus(deviceId, status));
+        deviceRepository.save(changeStatus(deviceId, status, "customer_contact"));
     }
 
     @Transactional
     public DeviceOutputDto updateDeviceStatus(int deviceId, DeviceStatusInputRecord dto) {
         DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(dto.deviceStatus());
-        deviceRepository.saveAndFlush(changeStatus(deviceId, newStatus));
+        deviceRepository.saveAndFlush(changeStatus(deviceId, newStatus, "status"));
         return findDeviceByIdOrThrow(deviceId);
     }
 
@@ -129,7 +143,7 @@ public class DeviceService {
         boolean newUrgency = dto.hasUrgency();
 
         if (newUrgency && !oldUrgency) {
-            revertStatusIfNeeded(device);
+            revertStatusIfNeeded(device, "urgency");
         }
 
         if (oldUrgency != newUrgency) {
@@ -149,7 +163,7 @@ public class DeviceService {
         boolean newRevision = dto.revision();
 
         if (newRevision && !oldRevision) {
-            revertStatusIfNeeded(device);
+            revertStatusIfNeeded(device, "revision");
         }
 
         if (oldRevision != newRevision) {
@@ -167,6 +181,7 @@ public class DeviceService {
         Device oldDevice = fetchOrThrow(device.deviceId());
 
         DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(device.deviceStatus());
+        DeviceStatusEnum previousStatus = oldDevice.getDeviceStatus();
 
         addHistories(oldDevice, device);
 
@@ -202,6 +217,9 @@ public class DeviceService {
         }
 
         deviceRepository.saveAndFlush(oldDevice);
+        if (previousStatus != newStatus) {
+            recordStatusChange(previousStatus, newStatus, "device_update");
+        }
         return findDeviceByIdOrThrow(oldDevice.getId());
     }
 
@@ -241,6 +259,8 @@ public class DeviceService {
         newDevice.setDeviceHistory(deviceHistoryList);
 
         Device savedDevice = deviceRepository.saveAndFlush(newDevice);
+        eventRecorder.record(ObservabilityEventCatalog.DEVICE_CREATED, Map.of(
+                "device.urgency", device.hasUrgency() ? "urgent" : "normal"));
         return new CreateDeviceOutputDtoRecord(savedDevice.getId());
     }
 

@@ -56,7 +56,7 @@ public final class ObservabilityEventValidator {
             Map.entry("device.urgency", Set.of("urgent", "normal")),
             Map.entry("status.previous", statusValues()),
             Map.entry("status.new", statusValues()),
-            Map.entry("change.origin", Set.of("status", "device_update", "urgency", "revision")),
+            Map.entry("change.origin", Set.of("status", "device_update", "urgency", "revision", "customer_contact")),
             Map.entry("budget.field", Set.of("budget_fee", "service_value")),
             Map.entry("budget.change_type", Set.of("set", "increase", "decrease", "cleared")),
             Map.entry("budget.value_band", valueBands()),
