@@ -34,11 +34,12 @@ public class CustomerContactService {
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
         DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
         validatePhoneIfNeeded(contact.contactType(), contact.phoneNumber());
-        deviceService.updateDeviceStatus(contact.deviceId(), status);
+        deviceService.ensureDeviceExists(contact.deviceId());
 
         CustomerContact newContact = new CustomerContact();
         mapContactFields(newContact, contact, status);
         CustomerContact saved = customerContactRepository.save(newContact);
+        updateDeviceStatusIfLatestContact(saved);
 
         return toDto(saved, technician.name());
     }
@@ -49,15 +50,36 @@ public class CustomerContactService {
                 new NotFoundException(String.format("Contato com id %d não encontrado", id))
         );
 
+        DeviceStatusEnum previousStatus = existingContact.getDeviceStatus();
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
         DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
         validatePhoneIfNeeded(contact.contactType(), contact.phoneNumber());
-        deviceService.updateDeviceStatus(contact.deviceId(), status);
+        deviceService.ensureDeviceExists(contact.deviceId());
 
         mapContactFields(existingContact, contact, status);
         CustomerContact saved = customerContactRepository.save(existingContact);
+        if (previousStatus != status) {
+            updateDeviceStatusIfLatestContact(saved);
+        }
 
         return toDto(saved, technician.name());
+    }
+
+    /**
+     * O status informado no contato representa o aparelho no momento daquele contato.
+     * Só o contato mais recente (por data, com desempate pelo id) pode refletir no status
+     * atual do aparelho; corrigir ou registrar um contato antigo não reverte, por exemplo,
+     * um aparelho ENTREGUE.
+     */
+    private void updateDeviceStatusIfLatestContact(CustomerContact contact) {
+        boolean isLatestContact = customerContactRepository
+                .findFirstByDeviceIdOrderByLastContactDescIdDesc(contact.getDeviceId())
+                .map(latest -> latest.getId().equals(contact.getId()))
+                .orElse(false);
+
+        if (isLatestContact) {
+            deviceService.updateDeviceStatus(contact.getDeviceId(), contact.getDeviceStatus());
+        }
     }
 
     private void validatePhoneIfNeeded(String contactType, String phoneNumber) {

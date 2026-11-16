@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/AuthSetup.sql", "/test-scripts/CustomerContactControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
@@ -319,6 +320,64 @@ public class CustomerContactControllerIT extends AbstractIntegrationLiveTest {
                         "deviceStatus", "entregue",
                         "contactDate", "2025-06-03T23:08:14.110245"
                 ), "missing phoneNumber for ligacao")
+        );
+    }
+
+    @Order(3)
+    @DisplayName("Only the latest contact changes the current device status")
+    @Test
+    public void shouldOnlyChangeDeviceStatus_whenContactIsTheLatest() {
+        // Contato mais recente (2025) marca o aparelho como ENTREGUE.
+        postContact(contactBody("entregue", "2025-06-03T10:00:00"), HttpStatus.SC_CREATED);
+        assertDeviceStatus("ENTREGUE");
+
+        // Corrigir o contato antigo (id 1, 2024) não reverte o aparelho.
+        given().spec(getAuthenticatedSpec())
+                .contentType("application/json")
+                .body(contactBody("em_andamento", "2024-01-10T09:00:00"))
+                .put(BASE_PATH + "/{id}", 1)
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+        assertDeviceStatus("ENTREGUE");
+
+        // Registrar um contato retroativo também não altera o status atual.
+        postContact(contactBody("aguardando", "2023-01-01T09:00:00"), HttpStatus.SC_CREATED);
+        assertDeviceStatus("ENTREGUE");
+
+        // Alterar o status do contato mais recente (id 2) reflete no aparelho.
+        given().spec(getAuthenticatedSpec())
+                .contentType("application/json")
+                .body(contactBody("pronto", "2025-06-03T10:00:00"))
+                .put(BASE_PATH + "/{id}", 2)
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+        assertDeviceStatus("PRONTO");
+    }
+
+    private void postContact(Map<String, Object> body, int expectedStatus) {
+        given().spec(getAuthenticatedSpec())
+                .contentType("application/json")
+                .body(body)
+                .post(BASE_PATH)
+                .then()
+                .statusCode(expectedStatus);
+    }
+
+    private void assertDeviceStatus(String expected) {
+        String status = jdbcTemplate.queryForObject(
+                "SELECT device_status FROM devices WHERE id = 1", String.class);
+        assertThat(status).isEqualTo(expected);
+    }
+
+    private static Map<String, Object> contactBody(String deviceStatus, String contactDate) {
+        return Map.of(
+                "deviceId", 1,
+                "contactType", "pessoalmente",
+                "technicianId", 2,
+                "message", "teste",
+                "contactStatus", true,
+                "deviceStatus", deviceStatus,
+                "contactDate", contactDate
         );
     }
 }

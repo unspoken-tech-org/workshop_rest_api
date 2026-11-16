@@ -105,6 +105,11 @@ public class DeviceService {
 
     }
 
+    @Transactional(readOnly = true)
+    public void ensureDeviceExists(int deviceId) {
+        fetchOrThrow(deviceId);
+    }
+
     @Transactional
     public void updateDeviceStatus(int deviceId, DeviceStatusEnum status) {
         deviceRepository.save(changeStatus(deviceId, status));
