@@ -13,6 +13,8 @@
 # under SECRETS_DIR (default .secrets):
 #   pgbackrest-r2-ro-access-key  pgbackrest-r2-ro-secret-key
 #   pgbackrest-r2-bucket         pgbackrest-r2-endpoint
+#   pgbackrest-cipher-pass       repo1-cipher-pass of an encrypted repository (aes-256-cbc);
+#                                read only when PITR_REPO_PATH is not the default
 # Environment:
 #   PITR_DB_USER, PITR_DB_NAME   PostgreSQL role and database of PRD (required)
 #   PITR_TARGET                  target time, e.g. "2026-11-12 18:00:00-03"; default:
@@ -62,6 +64,12 @@ umask 077
   echo "PGBACKREST_REPO1_S3_ENDPOINT=${ENDPOINT#https://}"
   echo "PGBACKREST_REPO1_S3_KEY=$(read_secret pgbackrest-r2-ro-access-key)"
   echo "PGBACKREST_REPO1_S3_KEY_SECRET=$(read_secret pgbackrest-r2-ro-secret-key)"
+  # The default path is the old unencrypted repository; any other path is encrypted.
+  if [ "${REPO_PATH%/}" != /var/lib/pgbackrest ]; then
+    CIPHER_PASS="$(read_secret pgbackrest-cipher-pass)"
+    echo "PGBACKREST_REPO1_CIPHER_TYPE=aes-256-cbc"
+    echo "PGBACKREST_REPO1_CIPHER_PASS=${CIPHER_PASS}"
+  fi
   echo "PGBACKREST_PG1_PATH=${PGDATA}"
   echo "PGBACKREST_LOG_LEVEL_CONSOLE=info"
   echo "PGBACKREST_LOG_LEVEL_FILE=off"

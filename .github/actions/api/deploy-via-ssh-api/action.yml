@@ -68,6 +68,14 @@ inputs:
   pgbackrest-s3-key-secret:
     description: 'pgBackRest S3 secret access key'
     required: true
+  pgbackrest-cipher-pass:
+    description: 'repo1-cipher-pass (aes-256-cbc); empty keeps the repository unencrypted. Needs pgbackrest-repo1-path'
+    required: false
+    default: ''
+  pgbackrest-repo1-path:
+    description: 'repo1-path of the encrypted repository; never the unencrypted /var/lib/pgbackrest'
+    required: false
+    default: ''
   scrape-password-hash:
     description: 'Bcrypt hash of the /actuator/prometheus scrape identity'
     required: true
@@ -107,6 +115,8 @@ runs:
         PGBACKREST_S3_REGION: ${{ inputs.pgbackrest-s3-region }}
         PGBACKREST_S3_KEY: ${{ inputs.pgbackrest-s3-key }}
         PGBACKREST_S3_KEY_SECRET: ${{ inputs.pgbackrest-s3-key-secret }}
+        PGBACKREST_CIPHER_PASS: ${{ inputs.pgbackrest-cipher-pass }}
+        PGBACKREST_REPO1_PATH: ${{ inputs.pgbackrest-repo1-path }}
         SCRAPE_PASSWORD_HASH: ${{ inputs.scrape-password-hash }}
         OTEL_JAVAAGENT_ENABLED: ${{ inputs.otel-javaagent-enabled }}
         OTEL_TRACES_EXPORTER: ${{ inputs.otel-traces-exporter }}
@@ -170,6 +180,20 @@ runs:
             exit 1
           }
         done
+        # Encryption goes with a new repo1-path: an existing unencrypted repository cannot
+        # turn encrypted, so the pair is all or nothing and never the old path.
+        if [[ -n "${PGBACKREST_CIPHER_PASS}" || -n "${PGBACKREST_REPO1_PATH}" ]]; then
+          [[ "${PGBACKREST_CIPHER_PASS}" != *$'\n'* && "${PGBACKREST_CIPHER_PASS}" != *$'\r'* \
+            && ${#PGBACKREST_CIPHER_PASS} -ge 32 ]] || {
+            echo "pgbackrest-cipher-pass must be a single-line value of at least 32 characters" >&2
+            exit 1
+          }
+          [[ "${PGBACKREST_REPO1_PATH}" =~ ^/[A-Za-z0-9._/-]+$ \
+            && "${PGBACKREST_REPO1_PATH%/}" != /var/lib/pgbackrest ]] || {
+            echo "pgbackrest-repo1-path must be an absolute path other than /var/lib/pgbackrest" >&2
+            exit 1
+          }
+        fi
         ( umask 077 && printf '%s' "${DB_PASSWORD}" > /tmp/db_password )
         (
           umask 077
@@ -181,6 +205,11 @@ runs:
             echo "repo1-s3-region=${PGBACKREST_S3_REGION}"
             echo "repo1-s3-key=${PGBACKREST_S3_KEY}"
             echo "repo1-s3-key-secret=${PGBACKREST_S3_KEY_SECRET}"
+            if [[ -n "${PGBACKREST_CIPHER_PASS}" ]]; then
+              echo "repo1-path=${PGBACKREST_REPO1_PATH}"
+              echo "repo1-cipher-type=aes-256-cbc"
+              echo "repo1-cipher-pass=${PGBACKREST_CIPHER_PASS}"
+            fi
           } > /tmp/pgbackrest-repo1.conf
         )
 
