@@ -53,7 +53,43 @@ public final class ObservabilityEventCatalog {
     public static final ObservabilityEventContract CUSTOMER_CONTACT_REGISTERED = contract(
             "workshop.customer_contact.registered",
             EventSeverity.INFO,
-            Set.of("contact.made", "status.new", "actor.role"),
+            Set.of("contact.type", "contact.made", "status.new", "actor.role"),
+            Set.of());
+
+    public static final ObservabilityEventContract CUSTOMER_CONTACT_UPDATED = contract(
+            "workshop.customer_contact.updated",
+            EventSeverity.INFO,
+            Set.of("contact.type", "contact.made", "status.new", "actor.role"),
+            Set.of());
+
+    public static final ObservabilityEventContract CUSTOMER_CREATED = contract(
+            "workshop.customer.created",
+            EventSeverity.INFO,
+            Set.of("customer.phone_count_band", "actor.role"),
+            Set.of());
+
+    public static final ObservabilityEventContract DEVICE_CLOSED = contract(
+            "workshop.device.closed",
+            EventSeverity.INFO,
+            Set.of("status.new", "turnaround.band", "actor.role"),
+            Set.of());
+
+    public static final ObservabilityEventContract CATALOG_ENTRY_CREATED = contract(
+            "workshop.catalog.entry_created",
+            EventSeverity.INFO,
+            Set.of("catalog.kind", "actor.role"),
+            Set.of());
+
+    public static final ObservabilityEventContract API_KEY_CREATED = contract(
+            "workshop.api_key.created",
+            EventSeverity.INFO,
+            Set.of("client.platform", "key.role", "key.expiry", "actor.role"),
+            Set.of());
+
+    public static final ObservabilityEventContract API_KEY_DEVICE_BOUND = contract(
+            "workshop.api_key.device_bound",
+            EventSeverity.INFO,
+            Set.of("client.platform"),
             Set.of());
 
     public static final ObservabilityEventContract API_KEY_REVOKED = contract(
@@ -105,6 +141,12 @@ public final class ObservabilityEventCatalog {
             DEVICE_URGENCY_CHANGED,
             PAYMENT_CREATED,
             CUSTOMER_CONTACT_REGISTERED,
+            CUSTOMER_CONTACT_UPDATED,
+            CUSTOMER_CREATED,
+            DEVICE_CLOSED,
+            CATALOG_ENTRY_CREATED,
+            API_KEY_CREATED,
+            API_KEY_DEVICE_BOUND,
             API_KEY_REVOKED,
             API_KEY_DEVICE_RESET,
             BACKUP_COMPLETED,

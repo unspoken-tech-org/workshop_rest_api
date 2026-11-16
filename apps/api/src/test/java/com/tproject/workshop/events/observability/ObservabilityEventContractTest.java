@@ -13,7 +13,7 @@ class ObservabilityEventContractTest {
 
     @Test
     void shouldExposeStableVersionOneCatalog() {
-        assertThat(ObservabilityEventCatalog.all()).hasSize(13);
+        assertThat(ObservabilityEventCatalog.all()).hasSize(19);
         assertThat(ObservabilityEventCatalog.all())
                 .allSatisfy(contract -> {
                     assertThat(contract.version()).isEqualTo(ObservabilityEventCatalog.CATALOG_VERSION);

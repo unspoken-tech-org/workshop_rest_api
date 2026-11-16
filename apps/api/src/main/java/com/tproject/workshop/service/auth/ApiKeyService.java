@@ -2,6 +2,8 @@ package com.tproject.workshop.service.auth;
 
 import com.tproject.workshop.dto.apikey.ApiKeyCreatedResponse;
 import com.tproject.workshop.dto.apikey.ApiKeyResponse;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.ApiKeyDeviceBoundException;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.InvalidApiKeyException;
@@ -20,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,7 @@ public class ApiKeyService {
 
     private final ApiKeyRepository apiKeyRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ObservabilityEventRecorder eventRecorder;
 
 
     /**
@@ -92,6 +98,9 @@ public class ApiKeyService {
             apiKey.setBoundDeviceId(boundDeviceId);
             apiKey.setBoundAt(apiKey.getBoundAt() == null ? now : apiKey.getBoundAt());
             log.info("API Key bound to device (apiKeyId: {})", apiKey.getId());
+            Optional.ofNullable(apiKey.getPlatform()).ifPresent(platform ->
+                    eventRecorder.record(ObservabilityEventCatalog.API_KEY_DEVICE_BOUND, Map.of(
+                            "client.platform", platform.name().toLowerCase(Locale.ROOT))));
             return;
         }
 
@@ -203,6 +212,10 @@ public class ApiKeyService {
                 .build();
 
         ApiKey savedKey = apiKeyRepository.save(apiKey);
+        eventRecorder.record(ObservabilityEventCatalog.API_KEY_CREATED, Map.of(
+                "client.platform", platform.name().toLowerCase(Locale.ROOT),
+                "key.role", savedKey.getRole().name().toLowerCase(Locale.ROOT),
+                "key.expiry", expiresAt == null ? "none" : "set"));
         log.info("API Key created for client: {}, user: {} (platform: {}, role: {})",
                 clientName, userIdentifier, platform, apiKey.getRole());
 

@@ -5,6 +5,7 @@ import com.tproject.workshop.enums.DeviceHistoryFieldEnum;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
+import com.tproject.workshop.events.observability.TurnaroundBand;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -77,6 +79,17 @@ public class DeviceService {
                 "change.origin", origin));
     }
 
+    private void recordClosedIfNeeded(Device device, DeviceStatusEnum previous, DeviceStatusEnum current) {
+        if (previous == current
+                || (current != DeviceStatusEnum.ENTREGUE && current != DeviceStatusEnum.DESCARTADO)) {
+            return;
+        }
+        Instant entry = Optional.ofNullable(device.getEntryDate()).map(Timestamp::toInstant).orElse(null);
+        eventRecorder.record(ObservabilityEventCatalog.DEVICE_CLOSED, Map.of(
+                "status.new", current.name().toLowerCase(Locale.ROOT),
+                "turnaround.band", TurnaroundBand.of(entry, Instant.now())));
+    }
+
     private void revertStatusIfNeeded(Device device, String origin) {
         DeviceStatusEnum current = device.getDeviceStatus();
         if (current == DeviceStatusEnum.ENTREGUE || current == DeviceStatusEnum.DESCARTADO) {
@@ -98,6 +111,7 @@ public class DeviceService {
         device.setDeviceStatus(newStatus);
         resetUrgencyAndRevisionIfNeeded(device, newStatus);
         setDepartureDateIfDelivered(device, newStatus);
+        recordClosedIfNeeded(device, oldStatus, newStatus);
         return device;
     }
 
@@ -219,6 +233,7 @@ public class DeviceService {
         deviceRepository.saveAndFlush(oldDevice);
         if (previousStatus != newStatus) {
             recordStatusChange(previousStatus, newStatus, "device_update");
+            recordClosedIfNeeded(oldDevice, previousStatus, newStatus);
         }
         return findDeviceByIdOrThrow(oldDevice.getId());
     }

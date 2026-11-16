@@ -25,6 +25,8 @@ import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -151,5 +153,16 @@ class ObservabilityEventEmitterTest {
         assertThat(ValueBand.of(new BigDecimal("99.99"))).isEqualTo("low");
         assertThat(ValueBand.of(new BigDecimal("100"))).isEqualTo("medium");
         assertThat(ValueBand.of(new BigDecimal("500"))).isEqualTo("high");
+    }
+
+    @Test
+    void shouldMapTurnaroundToBands() {
+        Instant entry = Instant.parse("2026-11-01T12:00:00Z");
+
+        assertThat(TurnaroundBand.of(null, entry)).isEqualTo("lt_1d");
+        assertThat(TurnaroundBand.of(entry, entry.plus(Duration.ofHours(23)))).isEqualTo("lt_1d");
+        assertThat(TurnaroundBand.of(entry, entry.plus(Duration.ofHours(24)))).isEqualTo("1d_3d");
+        assertThat(TurnaroundBand.of(entry, entry.plus(Duration.ofDays(3)))).isEqualTo("3d_7d");
+        assertThat(TurnaroundBand.of(entry, entry.plus(Duration.ofDays(7)))).isEqualTo("gt_7d");
     }
 }

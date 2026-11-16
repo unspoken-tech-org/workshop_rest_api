@@ -4,8 +4,11 @@ import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import com.tproject.workshop.enums.DeviceStatusEnum;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.events.observability.ObservabilityEventContract;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
 import com.tproject.workshop.utils.UtilsString;
@@ -17,6 +20,8 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class CustomerContactService {
     private final DeviceService deviceService;
     private final TechnicianService technicianService;
     private final PhoneService phoneService;
+    private final ObservabilityEventRecorder eventRecorder;
 
     private final List<String> contactTypesThatNeedPhone = List.of("ligacao", "mensagem");
 
@@ -40,6 +46,7 @@ public class CustomerContactService {
         mapContactFields(newContact, contact, status);
         CustomerContact saved = customerContactRepository.save(newContact);
         updateDeviceStatusIfLatestContact(saved);
+        recordContact(ObservabilityEventCatalog.CUSTOMER_CONTACT_REGISTERED, saved, status);
 
         return toDto(saved, technician.name());
     }
@@ -61,6 +68,7 @@ public class CustomerContactService {
         if (previousStatus != status) {
             updateDeviceStatusIfLatestContact(saved);
         }
+        recordContact(ObservabilityEventCatalog.CUSTOMER_CONTACT_UPDATED, saved, status);
 
         return toDto(saved, technician.name());
     }
@@ -80,6 +88,18 @@ public class CustomerContactService {
         if (isLatestContact) {
             deviceService.updateDeviceStatus(contact.getDeviceId(), contact.getDeviceStatus());
         }
+    }
+
+    private void recordContact(ObservabilityEventContract contract, CustomerContact contact, DeviceStatusEnum status) {
+        eventRecorder.record(contract, Map.of(
+                "contact.type", contactTypeOf(contact.getType()),
+                "contact.made", String.valueOf(contact.isHasMadeContact()),
+                "status.new", status.name().toLowerCase(Locale.ROOT)));
+    }
+
+    private String contactTypeOf(String contactType) {
+        String normalized = contactType == null ? "" : UtilsString.normalizeString(contactType);
+        return contactTypesThatNeedPhone.contains(normalized) ? normalized : "other";
     }
 
     private void validatePhoneIfNeeded(String contactType, String phoneNumber) {

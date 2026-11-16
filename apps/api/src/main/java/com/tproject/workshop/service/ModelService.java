@@ -2,6 +2,8 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.model.ModelResponseDto;
 import com.tproject.workshop.dto.model.ModelSearchParam;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Model;
 import com.tproject.workshop.repository.ModelRepository;
@@ -12,12 +14,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Service
 public class ModelService {
 
     private final ModelRepository modelRepository;
+    private final ObservabilityEventRecorder eventRecorder;
 
     public List<Model> findAll() {
         return modelRepository.findAll();
@@ -41,7 +45,9 @@ public class ModelService {
             var newModel = new Model();
             newModel.setModel(modelName);
 
-            return modelRepository.save(newModel);
+            Model saved = modelRepository.save(newModel);
+            eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "model"));
+            return saved;
         } catch (DataIntegrityViolationException e) {
             return findModelOnCreate(modelName, model);
         }
