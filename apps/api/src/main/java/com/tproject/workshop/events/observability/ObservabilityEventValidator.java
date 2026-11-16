@@ -25,6 +25,7 @@ public final class ObservabilityEventValidator {
             "apikey",
             "api_key",
             "body",
+            "client_name",
             "cnpj",
             "cpf",
             "device_id",
@@ -33,37 +34,57 @@ public final class ObservabilityEventValidator {
             "message",
             "password",
             "payload",
+            "payment_id",
             "phone",
             "query",
             "query_string",
             "secret",
-            "service_order_id",
             "span_id",
             "token",
             "trace_id",
             "user_id");
 
     /**
-     * Closed vocabularies keep categorical event attributes suitable for
-     * aggregation. A new category is an explicit contract change rather than
-     * an unbounded value supplied by a request.
+     * Every attribute has a closed vocabulary, so no request-supplied text
+     * (CPF, phone, e-mail, API key, free text) can reach an event. A new
+     * category is an explicit contract change.
      */
-    private static final Map<String, Set<String>> LOW_CARDINALITY_VALUES = Map.ofEntries(
-            Map.entry("client.platform", Set.of("mobile", "web", "desktop", "server", "unknown")),
-            Map.entry("actor.role", Set.of("admin", "service", "system", "anonymous", "unknown",
-                    "role_admin", "role_service")),
-            Map.entry("result", Set.of("success", "ok", "failure", "failed", "error", "skipped", "unknown")),
+    private static final Map<String, Set<String>> CLOSED_VOCABULARIES = Map.ofEntries(
+            Map.entry("actor.role", Set.of("admin", "service", "anonymous")),
+            Map.entry("client.platform", Set.of("mobile", "web", "desktop", "server")),
+            Map.entry("result", Set.of("ok", "failed", "skipped")),
+            Map.entry("device.urgency", Set.of("urgent", "normal")),
             Map.entry("status.previous", statusValues()),
             Map.entry("status.new", statusValues()),
-            Map.entry("budget.change_type", Set.of("increase", "decrease", "set", "waived", "unknown")),
-            Map.entry("budget.value_band", Set.of("none", "zero", "low", "medium", "high", "unknown")),
-            Map.entry("payment.method", Set.of("credito", "debito", "dinheiro", "pix", "outro", "unknown")),
-            Map.entry("payment.category", Set.of("taxa_orcamento", "servicos", "unknown")),
-            Map.entry("backup.type", Set.of("full", "diff", "incremental", "wal", "logical", "unknown")),
-            Map.entry("duration.band", Set.of("lt_1s", "1s_10s", "10s_60s", "gt_60s", "unknown")),
-            Map.entry("deployment.environment", Set.of("local", "qa", "production", "test", "staging", "unknown")),
-            Map.entry("deployment.service", Set.of("api", "gateway", "frontend", "observability", "workshop-api", "unknown")),
-            Map.entry("retry.policy", Set.of("none", "immediate", "backoff", "pending", "retrying", "exhausted", "unknown")));
+            Map.entry("change.origin", Set.of("status", "device_update", "urgency", "revision")),
+            Map.entry("budget.field", Set.of("budget_fee", "service_value")),
+            Map.entry("budget.change_type", Set.of("set", "increase", "decrease", "cleared")),
+            Map.entry("budget.value_band", valueBands()),
+            Map.entry("payment.method", Set.of("credito", "debito", "dinheiro", "pix", "outro")),
+            Map.entry("payment.category", Set.of("taxa_orcamento", "servicos")),
+            Map.entry("payment.value_band", valueBands()),
+            Map.entry("contact.made", Set.of("true", "false")),
+            Map.entry("scope", Set.of("single", "all_by_client")),
+            Map.entry("backup.type", Set.of("full", "diff")),
+            Map.entry("duration.band", Set.of("lt_1m", "1m_10m", "10m_60m", "gt_60m")),
+            Map.entry("deploy.service", Set.of("api", "gateway", "observability")),
+            Map.entry("deploy.environment", Set.of("qa", "production")),
+            Map.entry("reason.code", Set.of(
+                    "canary_failed",
+                    "telemetry_no_span",
+                    "health_timeout",
+                    "migration_approval_required",
+                    "migration_ahead_of_image",
+                    "backup_stale",
+                    "backup_info_failed",
+                    "wal_check_failed",
+                    "flyway_history_failed",
+                    "db_not_running",
+                    "admin_request")));
+
+    /** Attributes whose values are bounded by a strict format instead of a list. */
+    private static final Map<String, Pattern> CLOSED_FORMATS = Map.of(
+            "deployment.version", Pattern.compile("v\\d+\\.\\d+\\.\\d+(?:-[0-9a-z.]+)?|[0-9a-f]{7,40}"));
 
     private ObservabilityEventValidator() {
     }
@@ -111,10 +132,23 @@ public final class ObservabilityEventValidator {
         if (value == null || !NORMALIZED_VALUE.matcher(value).matches()) {
             throw new IllegalArgumentException("event attribute value must be a bounded normalized token");
         }
-        Set<String> allowedValues = LOW_CARDINALITY_VALUES.get(name);
-        if (allowedValues != null && !allowedValues.contains(value.toLowerCase(Locale.ROOT))) {
-            throw new IllegalArgumentException("event attribute value is outside the low-cardinality vocabulary");
+        String normalized = value.toLowerCase(Locale.ROOT);
+        Set<String> allowedValues = CLOSED_VOCABULARIES.get(name);
+        Pattern format = CLOSED_FORMATS.get(name);
+        if (allowedValues == null && format == null) {
+            throw new IllegalArgumentException("event attribute has no closed vocabulary");
         }
+        if (allowedValues != null && !allowedValues.contains(normalized)) {
+            throw new IllegalArgumentException("event attribute value is outside the closed vocabulary");
+        }
+        if (format != null && !format.matcher(normalized).matches()) {
+            throw new IllegalArgumentException("event attribute value does not match its closed format");
+        }
+    }
+
+    /** True when the attribute name has a closed vocabulary or a strict format. */
+    public static boolean hasClosedVocabulary(String name) {
+        return CLOSED_VOCABULARIES.containsKey(name) || CLOSED_FORMATS.containsKey(name);
     }
 
     private static boolean containsProhibitedSegment(String name) {
@@ -136,8 +170,10 @@ public final class ObservabilityEventValidator {
                 "descartado",
                 "aprovado",
                 "nao_aprovado",
-                "pronto",
-                "none",
-                "unknown");
+                "pronto");
+    }
+
+    private static Set<String> valueBands() {
+        return Set.of("zero", "low", "medium", "high");
     }
 }

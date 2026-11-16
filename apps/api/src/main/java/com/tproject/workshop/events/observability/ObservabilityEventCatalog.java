@@ -9,92 +9,109 @@ import java.util.Set;
 /**
  * Stable event names and their version-one attribute contracts.
  *
- * <p>Values that identify a customer, device, order or trace are intentionally
- * absent from these schemas. If a future event needs another shape, it must
- * receive a new version instead of silently changing an existing contract.</p>
+ * <p>Values that identify a customer, device, payment, user or trace are
+ * intentionally absent from these schemas. Domain facts are emitted by the
+ * backend only after the transaction commits, so they carry no {@code result}.
+ * Application events stay at WARN or below because ERROR logs count in the
+ * deploy canary; only host-side backup failures use ERROR. Once an event is
+ * emitted, a new shape needs a new version instead of a silent change.</p>
  */
 public final class ObservabilityEventCatalog {
 
     public static final int CATALOG_VERSION = 1;
 
-    public static final ObservabilityEventContract SERVICE_ORDER_CREATED = contract(
-            "workshop.service_order.created",
+    public static final ObservabilityEventContract DEVICE_CREATED = contract(
+            "workshop.device.created",
             EventSeverity.INFO,
-            Set.of("client.platform", "actor.role", "result"),
+            Set.of("actor.role", "device.urgency"),
+            Set.of("client.platform"));
+
+    public static final ObservabilityEventContract DEVICE_STATUS_CHANGED = contract(
+            "workshop.device.status_changed",
+            EventSeverity.INFO,
+            Set.of("status.previous", "status.new", "change.origin", "actor.role"),
             Set.of());
 
-    public static final ObservabilityEventContract SERVICE_ORDER_STATUS_CHANGED = contract(
-            "workshop.service_order.status_changed",
+    public static final ObservabilityEventContract DEVICE_BUDGET_CHANGED = contract(
+            "workshop.device.budget_changed",
             EventSeverity.INFO,
-            Set.of("status.previous", "status.new", "actor.role"),
-            Set.of("result"));
+            Set.of("budget.field", "budget.change_type", "budget.value_band", "actor.role"),
+            Set.of());
 
-    public static final ObservabilityEventContract SERVICE_ORDER_BUDGET_CHANGED = contract(
-            "workshop.service_order.budget_changed",
+    public static final ObservabilityEventContract DEVICE_URGENCY_CHANGED = contract(
+            "workshop.device.urgency_changed",
             EventSeverity.INFO,
-            Set.of("budget.change_type", "budget.value_band", "result"),
-            Set.of("actor.role"));
+            Set.of("device.urgency", "actor.role"),
+            Set.of());
 
     public static final ObservabilityEventContract PAYMENT_CREATED = contract(
             "workshop.payment.created",
             EventSeverity.INFO,
-            Set.of("payment.method", "payment.category", "result"),
-            Set.of("actor.role"));
+            Set.of("payment.method", "payment.category", "payment.value_band", "actor.role"),
+            Set.of());
 
-    public static final ObservabilityEventContract AUTH_LOGIN_FAILED = contract(
-            "workshop.auth.login.failed",
-            EventSeverity.WARN,
-            Set.of("reason.code", "client.platform"),
+    public static final ObservabilityEventContract CUSTOMER_CONTACT_REGISTERED = contract(
+            "workshop.customer_contact.registered",
+            EventSeverity.INFO,
+            Set.of("contact.made", "status.new", "actor.role"),
             Set.of());
 
     public static final ObservabilityEventContract API_KEY_REVOKED = contract(
             "workshop.api_key.revoked",
             EventSeverity.INFO,
-            Set.of("actor.role", "reason.code"),
+            Set.of("actor.role", "scope"),
+            Set.of());
+
+    public static final ObservabilityEventContract API_KEY_DEVICE_RESET = contract(
+            "workshop.api_key.device_reset",
+            EventSeverity.INFO,
+            Set.of("actor.role"),
             Set.of());
 
     public static final ObservabilityEventContract BACKUP_COMPLETED = contract(
             "workshop.backup.completed",
             EventSeverity.INFO,
-            Set.of("backup.type", "duration.band", "result"),
+            Set.of("backup.type", "duration.band"),
             Set.of());
 
     public static final ObservabilityEventContract BACKUP_FAILED = contract(
             "workshop.backup.failed",
             EventSeverity.ERROR,
-            Set.of("backup.type", "duration.band", "result"),
-            Set.of("error.code"));
+            Set.of("backup.type", "duration.band"),
+            Set.of());
 
     public static final ObservabilityEventContract DEPLOYMENT_COMPLETED = contract(
             "workshop.deployment.completed",
             EventSeverity.INFO,
-            Set.of("deployment.service", "deployment.version", "deployment.environment", "result"),
-            Set.of());
+            Set.of("deploy.service", "deploy.environment", "deployment.version", "result"),
+            Set.of("reason.code"));
 
     public static final ObservabilityEventContract DEPLOYMENT_ROLLED_BACK = contract(
             "workshop.deployment.rolled_back",
             EventSeverity.WARN,
-            Set.of("deployment.service", "deployment.version", "deployment.environment", "result"),
-            Set.of("reason.code"));
+            Set.of("deploy.service", "deploy.environment", "deployment.version", "result", "reason.code"),
+            Set.of());
 
-    public static final ObservabilityEventContract CLIENT_SYNC_FAILED = contract(
-            "workshop.client.sync.failed",
-            EventSeverity.ERROR,
-            Set.of("client.platform", "error.class", "retry.policy"),
-            Set.of("result"));
+    public static final ObservabilityEventContract DEPLOYMENT_GATE_BLOCKED = contract(
+            "workshop.deployment.gate_blocked",
+            EventSeverity.WARN,
+            Set.of("deploy.service", "deploy.environment", "reason.code"),
+            Set.of());
 
     private static final List<ObservabilityEventContract> CONTRACTS = List.of(
-            SERVICE_ORDER_CREATED,
-            SERVICE_ORDER_STATUS_CHANGED,
-            SERVICE_ORDER_BUDGET_CHANGED,
+            DEVICE_CREATED,
+            DEVICE_STATUS_CHANGED,
+            DEVICE_BUDGET_CHANGED,
+            DEVICE_URGENCY_CHANGED,
             PAYMENT_CREATED,
-            AUTH_LOGIN_FAILED,
+            CUSTOMER_CONTACT_REGISTERED,
             API_KEY_REVOKED,
+            API_KEY_DEVICE_RESET,
             BACKUP_COMPLETED,
             BACKUP_FAILED,
             DEPLOYMENT_COMPLETED,
             DEPLOYMENT_ROLLED_BACK,
-            CLIENT_SYNC_FAILED);
+            DEPLOYMENT_GATE_BLOCKED);
 
     private static final Map<String, ObservabilityEventContract> BY_NAME = index(CONTRACTS);
 
