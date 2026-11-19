@@ -2,6 +2,9 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.payment.PaymentDeviceInputDto;
 import com.tproject.workshop.dto.payment.PaymentResponseDto;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
+import com.tproject.workshop.events.observability.ValueBand;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Payment;
@@ -13,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -20,6 +24,7 @@ import java.util.Optional;
 public class PaymentService {
     private final PaymentRepository repository;
     private final DeviceRepository deviceRepository;
+    private final ObservabilityEventRecorder eventRecorder;
 
     @Transactional
     public PaymentResponseDto create(PaymentDeviceInputDto inputPayment) {
@@ -44,6 +49,10 @@ public class PaymentService {
         paymentModel.setReceivedBy(inputPayment.receivedBy());
 
         Payment saved = repository.save(paymentModel);
+        eventRecorder.record(ObservabilityEventCatalog.PAYMENT_CREATED, Map.of(
+                "payment.method", saved.getPaymentType().getDbValue(),
+                "payment.category", saved.getCategory().getDbValue(),
+                "payment.value_band", ValueBand.of(saved.getPaymentValue())));
 
         return toDto(saved);
     }

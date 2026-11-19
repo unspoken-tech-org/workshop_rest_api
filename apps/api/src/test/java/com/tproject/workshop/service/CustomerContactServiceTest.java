@@ -3,6 +3,7 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import com.tproject.workshop.enums.DeviceStatusEnum;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
@@ -38,6 +39,8 @@ class CustomerContactServiceTest {
     private TechnicianService technicianService;
     @Mock
     private PhoneService phoneService;
+    @Mock
+    private ObservabilityEventRecorder eventRecorder;
 
     @InjectMocks
     private CustomerContactService customerContactService;

@@ -2,6 +2,7 @@ package com.tproject.workshop.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,6 +19,8 @@ import com.tproject.workshop.dto.customer.CustomerListOutputDto;
 import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.dto.customer.InputCustomerDtoRecord;
 import com.tproject.workshop.dto.device.MinifiedDeviceTableOutputDto;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.NotFoundException;
@@ -41,6 +44,7 @@ public class CustomerService {
     private final PhoneRepository phoneRepository;
     private final CustomerPhoneRepository customerPhoneRepository;
     private final DeviceRepository deviceRepository;
+    private final ObservabilityEventRecorder eventRecorder;
 
 
     public CustomerOutputDto findById(int id) {
@@ -136,8 +140,18 @@ public class CustomerService {
 
         // The JDBC read below does not see changes still pending in the persistence context
         customerRepository.flush();
+        eventRecorder.record(ObservabilityEventCatalog.CUSTOMER_CREATED, Map.of(
+                "customer.phone_count_band", phoneCountBand(phones.size())));
 
         return findById(savedCustomer.getIdCustomer());
+    }
+
+    private static String phoneCountBand(int count) {
+        return switch (count) {
+            case 0 -> "0";
+            case 1 -> "1";
+            default -> "2_plus";
+        };
     }
 
     @Transactional

@@ -2,6 +2,8 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.brand.BrandResponseDto;
 import com.tproject.workshop.dto.brand.BrandSearchParam;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Brand;
 import com.tproject.workshop.repository.BrandRepository;
@@ -13,12 +15,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Service
 public class BrandService {
 
     private final BrandRepository brandRepository;
+    private final ObservabilityEventRecorder eventRecorder;
 
     public List<BrandResponseDto> findAllDto(String name) {
         if (name == null || name.trim().isEmpty()) {
@@ -50,7 +54,9 @@ public class BrandService {
             var newBrand = new Brand();
             newBrand.setBrand(brandName);
 
-            return brandRepository.save(newBrand);
+            Brand saved = brandRepository.save(newBrand);
+            eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "brand"));
+            return saved;
         } catch (DataIntegrityViolationException e) {
             return findBrandOnCreate(brandName, brand);
         }

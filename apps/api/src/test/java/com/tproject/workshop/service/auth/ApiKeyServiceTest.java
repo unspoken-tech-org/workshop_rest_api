@@ -1,8 +1,11 @@
 package com.tproject.workshop.service.auth;
 
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.ApiKeyDeviceBoundException;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.model.ApiKey;
+import com.tproject.workshop.model.Platform;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import org.junit.jupiter.api.Test;
@@ -13,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +34,9 @@ class ApiKeyServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Mock
+    private ObservabilityEventRecorder eventRecorder;
+
     @InjectMocks
     private ApiKeyService apiKeyService;
 
@@ -37,6 +44,7 @@ class ApiKeyServiceTest {
     void shouldBindDeviceWhenUnbound() {
         ApiKey apiKey = ApiKey.builder()
                 .id(1L)
+                .platform(Platform.MOBILE)
                 .boundDeviceId(null)
                 .build();
 
@@ -48,6 +56,8 @@ class ApiKeyServiceTest {
         ArgumentCaptor<Instant> instantCaptor = ArgumentCaptor.forClass(Instant.class);
         verify(apiKeyRepository).bindDevice(eq(1L), eq("device-a"), instantCaptor.capture());
         assertThat(instantCaptor.getValue()).isNotNull();
+        verify(eventRecorder).record(ObservabilityEventCatalog.API_KEY_DEVICE_BOUND,
+                Map.of("client.platform", "mobile"));
         assertThat(apiKey.getBoundDeviceId()).isEqualTo("device-a");
         assertThat(apiKey.getBoundAt()).isNotNull();
     }

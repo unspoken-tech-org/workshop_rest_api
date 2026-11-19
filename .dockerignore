@@ -31,7 +31,6 @@ scripts/
 infra/
 docker-compose*.yml
 Dockerfile*
-opencode.json
 
 # Testes e relatórios de teste (a imagem de runtime não precisa do código de teste)
 apps/api/src/test/

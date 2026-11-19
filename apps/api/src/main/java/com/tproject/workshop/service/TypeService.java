@@ -2,6 +2,8 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.type.TypeResponseDto;
 import com.tproject.workshop.dto.type.TypeSearchParam;
+import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypeRepository;
@@ -12,11 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class TypeService {
     private final TypeRepository typeRepository;
+    private final ObservabilityEventRecorder eventRecorder;
 
 
     public List<TypeResponseDto> findAllDto(String name) {
@@ -52,7 +56,9 @@ public class TypeService {
             var newType = new Type();
             newType.setType(typeName);
 
-            return typeRepository.save(newType);
+            Type saved = typeRepository.save(newType);
+            eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "type"));
+            return saved;
         } catch (DataIntegrityViolationException e) {
             return findTypeOnCreate(typeName, type);
         }
