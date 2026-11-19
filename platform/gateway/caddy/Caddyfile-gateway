@@ -16,10 +16,12 @@
         output stderr
         # O IP do cliente fica só em request.client_ip (resolvido pelos
         # trusted_proxies); os headers de origem do IP saem por duplicarem o dado.
+        # A redação padrão do Caddy não cobre X-Api-Key, que sai do log (vai ao Loki).
         format filter {
             wrap json
             request>headers>Cf-Connecting-Ip delete
             request>headers>X-Forwarded-For delete
+            request>headers>X-Api-Key delete
         }
     }
 }

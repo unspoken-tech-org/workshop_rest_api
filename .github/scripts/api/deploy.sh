@@ -59,6 +59,15 @@ mkdir -p config/secrets
 chmod 700 config/secrets
 mv "${DEPLOY_DIR}/.tmp/db_password" config/secrets/db_password
 chmod 444 config/secrets/db_password
+# Once the repository is encrypted, a deploy without the cipher would send backups
+# back to the old unencrypted path: the marker makes that deploy fail instead.
+CIPHER_MARKER=config/secrets/pgbackrest-cipher-required
+if grep -q '^repo1-cipher-type=' "${DEPLOY_DIR}/.tmp/pgbackrest-repo1.conf"; then
+  touch "${CIPHER_MARKER}"
+elif [ -f "${CIPHER_MARKER}" ]; then
+  echo "pgBackRest repository is encrypted but this deploy has no cipher; set PGBACKREST_REPO1_CIPHER_PASS and PGBACKREST_REPO1_PATH" >&2
+  exit 1
+fi
 mv "${DEPLOY_DIR}/.tmp/pgbackrest-repo1.conf" config/secrets/pgbackrest-repo1.conf
 chmod 444 config/secrets/pgbackrest-repo1.conf
 

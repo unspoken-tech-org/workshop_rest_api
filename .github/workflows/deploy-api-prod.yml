@@ -310,6 +310,9 @@ jobs:
           pgbackrest-s3-region: ${{ secrets.PGBACKREST_S3_REGION }}
           pgbackrest-s3-key: ${{ secrets.PGBACKREST_S3_KEY }}
           pgbackrest-s3-key-secret: ${{ secrets.PGBACKREST_S3_KEY_SECRET }}
+          # Repository encryption: both unset keeps the current unencrypted repository.
+          pgbackrest-cipher-pass: ${{ secrets.PGBACKREST_REPO1_CIPHER_PASS }}
+          pgbackrest-repo1-path: ${{ vars.PGBACKREST_REPO1_PATH }}
           scrape-password-hash: ${{ secrets.OBSERVABILITY_SCRAPE_PASSWORD_HASH }}
           healthchecks-backup-full-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_FULL_URL }}
           healthchecks-backup-diff-url: ${{ secrets.PROD_HEALTHCHECKS_BACKUP_DIFF_URL }}
