@@ -4,6 +4,20 @@ Only what the code does not tell you. Scoped rules live in nested files:
 `.github/workflows/AGENTS.md` covers CI/CD (workflows, actions, deploy scripts,
 secrets, Environments).
 
+## Git
+
+Never push to `main` or `feature/*` directly, never squash or rebase a shared
+branch, and never create a tag unless the user asks: a tag deploys.
+
+Read the matching file before the task (load it only then):
+
+| Before you... | Read |
+| --- | --- |
+| create a branch or fix a bug | `instructions/git/branches.md` |
+| commit | `instructions/git/commits.md` |
+| open or update a PR | `instructions/git/pull-requests.md` |
+| create a tag or release | `instructions/git/releases.md` |
+
 ## Communication
 
 - In your summary, list the commands you ran and the files you changed.
