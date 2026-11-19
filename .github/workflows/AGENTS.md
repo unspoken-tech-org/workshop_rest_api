@@ -42,7 +42,7 @@ Applies to `.github/` (workflows, composite actions, scripts). The root
 | Workflow | Trigger | Environment | Allowed refs |
 | --- | --- | --- | --- |
 | `ci.yml` | push, PR | — | — |
-| `deploy-api-prod.yml` | tag `vX.Y.Z`, dispatch (`skip_rc`) | `production` | tag `vX.Y.Z` on the commit of a `vX.Y.Z-rc.N` (unless `skip_rc`) |
+| `deploy-api-prod.yml` | tag `vX.Y.Z`, dispatch (`skip_rc`) | `production` | tag `vX.Y.Z` on a commit in `main` or `release/*`, with a `vX.Y.Z-rc.N` whose QA deploy succeeded (`skip_rc` skips only the rc and QA checks) |
 | `deploy-api-qa.yml` | tag `vX.Y.Z-rc.N`, dispatch | `qa` (no reviewer) | any |
 | `deploy-gateway-prod.yml` | dispatch + `confirm` | `production` | tags `v*.*.*`, `release/*` |
 | `deploy-gateway-qa.yml` | dispatch + `confirm` | — | any |
