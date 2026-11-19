@@ -10,6 +10,9 @@ a tag deploys. Deploy details: `.github/workflows/AGENTS.md`.
   the rc (`skip_rc`). The front uses the same suffixes.
 - `git tag -a vX.Y.Z -m "<summary>" <sha> && git push origin vX.Y.Z`.
   Production needs approval in the `production` Environment.
+- After a tag deploys, the workflow publishes a GitHub Release with notes
+  generated from the PRs since the last final tag (an rc becomes a
+  pre-release). PR titles are those notes: keep them in commit format.
 - Migrations are forward-only: redeploying an older tag does not undo them.
   Warn when tagging a release that has one.
 - `release/X.Y` (optional, on request): cut from `main`, or from the prod tag,
