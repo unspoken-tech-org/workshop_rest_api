@@ -42,8 +42,8 @@ Applies to `.github/` (workflows, composite actions, scripts). The root
 | Workflow | Trigger | Environment | Allowed refs |
 | --- | --- | --- | --- |
 | `ci.yml` | push, PR | — | — |
-| `deploy-api-prod.yml` | tag `vX.Y.Z` / `vX.Y.Z-*`, dispatch | `production` | tags `v*.*.*`, `release/*` |
-| `deploy-api-qa.yml` | dispatch | `qa` (no reviewer) | any |
+| `deploy-api-prod.yml` | tag `vX.Y.Z`, dispatch (`skip_rc`) | `production` | tag `vX.Y.Z` on the commit of a `vX.Y.Z-rc.N` (unless `skip_rc`) |
+| `deploy-api-qa.yml` | tag `vX.Y.Z-rc.N`, dispatch | `qa` (no reviewer) | any |
 | `deploy-gateway-prod.yml` | dispatch + `confirm` | `production` | tags `v*.*.*`, `release/*` |
 | `deploy-gateway-qa.yml` | dispatch + `confirm` | — | any |
 | `deploy-observability-control-plane-qa.yml` | dispatch + `confirm` | `qa-observability` | `main` (commit must be on `main`) |
@@ -53,8 +53,8 @@ Applies to `.github/` (workflows, composite actions, scripts). The root
 | `restore-test.yml` | dispatch, weekly, PR touching the DB image | — | any (synthetic data, no secrets) |
 | `deploy-observability-prod.yml` | dispatch | — | archived, no deploy |
 
-PRD deploys are dispatched with `--ref` pointing at the tag or `release/*`
-branch (e.g. `gh workflow run deploy-gateway-prod.yml --ref v1.2.0 -f confirm=DEPLOY`).
+PRD deploys are dispatched with `--ref` pointing at the tag (e.g.
+`gh workflow run deploy-api-prod.yml --ref v1.2.0 -f allow_migrations=true`).
 
 ## Secrets
 - Names follow `PRD_*`/`PROD_*` and `QA_*` per environment, and `OBS_*` for

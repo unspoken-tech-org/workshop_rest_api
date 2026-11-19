@@ -17,17 +17,22 @@
 name: Deploy API (Prod) v10 (Hosted + Tailscale)
 
 on:
+  # Only final tags: vX.Y.Z-rc.N goes to QA (deploy-api-qa.yml).
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
+  # Dispatch with --ref vX.Y.Z (the tag to deploy, also for a rollback).
   workflow_dispatch:
     inputs:
-      ref:
-        description: 'Tag, branch or commit to deploy'
+      skip_rc:
+        description: 'Deploy without a vX.Y.Z-rc.N on the same commit (hotfix, or an old tag)'
         required: false
-        default: 'main'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
       allow_migrations:
         description: 'Apply pending Flyway migrations (needs a pgBackRest backup < 26h)'
         required: false
@@ -94,7 +99,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
 
       # The later jobs check out this exact commit: a ref moved during the run cannot
       # change the scripts and compose that deploy the image built here.
@@ -107,6 +112,34 @@ jobs:
             exit 1
           }
           echo "sha=${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+
+      # Production runs only a final tag, on the commit QA approved as an rc.
+      - name: Require a final tag with an approved rc
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ steps.commit.outputs.sha }}
+          SKIP_RC: ${{ github.event.inputs.skip_rc || 'false' }}
+        run: |
+          if [[ "${REF_TYPE}" != "tag" || ! "${REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::production deploys only a tag vX.Y.Z (dispatch with --ref vX.Y.Z)"
+            exit 1
+          fi
+          if [[ "${SKIP_RC}" == "true" ]]; then
+            echo "::warning::skip_rc=true: deploying ${REF_NAME} without an rc check"
+            exit 0
+          fi
+          for RC in $(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/${REF_NAME}-rc." --jq '.[].ref | ltrimstr("refs/tags/")'); do
+            [[ "${RC}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]] || continue
+            RC_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RC}" --jq .sha)"
+            if [[ "${RC_SHA}" == "${COMMIT_SHA}" ]]; then
+              echo "${REF_NAME} is on the same commit as ${RC}"
+              exit 0
+            fi
+          done
+          echo "::error::no ${REF_NAME}-rc.N on ${COMMIT_SHA}: tag the rc first, or dispatch with skip_rc=true for a hotfix"
+          exit 1
 
       # The build below skips tests: a successful CI run (unit tests and Trivy) for this
       # commit is the proof they ran. Waits up to 30 minutes for a run in progress.
@@ -139,7 +172,7 @@ jobs:
       - name: Prepare image tag
         id: prep
         env:
-          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
+          INPUT_REF: ${{ github.ref_name }}
         run: |
           TAG="${INPUT_REF//\//-}"
           # The tag reaches remote shell commands; allow only Docker tag characters.
