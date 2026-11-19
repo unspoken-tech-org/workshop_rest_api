@@ -344,3 +344,26 @@ jobs:
         with:
           prefix: DEPLOY
           image-tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.deployed-image-tag }}@${{ needs.build.outputs.deployed-image-digest }}
+
+  # ===========================================
+  # JOB 3: GITHUB RELEASE
+  # ===========================================
+  # Runs only after a successful deploy of a tag. A failure here does not undo
+  # the deploy; rerun this job.
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: deploy
+    if: github.ref_type == 'tag'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
+      - name: Create GitHub Release
+        uses: ./.github/actions/shared/github-release

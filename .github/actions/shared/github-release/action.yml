@@ -1,0 +1,40 @@
+name: GitHub Release
+description: >
+  Publishes a GitHub Release for the tag being deployed, with notes GitHub
+  generates from the PRs since the last final tag. vX.Y.Z-rc.N becomes a
+  pre-release. Does nothing when the release already exists (redeploy, rollback).
+
+runs:
+  using: composite
+  steps:
+    - name: Create release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.ref_name }}
+      run: |
+        set -euo pipefail
+        [[ "${TAG}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)(-rc\.[0-9]+)?$ ]] || {
+          echo "::error::${TAG} is not vX.Y.Z or vX.Y.Z-rc.N"
+          exit 1
+        }
+        VERSION="v${BASH_REMATCH[1]}"
+
+        if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+          echo "Release ${TAG} already exists; nothing to do."
+          exit 0
+        fi
+
+        # Last final tag below this version: the notes cover everything since it.
+        PREV="$( { gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v" --paginate \
+                     --jq '.[].ref | ltrimstr("refs/tags/")' \
+                   | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "${VERSION}" || true
+                   echo "${VERSION}"; } \
+                 | sort -V | grep -B1 -x "${VERSION}" | grep -vx "${VERSION}" || true)"
+
+        ARGS=(--repo "${GITHUB_REPOSITORY}" --verify-tag --title "${TAG}" --generate-notes)
+        [[ -n "${PREV}" ]] && ARGS+=(--notes-start-tag "${PREV}")
+        [[ "${TAG}" == *-rc.* ]] && ARGS+=(--prerelease)
+
+        gh release create "${TAG}" "${ARGS[@]}"
+        echo "Published ${TAG} (notes since ${PREV:-the first commit})." >> "$GITHUB_STEP_SUMMARY"

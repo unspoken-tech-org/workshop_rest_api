@@ -53,6 +53,12 @@ Applies to `.github/` (workflows, composite actions, scripts). The root
 | `restore-test.yml` | dispatch, weekly, PR touching the DB image | — | any (synthetic data, no secrets) |
 | `deploy-observability-prod.yml` | dispatch | — | archived, no deploy |
 
+After a successful deploy of a tag, `deploy-api-qa.yml` and
+`deploy-api-prod.yml` run a `release` job
+(`.github/actions/shared/github-release`): it publishes a GitHub Release with
+generated notes, a pre-release for `-rc.N`, and skips a tag that already has
+one.
+
 PRD deploys are dispatched with `--ref` pointing at the tag (e.g.
 `gh workflow run deploy-api-prod.yml --ref v1.2.0 -f allow_migrations=true`).
 
