@@ -69,7 +69,7 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
      */
     @Modifying
     @Query("UPDATE ApiKey a SET a.active = false WHERE a.clientName = :clientName")
-    void deactivateByClientName(String clientName);
+    int deactivateByClientName(String clientName);
 
     /**
      * Checks if there is an active API Key for the client, user and platform.

@@ -100,5 +100,28 @@ class ApiKeyServiceTest {
 
         verify(apiKeyRepository).clearBoundDevice(2L);
         verify(refreshTokenRepository).revokeByApiKeyId(2L);
+        verify(eventRecorder).record(ObservabilityEventCatalog.API_KEY_DEVICE_RESET, Map.of());
+    }
+
+    @Test
+    void shouldRecordSingleRevocation() {
+        when(apiKeyRepository.existsById(3L)).thenReturn(true);
+
+        apiKeyService.revokeApiKey(3L);
+
+        verify(apiKeyRepository).deactivateById(3L);
+        verify(eventRecorder).record(ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "single"));
+    }
+
+    @Test
+    void shouldRecordClientRevocationOnlyWhenKeysWereDeactivated() {
+        when(apiKeyRepository.deactivateByClientName("client-a")).thenReturn(2);
+        when(apiKeyRepository.deactivateByClientName("client-b")).thenReturn(0);
+
+        apiKeyService.revokeAllByClientName("client-a");
+        apiKeyService.revokeAllByClientName("client-b");
+
+        verify(eventRecorder, times(1)).record(ObservabilityEventCatalog.API_KEY_REVOKED,
+                Map.of("scope", "all_by_client"));
     }
 }

@@ -120,6 +120,7 @@ public class ApiKeyService {
 
         apiKeyRepository.clearBoundDevice(apiKeyId);
         refreshTokenRepository.revokeByApiKeyId(apiKeyId);
+        eventRecorder.record(ObservabilityEventCatalog.API_KEY_DEVICE_RESET, Map.of());
 
         log.info("API Key binding reset for id: {}", apiKeyId);
     }
@@ -234,6 +235,7 @@ public class ApiKeyService {
             throw new NotFoundException("API Key not found with id: " + id);
         }
         apiKeyRepository.deactivateById(id);
+        eventRecorder.record(ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "single"));
         log.info("API Key revoked: {}", id);
     }
 
@@ -244,7 +246,9 @@ public class ApiKeyService {
      */
     @Transactional
     public void revokeAllByClientName(String clientName) {
-        apiKeyRepository.deactivateByClientName(clientName);
+        if (apiKeyRepository.deactivateByClientName(clientName) > 0) {
+            eventRecorder.record(ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "all_by_client"));
+        }
         log.info("All API Keys revoked for client: {}", clientName);
     }
 
