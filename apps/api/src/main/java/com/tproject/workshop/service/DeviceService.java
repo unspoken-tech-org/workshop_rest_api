@@ -6,6 +6,7 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.events.observability.TurnaroundBand;
+import com.tproject.workshop.events.observability.ValueBand;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
@@ -90,6 +91,35 @@ public class DeviceService {
                 "turnaround.band", TurnaroundBand.of(entry, Instant.now())));
     }
 
+    private void recordUrgencyChange(boolean previous, boolean current) {
+        if (previous != current) {
+            eventRecorder.record(ObservabilityEventCatalog.DEVICE_URGENCY_CHANGED, Map.of(
+                    "device.urgency", current ? "urgent" : "normal"));
+        }
+    }
+
+    /** Null and zero both mean "no amount"; only the new value's band is emitted. */
+    private void recordBudgetChange(String field, BigDecimal previous, BigDecimal current) {
+        BigDecimal before = Optional.ofNullable(previous).orElse(BigDecimal.ZERO);
+        BigDecimal after = Optional.ofNullable(current).orElse(BigDecimal.ZERO);
+        int comparison = after.compareTo(before);
+        if (comparison == 0) {
+            return;
+        }
+        String changeType;
+        if (before.signum() == 0) {
+            changeType = "set";
+        } else if (after.signum() == 0) {
+            changeType = "cleared";
+        } else {
+            changeType = comparison > 0 ? "increase" : "decrease";
+        }
+        eventRecorder.record(ObservabilityEventCatalog.DEVICE_BUDGET_CHANGED, Map.of(
+                "budget.field", field,
+                "budget.change_type", changeType,
+                "budget.value_band", ValueBand.of(after)));
+    }
+
     private void revertStatusIfNeeded(Device device, String origin) {
         DeviceStatusEnum current = device.getDeviceStatus();
         if (current == DeviceStatusEnum.ENTREGUE || current == DeviceStatusEnum.DESCARTADO) {
@@ -167,6 +197,7 @@ public class DeviceService {
 
         device.setUrgency(newUrgency);
         deviceRepository.saveAndFlush(device);
+        recordUrgencyChange(oldUrgency, newUrgency);
         return findDeviceByIdOrThrow(device.getId());
     }
 
@@ -196,6 +227,9 @@ public class DeviceService {
 
         DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(device.deviceStatus());
         DeviceStatusEnum previousStatus = oldDevice.getDeviceStatus();
+        boolean previousUrgency = oldDevice.isUrgency();
+        BigDecimal previousBudgetFee = oldDevice.getBudgetFee();
+        BigDecimal previousServiceValue = oldDevice.getServiceValue();
 
         addHistories(oldDevice, device);
 
@@ -235,6 +269,9 @@ public class DeviceService {
             recordStatusChange(previousStatus, newStatus, "device_update");
             recordClosedIfNeeded(oldDevice, previousStatus, newStatus);
         }
+        recordBudgetChange("budget_fee", previousBudgetFee, device.budgetFee());
+        recordBudgetChange("service_value", previousServiceValue, device.serviceValue());
+        recordUrgencyChange(previousUrgency, device.hasUrgency());
         return findDeviceByIdOrThrow(oldDevice.getId());
     }
 
