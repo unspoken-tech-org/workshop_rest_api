@@ -50,6 +50,7 @@ Applies to `.github/` (workflows, composite actions, scripts). The root
 | `deploy-observability-edge-prod.yml` | dispatch + `confirm` | `production-observability` | `main` (commit must be on `main`) |
 | `terraform-cloudflare-observability.yml` | PR/push plan; dispatch `PLAN`/`APPLY` | `observability-terraform-apply` (apply) | `main` |
 | `terraform-state-drill-observability.yml` | dispatch `DRILL` | `observability-terraform-apply` | `main` |
+| `restore-test.yml` | dispatch, weekly, PR touching the DB image | — | any (synthetic data, no secrets) |
 | `deploy-observability-prod.yml` | dispatch | — | archived, no deploy |
 
 PRD deploys are dispatched with `--ref` pointing at the tag or `release/*`

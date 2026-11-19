@@ -59,11 +59,26 @@ if [ -z "$PG_CID" ]; then
   exit 1
 fi
 
+# A missing stanza is only created on an explicit bootstrap (STANZA_BOOTSTRAP=true,
+# the bootstrap_stanza workflow_dispatch input). Otherwise it fails the verification:
+# recreating it in silence leaves an empty repository and loses the PITR history.
 echo ">>> Checking stanza..."
 if docker exec -u postgres "$PG_CID" bash -c 'pgbackrest --stanza=workshop --log-level-console=info check'; then
   echo "stanza OK"
 else
-  echo "stanza not found, creating..."
+  # pgbackrest info status codes 1 (missing stanza path) and 3 (missing stanza data) mean no stanza.
+  STANZA_CODE=$(docker exec -u postgres "$PG_CID" bash -c 'pgbackrest --stanza=workshop --output=json info' \
+    | jq -r '.[0].status.code // empty' 2>/dev/null) || STANZA_CODE=""
+  if [ "${STANZA_CODE}" != "1" ] && [ "${STANZA_CODE}" != "3" ]; then
+    echo "ERROR: pgbackrest check failed and info does not report the stanza as missing (status ${STANZA_CODE:-unknown}); not recreating it" >&2
+    exit 1
+  fi
+  if [ "${STANZA_BOOTSTRAP:-false}" != "true" ]; then
+    echo "ERROR: stanza workshop not found in the pgBackRest repository (info status ${STANZA_CODE})." >&2
+    echo "Restore the repository, or, on a first install only, re-run with bootstrap_stanza=true to create it." >&2
+    exit 1
+  fi
+  echo "STANZA_BOOTSTRAP=true: creating stanza workshop..."
   docker exec -u postgres "$PG_CID" bash -c 'pgbackrest --stanza=workshop --log-level-console=info stanza-create'
   docker exec -u postgres "$PG_CID" bash -c 'pgbackrest --stanza=workshop --log-level-console=info check'
   echo "stanza created and OK"
