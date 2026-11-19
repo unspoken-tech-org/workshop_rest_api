@@ -6,8 +6,8 @@ secrets, Environments).
 
 ## Git
 
-Never push to `main` or `feature/*` directly, never squash or rebase a shared
-branch, and never create a tag unless the user asks: a tag deploys.
+Never push to `main` or `release/*` directly, never squash or rebase a
+shared branch, and never create a tag unless the user asks: a tag deploys.
 
 Read the matching file before the task (load it only then):
 
