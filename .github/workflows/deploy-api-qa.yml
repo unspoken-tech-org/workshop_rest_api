@@ -17,6 +17,11 @@
 name: Deploy API (QA) v2 (Hosted + Tailscale)
 
 on:
+  # Release candidates (vX.Y.Z-rc.N) deploy to QA; final tags go to production.
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
+
   workflow_dispatch:
     inputs:
       ref:
@@ -142,10 +147,11 @@ jobs:
           push: true
           build-args: |
             SERVICE_VERSION=${{ steps.prep.outputs.service-version }}
+          # No :latest here: only the production deploy moves it, so it always names the
+          # amd64 image running in production, never an arm64 release candidate.
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.commit.outputs.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           # Registry cache: one ref per environment (PRD amd64, QA arm64), shared across
           # tags and branches and outside the 10 GB Actions cache, where per-ref scopes
           # were never read back.
