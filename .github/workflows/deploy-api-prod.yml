@@ -113,7 +113,9 @@ jobs:
           }
           echo "sha=${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
 
-      # Production runs only a final tag, on the commit QA approved as an rc.
+      # Production runs only a final tag on main or a release/* branch, on the
+      # commit of an rc whose QA deploy succeeded. skip_rc (hotfix, old tag)
+      # skips the rc checks, never the branch check.
       - name: Require a final tag with an approved rc
         env:
           GH_TOKEN: ${{ github.token }}
@@ -122,23 +124,61 @@ jobs:
           COMMIT_SHA: ${{ steps.commit.outputs.sha }}
           SKIP_RC: ${{ github.event.inputs.skip_rc || 'false' }}
         run: |
+          set -euo pipefail
           if [[ "${REF_TYPE}" != "tag" || ! "${REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::production deploys only a tag vX.Y.Z (dispatch with --ref vX.Y.Z)"
             exit 1
           fi
+
+          # The commit must be in main or in a release/* branch ("identical" or
+          # "behind" = the branch contains it).
+          on_branch() {
+            local status
+            status="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${1}...${COMMIT_SHA}" --jq .status 2>/dev/null || true)"
+            [[ "${status}" == "identical" || "${status}" == "behind" ]]
+          }
+          BRANCH=""
+          for B in main $(gh api "repos/${GITHUB_REPOSITORY}/branches" --paginate --jq '.[].name | select(startswith("release/"))'); do
+            if on_branch "${B}"; then BRANCH="${B}"; break; fi
+          done
+          if [[ -z "${BRANCH}" ]]; then
+            echo "::error::${COMMIT_SHA} is not in main or any release/* branch: tag a merged commit"
+            exit 1
+          fi
+          echo "${COMMIT_SHA} is in ${BRANCH}"
+
           if [[ "${SKIP_RC}" == "true" ]]; then
-            echo "::warning::skip_rc=true: deploying ${REF_NAME} without an rc check"
+            echo "::warning::skip_rc=true: deploying ${REF_NAME} without the rc and QA checks"
             exit 0
           fi
+
+          RCS=()
           for RC in $(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/${REF_NAME}-rc." --jq '.[].ref | ltrimstr("refs/tags/")'); do
             [[ "${RC}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]] || continue
             RC_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RC}" --jq .sha)"
-            if [[ "${RC_SHA}" == "${COMMIT_SHA}" ]]; then
-              echo "${REF_NAME} is on the same commit as ${RC}"
+            [[ "${RC_SHA}" == "${COMMIT_SHA}" ]] && RCS+=("${RC}")
+          done
+          if (( ${#RCS[@]} == 0 )); then
+            echo "::error::no ${REF_NAME}-rc.N on ${COMMIT_SHA}: tag the rc first, or dispatch with skip_rc=true for a hotfix"
+            exit 1
+          fi
+
+          # One of those rc tags must have a deploy-api-qa.yml run, started by
+          # its tag push, whose "Deploy to QA" job succeeded. Later jobs (the
+          # GitHub Release) do not count.
+          RUNS="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-api-qa.yml/runs?event=push&head_sha=${COMMIT_SHA}&per_page=100" \
+            --jq '.workflow_runs[] | "\(.id) \(.head_branch)"')"
+          while read -r RUN_ID RUN_REF; do
+            [[ -n "${RUN_ID}" ]] || continue
+            [[ " ${RCS[*]} " == *" ${RUN_REF} "* ]] || continue
+            DEPLOY="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
+              --jq '.jobs[] | select(.name == "Deploy to QA") | .conclusion')"
+            if [[ "${DEPLOY}" == "success" ]]; then
+              echo "${REF_NAME} is on ${RUN_REF}, deployed to QA by run ${RUN_ID}"
               exit 0
             fi
-          done
-          echo "::error::no ${REF_NAME}-rc.N on ${COMMIT_SHA}: tag the rc first, or dispatch with skip_rc=true for a hotfix"
+          done <<< "${RUNS}"
+          echo "::error::no successful QA deploy for ${RCS[*]}: wait for deploy-api-qa.yml, or tag a new rc"
           exit 1
 
       # The build below skips tests: a successful CI run (unit tests and Trivy) for this

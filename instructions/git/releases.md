@@ -6,8 +6,9 @@ a tag deploys. Deploy details: `.github/workflows/AGENTS.md`.
 - Semver: minor = feature, patch = fix, major = breaking the front contract.
   Latest: `git tag --sort=-v:refname | head`.
 - `vX.Y.Z-rc.N` (with a dot) on `main` or `release/X.Y` goes to QA. `vX.Y.Z` on
-  the same commit as the approved rc goes to production. A hotfix patch skips
-  the rc (`skip_rc`). The front uses the same suffixes.
+  the same commit as the rc goes to production once that rc's QA deploy
+  succeeded; the commit must be in `main` or `release/*`. A hotfix patch skips
+  the rc and QA checks (`skip_rc`), not the branch check. The front uses the same suffixes.
 - `git tag -a vX.Y.Z -m "<summary>" <sha> && git push origin vX.Y.Z`.
   Production needs approval in the `production` Environment.
 - After a tag deploys, the workflow publishes a GitHub Release with notes
