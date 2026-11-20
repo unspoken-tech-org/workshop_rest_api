@@ -68,12 +68,16 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
 
         CustomerOutputDto customerB = customerService.saveCustomer(new InputCustomerDtoRecord(
                 "Cliente B", "75386544020", "F", "b@example.com",
-                List.of(new InputPhoneDto(null, "Trabalho B", sharedNumber, true))));
+                List.of(
+                        new InputPhoneDto(null, "Principal B", "11988886666", true),
+                        new InputPhoneDto(null, "Trabalho B", sharedNumber, false))));
 
         // Customer B updates their alias for the shared phone
         customerService.updateCustomer(customerB.getCustomerId(), new InputCustomerDtoRecord(
                 "Cliente B", "75386544020", "F", "b@example.com",
-                List.of(new InputPhoneDto(null, "Celular B", sharedNumber, true))));
+                List.of(
+                        new InputPhoneDto(null, "Principal B", "11988886666", true),
+                        new InputPhoneDto(null, "Celular B", sharedNumber, false))));
 
         CustomerOutputDto reloadedA = customerService.findById(customerA.getCustomerId());
         CustomerOutputDto reloadedB = customerService.findById(customerB.getCustomerId());
@@ -81,7 +85,7 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
 
         assertThat(reloadedA.getPhones()).extracting("name").containsExactly("Casa A");
         assertThat(reloadedAJpa.getPhones()).extracting("name").containsExactly("Casa A");
-        assertThat(reloadedB.getPhones()).extracting("name").containsExactly("Celular B");
+        assertThat(reloadedB.getPhones()).extracting("name").containsExactlyInAnyOrder("Principal B", "Celular B");
     }
 
     @Test
@@ -190,8 +194,10 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
         assertThatThrownBy(() -> deviceRepository.saveAndFlush(staleDevice))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
 
+        Device currentDevice = deviceRepository.findById(updatedDevice.getId()).orElseThrow();
+
         Payment payment = new Payment();
-        payment.setDevice(updatedDevice);
+        payment.setDevice(currentDevice);
         payment.setPaymentDate(Timestamp.from(Instant.now()));
         payment.setPaymentType(PaymentMethodEnum.PIX);
         payment.setPaymentValue(new BigDecimal("100.00"));
@@ -200,10 +206,10 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
 
         Payment stalePayment = new Payment();
         stalePayment.setId(savedPayment.getId());
-        stalePayment.setDevice(updatedDevice);
+        stalePayment.setDevice(currentDevice);
         stalePayment.setVersion(savedPayment.getVersion());
 
-        savedPayment.setDevice(updatedDevice);
+        savedPayment.setDevice(currentDevice);
         savedPayment.setUpdatedAt(Timestamp.from(Instant.now()));
         paymentRepository.saveAndFlush(savedPayment);
 

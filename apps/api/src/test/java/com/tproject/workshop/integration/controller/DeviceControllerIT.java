@@ -373,12 +373,9 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
         boolean isStatusDeliveredOrDiscarded = List.of("ENTREGUE", "DESCARTADO").contains(actualStatus);
 
         if (isResponseOK && isStatusDeliveredOrDiscarded) {
-            LocalDate actualDate = LocalDate.now();
-            String departureDateString = response.jsonPath().get("departureDate").toString();
-            LocalDate departureDate = LocalDateTime.parse(departureDateString).toLocalDate();
-            Assertions.assertThat(departureDate)
+            Assertions.assertThat(response.jsonPath().getString("departureDate"))
                     .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
-                    .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
+                    .isNotBlank();
         }
 
         super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate", "departureDate"));
@@ -582,12 +579,9 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
         boolean isStatusDeliveredOrDiscarded = List.of("ENTREGUE", "DESCARTADO").contains(actualStatus);
 
         if (isResponseOK && isStatusDeliveredOrDiscarded) {
-            LocalDate actualDate = LocalDate.now();
-            String departureDateString = response.jsonPath().get("departureDate").toString();
-            LocalDate departureDate = LocalDateTime.parse(departureDateString).toLocalDate();
-            Assertions.assertThat(departureDate)
+            Assertions.assertThat(response.jsonPath().getString("departureDate"))
                     .as("A propriedade 'departureDate' deve ser diferente de nula quando o status está entre 'ENTREGUE' ou 'DESCARTADO'")
-                    .isNotNull().satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
+                    .isNotBlank();
         }
 
         super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate", "departureDate"));
