@@ -74,8 +74,9 @@ public class AuthService {
     public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
         log.debug("Refresh token request");
 
-        // Validate refresh token and get associated API Key
-        ApiKey apiKey = refreshTokenService.validateRefreshToken(request.refreshToken());
+        // Validate, rotate refresh token, and get associated API Key
+        RefreshTokenService.RotationResult rotation = refreshTokenService.rotateRefreshToken(request.refreshToken());
+        ApiKey apiKey = rotation.apiKey();
 
         // We don't have appVersion easily available here without changing
         // the refresh request or saving them in the refresh token.
@@ -87,6 +88,7 @@ public class AuthService {
 
         return new RefreshTokenResponse(
                 accessToken,
+                rotation.refreshToken(),
                 "Bearer",
                 accessTokenExpiration
         );

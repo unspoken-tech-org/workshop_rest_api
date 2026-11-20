@@ -10,6 +10,7 @@ import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.skyscreamer.jsonassert.Customization;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -59,6 +60,13 @@ public class AbstractIntegrationLiveTest {
     // Lazy-initialized authenticated spec (cached after first use)
     private static RequestSpecification cachedAuthenticatedSpec;
     private static RequestSpecification cachedServiceAuthenticatedSpec;
+
+    @BeforeEach
+    void resetAuthCache() {
+        TestAuthHelper.invalidateTokenCache();
+        cachedAuthenticatedSpec = null;
+        cachedServiceAuthenticatedSpec = null;
+    }
 
     protected static RequestSpecification createRequestSpecification(int apiPort) {
         return new RequestSpecBuilder().setContentType(ContentType.JSON)
