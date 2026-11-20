@@ -8,7 +8,6 @@ import com.tproject.workshop.model.Model;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypesBrandsModelsRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,25 +32,16 @@ public class TypesBrandsModelsService {
         Brand brand = brandService.createOrReturnExistentBrand(brandInput);
         Model model = modelService.createOrReturnExistentModel(modelInput);
 
-        var entity = typesBrandsModelsRepository.findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(),
-                model.getIdModel());
-
-        if (entity.isPresent()) {
-            return entity.get();
-        }
-
-        BrandsModelsTypes brandModelType = new BrandsModelsTypes();
-        brandModelType.setIdBrand(brand);
-        brandModelType.setIdModel(model);
-        brandModelType.setIdType(type);
-
-        try {
-            return typesBrandsModelsRepository.saveAndFlush(brandModelType);
-        } catch (DataIntegrityViolationException e) {
-            return typesBrandsModelsRepository.findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(),
-                            model.getIdModel())
-                    .orElseThrow(() -> new RuntimeException("Erro ao criar ou buscar associação de tipo, marca e modelo", e));
-        }
+        return typesBrandsModelsRepository
+                .findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(), model.getIdModel())
+                .orElseGet(() -> {
+                    typesBrandsModelsRepository.insertIgnore(
+                            brand.getIdBrand(), model.getIdModel(), type.getIdType());
+                    return typesBrandsModelsRepository
+                            .findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(), model.getIdModel())
+                            .orElseThrow(() -> new RuntimeException(
+                                    "Erro ao criar ou buscar associação de tipo, marca e modelo"));
+                });
     }
 
     @Transactional(readOnly = true)

@@ -7,9 +7,8 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Brand;
 import com.tproject.workshop.repository.BrandRepository;
-import com.tproject.workshop.repository.jdbc.BrandRepositoryJdbc;
+import com.tproject.workshop.utils.CatalogName;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,28 +42,13 @@ public class BrandService {
 
     @Transactional
     public Brand createOrReturnExistentBrand(String brand) {
-        var brandName = brand.toLowerCase().trim().replaceAll("\\s+", " ");
-        var brandFound = brandRepository.findByBrandIgnoreCase(brandName);
-
-        if (brandFound.isPresent()) {
-            return brandFound.get();
-        }
-
-        try {
-            var newBrand = new Brand();
-            newBrand.setBrand(brandName);
-
-            Brand saved = brandRepository.save(newBrand);
-            eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "brand"));
-            return saved;
-        } catch (DataIntegrityViolationException e) {
-            return findBrandOnCreate(brandName, brand);
-        }
-    }
-
-    private Brand findBrandOnCreate(String brandName, String originalBrand) {
-        return brandRepository.findByBrandIgnoreCase(brandName)
-                .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar marca: " + originalBrand));
+        return CatalogName.findOrCreate(
+                brand,
+                brandRepository::findByBrandIgnoreCase,
+                brandRepository::insertIgnore,
+                () -> eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "brand")),
+                () -> new NotFoundException("Erro ao criar ou buscar marca: " + brand)
+        );
     }
 
     private BrandResponseDto toDto(Brand brand) {
