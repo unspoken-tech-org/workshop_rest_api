@@ -2,8 +2,6 @@ app:
   version: '@project.version@'
 
 spring:
-  profiles:
-    active: local
   application:
     name: ${OTEL_SERVICE_NAME:workshop-api}
 
