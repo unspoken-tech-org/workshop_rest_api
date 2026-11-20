@@ -8,6 +8,7 @@ WORKDIR /app
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle/ gradle/
 COPY apps/api/build.gradle apps/api/build.gradle
+COPY apps/api/gradle.lockfile apps/api/gradle.lockfile
 COPY apps/security/build.gradle apps/security/build.gradle
 
 # Garante permissão de execução no wrapper e pré-baixa dependências
