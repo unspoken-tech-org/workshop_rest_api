@@ -1666,6 +1666,78 @@ tests:
               description: "O pgbackrest info da última execução registrou o código 2 na stanza workshop. Rode pgbackrest info e check no container workshop-db."
               runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
 
+  - name: falha imediata de backup alerta em 5 minutos e resolve quando volta a zero
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_last_backup_exit_code{job="workshop/node-exporter"}'
+        values: '0x5 1x10 0x10'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopBackupFailed
+      - eval_time: 11m
+        alertname: WorkshopBackupFailed
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: backup
+              environment: production
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Falha na última execução de backup do pgBackRest de PRD"
+              description: "O último backup do pgBackRest (full ou diff) terminou com exit code 1. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+      - eval_time: 16m
+        alertname: WorkshopBackupFailed
+
+  - name: falha do pgbackrest expire alerta em 5 minutos e resolve quando volta a zero
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_expire_last_exit_code{job="workshop/node-exporter"}'
+        values: '0x5 2x10 0x10'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: WorkshopBackupExpireFailed
+      - eval_time: 11m
+        alertname: WorkshopBackupExpireFailed
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: backup
+              environment: production
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Falha no expire de retenção do pgBackRest de PRD"
+              description: "O comando pgbackrest expire diário terminou com exit code 2. Confira o journal (tag workshop-backup) no host de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+      - eval_time: 16m
+        alertname: WorkshopBackupExpireFailed
+
+  - name: pgbackrest expire atrasado alerta após 26 horas e resolve com novo sucesso
+    interval: 1m
+    input_series:
+      - series: 'workshop_pgbackrest_expire_last_success_timestamp_seconds{job="workshop/node-exporter"}'
+        values: '0x1600 96000x30'
+    alert_rule_test:
+      - eval_time: 26h10m
+        alertname: WorkshopBackupExpireStale
+      - eval_time: 26h20m
+        alertname: WorkshopBackupExpireStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              service: backup
+              environment: production
+              job: workshop/node-exporter
+            exp_annotations:
+              summary: "Expire de retenção do pgBackRest de PRD atrasado"
+              description: "O último pgbackrest expire bem-sucedido ocorreu há 1d 2h 20m 0s. Confira o cron e o journal (tag workshop-backup) no host de PRD."
+              runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+      - eval_time: 26h50m
+        alertname: WorkshopBackupExpireStale
+
   - name: gateway de PRD fora do scrape alerta após 5 minutos e volta ao normal
     interval: 1m
     input_series:

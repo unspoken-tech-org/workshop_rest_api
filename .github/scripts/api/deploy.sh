@@ -1,6 +1,6 @@
 #!/bin/bash
-set -e
-cd "${DEPLOY_DIR}"
+set -Eeuo pipefail
+cd "${DEPLOY_DIR:?DEPLOY_DIR is required}"
 
 # Cleanup secrets/credentials on exit (success or failure)
 trap 'rm -rf "${DEPLOY_DIR}/.tmp"' EXIT
@@ -105,8 +105,8 @@ sed "s#DEPLOY_DIR_PLACEHOLDER#${DEPLOY_DIR}#g" "${DEPLOY_DIR}/.tmp/backup.cronta
     { print }'
   cat "${DEPLOY_DIR}/.tmp/backup.crontab.rendered"
 } | crontab -
-if [ "$(crontab -l | grep -c 'pgbackrest-backup.sh')" != 2 ]; then
-  echo "crontab does not hold the two managed backup entries" >&2
+if [ "$(crontab -l | grep -c 'pgbackrest-backup.sh')" != 3 ]; then
+  echo "crontab does not hold the three managed pgbackrest entries" >&2
   exit 1
 fi
 echo "Backup schedule installed"
