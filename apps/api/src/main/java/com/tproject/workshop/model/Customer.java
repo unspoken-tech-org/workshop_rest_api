@@ -40,4 +40,9 @@ public class Customer {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Timestamp updatedAt;
+
+    @Version
+    @Builder.Default
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
 }

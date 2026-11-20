@@ -69,6 +69,10 @@ public class Device {
     @Column(name = "last_viewed_at")
     private Timestamp lastViewedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_customer")
     @ToString.Exclude

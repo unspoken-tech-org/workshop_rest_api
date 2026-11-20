@@ -48,4 +48,8 @@ public class Payment {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Timestamp updatedAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
 }
