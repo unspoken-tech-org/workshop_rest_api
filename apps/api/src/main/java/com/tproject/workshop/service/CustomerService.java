@@ -64,7 +64,7 @@ public class CustomerService {
                 .map(cp -> CellPhoneOutputDeviceDto.builder()
                         .id(cp.getPhone().getIdCellphone())
                         .number(cp.getPhone().getNumber())
-                        .name(cp.getPhone().getPhoneAlias())
+                        .name(cp.getPhoneAlias())
                         .main(cp.isMain())
                         .build())
                 .toList();
@@ -188,22 +188,10 @@ public class CustomerService {
         for (InputPhoneDto phoneDto : phoneDtos) {
             Phone phone = phoneRepository.findByNumber(phoneDto.number())
                     .orElseGet(() -> {
-                        Phone newPhone = Phone.builder()
-                                .number(phoneDto.number())
-                                .phoneAlias(phoneDto.name())
-                                .build();
-                        try {
-                            return phoneRepository.save(newPhone);
-                        } catch (DataIntegrityViolationException e) {
-                            return phoneRepository.findByNumber(phoneDto.number())
-                                    .orElseThrow(() -> new RuntimeException("Erro ao criar ou buscar telefone", e));
-                        }
+                        phoneRepository.insertIgnore(phoneDto.number());
+                        return phoneRepository.findByNumber(phoneDto.number())
+                                .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar telefone"));
                     });
-
-            if (phoneDto.name() != null && !phoneDto.name().isEmpty()) {
-                phone.setPhoneAlias(phoneDto.name());
-                phoneRepository.save(phone);
-            }
 
             Optional<CustomerPhone> existingAssociation = customerPhoneRepository
                     .findByCustomerIdAndPhoneNumber(customer.getIdCustomer(), phone.getNumber());
@@ -216,7 +204,7 @@ public class CustomerService {
                 customerPhoneRepository.clearMainPhoneForCustomer(customer.getIdCustomer());
             }
 
-            CustomerPhone customerPhone = new CustomerPhone(customer, phone, phoneDto.isPrimary());
+            CustomerPhone customerPhone = new CustomerPhone(customer, phone, phoneDto.isPrimary(), phoneDto.name());
             
             customerPhoneRepository.save(customerPhone);
         }
