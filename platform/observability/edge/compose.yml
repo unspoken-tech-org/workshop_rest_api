@@ -362,6 +362,7 @@ services:
       - /etc/alloy/config.alloy
     volumes:
       - ./platform/observability/edge/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/log/journal:/var/log/journal:ro
       - alloy_data:/var/lib/alloy/data
     networks:
       - edge-docker-logs
