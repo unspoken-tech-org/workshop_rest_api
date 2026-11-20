@@ -5,8 +5,10 @@ import com.tproject.workshop.dto.deviceStatistics.DeviceStatisticsOutputDtoRecor
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 
+@PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
 @Tag(name = "Device Statistics", description = "Operational dashboards for device pipeline and recent activity")
 public interface DeviceStatisticsController {
 

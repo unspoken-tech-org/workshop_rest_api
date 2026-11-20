@@ -7,9 +7,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+@PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
 @Tag(name = "Technicians", description = "Access the roster of technicians responsible for device servicing")
 public interface TechnicianController {
 

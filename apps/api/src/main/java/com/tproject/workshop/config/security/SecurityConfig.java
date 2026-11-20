@@ -119,8 +119,9 @@ public class SecurityConfig {
                         // Only health is public; /actuator/prometheus is handled by
                         // the scrape chain above and info reveals build details.
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
-                        // All other endpoints require authentication
-                        .anyRequest().authenticated()
+                        .requestMatchers("/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/v1/**").hasAnyRole("ADMIN", "SERVICE")
+                        .anyRequest().denyAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
