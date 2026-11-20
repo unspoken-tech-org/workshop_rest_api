@@ -1687,7 +1687,7 @@ tests:
               summary: "Falha na última execução de backup do pgBackRest de PRD"
               description: "O último backup do pgBackRest (full ou diff) terminou com exit code 1. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
               runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
-      - eval_time: 16m
+      - eval_time: 18m
         alertname: WorkshopBackupFailed
 
   - name: falha do pgbackrest expire alerta em 5 minutos e resolve quando volta a zero
@@ -1711,7 +1711,7 @@ tests:
               summary: "Falha no expire de retenção do pgBackRest de PRD"
               description: "O comando pgbackrest expire diário terminou com exit code 2. Confira o journal (tag workshop-backup) no host de PRD."
               runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
-      - eval_time: 16m
+      - eval_time: 18m
         alertname: WorkshopBackupExpireFailed
 
   - name: pgbackrest expire atrasado alerta após 26 horas e resolve com novo sucesso
