@@ -39,10 +39,10 @@ public record ApiKeyCreatedResponse(
     @Schema(description = "Expiration timestamp")
     Instant expiresAt
 ) {
-    public static ApiKeyCreatedResponse fromEntity(ApiKey apiKey) {
+    public static ApiKeyCreatedResponse fromEntity(ApiKey apiKey, String plaintextKey) {
         return new ApiKeyCreatedResponse(
             apiKey.getId(),
-            apiKey.getKeyValue(),
+            plaintextKey,
             apiKey.getClientName(),
             apiKey.getUserIdentifier(),
             apiKey.getPlatform(),

@@ -1,19 +1,27 @@
 package com.tproject.workshop.service.auth;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.tproject.workshop.dto.apikey.ApiKeyCreatedResponse;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.ApiKeyDeviceBoundException;
 import com.tproject.workshop.exception.BadRequestException;
+import com.tproject.workshop.exception.InvalidApiKeyException;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.Platform;
+import com.tproject.workshop.model.Role;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
+import com.tproject.workshop.util.KeyGeneratorUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.Map;
@@ -123,5 +131,55 @@ class ApiKeyServiceTest {
 
         verify(eventRecorder, times(1)).record(ObservabilityEventCatalog.API_KEY_REVOKED,
                 Map.of("scope", "all_by_client"));
+    }
+
+    @Test
+    void shouldStoreSha256HashOnCreateAndReturnPlaintextOnce() {
+        when(apiKeyRepository.existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(
+                "client-a", "user-1", Platform.MOBILE)).thenReturn(false);
+        when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(invocation -> {
+            ApiKey entity = invocation.getArgument(0);
+            entity.setId(99L);
+            return entity;
+        });
+
+        ApiKeyCreatedResponse response = apiKeyService.createApiKey(
+                "client-a", "user-1", Platform.MOBILE, Role.SERVICE, "desc", null);
+
+        ArgumentCaptor<ApiKey> savedCaptor = ArgumentCaptor.forClass(ApiKey.class);
+        verify(apiKeyRepository).save(savedCaptor.capture());
+
+        String storedHash = savedCaptor.getValue().getKeyValue();
+        assertThat(response.keyValue()).startsWith("sk_mobile_");
+        assertThat(storedHash).isEqualTo(KeyGeneratorUtils.sha256Hex(response.keyValue()));
+        assertThat(storedHash).matches("^[0-9a-f]{64}$");
+    }
+
+    @Test
+    void shouldLookupBySha256HashAndNotLogKeyPrefixWhenInvalid() {
+        String rawKey = "sk_mobile_SECRET_PREFIX_1234567890";
+        String expectedHash = KeyGeneratorUtils.sha256Hex(rawKey);
+        when(apiKeyRepository.findByKeyValueAndActiveTrue(expectedHash)).thenReturn(Optional.empty());
+
+        Logger logger = (Logger) LoggerFactory.getLogger(ApiKeyService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertThatThrownBy(() -> apiKeyService.findByKeyValue(rawKey))
+                    .isInstanceOf(InvalidApiKeyException.class);
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+
+        verify(apiKeyRepository).findByKeyValueAndActiveTrue(expectedHash);
+        assertThat(appender.list)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .allSatisfy(msg -> {
+                    assertThat(msg).doesNotContain("sk_mobile_");
+                    assertThat(msg).doesNotContain("SECRET");
+                    assertThat(msg).doesNotContain("7890");
+                });
     }
 }

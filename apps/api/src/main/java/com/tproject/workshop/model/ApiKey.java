@@ -23,7 +23,7 @@ public class ApiKey {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "key_value", nullable = false, unique = true, length = 60)
+    @Column(name = "key_value", nullable = false, unique = true, length = 64)
     private String keyValue;
 
     @Column(name = "client_name", nullable = false, length = 100)

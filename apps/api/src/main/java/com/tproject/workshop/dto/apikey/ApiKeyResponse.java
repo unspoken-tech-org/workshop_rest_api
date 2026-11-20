@@ -42,7 +42,7 @@ public record ApiKeyResponse(
     public static ApiKeyResponse fromEntity(ApiKey apiKey) {
         return new ApiKeyResponse(
             apiKey.getId(),
-            maskKeyValue(apiKey.getKeyValue()),
+            "****",
             apiKey.getClientName(),
             apiKey.getUserIdentifier(),
             apiKey.getPlatform().name(),
@@ -53,17 +53,5 @@ public record ApiKeyResponse(
             apiKey.getExpiresAt(),
             apiKey.getLastUsedAt()
         );
-    }
-
-    private static String maskKeyValue(String keyValue) {
-        if (keyValue == null || keyValue.length() < 20) {
-            return "****";
-        }
-        // Show prefix and last 4 characters: sk_mobile_****abcd
-        int firstUnderscore = keyValue.indexOf('_');
-        int secondUnderscore = keyValue.indexOf('_', firstUnderscore + 1);
-        String prefix = keyValue.substring(0, secondUnderscore + 1);
-        String suffix = keyValue.substring(keyValue.length() - 4);
-        return prefix + "****" + suffix;
     }
 }
