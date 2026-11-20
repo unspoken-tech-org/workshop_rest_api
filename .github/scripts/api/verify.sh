@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
 cd /home/workshop/deploy/workshop_rest_api
 
 # Counts ERROR records per logger name. Messages are never printed: they can carry data.

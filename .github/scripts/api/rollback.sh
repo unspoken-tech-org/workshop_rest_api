@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 DEPLOY_DIR="${DEPLOY_DIR:-/home/workshop/deploy/workshop_rest_api}"
 cd "${DEPLOY_DIR}"
 

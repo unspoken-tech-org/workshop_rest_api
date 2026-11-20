@@ -6,7 +6,7 @@
 #          run data masking (LGPD), and dynamically bulk-insert all QA API keys 
 #          from Infisical path /qa-api-keys.
 # ==============================================================================
-set -euo pipefail
+set -Eeuo pipefail
 
 DEPLOY_DIR="/home/workshop/deploy/workshop_rest_api_qa"
 COMPOSE_FILE="${DEPLOY_DIR}/docker-compose-qa.yml"
@@ -23,6 +23,7 @@ cleanup_all() {
 }
 
 # Fail-Closed error handler to destroy unmasked volume on premature abort
+# shellcheck disable=SC2329 # Invoked via trap cleanup_on_error ERR
 cleanup_on_error() {
   echo ">>> [ALERT] QA Restore failed! Destroying unmasked data volume..."
   docker compose -f "${COMPOSE_FILE}" down -v || true

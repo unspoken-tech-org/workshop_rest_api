@@ -210,3 +210,25 @@ jobs:
           trivyignores: '.trivyignore.yaml'
           skip-setup-trivy: true
           exit-code: '1'
+
+  # ===========================================
+  # JOB 4: SHELLCHECK
+  # ===========================================
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run ShellCheck on all .sh scripts
+        run: |
+          mapfile -d '' scripts < <(find . -name '*.sh' -not -path './.git/*' -print0 | sort -z)
+          shellcheck -x -P SCRIPTDIR "${scripts[@]}"

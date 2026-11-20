@@ -5,7 +5,7 @@
 #
 # Uso, na raiz de workshop_rest_api:
 #   platform/observability/local/scripts/init-secrets.sh
-set -euo pipefail
+set -Eeuo pipefail
 
 SECRETS_DIR="${SECRETS_DIR:-platform/observability/local/.secrets}"
 # Imagem usada só para gerar o hash bcrypt, sem rede.

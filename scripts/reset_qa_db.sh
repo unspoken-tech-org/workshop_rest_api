@@ -8,7 +8,7 @@
 #          4. Injects synthetic seed dataset (qa_seed_data.sql)
 #          5. Dynamically injects QA API keys from Infisical path /qa-api-keys
 # ==============================================================================
-set -euo pipefail
+set -Eeuo pipefail
 
 DEPLOY_DIR="${DEPLOY_DIR:-/home/workshop/deploy/workshop_rest_api_qa}"
 COMPOSE_FILE="${DEPLOY_DIR}/docker-compose-qa.yml"
