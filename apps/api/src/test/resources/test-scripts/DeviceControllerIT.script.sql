@@ -96,19 +96,19 @@ VALUES
 (15, 1, 5, 'DESCARTADO', 1, '2021-04-22 08:41:00.968173', '2021-05-04 08:41:00.968173', 'Problem 15', 'Observation 15', 'Budget 15', 50.00, 1500.00, true, false, '2021-04-26 08:41:00.968173', ('{3, 2}'))
 ;
 
-INSERT INTO phones(id, number, alias)
+INSERT INTO phones(id, number)
 VALUES
-(1, '4430356678', 'Telefone Secundário'),
-(2, '44988254493', 'Telefone Principal'),
-(3, '44988255540', 'Lucas Principal'),
-(4, '44988252235', 'Francisco Principal');
+(1, '4430356678'),
+(2, '44988254493'),
+(3, '44988255540'),
+(4, '44988252235');
 
-INSERT INTO customer_phones(id_customer, id_phone, is_main)
+INSERT INTO customer_phones(id_customer, id_phone, is_main, alias)
 VALUES
-(1, 1, false),
-(1, 2, true),
-(2, 3, true),
-(3, 4, true);
+(1, 1, false, 'Telefone Secundário'),
+(1, 2, true, 'Telefone Principal'),
+(2, 3, true, 'Lucas Principal'),
+(3, 4, true, 'Francisco Principal');
 
 INSERT INTO customer_contact(id, id_device, id_technician, phone, device_status, type, has_made_contact, last_contact, conversation)
 VALUES

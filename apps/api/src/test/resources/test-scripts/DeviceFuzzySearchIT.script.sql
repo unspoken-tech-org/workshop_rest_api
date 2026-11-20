@@ -245,8 +245,8 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 -- =============================================
 -- PHONES (para testes de customerPhone)
 -- =============================================
-INSERT INTO phones(id, number, alias) VALUES
-(100, '11999887766', 'Celular João');
+INSERT INTO phones(id, number) VALUES
+(100, '11999887766');
 
-INSERT INTO customer_phones(id_customer, id_phone, is_main) VALUES
-(10, 100, true);
+INSERT INTO customer_phones(id_customer, id_phone, is_main, alias) VALUES
+(10, 100, true, 'Celular João');

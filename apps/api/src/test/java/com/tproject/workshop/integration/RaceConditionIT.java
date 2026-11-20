@@ -200,7 +200,7 @@ public class RaceConditionIT extends AbstractIntegrationLiveTest {
                             VALID_CPFS.get(idx),
                             "M",
                             "cliente" + idx + "@example.com",
-                            List.of(new InputPhoneDto(null, sharedNumber, "Alias " + idx, true))
+                            List.of(new InputPhoneDto(null, "Alias " + idx, sharedNumber, true))
                     );
                     return customerService.saveCustomer(dto);
                 });
@@ -243,7 +243,7 @@ public class RaceConditionIT extends AbstractIntegrationLiveTest {
                             duplicateCpf,
                             "M",
                             "dup" + idx + "@example.com",
-                            List.of(new InputPhoneDto(null, "1197777000" + idx, "Principal", true))
+                            List.of(new InputPhoneDto(null, "Principal", "1197777000" + idx, true))
                     );
                     customerService.saveCustomer(dto);
                     successes.incrementAndGet();

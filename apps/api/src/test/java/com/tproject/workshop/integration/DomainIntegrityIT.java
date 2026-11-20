@@ -64,16 +64,16 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
 
         CustomerOutputDto customerA = customerService.saveCustomer(new InputCustomerDtoRecord(
                 "Cliente A", "31781477051", "M", "a@example.com",
-                List.of(new InputPhoneDto(null, sharedNumber, "Casa A", true))));
+                List.of(new InputPhoneDto(null, "Casa A", sharedNumber, true))));
 
         CustomerOutputDto customerB = customerService.saveCustomer(new InputCustomerDtoRecord(
                 "Cliente B", "75386544020", "F", "b@example.com",
-                List.of(new InputPhoneDto(null, sharedNumber, "Trabalho B", true))));
+                List.of(new InputPhoneDto(null, "Trabalho B", sharedNumber, true))));
 
         // Customer B updates their alias for the shared phone
         customerService.updateCustomer(customerB.getCustomerId(), new InputCustomerDtoRecord(
                 "Cliente B", "75386544020", "F", "b@example.com",
-                List.of(new InputPhoneDto(null, sharedNumber, "Celular B", true))));
+                List.of(new InputPhoneDto(null, "Celular B", sharedNumber, true))));
 
         CustomerOutputDto reloadedA = customerService.findById(customerA.getCustomerId());
         CustomerOutputDto reloadedB = customerService.findById(customerB.getCustomerId());
@@ -111,9 +111,24 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
         Long originalVersion = saved.getVersion();
 
         deviceEventListener.onDeviceViewed(new DeviceViewedEvent(this, saved.getId()));
-        entityManager.clear();
 
-        Device afterView = deviceRepository.findById(saved.getId()).orElseThrow();
+        Device afterView = null;
+        Instant deadline = Instant.now().plusSeconds(3);
+        while (Instant.now().isBefore(deadline)) {
+            entityManager.clear();
+            afterView = deviceRepository.findById(saved.getId()).orElseThrow();
+            if (afterView.getLastViewedAt() != null) {
+                break;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        assertThat(afterView).isNotNull();
         assertThat(afterView.getLastViewedAt()).isNotNull();
         assertThat(afterView.getLastUpdate()).isEqualTo(originalLastUpdate);
         assertThat(afterView.getVersion()).isEqualTo(originalVersion);
@@ -140,7 +155,7 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
                 .build();
 
         customer.setName("Updated Name");
-        customerRepository.saveAndFlush(customer);
+        Customer updatedCustomer = customerRepository.saveAndFlush(customer);
 
         assertThatThrownBy(() -> customerRepository.saveAndFlush(staleCustomer))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
@@ -149,7 +164,7 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
                 new TypeBrandModelInputDtoRecord("Notebook", "Dell", "Inspiron"));
 
         Device device = new Device();
-        device.setCustomer(customer);
+        device.setCustomer(updatedCustomer);
         device.setBrandsModelsTypes(bmt);
         device.setColorIds(List.of());
         device.setProblem("Teclado");
@@ -160,7 +175,7 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
 
         Device staleDevice = new Device();
         staleDevice.setId(savedDevice.getId());
-        staleDevice.setCustomer(customer);
+        staleDevice.setCustomer(updatedCustomer);
         staleDevice.setBrandsModelsTypes(bmt);
         staleDevice.setColorIds(List.of());
         staleDevice.setProblem("Stale Problem");
@@ -170,13 +185,13 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
         staleDevice.setVersion(savedDevice.getVersion());
 
         savedDevice.setProblem("Updated Problem");
-        deviceRepository.saveAndFlush(savedDevice);
+        Device updatedDevice = deviceRepository.saveAndFlush(savedDevice);
 
         assertThatThrownBy(() -> deviceRepository.saveAndFlush(staleDevice))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
 
         Payment payment = new Payment();
-        payment.setDevice(savedDevice);
+        payment.setDevice(updatedDevice);
         payment.setPaymentDate(Timestamp.from(Instant.now()));
         payment.setPaymentType(PaymentMethodEnum.PIX);
         payment.setPaymentValue(new BigDecimal("100.00"));
@@ -185,10 +200,10 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
 
         Payment stalePayment = new Payment();
         stalePayment.setId(savedPayment.getId());
-        stalePayment.setDevice(savedDevice);
+        stalePayment.setDevice(updatedDevice);
         stalePayment.setVersion(savedPayment.getVersion());
 
-        savedPayment.setDevice(savedDevice);
+        savedPayment.setDevice(updatedDevice);
         savedPayment.setUpdatedAt(Timestamp.from(Instant.now()));
         paymentRepository.saveAndFlush(savedPayment);
 
