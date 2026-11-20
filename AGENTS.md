@@ -35,8 +35,9 @@ Read the matching file before the task (load it only then):
 - Integration tests are a separate task (`:apps:api:integrationTests`, tag
   `integration`), extend `AbstractIntegrationLiveTest`, and run the app on port
   `8081` with the `test` profile; the DB must be running.
-- A missing JSON snapshot in `apps/api/src/test/resources/jsons/` is written on
-  the first run; review a new snapshot before committing it.
+- Missing JSON snapshots in `apps/api/src/test/resources/jsons/` fail the test
+  by default; pass `-DupdateSnapshots=true` (or `UPDATE_SNAPSHOTS=true`) to
+  generate new snapshots, and review them before committing.
 - Token/auth flows are sensitive to API key status and device IDs.
 
 ## Local Dev

@@ -31,7 +31,7 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.junit.platform.commons.function.Try.success;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
@@ -125,21 +125,45 @@ public class AbstractIntegrationLiveTest {
             String actualPayload = response instanceof Response ? ((Response) response).getBody().prettyPrint() :
                     objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
 
-            if (testFile.exists()) {
-
-                String expectedPayload =
-                        (String) FileUtils.readLines(testFile, StandardCharsets.UTF_8.name()).stream()
-                                .collect(Collectors.joining("\n"));
-
-                JSONAssert.assertEquals(String.format("File %s", filename), expectedPayload, actualPayload, comparator);
-
-            } else {
-                testFile.getParentFile().mkdirs();
-                Files.write(testFile.toPath(), actualPayload.getBytes());
-                success("Test file did not exist. File created and test succeeded");
-            }
+            assertMatchesSnapshot(testFile, filename, actualPayload, comparator, isUpdateSnapshotsEnabled());
         } catch (JSONException | IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    static boolean isUpdateSnapshotsEnabled() {
+        String property = System.getProperty("updateSnapshots");
+        if (property != null) {
+            return Boolean.parseBoolean(property);
+        }
+        return Boolean.parseBoolean(System.getenv().getOrDefault("UPDATE_SNAPSHOTS", "false"));
+    }
+
+    static void assertMatchesSnapshot(
+            File testFile,
+            String filename,
+            String actualPayload,
+            DefaultComparator comparator,
+            boolean updateSnapshots
+    ) throws IOException, JSONException {
+        if (testFile.exists()) {
+            String expectedPayload = FileUtils.readLines(testFile, StandardCharsets.UTF_8.name()).stream()
+                    .collect(Collectors.joining("\n"));
+
+            JSONAssert.assertEquals(String.format("File %s", filename), expectedPayload, actualPayload, comparator);
+            return;
+        }
+
+        if (!updateSnapshots) {
+            fail(String.format(
+                    "Missing JSON snapshot: %s. Re-run with -DupdateSnapshots=true or UPDATE_SNAPSHOTS=true to generate it.",
+                    testFile.getPath()));
+        }
+
+        File parentDir = testFile.getParentFile();
+        if (parentDir != null) {
+            parentDir.mkdirs();
+        }
+        Files.writeString(testFile.toPath(), actualPayload, StandardCharsets.UTF_8);
     }
 }
