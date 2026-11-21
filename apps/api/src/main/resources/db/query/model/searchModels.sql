@@ -9,8 +9,8 @@ WHERE
     AND (:QUERY IS NULL OR :QUERY = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(unaccent(m.model))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(immutable_unaccent(m.model))
             )
             FROM unnest(string_to_array(:QUERY, ' ')) AS word
             WHERE word <> ''
@@ -19,15 +19,15 @@ WHERE
 ORDER BY
     CASE
         WHEN :QUERY IS NOT NULL AND :QUERY != ''
-        AND LOWER(unaccent(m.model)) LIKE LOWER(unaccent(:QUERY)) || '%'
+        AND LOWER(immutable_unaccent(m.model)) LIKE LOWER(immutable_unaccent(:QUERY)) || '%'
         THEN 0
         ELSE 1
     END,
     CASE
         WHEN :QUERY IS NOT NULL AND :QUERY != ''
         THEN word_similarity(
-            LOWER(unaccent(:QUERY)),
-            LOWER(unaccent(m.model))
+            LOWER(immutable_unaccent(:QUERY)),
+            LOWER(immutable_unaccent(m.model))
         )
     END DESC NULLS LAST,
     LENGTH(m.model) ASC,

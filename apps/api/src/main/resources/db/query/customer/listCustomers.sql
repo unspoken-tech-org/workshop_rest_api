@@ -14,7 +14,7 @@ FROM
     customers c
 WHERE
     (:CUSTOMER_ID IS NULL OR c.id = :CUSTOMER_ID) 
-    AND (:NAME IS NULL OR (:NAME != '' AND unaccent(c.name) ILIKE '%' || unaccent(:NAME) || '%')) 
+    AND (:NAME IS NULL OR (:NAME != '' AND LOWER(immutable_unaccent(c.name)) ILIKE '%' || LOWER(immutable_unaccent(:NAME)) || '%')) 
     AND (:CPF IS NULL OR (:CPF != '' AND c.cpf = :CPF))
     AND (
       :PHONE IS NULL
