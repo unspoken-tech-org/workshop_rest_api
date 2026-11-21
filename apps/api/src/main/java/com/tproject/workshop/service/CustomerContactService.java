@@ -14,6 +14,8 @@ import com.tproject.workshop.repository.CustomerContactRepository;
 import com.tproject.workshop.utils.UtilsString;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
@@ -108,7 +110,8 @@ public class CustomerContactService {
     }
 
     private void validatePhoneIfNeeded(String contactType, String phoneNumber) {
-        if (contactTypesThatNeedPhone.contains(UtilsString.normalizeString(contactType))) {
+        String normalizedType = contactType == null ? "" : UtilsString.normalizeString(contactType);
+        if (contactTypesThatNeedPhone.contains(normalizedType)) {
             if (phoneNumber == null || phoneNumber.isEmpty()) {
                 String joinedNeededContactTypes = String.join(", ", contactTypesThatNeedPhone);
                 throw new BadRequestException(
@@ -128,15 +131,32 @@ public class CustomerContactService {
         contact.setConversation(dto.message());
         contact.setType(dto.contactType());
         contact.setPhone(dto.phoneNumber());
-        try {
-            contact.setLastContact(Timestamp.valueOf(LocalDateTime.parse(dto.contactDate())));
-        } catch (DateTimeParseException e) {
-            throw new BadRequestException(
-                    String.format(
-                            "Formato de data inválido: '%s'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)",
-                            dto.contactDate()));
-        }
+        contact.setLastContact(parseContactDate(dto.contactDate()));
         contact.setDeviceStatus(status);
+    }
+
+    private static Timestamp parseContactDate(String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            throw new BadRequestException(
+                    "Formato de data inválido: '%s'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)",
+                    rawDate);
+        }
+        try {
+            return Timestamp.valueOf(LocalDateTime.parse(rawDate));
+        } catch (DateTimeParseException ignored) {
+            try {
+                LocalDateTime localDateTime =
+                        OffsetDateTime.parse(rawDate)
+                                .atZoneSameInstant(ZoneId.systemDefault())
+                                .toLocalDateTime();
+                return Timestamp.valueOf(localDateTime);
+            } catch (DateTimeParseException e) {
+                throw new BadRequestException(
+                        String.format(
+                                "Formato de data inválido: '%s'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)",
+                                rawDate));
+            }
+        }
     }
 
     private CustomerContactOutputDto toDto(CustomerContact model, String technicianName) {

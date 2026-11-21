@@ -7,7 +7,7 @@ left join models m on m.id = bmt.id_model
 left join "types" t on t.id  = bmt.id_type
 where
     (:DEVICE_ID IS NULL OR d.id = :DEVICE_ID)
-    AND (:CUSTOMER_NAME IS NULL OR (:CUSTOMER_NAME != '' AND LOWER(unaccent(c.name)) ilike CONCAT('%', LOWER(unaccent(:CUSTOMER_NAME)), '%')))
+    AND (:CUSTOMER_NAME IS NULL OR (:CUSTOMER_NAME != '' AND LOWER(immutable_unaccent(c.name)) ilike CONCAT('%', LOWER(immutable_unaccent(:CUSTOMER_NAME)), '%')))
         AND (:CUSTOMER_PHONE IS NULL 
         OR (:CUSTOMER_PHONE != '' 
             AND EXISTS(

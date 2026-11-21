@@ -14,6 +14,7 @@ import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.ApiKeyDeviceBoundException;
 import com.tproject.workshop.exception.BadRequestException;
+import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.InvalidApiKeyException;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.Platform;
@@ -175,5 +176,18 @@ class ApiKeyServiceTest {
                     assertThat(msg).doesNotContain("SECRET");
                     assertThat(msg).doesNotContain("7890");
                 });
+    }
+
+    @Test
+    void shouldThrowEntityAlreadyExistsWhenCreatingDuplicateActiveKey() {
+        when(apiKeyRepository.existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(
+                        "client-a", "user-1", Platform.MOBILE))
+                .thenReturn(true);
+
+        assertThatThrownBy(() ->
+                        apiKeyService.createApiKey(
+                                "client-a", "user-1", Platform.MOBILE, Role.SERVICE, "desc", null))
+                .isInstanceOf(EntityAlreadyExistsException.class);
+        verify(apiKeyRepository, never()).save(any());
     }
 }

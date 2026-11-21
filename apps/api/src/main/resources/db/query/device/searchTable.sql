@@ -36,8 +36,8 @@ where
     AND (:SEARCH_QUERY IS NULL OR :SEARCH_QUERY = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(CONCAT_WS(' ', unaccent(t.type), unaccent(b.brand), unaccent(m.model), unaccent(c.name)))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(CONCAT_WS(' ', immutable_unaccent(t.type), immutable_unaccent(b.brand), immutable_unaccent(m.model), immutable_unaccent(c.name)))
             )
             FROM unnest(string_to_array(:SEARCH_QUERY, ' ')) AS word
             WHERE word <> ''
@@ -48,10 +48,10 @@ ORDER BY
     CASE
         WHEN :SEARCH_QUERY IS NOT NULL AND :SEARCH_QUERY != ''
         AND (
-            LOWER(unaccent(t.type)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
-            OR LOWER(unaccent(b.brand)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
-            OR LOWER(unaccent(m.model)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
-            OR LOWER(unaccent(c.name)) LIKE LOWER(unaccent(:SEARCH_QUERY)) || '%'
+            LOWER(immutable_unaccent(t.type)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
+            OR LOWER(immutable_unaccent(b.brand)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
+            OR LOWER(immutable_unaccent(m.model)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
+            OR LOWER(immutable_unaccent(c.name)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
         )
         THEN 0
         ELSE 1
@@ -60,8 +60,8 @@ ORDER BY
     CASE
         WHEN :SEARCH_QUERY IS NOT NULL AND :SEARCH_QUERY != ''
         THEN word_similarity(
-                LOWER(unaccent(:SEARCH_QUERY)),
-                LOWER(CONCAT_WS(' ', unaccent(t.type), unaccent(b.brand), unaccent(m.model), unaccent(c.name)))
+                LOWER(immutable_unaccent(:SEARCH_QUERY)),
+                LOWER(CONCAT_WS(' ', immutable_unaccent(t.type), immutable_unaccent(b.brand), immutable_unaccent(m.model), immutable_unaccent(c.name)))
              )
     END DESC NULLS LAST,
     -- 2.1 Tiebreaker: preferir strings mais curtas

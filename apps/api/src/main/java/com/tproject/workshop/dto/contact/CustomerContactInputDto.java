@@ -3,6 +3,7 @@ package com.tproject.workshop.dto.contact;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.tproject.workshop.config.jackson.PhoneNumberDeserializer;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -14,6 +15,7 @@ public record CustomerContactInputDto(
                 @NotNull(message = "O ID do dispositivo é obrigatório")
                 Integer deviceId,
         @Schema(description = "Channel used to reach the customer", example = "WHATSAPP")
+                @NotBlank(message = "O tipo de contato é obrigatório")
                 String contactType,
         @Schema(description = "Technician responsible for the contact", example = "7")
                 @NotNull(message = "O ID do técnico é obrigatório")

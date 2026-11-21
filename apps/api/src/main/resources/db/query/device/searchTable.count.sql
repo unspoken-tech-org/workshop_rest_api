@@ -35,8 +35,8 @@ where
     AND (:SEARCH_QUERY IS NULL OR :SEARCH_QUERY = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(CONCAT_WS(' ', unaccent(t.type), unaccent(b.brand), unaccent(m.model), unaccent(c.name)))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(CONCAT_WS(' ', immutable_unaccent(t.type), immutable_unaccent(b.brand), immutable_unaccent(m.model), immutable_unaccent(c.name)))
             )
             FROM unnest(string_to_array(:SEARCH_QUERY, ' ')) AS word
             WHERE word <> ''

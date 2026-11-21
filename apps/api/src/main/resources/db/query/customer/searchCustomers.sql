@@ -27,8 +27,8 @@ WHERE
     AND (:SEARCH_NAME IS NULL OR :SEARCH_NAME = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(unaccent(c.name))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(immutable_unaccent(c.name))
             )
             FROM unnest(string_to_array(:SEARCH_NAME, ' ')) AS word
             WHERE word <> ''
@@ -37,8 +37,8 @@ WHERE
     AND (:SEARCH_EMAIL IS NULL OR :SEARCH_EMAIL = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(unaccent(c.email))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(immutable_unaccent(c.email))
             )
             FROM unnest(string_to_array(:SEARCH_EMAIL, ' ')) AS word
             WHERE word <> ''
@@ -47,15 +47,15 @@ WHERE
 ORDER BY
     CASE
         WHEN :SEARCH_NAME IS NOT NULL AND :SEARCH_NAME != ''
-        AND LOWER(unaccent(c.name)) LIKE LOWER(unaccent(:SEARCH_NAME)) || '%'
+        AND LOWER(immutable_unaccent(c.name)) LIKE LOWER(immutable_unaccent(:SEARCH_NAME)) || '%'
         THEN 0
         ELSE 1
     END,
     CASE
         WHEN :SEARCH_NAME IS NOT NULL AND :SEARCH_NAME != ''
         THEN word_similarity(
-            LOWER(unaccent(:SEARCH_NAME)),
-            LOWER(unaccent(c.name))
+            LOWER(immutable_unaccent(:SEARCH_NAME)),
+            LOWER(immutable_unaccent(c.name))
         )
     END DESC NULLS LAST,
     CASE
@@ -64,15 +64,15 @@ ORDER BY
     END ASC NULLS LAST,
     CASE
         WHEN :SEARCH_EMAIL IS NOT NULL AND :SEARCH_EMAIL != ''
-        AND LOWER(unaccent(c.email)) LIKE LOWER(unaccent(:SEARCH_EMAIL)) || '%'
+        AND LOWER(immutable_unaccent(c.email)) LIKE LOWER(immutable_unaccent(:SEARCH_EMAIL)) || '%'
         THEN 0
         ELSE 1
     END,
     CASE
         WHEN :SEARCH_EMAIL IS NOT NULL AND :SEARCH_EMAIL != ''
         THEN word_similarity(
-            LOWER(unaccent(:SEARCH_EMAIL)),
-            LOWER(unaccent(c.email))
+            LOWER(immutable_unaccent(:SEARCH_EMAIL)),
+            LOWER(immutable_unaccent(c.email))
         )
     END DESC NULLS LAST,
     CASE

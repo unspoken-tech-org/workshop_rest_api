@@ -29,6 +29,6 @@ public record DeviceInputDtoRecord(
                 BigDecimal budgetFee,
         @Schema(description = "Selected colors for the device", example = "[\"black\",\"blue\"]")
                 @NotEmpty(message = "A lista de cores é obrigatória")
-                List<String> colors,
+                List<@NotBlank(message = "A cor não pode ser vazia") String> colors,
         @Schema(description = "Marks if the device requires priority handling", example = "false")
                 boolean hasUrgency) {}

@@ -1,12 +1,14 @@
 package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
+import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Technician;
 import com.tproject.workshop.repository.TechnicianRepository;
+import com.tproject.workshop.utils.CatalogName;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,19 +36,18 @@ public class TechnicianService {
 
     @Transactional
     public Technician save(Technician technician) {
-        var technicianFound = technicianRepository.findByNameIgnoreCase(technician.getName());
-        if (technicianFound.isPresent()) {
-            return technicianFound.get();
+        if (technician == null || technician.getName() == null || technician.getName().isBlank()) {
+            throw new BadRequestException("O nome do técnico é obrigatório");
         }
-        var technicianName = technician.getName().toLowerCase();
-        technician.setName(technicianName);
-        try {
-            return technicianRepository.save(technician);
-        } catch (DataIntegrityViolationException e) {
-            return technicianRepository
-                    .findByNameIgnoreCase(technicianName)
-                    .orElseThrow(() -> new RuntimeException("Erro ao criar ou buscar técnico", e));
-        }
+        String number = Optional.ofNullable(technician.getNumber()).orElse("");
+        return CatalogName.findOrCreate(
+                technician.getName(),
+                technicianRepository::findByNameIgnoreCase,
+                normalized -> technicianRepository.insertIgnore(normalized, number),
+                null,
+                () ->
+                        new NotFoundException(
+                                "Erro ao criar ou buscar técnico: " + technician.getName()));
     }
 
     private TechnicianResponseDto toDto(Technician technician) {
