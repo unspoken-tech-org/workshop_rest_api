@@ -1,9 +1,6 @@
 package com.tproject.workshop.config;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.core.io.ClassPathResource;
-import org.yaml.snakeyaml.Yaml;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -15,8 +12,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.core.io.ClassPathResource;
+import org.yaml.snakeyaml.Yaml;
 
 /** Guards environment parity across Spring profiles, Compose files, and Postgres versions. */
 class EnvironmentParityConfigTest {
@@ -26,17 +25,24 @@ class EnvironmentParityConfigTest {
 
     @Test
     void shouldInheritDdlAutoValidateAcrossProfiles() {
-        assertThat(loadYamlProperties("application.yml").getProperty("spring.jpa.hibernate.ddl-auto"))
+        assertThat(
+                        loadYamlProperties("application.yml")
+                                .getProperty("spring.jpa.hibernate.ddl-auto"))
                 .isEqualTo("validate");
-        assertThat(loadYamlProperties("application-test.yml").getProperty("spring.jpa.hibernate.ddl-auto"))
+        assertThat(
+                        loadYamlProperties("application-test.yml")
+                                .getProperty("spring.jpa.hibernate.ddl-auto"))
                 .isEqualTo("validate");
 
-        for (String profileConfig : List.of(
-                "application-local.yml",
-                "application-qa.yml",
-                "application-production.yml",
-                "application-production-local.yml")) {
-            assertThat(loadYamlProperties(profileConfig).getProperty("spring.jpa.hibernate.ddl-auto"))
+        for (String profileConfig :
+                List.of(
+                        "application-local.yml",
+                        "application-qa.yml",
+                        "application-production.yml",
+                        "application-production-local.yml")) {
+            assertThat(
+                            loadYamlProperties(profileConfig)
+                                    .getProperty("spring.jpa.hibernate.ddl-auto"))
                     .as("ddl-auto override in %s", profileConfig)
                     .isNull();
         }
@@ -47,16 +53,19 @@ class EnvironmentParityConfigTest {
         String dockerfile = Files.readString(Path.of("docker", "Dockerfile"));
         assertThat(dockerfile).contains("ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]");
 
-        assertComposeServiceHasNoCommand(Path.of("compose", "production.yml"), "workshop_spring_app", "production");
-        assertComposeServiceHasNoCommand(Path.of("compose", "qa.yml"), "workshop_spring_app_qa", "qa");
+        assertComposeServiceHasNoCommand(
+                Path.of("compose", "production.yml"), "workshop_spring_app", "production");
+        assertComposeServiceHasNoCommand(
+                Path.of("compose", "qa.yml"), "workshop_spring_app_qa", "qa");
     }
 
     @Test
     void shouldAlignLocalAndTestPostgresImageWithProductionMinorVersion() throws IOException {
-        String baseLine = Files.readAllLines(Path.of("docker", "Dockerfile.pgbackrest")).stream()
-                .filter(line -> line.startsWith("FROM postgres:"))
-                .findFirst()
-                .orElseThrow();
+        String baseLine =
+                Files.readAllLines(Path.of("docker", "Dockerfile.pgbackrest")).stream()
+                        .filter(line -> line.startsWith("FROM postgres:"))
+                        .findFirst()
+                        .orElseThrow();
 
         Matcher matcher = PGBACKREST_BASE_IMAGE.matcher(baseLine);
         assertThat(matcher.matches()).as("Dockerfile.pgbackrest base image: %s", baseLine).isTrue();
