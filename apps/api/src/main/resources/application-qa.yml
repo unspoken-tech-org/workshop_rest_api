@@ -15,7 +15,6 @@ spring:
     generate-ddl: false
     hibernate:
       default_schema: public
-      ddl-auto: none
     properties:
       hibernate.temp.use_jdbc_metadata_defaults: false
       hibernate.default_schema: public
