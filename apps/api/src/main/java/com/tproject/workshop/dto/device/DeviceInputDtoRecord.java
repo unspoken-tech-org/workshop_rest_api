@@ -2,6 +2,8 @@ package com.tproject.workshop.dto.device;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -26,6 +28,12 @@ public record DeviceInputDtoRecord(
                         example = "Customer requests OEM parts only")
                 String observation,
         @Schema(description = "Budget fee charged at intake", example = "350.00")
+                @DecimalMin(value = "0.00", message = "O valor do orçamento não pode ser negativo")
+                @Digits(
+                        integer = 13,
+                        fraction = 2,
+                        message =
+                                "O valor do orçamento deve ter no máximo 13 dígitos inteiros e 2 decimais")
                 BigDecimal budgetFee,
         @Schema(description = "Selected colors for the device", example = "[\"black\",\"blue\"]")
                 @NotEmpty(message = "A lista de cores é obrigatória")

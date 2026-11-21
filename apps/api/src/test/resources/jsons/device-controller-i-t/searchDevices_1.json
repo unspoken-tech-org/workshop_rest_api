@@ -13,7 +13,7 @@
             "hasUrgency": true,
             "hasRevision": false,
             "entryDate": "2025-02-04T08:41:00.968173",
-            "departureDate": "2021-05-01T08:41:00.968173"
+            "departureDate": "2025-02-05T08:41:00.968173"
         },
         {
             "deviceId": 1,
@@ -42,7 +42,7 @@
             "hasUrgency": false,
             "hasRevision": true,
             "entryDate": "2023-01-07T14:41:00.968173",
-            "departureDate": "2023-01-06T14:41:00.968173"
+            "departureDate": "2023-01-08T14:41:00.968173"
         },
         {
             "deviceId": 12,
