@@ -1,5 +1,5 @@
 # Stage 1: Build da aplicação
-FROM eclipse-temurin:25.0.5_8-jdk-alpine-3.24@sha256:c7c3d0bdf7f2bbc5a05a6712ed334d198360105634ea9adf76fca94f381b1e3f AS builder
+FROM eclipse-temurin:25-jdk-alpine-3.21@sha256:7dae47ac826aec7b78376bdecebcd3c6b05d0f004f4ba9854f18a7c2dffbed1c AS builder
 WORKDIR /app
 
 # Este Dockerfile é usado com o contexto da raiz do monorepo
@@ -27,7 +27,7 @@ RUN ./gradlew :apps:api:bootJar --no-daemon -x test -PappVersion="${SERVICE_VERS
 
 # Stage 2: OpenTelemetry Java Agent, baixado do Maven Central com checksum fixado.
 # Usa wget/sha256sum do busybox para funcionar com o builder legado e com BuildKit.
-FROM eclipse-temurin:25.0.5_8-jre-alpine-3.24@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918 AS otel-agent
+FROM eclipse-temurin:25-jre-alpine-3.21@sha256:bf30e2e0d17471cf174fffeaa86fdb45c46810a11d1fda4f0ff86f5fb3577202 AS otel-agent
 RUN mkdir -p /otel && \
     wget -q -O /otel/opentelemetry-javaagent.jar \
         https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/2.32.0/opentelemetry-javaagent-2.32.0.jar && \
@@ -35,7 +35,7 @@ RUN mkdir -p /otel && \
     chmod 644 /otel/opentelemetry-javaagent.jar
 
 # Stage 3: Runtime seguro e enxuto
-FROM eclipse-temurin:25.0.5_8-jre-alpine-3.24@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918
+FROM eclipse-temurin:25-jre-alpine-3.21@sha256:bf30e2e0d17471cf174fffeaa86fdb45c46810a11d1fda4f0ff86f5fb3577202
 WORKDIR /app
 
 # Aplica patches de segurança do Alpine e adiciona tzdata/ca-certificates
