@@ -32,6 +32,7 @@ Read the matching file before the task (load it only then):
 ## Tests
 
 - All API tests: `./gradlew :apps:api:test :apps:api:integrationTests`
+- Format check and unit tests (all modules): `./gradlew check`
 - Integration tests are a separate task (`:apps:api:integrationTests`, tag
   `integration`), extend `AbstractIntegrationLiveTest`, and run the app on port
   `8081` with the `test` profile; the DB must be running.
@@ -55,8 +56,7 @@ Read the matching file before the task (load it only then):
   `apps/api/src/main/resources/db/query/`, not inline SQL.
 - Map every new exception that reaches a controller in `GlobalExceptionHandler`.
 - Prefer `Optional` over ternaries for null values when it reads better.
-- No formatter is configured: do not reformat or reorder imports in code you
-  are not otherwise changing.
+- Java formatting is enforced by Spotless (google-java-format AOSP): run `./gradlew spotlessApply` before committing and `./gradlew check` to verify.
 
 ## Database
 
