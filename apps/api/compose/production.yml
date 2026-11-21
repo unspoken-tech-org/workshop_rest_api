@@ -70,7 +70,6 @@ services:
       workshop.env: "production"
     restart: unless-stopped
     image: workshop_rest_api-workshop_spring_app:latest
-    command: [ "java", "-Dspring.profiles.active=production", "-jar", "app.jar" ]
     expose:
       - "8080"
     stop_grace_period: 60s

@@ -47,7 +47,6 @@ services:
       workshop.env: "qa"
     restart: unless-stopped
     image: workshop_rest_api_qa:${IMAGE_TAG:-latest}
-    command: [ "java", "-Dspring.profiles.active=qa", "-jar", "app.jar" ]
     expose:
       - "8080"
     stop_grace_period: 60s
