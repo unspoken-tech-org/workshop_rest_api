@@ -40,10 +40,10 @@ public class PaymentService {
                                                 "Aparelho com id %d não encontrado",
                                                 inputPayment.deviceId())));
 
-        if (!device.getDeviceStatus().allowsPayments()) {
+        if (!device.getDeviceStatus().allowsPayment(inputPayment.category())) {
             throw new BadRequestException(
-                    "Não é possível registrar pagamento para aparelho com status %s",
-                    device.getDeviceStatus().name());
+                    "Não é possível registrar pagamento da categoria %s para aparelho com status %s",
+                    inputPayment.category().getDbValue(), device.getDeviceStatus().name());
         }
 
         final var paymentDate =

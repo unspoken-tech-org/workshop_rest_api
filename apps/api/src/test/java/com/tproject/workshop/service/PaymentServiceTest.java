@@ -156,12 +156,28 @@ class PaymentServiceTest {
         assertThat(device.isBudgetFeeCollected()).isTrue();
     }
 
-    @ParameterizedTest
-    @EnumSource(
-            value = DeviceStatusEnum.class,
-            names = {"NOVO", "DESCARTADO"})
-    void create_shouldThrowBadRequest_whenDeviceStatusDisallowsPayments(DeviceStatusEnum status) {
-        device.setDeviceStatus(status);
+    @Test
+    void create_shouldAllowBudgetFeePayment_whenDeviceIsNovo() {
+        device.setDeviceStatus(DeviceStatusEnum.NOVO);
+
+        PaymentDeviceInputDto dto =
+                new PaymentDeviceInputDto(
+                        DEVICE_ID,
+                        PaymentMethodEnum.PIX,
+                        new BigDecimal("50.00"),
+                        PaymentCategoryEnum.TAXA_ORCAMENTO,
+                        LocalDate.now().atStartOfDay(),
+                        "Maria");
+
+        PaymentResponseDto result = paymentService.create(dto);
+
+        assertThat(result.category()).isEqualTo(PaymentCategoryEnum.TAXA_ORCAMENTO);
+        assertThat(device.isBudgetFeeCollected()).isTrue();
+    }
+
+    @Test
+    void create_shouldThrowBadRequest_whenServicosPaymentOnNovoDevice() {
+        device.setDeviceStatus(DeviceStatusEnum.NOVO);
 
         PaymentDeviceInputDto dto =
                 new PaymentDeviceInputDto(
@@ -169,6 +185,27 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("50.00"),
                         PaymentCategoryEnum.SERVICOS,
+                        LocalDate.now().atStartOfDay(),
+                        "João");
+
+        assertThatThrownBy(() -> paymentService.create(dto))
+                .isInstanceOf(BadRequestException.class);
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = PaymentCategoryEnum.class,
+            names = {"TAXA_ORCAMENTO", "SERVICOS"})
+    void create_shouldThrowBadRequest_whenDeviceIsDescartado(PaymentCategoryEnum category) {
+        device.setDeviceStatus(DeviceStatusEnum.DESCARTADO);
+
+        PaymentDeviceInputDto dto =
+                new PaymentDeviceInputDto(
+                        DEVICE_ID,
+                        PaymentMethodEnum.PIX,
+                        new BigDecimal("50.00"),
+                        category,
                         LocalDate.now().atStartOfDay(),
                         "João");
 

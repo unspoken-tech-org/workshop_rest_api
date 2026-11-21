@@ -35,6 +35,16 @@ public enum DeviceStatusEnum {
         return allowsPayments;
     }
 
+    public boolean allowsPayment(PaymentCategoryEnum category) {
+        if (this == DESCARTADO) {
+            return false;
+        }
+        if (this == NOVO) {
+            return category == PaymentCategoryEnum.TAXA_ORCAMENTO;
+        }
+        return true;
+    }
+
     public static DeviceStatusEnum fromString(String status) {
         if (status == null || status.isBlank()) {
             throw new BadRequestException("Não foi encontrado o status: " + status);
