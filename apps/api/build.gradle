@@ -74,7 +74,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.slf4j:slf4j-api:2.0.18'
+    implementation 'org.slf4j:slf4j-api:2.0.20'
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'commons-io:commons-io:2.22.0'
     implementation 'dev.mccue:guava-base:33.4.0'
