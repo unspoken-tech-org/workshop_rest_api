@@ -6,8 +6,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 
+@PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
 @Tag(name = "Colors", description = "Expose the available color palette for device customization")
 public interface ColorsController {
 

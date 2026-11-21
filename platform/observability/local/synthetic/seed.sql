@@ -5,6 +5,6 @@
 \set api_key `cat /run/secrets/synthetic_api_key`
 
 INSERT INTO api_keys (key_value, client_name, user_identifier, platform, role, description, active)
-VALUES (:'api_key', 'local-synthetic', 'synthetic-operator', 'SERVER', 'ADMIN',
+VALUES (encode(sha256(convert_to(:'api_key', 'UTF8')), 'hex'), 'local-synthetic', 'synthetic-operator', 'SERVER', 'ADMIN',
         'Chave sintética da stack local de observabilidade', true)
 ON CONFLICT (key_value) DO NOTHING;

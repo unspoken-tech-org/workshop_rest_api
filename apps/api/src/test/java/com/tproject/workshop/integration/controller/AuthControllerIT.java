@@ -1,7 +1,9 @@
 package com.tproject.workshop.integration.controller;
 
+import com.tproject.workshop.config.security.RsaKeyProperties;
 import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import com.tproject.workshop.integration.TestAuthHelper;
+import com.tproject.workshop.util.KeyGeneratorUtils;
 import io.jsonwebtoken.Jwts;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.security.KeyPair;
@@ -29,6 +32,9 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
 
     private static final String AUTH_PATH = "/api/auth";
     private static final String API_KEY_HEADER = "X-API-Key";
+
+    @Autowired
+    private RsaKeyProperties rsaKeyProperties;
 
     @BeforeEach
     void setUp() {
@@ -162,7 +168,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .extract()
                 .response();
 
-        super.validateResponseIgnoreAttributes("refresh_success", response, List.of("accessToken"));
+        super.validateResponseIgnoreAttributes("refresh_success", response, List.of("accessToken", "refreshToken"));
     }
 
     @Order(7)
@@ -356,5 +362,200 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .post(AUTH_PATH + "/token")
                 .then()
                 .statusCode(HttpStatus.SC_CONFLICT);
+    }
+
+    // ========== Security Hardening Tests (2.4) ==========
+
+    @Order(16)
+    @DisplayName("Rotate refresh token and revoke family on reuse")
+    @Test
+    public void shouldRotateRefreshTokenAndRevokeAllOnReuse() {
+        String initialRefreshToken = TestAuthHelper.getRefreshToken(SPEC, TestAuthHelper.MOBILE_API_KEY);
+
+        String rotatedRefreshToken = given().spec(SPEC)
+                .body(Map.of("refreshToken", initialRefreshToken))
+                .when()
+                .post(AUTH_PATH + "/refresh")
+                .then()
+                .statusCode(HttpStatus.SC_OK)
+                .extract()
+                .jsonPath()
+                .getString("refreshToken");
+
+        Assertions.assertNotNull(rotatedRefreshToken);
+        Assertions.assertNotEquals(initialRefreshToken, rotatedRefreshToken);
+
+        // Reusing the already-rotated token must fail with 401 and revoke the rotated token too
+        given().spec(SPEC)
+                .body(Map.of("refreshToken", initialRefreshToken))
+                .when()
+                .post(AUTH_PATH + "/refresh")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+
+        given().spec(SPEC)
+                .body(Map.of("refreshToken", rotatedRefreshToken))
+                .when()
+                .post(AUTH_PATH + "/refresh")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+    }
+
+    @Order(17)
+    @DisplayName("Reject refresh when backing API Key is expired")
+    @Test
+    public void shouldReturn401_whenRefreshingWithExpiredApiKey() {
+        String refreshToken = TestAuthHelper.getRefreshToken(SPEC, TestAuthHelper.SERVICE_API_KEY);
+
+        jdbcTemplate.update("UPDATE api_keys SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute' WHERE id = 7");
+
+        given().spec(SPEC)
+                .body(Map.of("refreshToken", refreshToken))
+                .when()
+                .post(AUTH_PATH + "/refresh")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+    }
+
+    @Order(18)
+    @DisplayName("Immediately reject access token when API Key is revoked, expired, or device-reset")
+    @Test
+    public void shouldReturn401Immediately_whenApiKeyRevokedOrExpiredOrReset() {
+        String serviceToken = TestAuthHelper.getAccessToken(SPEC, TestAuthHelper.SERVICE_API_KEY);
+
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + serviceToken)
+                .when()
+                .get("/v1/colors")
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+
+        // Revoke API Key 7 (SERVICE) -> access token must immediately fail with 401
+        given().spec(getAuthenticatedSpec())
+                .when()
+                .delete("/v1/admin/api-keys/7")
+                .then()
+                .statusCode(HttpStatus.SC_NO_CONTENT);
+
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + serviceToken)
+                .when()
+                .get("/v1/colors")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+
+        // Device reset on API Key 8 -> access token must immediately fail with 401
+        String secondAdminToken = TestAuthHelper.getAccessToken(SPEC, TestAuthHelper.MOBILE_API_KEY_SECOND_USER);
+        given().spec(getAuthenticatedSpec())
+                .when()
+                .post("/v1/admin/api-keys/8/reset-device")
+                .then()
+                .statusCode(HttpStatus.SC_NO_CONTENT);
+
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + secondAdminToken)
+                .when()
+                .get("/v1/colors")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+
+        // Expire API Key 1 -> access token must immediately fail with 401
+        String adminToken = TestAuthHelper.getAccessToken(SPEC, TestAuthHelper.MOBILE_API_KEY);
+        jdbcTemplate.update("UPDATE api_keys SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 minute' WHERE id = 1");
+
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("/v1/colors")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+    }
+
+    @Order(19)
+    @DisplayName("Enforce role-based authorization across business and admin endpoints")
+    @Test
+    public void shouldEnforceRoleAuthorizationAcrossControllers() {
+        // SERVICE role can access business endpoints used by Flutter
+        given().spec(getServiceAuthenticatedSpec())
+                .when()
+                .get("/v1/colors")
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+
+        // SERVICE role cannot access admin endpoints
+        given().spec(getServiceAuthenticatedSpec())
+                .when()
+                .get("/v1/admin/api-keys")
+                .then()
+                .statusCode(HttpStatus.SC_FORBIDDEN);
+
+        // A valid JWT bound to an active key but carrying an unauthorized role gets 403 on business endpoints
+        jdbcTemplate.update("UPDATE api_keys SET bound_device_id = ? WHERE id = 7", "guest-device");
+        Instant now = Instant.now();
+        String guestToken = Jwts.builder()
+                .header().type("JWT").and()
+                .subject("test_service_app")
+                .issuer("workshop-api")
+                .audience().add("workshop-api").and()
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(300)))
+                .id(UUID.randomUUID().toString())
+                .claim("apiKeyId", 7L)
+                .claim("boundDeviceId", "guest-device")
+                .claim("roles", List.of("ROLE_GUEST"))
+                .signWith(rsaKeyProperties.privateKey(), Jwts.SIG.RS256)
+                .compact();
+
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + guestToken)
+                .when()
+                .get("/v1/colors")
+                .then()
+                .statusCode(HttpStatus.SC_FORBIDDEN);
+    }
+
+    @Order(20)
+    @DisplayName("Store SHA-256 hashes in DB instead of plaintext API keys and refresh tokens")
+    @Test
+    public void shouldStoreSha256HashesInDatabase() {
+        Response createResponse = given().spec(getAuthenticatedSpec())
+                .body(Map.of(
+                        "clientName", "hash_check_client",
+                        "userIdentifier", "hash_user",
+                        "platform", "MOBILE",
+                        "description", "Hash verification"
+                ))
+                .when()
+                .post("/v1/admin/api-keys")
+                .then()
+                .statusCode(HttpStatus.SC_CREATED)
+                .extract()
+                .response();
+
+        Long createdId = createResponse.jsonPath().getLong("id");
+        String plaintextKey = createResponse.jsonPath().getString("keyValue");
+        Assertions.assertTrue(plaintextKey.startsWith("sk_mobile_"));
+
+        String storedKeyValue = jdbcTemplate.queryForObject(
+                "SELECT key_value FROM api_keys WHERE id = ?", String.class, createdId);
+        Assertions.assertEquals(KeyGeneratorUtils.sha256Hex(plaintextKey), storedKeyValue);
+        Assertions.assertNotEquals(plaintextKey, storedKeyValue);
+
+        String maskedKey = given().spec(getAuthenticatedSpec())
+                .when()
+                .get("/v1/admin/api-keys/" + createdId)
+                .then()
+                .statusCode(HttpStatus.SC_OK)
+                .extract()
+                .jsonPath()
+                .getString("maskedKeyValue");
+        Assertions.assertEquals("****", maskedKey);
+
+        String plaintextRefresh = TestAuthHelper.getRefreshToken(SPEC, plaintextKey);
+        String storedRefreshHash = jdbcTemplate.queryForObject(
+                "SELECT token FROM refresh_tokens WHERE api_key_id = ? AND revoked = false",
+                String.class, createdId);
+        Assertions.assertEquals(KeyGeneratorUtils.sha256Hex(plaintextRefresh), storedRefreshHash);
+        Assertions.assertNotEquals(plaintextRefresh, storedRefreshHash);
     }
 }

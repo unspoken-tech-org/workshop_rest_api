@@ -1,5 +1,7 @@
 package com.tproject.workshop.config.security;
 
+import com.tproject.workshop.model.ApiKey;
+import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.service.auth.JwtService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -17,8 +19,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -26,7 +30,8 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    
+    private final ApiKeyRepository apiKeyRepository;
+
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -48,6 +53,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             Claims claims = jwtService.validateAndGetClaims(token);
             String subject = claims.getSubject();
+
+            Number apiKeyIdClaim = claims.get("apiKeyId", Number.class);
+            if (apiKeyIdClaim == null) {
+                log.warn("JWT authentication failed: missing apiKeyId claim");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            Long apiKeyId = apiKeyIdClaim.longValue();
+            Optional<ApiKey> apiKeyOpt = apiKeyRepository.findById(apiKeyId);
+            if (apiKeyOpt.isEmpty()) {
+                log.warn("JWT authentication failed: API key not found (apiKeyId={})", apiKeyId);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            ApiKey apiKey = apiKeyOpt.get();
+            if (!apiKey.isActive()) {
+                log.warn("JWT authentication failed: API key inactive (apiKeyId={})", apiKeyId);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            if (apiKey.getExpiresAt() != null && !apiKey.getExpiresAt().isAfter(Instant.now())) {
+                log.warn("JWT authentication failed: API key expired (apiKeyId={})", apiKeyId);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            String tokenBoundDeviceId = claims.get("boundDeviceId", String.class);
+            if (apiKey.getBoundDeviceId() == null || !apiKey.getBoundDeviceId().equals(tokenBoundDeviceId)) {
+                log.warn("JWT authentication failed: API key device binding mismatch or reset (apiKeyId={})", apiKeyId);
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             // Extract roles from claims
             @SuppressWarnings("unchecked")

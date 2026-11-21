@@ -48,23 +48,23 @@ public class ApiKeyService {
         ApiKey key = findByKeyValue(apiKey);
 
         // Check expiration
-        if (key.getExpiresAt() != null && key.getExpiresAt().isBefore(Instant.now())) {
+        if (key.getExpiresAt() != null && !key.getExpiresAt().isAfter(Instant.now())) {
             log.warn("Expired API Key for client: {} ({})",
                     key.getClientName(), key.getPlatform());
             throw new InvalidApiKeyException("Expired API Key");
         }
 
         // Update last used timestamp
-        apiKeyRepository.updateLastUsedAt(apiKey, Instant.now());
+        apiKeyRepository.updateLastUsedAt(key.getKeyValue(), Instant.now());
 
         log.debug("API Key validated for client: {} (platform: {})",
                 key.getClientName(), key.getPlatform());
     }
 
     /**
-     * Finds an active API Key by its value.
+     * Finds an active API Key by its plaintext value (compared via SHA-256 hash).
      *
-     * @param apiKey the API key value
+     * @param apiKey the plaintext API key value
      * @return the ApiKey entity
      * @throws InvalidApiKeyException if not found or inactive
      */
@@ -73,9 +73,10 @@ public class ApiKeyService {
         if (apiKey == null || apiKey.isBlank()) {
             throw new InvalidApiKeyException("API Key is required");
         }
-        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
+        String hashedKey = KeyGeneratorUtils.sha256Hex(apiKey);
+        return apiKeyRepository.findByKeyValueAndActiveTrue(hashedKey)
                 .orElseThrow(() -> {
-                    log.warn("Invalid or inactive API Key: {}", maskApiKey(apiKey));
+                    log.warn("Invalid or inactive API Key");
                     return new InvalidApiKeyException("Invalid API Key");
                 });
     }
@@ -126,60 +127,6 @@ public class ApiKeyService {
     }
 
     /**
-     * Returns the client identifier based on the API Key.
-     *
-     * @param apiKey the API key
-     * @return the client name associated with the key
-     */
-
-    @Transactional(readOnly = true)
-    public String getClientId(String apiKey) {
-        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
-                .map(ApiKey::getClientName)
-                .orElse("unknown_" + apiKey.substring(0, Math.min(8, apiKey.length())));
-    }
-
-    /**
-     * Returns the user identifier based on the API Key.
-     *
-     * @param apiKey the API key
-     * @return the user identifier associated with the key
-     */
-    @Transactional(readOnly = true)
-    public String getUserIdentifier(String apiKey) {
-        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
-                .map(ApiKey::getUserIdentifier)
-                .orElse("unknown");
-    }
-
-    /**
-     * Returns the platform associated with the API Key.
-     *
-     * @param apiKey the API key
-     * @return the platform or null if not found
-     */
-    @Transactional(readOnly = true)
-    public Platform getPlatform(String apiKey) {
-        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
-                .map(ApiKey::getPlatform)
-                .orElse(null);
-    }
-
-    /**
-     * Returns the role associated with the API Key.
-     *
-     * @param apiKey the API key
-     * @return the role
-     * @throws InvalidApiKeyException if key not found
-     */
-    @Transactional(readOnly = true)
-    public Role getRole(String apiKey) {
-        return apiKeyRepository.findByKeyValueAndActiveTrue(apiKey)
-                .map(ApiKey::getRole)
-                .orElseThrow(() -> new InvalidApiKeyException("Invalid API Key"));
-    }
-
-    /**
      * Creates a new API Key for a client on a specific platform.
      *
      * @param clientName     client name (Company)
@@ -201,8 +148,11 @@ public class ApiKeyService {
                     "An active API Key already exists for this client and user on this platform");
         }
 
+        String rawKey = KeyGeneratorUtils.generateSecureKey(platform);
+        String hashedKey = KeyGeneratorUtils.sha256Hex(rawKey);
+
         ApiKey apiKey = ApiKey.builder()
-                .keyValue(KeyGeneratorUtils.generateSecureKey(platform))
+                .keyValue(hashedKey)
                 .clientName(clientName)
                 .userIdentifier(userIdentifier)
                 .platform(platform)
@@ -220,7 +170,7 @@ public class ApiKeyService {
         log.info("API Key created for client: {}, user: {} (platform: {}, role: {})",
                 clientName, userIdentifier, platform, apiKey.getRole());
 
-        return ApiKeyCreatedResponse.fromEntity(savedKey);
+        return ApiKeyCreatedResponse.fromEntity(savedKey, rawKey);
     }
 
     /**
@@ -277,10 +227,5 @@ public class ApiKeyService {
         return apiKeyRepository.findById(id)
                 .map(ApiKeyResponse::fromEntity)
                 .orElseThrow(() -> new NotFoundException("API Key not found with id: " + id));
-    }
-
-    private String maskApiKey(String apiKey) {
-        if (apiKey.length() <= 8) return "****";
-        return apiKey.substring(0, 4) + "****" + apiKey.substring(apiKey.length() - 4);
     }
 }
