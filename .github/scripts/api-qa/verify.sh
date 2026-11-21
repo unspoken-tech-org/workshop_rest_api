@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -Eeuo pipefail
 cd "${DEPLOY_DIR}"
 
 # Counts ERROR records per logger name. Messages are never printed: they can carry data.

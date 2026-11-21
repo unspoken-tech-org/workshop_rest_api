@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -Eeuo pipefail
 cd "${DEPLOY_DIR}"
 
 # R2: every gateway container must exist, run and report healthy. A container

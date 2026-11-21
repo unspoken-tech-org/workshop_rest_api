@@ -36,6 +36,10 @@ java {
     sourceCompatibility = '25'
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor

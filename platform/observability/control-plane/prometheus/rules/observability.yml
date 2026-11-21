@@ -929,6 +929,46 @@ groups:
           description: "O pgbackrest info da última execução registrou o código {{ $value }} na stanza workshop. Rode pgbackrest info e check no container workshop-db."
           runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
 
+      - alert: WorkshopBackupFailed
+        expr: workshop_pgbackrest_last_backup_exit_code{job="workshop/node-exporter"} != 0
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+          service: backup
+          environment: production
+        annotations:
+          summary: "Falha na última execução de backup do pgBackRest de PRD"
+          description: "O último backup do pgBackRest (full ou diff) terminou com exit code {{ $value }}. Confira o Healthchecks e o journal (tag workshop-backup) no host de PRD."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+
+      - alert: WorkshopBackupExpireFailed
+        expr: workshop_pgbackrest_expire_last_exit_code{job="workshop/node-exporter"} != 0
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+          service: backup
+          environment: production
+        annotations:
+          summary: "Falha no expire de retenção do pgBackRest de PRD"
+          description: "O comando pgbackrest expire diário terminou com exit code {{ $value }}. Confira o journal (tag workshop-backup) no host de PRD."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+
+      # Diário (04:00): 24 horas mais 2 horas de folga.
+      - alert: WorkshopBackupExpireStale
+        expr: time() - workshop_pgbackrest_expire_last_success_timestamp_seconds{job="workshop/node-exporter"} > 26 * 3600
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+          service: backup
+          environment: production
+        annotations:
+          summary: "Expire de retenção do pgBackRest de PRD atrasado"
+          description: "O último pgbackrest expire bem-sucedido ocorreu há {{ $value | humanizeDuration }}. Confira o cron e o journal (tag workshop-backup) no host de PRD."
+          runbook_url: "https://github.com/unspoken-tech-org/workshop_rest_api/blob/main/platform/observability/runbooks/falha-backup.md"
+
   # Alloy da QA e da borda de PRD (job workshop/alloy), por OTLP pelo Collector de
   # cada ambiente, que carimba deployment_environment_name. Erro permanente de envio
   # cai no OTelCollectorExportFailures (mesmos nomes de métrica, sem filtro de job).

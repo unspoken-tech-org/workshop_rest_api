@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -Eeuo pipefail
 cd "${DEPLOY_DIR}"
 
 # Cleanup secrets/credentials on exit (success or failure)

@@ -3,7 +3,7 @@
 # Audita todos os SHAs de actions em um workflow do GitHub Actions
 # Uso: ./scripts/audit-action-shas.sh [.github/workflows/deploy.yml]
 
-set -euo pipefail
+set -Eeuo pipefail
 
 WORKFLOW="${1:-.github/workflows/deploy.yml}"
 

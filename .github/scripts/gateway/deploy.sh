@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 cd "${DEPLOY_DIR}"
 
 # Cleanup secrets/credentials on exit (success or failure)
@@ -43,9 +43,7 @@ PREVIOUS_OVERRIDE="${OVERRIDE_FILE}.previous"
 
 # Backup the CURRENT image before pulling the new one
 # (rollback.sh restores :backup, ensuring a safe fallback)
-OLD_DIGEST=""
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
-  OLD_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${LOCAL_IMAGE_NAME}:latest" 2>/dev/null || echo "")
   docker tag "${LOCAL_IMAGE_NAME}:latest" "${LOCAL_IMAGE_NAME}:backup"
   echo "Backup created: ${LOCAL_IMAGE_NAME}:backup"
 else

@@ -8,6 +8,7 @@ WORKDIR /app
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle/ gradle/
 COPY apps/api/build.gradle apps/api/build.gradle
+COPY apps/api/gradle.lockfile apps/api/gradle.lockfile
 COPY apps/security/build.gradle apps/security/build.gradle
 
 # Garante permissão de execução no wrapper e pré-baixa dependências
@@ -37,8 +38,9 @@ RUN mkdir -p /otel && \
 FROM eclipse-temurin:25.0.5_8-jre-alpine-3.24@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918
 WORKDIR /app
 
-# Adiciona tzdata para suporte correto a fuso horário e ca-certificates
-RUN apk --no-cache add tzdata ca-certificates
+# Aplica patches de segurança do Alpine e adiciona tzdata/ca-certificates
+RUN apk --no-cache upgrade && \
+    apk --no-cache add tzdata ca-certificates
 
 # Cria usuário e grupo não-privilegiados para execução da aplicação
 RUN addgroup -g 1001 -S appgroup && \

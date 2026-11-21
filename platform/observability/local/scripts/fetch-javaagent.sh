@@ -5,7 +5,7 @@
 #
 # Uso, na raiz de workshop_rest_api:
 #   platform/observability/local/scripts/fetch-javaagent.sh
-set -euo pipefail
+set -Eeuo pipefail
 
 AGENT_DIR="${AGENT_DIR:-platform/observability/local/.javaagent}"
 AGENT_VERSION="2.32.0"

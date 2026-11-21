@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -Eeuo pipefail
 
 echo ">>> Pruning dangling images..."
 timeout 60 docker image prune -f

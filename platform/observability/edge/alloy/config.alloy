@@ -67,6 +67,41 @@ loki.source.docker "containers" {
 	forward_to = [loki.process.production.receiver]
 }
 
+// Logs dos scripts do host (cron/pgBackRest com logger -t workshop-backup).
+// Lê /var/log/journal em somente leitura e mantém apenas o identificador
+// esperado para evitar alta cardinalidade no Loki.
+loki.relabel "journal" {
+	forward_to = []
+
+	rule {
+		source_labels = ["__journal_syslog_identifier"]
+		target_label  = "syslog_identifier"
+	}
+
+	rule {
+		source_labels = ["syslog_identifier"]
+		regex         = "workshop-backup"
+		action        = "keep"
+	}
+
+	rule {
+		target_label = "service_name"
+		replacement  = "workshop-backup"
+	}
+
+	rule {
+		target_label = "log_source"
+		replacement  = "journald"
+	}
+}
+
+loki.source.journal "host_scripts" {
+	path          = "/var/log/journal"
+	max_age       = "12h"
+	relabel_rules = loki.relabel.journal.rules
+	forward_to    = [loki.process.production.receiver]
+}
+
 loki.process "production" {
 	// Ruído do Caddy (Fase 4, leitura de 19/10/2026 na PRD): o healthcheck do
 	// container consulta o admin a cada 30 s, e as sondas de /actuator/* somavam
@@ -115,10 +150,12 @@ otelcol.processor.transform "resource" {
 		statements = [
 			`set(resource.attributes["service.name"], attributes["service_name"]) where attributes["service_name"] != nil`,
 			`set(resource.attributes["container.name"], attributes["container_name"]) where attributes["container_name"] != nil`,
+			`set(resource.attributes["log.source"], attributes["log_source"]) where attributes["log_source"] != nil`,
+			`set(resource.attributes["log.source"], "docker") where resource.attributes["log.source"] == nil`,
 			`delete_key(attributes, "service_name")`,
 			`delete_key(attributes, "container_name")`,
+			`delete_key(attributes, "log_source")`,
 			`delete_key(attributes, "loki.attribute.labels")`,
-			`set(resource.attributes["log.source"], "docker")`,
 		]
 	}
 
