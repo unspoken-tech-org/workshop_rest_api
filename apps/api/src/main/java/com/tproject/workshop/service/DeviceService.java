@@ -37,17 +37,6 @@ public class DeviceService {
     private final TechnicianService technicianService;
     private final ObservabilityEventRecorder eventRecorder;
 
-    private static final List<DeviceStatusEnum> STATUS_THAT_RESET_URGENCY_REVISION =
-            List.of(
-                    DeviceStatusEnum.PRONTO,
-                    DeviceStatusEnum.APROVADO,
-                    DeviceStatusEnum.NAO_APROVADO,
-                    DeviceStatusEnum.ENTREGUE,
-                    DeviceStatusEnum.DESCARTADO);
-
-    private static final List<DeviceStatusEnum> STATUS_THAT_SET_DEPARTURE_DATE =
-            List.of(DeviceStatusEnum.ENTREGUE, DeviceStatusEnum.DESCARTADO);
-
     private Device fetchOrThrow(int deviceId) {
         return deviceRepository
                 .findById(deviceId)
@@ -61,15 +50,14 @@ public class DeviceService {
     }
 
     private void resetUrgencyAndRevisionIfNeeded(Device device, DeviceStatusEnum newStatus) {
-        if (STATUS_THAT_RESET_URGENCY_REVISION.contains(newStatus)) {
+        if (newStatus.resetsUrgencyAndRevision()) {
             device.setUrgency(false);
             device.setRevision(false);
         }
     }
 
     private void setDepartureDateIfDelivered(Device device, DeviceStatusEnum newStatus) {
-        if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)
-                && device.getDepartureDate() == null) {
+        if (newStatus.isClosed() && device.getDepartureDate() == null) {
             device.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
         }
     }
@@ -86,9 +74,7 @@ public class DeviceService {
 
     private void recordClosedIfNeeded(
             Device device, DeviceStatusEnum previous, DeviceStatusEnum current) {
-        if (previous == current
-                || (current != DeviceStatusEnum.ENTREGUE
-                        && current != DeviceStatusEnum.DESCARTADO)) {
+        if (previous == current || !current.isClosed()) {
             return;
         }
         Instant entry =
@@ -134,7 +120,7 @@ public class DeviceService {
 
     private void revertStatusIfNeeded(Device device, String origin) {
         DeviceStatusEnum current = device.getDeviceStatus();
-        if (current == DeviceStatusEnum.ENTREGUE || current == DeviceStatusEnum.DESCARTADO) {
+        if (current.isClosed()) {
             addHistory(
                     device,
                     DeviceHistoryFieldEnum.STATUS.getField(),
@@ -284,7 +270,7 @@ public class DeviceService {
             effectiveDepartureDate = device.departureDate();
         } else if (oldDevice.getDepartureDate() != null) {
             effectiveDepartureDate = oldDevice.getDepartureDate().toLocalDateTime();
-        } else if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+        } else if (newStatus.isClosed()) {
             effectiveDepartureDate = LocalDateTime.now();
         } else {
             effectiveDepartureDate = null;
@@ -305,8 +291,7 @@ public class DeviceService {
 
         if (device.departureDate() != null) {
             oldDevice.setDepartureDate(Timestamp.valueOf(device.departureDate()));
-        } else if (oldDevice.getDepartureDate() == null
-                && STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+        } else if (oldDevice.getDepartureDate() == null && newStatus.isClosed()) {
             oldDevice.setDepartureDate(Timestamp.valueOf(effectiveDepartureDate));
         }
 
