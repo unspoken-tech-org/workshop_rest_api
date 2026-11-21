@@ -3,6 +3,7 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.dto.device.*;
 import com.tproject.workshop.enums.DeviceHistoryFieldEnum;
 import com.tproject.workshop.enums.DeviceStatusEnum;
+import com.tproject.workshop.enums.PaymentCategoryEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.events.observability.TurnaroundBand;
@@ -12,6 +13,7 @@ import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
+import com.tproject.workshop.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DeviceService {
     private final DeviceRepository deviceRepository;
     private final CustomerRepository customerRepository;
+    private final PaymentRepository paymentRepository;
     private final ColorService colorService;
     private final TypesBrandsModelsService typeBrandModelService;
     private final TechnicianService technicianService;
@@ -240,10 +243,22 @@ public class DeviceService {
 
         recordStateHistory(oldDevice, newStatus, effectiveUrgency, effectiveRevision);
 
+        BigDecimal effectiveBudgetFee =
+                Optional.ofNullable(device.budgetFee()).orElse(BigDecimal.ZERO);
+        BigDecimal totalPaidFee =
+                Optional.ofNullable(
+                                paymentRepository.sumPaymentValueByDeviceIdAndCategory(
+                                        oldDevice.getId(),
+                                        PaymentCategoryEnum.TAXA_ORCAMENTO.getDbValue()))
+                        .orElse(BigDecimal.ZERO);
+
         oldDevice.setProblem(device.problem());
         oldDevice.setObservation(device.observation());
         oldDevice.setBudget(device.budget());
-        oldDevice.setBudgetFee(device.budgetFee());
+        oldDevice.setBudgetFee(effectiveBudgetFee);
+        oldDevice.setBudgetFeeCollected(
+                effectiveBudgetFee.compareTo(BigDecimal.ZERO) > 0
+                        && totalPaidFee.compareTo(effectiveBudgetFee) >= 0);
         oldDevice.setServiceValue(device.serviceValue());
         oldDevice.setUrgency(effectiveUrgency);
         oldDevice.setRevision(effectiveRevision);

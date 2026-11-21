@@ -3,6 +3,7 @@ package com.tproject.workshop.dto.device;
 import com.tproject.workshop.validation.ValidDeviceStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -30,10 +31,21 @@ public record DeviceUpdateInputDtoRecord(
         @Schema(description = "Optional budget notes", example = "Initial budget approved")
                 String budget,
         @Schema(description = "Budget fee charged at intake", example = "120.00")
+                @NotNull(message = "O valor do orçamento é obrigatório")
                 @DecimalMin(value = "0.00", message = "O valor do orçamento não pode ser negativo")
+                @Digits(
+                        integer = 13,
+                        fraction = 2,
+                        message =
+                                "O valor do orçamento deve ter no máximo 13 dígitos inteiros e 2 decimais")
                 BigDecimal budgetFee,
         @Schema(description = "Service cost estimate or charged amount", example = "220.00")
                 @DecimalMin(value = "0.00", message = "O valor do serviço não pode ser negativo")
+                @Digits(
+                        integer = 13,
+                        fraction = 2,
+                        message =
+                                "O valor do serviço deve ter no máximo 13 dígitos inteiros e 2 decimais")
                 BigDecimal serviceValue,
         @Schema(description = "Flags if the device is urgent", example = "true") boolean hasUrgency,
         @Schema(description = "Indicates if the device is under revision", example = "false")

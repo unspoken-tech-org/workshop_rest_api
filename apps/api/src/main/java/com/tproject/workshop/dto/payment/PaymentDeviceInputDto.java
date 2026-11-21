@@ -4,6 +4,7 @@ import com.tproject.workshop.enums.PaymentCategoryEnum;
 import com.tproject.workshop.enums.PaymentMethodEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -20,6 +21,11 @@ public record PaymentDeviceInputDto(
         @Schema(description = "Amount collected for this transaction", example = "150.00")
                 @NotNull(message = "Valor do pagamento não pode ser nulo")
                 @DecimalMin(value = "0.01", message = "Valor do pagamento deve ser maior que zero")
+                @Digits(
+                        integer = 13,
+                        fraction = 2,
+                        message =
+                                "Valor do pagamento deve ter no máximo 13 dígitos inteiros e 2 decimais")
                 BigDecimal value,
         @Schema(description = "Category of the payment", example = "servicos")
                 @NotNull(message = "Categoria do pagamento é obrigatória")

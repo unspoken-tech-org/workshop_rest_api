@@ -273,4 +273,36 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
                         "SELECT public.immutable_unaccent('Conceição JoãO')", String.class);
         assertThat(normalized).isEqualTo("Conceicao JoaO");
     }
+
+    @Test
+    @DisplayName("V16 should enforce payment and device CHECK constraints and NOT NULL columns")
+    void shouldEnforceV16PaymentAndDeviceConstraints() {
+        List<String> constraints =
+                jdbcTemplate.queryForList(
+                        "SELECT conname FROM pg_constraint WHERE contype = 'c'", String.class);
+
+        assertThat(constraints)
+                .contains(
+                        "chk_payments_payment_value_positive",
+                        "chk_payments_payment_type_valid",
+                        "chk_payments_category_valid",
+                        "chk_devices_budget_fee_non_negative",
+                        "chk_devices_service_value_non_negative",
+                        "chk_devices_status_valid",
+                        "chk_devices_departure_after_entry");
+
+        String budgetFeeNullable =
+                jdbcTemplate.queryForObject(
+                        "SELECT is_nullable FROM information_schema.columns "
+                                + "WHERE table_name = 'devices' AND column_name = 'budget_fee'",
+                        String.class);
+        String budgetFeeCollectedNullable =
+                jdbcTemplate.queryForObject(
+                        "SELECT is_nullable FROM information_schema.columns "
+                                + "WHERE table_name = 'devices' AND column_name = 'budget_fee_collected'",
+                        String.class);
+
+        assertThat(budgetFeeNullable).isEqualTo("NO");
+        assertThat(budgetFeeCollectedNullable).isEqualTo("NO");
+    }
 }

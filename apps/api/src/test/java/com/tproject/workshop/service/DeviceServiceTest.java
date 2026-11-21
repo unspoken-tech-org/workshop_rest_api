@@ -26,6 +26,7 @@ import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.DeviceHistory;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
+import com.tproject.workshop.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -50,6 +51,7 @@ class DeviceServiceTest {
 
     @Mock private DeviceRepository deviceRepository;
     @Mock private CustomerRepository customerRepository;
+    @Mock private PaymentRepository paymentRepository;
     @Mock private ColorService colorService;
     @Mock private TypesBrandsModelsService typeBrandModelService;
     @Mock private TechnicianService technicianService;
