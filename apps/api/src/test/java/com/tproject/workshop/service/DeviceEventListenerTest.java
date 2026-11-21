@@ -1,28 +1,25 @@
 package com.tproject.workshop.service;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.tproject.workshop.events.DeviceViewedEvent;
 import com.tproject.workshop.repository.DeviceRepository;
+import java.sql.Timestamp;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.sql.Timestamp;
-
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class DeviceEventListenerTest {
 
-    @Mock
-    private DeviceRepository deviceRepository;
+    @Mock private DeviceRepository deviceRepository;
 
-    @InjectMocks
-    private DeviceEventListener deviceEventListener;
+    @InjectMocks private DeviceEventListener deviceEventListener;
 
     @Test
     void shouldUpdateLastViewedAtWhenDeviceExists() {

@@ -6,13 +6,11 @@ import com.tproject.workshop.dto.brand.BrandSearchParam;
 import com.tproject.workshop.dto.brand.CreateBrandRequest;
 import com.tproject.workshop.service.BrandService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor

@@ -11,4 +11,4 @@ public class DeviceViewedEvent extends ApplicationEvent {
         super(source);
         this.deviceId = deviceId;
     }
-} 
+}

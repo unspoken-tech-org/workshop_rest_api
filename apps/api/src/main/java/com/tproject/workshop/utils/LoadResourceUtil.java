@@ -1,16 +1,15 @@
 package com.tproject.workshop.utils;
 
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.util.FileCopyUtils;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.util.FileCopyUtils;
 
 public final class LoadResourceUtil {
 
@@ -18,13 +17,14 @@ public final class LoadResourceUtil {
 
     private static final ResourceLoader LOADER = new DefaultResourceLoader();
 
-    private LoadResourceUtil() {
-    }
+    private LoadResourceUtil() {}
 
     public static String getResource(String resourcePath) {
         synchronized (LoadResourceUtil.class) {
             if (!CACHE.containsKey(resourcePath)) {
-                try (var rd = new InputStreamReader(LOADER.getResource(resourcePath).getInputStream(), UTF_8)) {
+                try (var rd =
+                        new InputStreamReader(
+                                LOADER.getResource(resourcePath).getInputStream(), UTF_8)) {
                     CACHE.put(resourcePath, FileCopyUtils.copyToString(rd));
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);

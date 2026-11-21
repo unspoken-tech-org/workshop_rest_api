@@ -3,13 +3,12 @@ package com.tproject.workshop.model;
 import com.tproject.workshop.enums.PaymentCategoryEnum;
 import com.tproject.workshop.enums.PaymentMethodEnum;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import java.math.BigDecimal;
-import java.sql.Timestamp;
 
 @Data
 @NoArgsConstructor

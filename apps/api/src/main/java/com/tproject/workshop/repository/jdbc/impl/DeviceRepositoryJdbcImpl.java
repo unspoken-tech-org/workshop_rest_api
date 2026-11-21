@@ -10,6 +10,12 @@ import com.tproject.workshop.repository.jdbc.DeviceRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
 import com.tproject.workshop.utils.UtilsString;
 import com.tproject.workshop.utils.mapper.JsonResultSetMapper;
+import java.sql.Array;
+import java.sql.Types;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.simpleflatmapper.jdbc.spring.JdbcTemplateMapperFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -21,17 +27,9 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Array;
-import java.sql.Types;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
 @Repository
 @RequiredArgsConstructor
 public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
-
 
     public static final String DEVICE_ID = "DEVICE_ID";
     public static final String CUSTOMER_PHONE = "CUSTOMER_PHONE";
@@ -55,30 +53,47 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
 
     @Override
     public Page<DeviceTableDto> listTable(DeviceQueryParam deviceParams) {
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue(DEVICE_ID, deviceParams.getDeviceId(), Types.INTEGER)
-                .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
-                .addValue(CUSTOMER_PHONE, deviceParams.getCustomerPhone(), Types.VARCHAR)
-                .addValue(CUSTOMER_CPF, UtilsString.onlyDigits(deviceParams.getCustomerCpf()), Types.VARCHAR)
-                .addValue(DEVICE_TYPES, UtilsSql.toLiteralArray(deviceParams.getDeviceTypes()))
-                .addValue(DEVICE_BRANDS, UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
-                .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))
-                .addValue(INITIAL_ENTRY_DATE, deviceParams.getInitialEntryDate(), Types.VARCHAR)
-                .addValue(FINAL_ENTRY_DATE, deviceParams.getFinalEntryDate(), Types.VARCHAR)
-                .addValue(HAS_URGENCY, deviceParams.getUrgency(), Types.BOOLEAN)
-                .addValue(HAS_REVISION, deviceParams.getRevision(), Types.BOOLEAN)
-                .addValue(ORDER_BY_FIELD, deviceParams.getOrdenation().orderByField(), Types.VARCHAR)
-                .addValue(ORDER_BY_DIRECTION, deviceParams.getOrdenation().orderByDirection().toString(), Types.VARCHAR)
-                .addValue(PAGE_SIZE, deviceParams.getSize())
-                .addValue(OFFSET, deviceParams.getPage() * deviceParams.getSize());
+        MapSqlParameterSource params =
+                new MapSqlParameterSource()
+                        .addValue(DEVICE_ID, deviceParams.getDeviceId(), Types.INTEGER)
+                        .addValue(CUSTOMER_NAME, deviceParams.getCustomerName(), Types.VARCHAR)
+                        .addValue(CUSTOMER_PHONE, deviceParams.getCustomerPhone(), Types.VARCHAR)
+                        .addValue(
+                                CUSTOMER_CPF,
+                                UtilsString.onlyDigits(deviceParams.getCustomerCpf()),
+                                Types.VARCHAR)
+                        .addValue(
+                                DEVICE_TYPES,
+                                UtilsSql.toLiteralArray(deviceParams.getDeviceTypes()))
+                        .addValue(
+                                DEVICE_BRANDS,
+                                UtilsSql.toLiteralArray(deviceParams.getDeviceBrands()))
+                        .addValue(STATUS, UtilsSql.toLiteralArray(deviceParams.getStatus()))
+                        .addValue(
+                                INITIAL_ENTRY_DATE,
+                                deviceParams.getInitialEntryDate(),
+                                Types.VARCHAR)
+                        .addValue(FINAL_ENTRY_DATE, deviceParams.getFinalEntryDate(), Types.VARCHAR)
+                        .addValue(HAS_URGENCY, deviceParams.getUrgency(), Types.BOOLEAN)
+                        .addValue(HAS_REVISION, deviceParams.getRevision(), Types.BOOLEAN)
+                        .addValue(
+                                ORDER_BY_FIELD,
+                                deviceParams.getOrdenation().orderByField(),
+                                Types.VARCHAR)
+                        .addValue(
+                                ORDER_BY_DIRECTION,
+                                deviceParams.getOrdenation().orderByDirection().toString(),
+                                Types.VARCHAR)
+                        .addValue(PAGE_SIZE, deviceParams.getSize())
+                        .addValue(OFFSET, deviceParams.getPage() * deviceParams.getSize());
 
-        List<DeviceTableDto> devices = jdbcTemplate
-                .query(
+        List<DeviceTableDto> devices =
+                jdbcTemplate.query(
                         UtilsSql.getQuery("device/listTable"),
                         params,
-                        JdbcTemplateMapperFactory
-                                .newInstance()
-                                .addKeys(DeviceTableDto.Fields.deviceId.name(),
+                        JdbcTemplateMapperFactory.newInstance()
+                                .addKeys(
+                                        DeviceTableDto.Fields.deviceId.name(),
                                         DeviceTableDto.Fields.customerId.name(),
                                         DeviceTableDto.Fields.type.name(),
                                         DeviceTableDto.Fields.brand.name(),
@@ -90,73 +105,83 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
                                         DeviceTableDto.Fields.observation.name(),
                                         DeviceTableDto.Fields.problem.name(),
                                         DeviceTableDto.Fields.hasUrgency.name(),
-                                        DeviceTableDto.Fields.hasRevision.name()
-                                )
-                                .newResultSetExtractor(DeviceTableDto.class)
-                );
+                                        DeviceTableDto.Fields.hasRevision.name())
+                                .newResultSetExtractor(DeviceTableDto.class));
 
-        Long total = jdbcTemplate.queryForObject(UtilsSql.getQuery("device/listTable.count"), params, Long.class);
+        Long total =
+                jdbcTemplate.queryForObject(
+                        UtilsSql.getQuery("device/listTable.count"), params, Long.class);
 
-        return new PageImpl<>(devices, PageRequest.of(deviceParams.getPage(), deviceParams.getSize()), total != null ? total : 0);
-    }
-
-    @Override
-    public Page<DeviceTableDto> searchTable(DeviceSearchParam params) {
-        MapSqlParameterSource sqlParams = new MapSqlParameterSource()
-                .addValue(SEARCH_QUERY, params.searchQuery(), Types.VARCHAR)
-                .addValue(DEVICE_ID, params.deviceId(), Types.INTEGER)
-                .addValue(CUSTOMER_PHONE, params.customerPhone(), Types.VARCHAR)
-                .addValue(CUSTOMER_CPF, UtilsString.onlyDigits(params.customerCpf()), Types.VARCHAR)
-                .addValue(STATUS, UtilsSql.toLiteralArray(params.status()))
-                .addValue(INITIAL_ENTRY_DATE, params.initialEntryDate(), Types.VARCHAR)
-                .addValue(FINAL_ENTRY_DATE, params.finalEntryDate(), Types.VARCHAR)
-                .addValue(HAS_URGENCY, params.urgency(), Types.BOOLEAN)
-                .addValue(HAS_REVISION, params.revision(), Types.BOOLEAN)
-                .addValue(ORDER_BY_FIELD, params.ordenation().orderByField(), Types.VARCHAR)
-                .addValue(ORDER_BY_DIRECTION, params.ordenation().orderByDirection().toString(), Types.VARCHAR)
-                .addValue(PAGE_SIZE, params.size())
-                .addValue(OFFSET, params.page() * params.size());
-
-        List<DeviceTableDto> devices = jdbcTemplate.query(
-                UtilsSql.getQuery("device/searchTable"), sqlParams,
-                JdbcTemplateMapperFactory
-                        .newInstance()
-                        .addKeys(DeviceTableDto.Fields.deviceId.name(),
-                                DeviceTableDto.Fields.customerId.name(),
-                                DeviceTableDto.Fields.type.name(),
-                                DeviceTableDto.Fields.brand.name(),
-                                DeviceTableDto.Fields.model.name(),
-                                DeviceTableDto.Fields.customerName.name(),
-                                DeviceTableDto.Fields.entryDate.name(),
-                                DeviceTableDto.Fields.departureDate.name(),
-                                DeviceTableDto.Fields.status.name(),
-                                DeviceTableDto.Fields.observation.name(),
-                                DeviceTableDto.Fields.problem.name(),
-                                DeviceTableDto.Fields.hasUrgency.name(),
-                                DeviceTableDto.Fields.hasRevision.name()
-                        )
-                        .newResultSetExtractor(DeviceTableDto.class)
-        );
-
-        Long total = jdbcTemplate.queryForObject(
-                UtilsSql.getQuery("device/searchTable.count"), sqlParams, Long.class);
-
-        return new PageImpl<>(devices,
-                PageRequest.of(params.page(), params.size()),
+        return new PageImpl<>(
+                devices,
+                PageRequest.of(deviceParams.getPage(), deviceParams.getSize()),
                 total != null ? total : 0);
     }
 
     @Override
+    public Page<DeviceTableDto> searchTable(DeviceSearchParam params) {
+        MapSqlParameterSource sqlParams =
+                new MapSqlParameterSource()
+                        .addValue(SEARCH_QUERY, params.searchQuery(), Types.VARCHAR)
+                        .addValue(DEVICE_ID, params.deviceId(), Types.INTEGER)
+                        .addValue(CUSTOMER_PHONE, params.customerPhone(), Types.VARCHAR)
+                        .addValue(
+                                CUSTOMER_CPF,
+                                UtilsString.onlyDigits(params.customerCpf()),
+                                Types.VARCHAR)
+                        .addValue(STATUS, UtilsSql.toLiteralArray(params.status()))
+                        .addValue(INITIAL_ENTRY_DATE, params.initialEntryDate(), Types.VARCHAR)
+                        .addValue(FINAL_ENTRY_DATE, params.finalEntryDate(), Types.VARCHAR)
+                        .addValue(HAS_URGENCY, params.urgency(), Types.BOOLEAN)
+                        .addValue(HAS_REVISION, params.revision(), Types.BOOLEAN)
+                        .addValue(ORDER_BY_FIELD, params.ordenation().orderByField(), Types.VARCHAR)
+                        .addValue(
+                                ORDER_BY_DIRECTION,
+                                params.ordenation().orderByDirection().toString(),
+                                Types.VARCHAR)
+                        .addValue(PAGE_SIZE, params.size())
+                        .addValue(OFFSET, params.page() * params.size());
+
+        List<DeviceTableDto> devices =
+                jdbcTemplate.query(
+                        UtilsSql.getQuery("device/searchTable"),
+                        sqlParams,
+                        JdbcTemplateMapperFactory.newInstance()
+                                .addKeys(
+                                        DeviceTableDto.Fields.deviceId.name(),
+                                        DeviceTableDto.Fields.customerId.name(),
+                                        DeviceTableDto.Fields.type.name(),
+                                        DeviceTableDto.Fields.brand.name(),
+                                        DeviceTableDto.Fields.model.name(),
+                                        DeviceTableDto.Fields.customerName.name(),
+                                        DeviceTableDto.Fields.entryDate.name(),
+                                        DeviceTableDto.Fields.departureDate.name(),
+                                        DeviceTableDto.Fields.status.name(),
+                                        DeviceTableDto.Fields.observation.name(),
+                                        DeviceTableDto.Fields.problem.name(),
+                                        DeviceTableDto.Fields.hasUrgency.name(),
+                                        DeviceTableDto.Fields.hasRevision.name())
+                                .newResultSetExtractor(DeviceTableDto.class));
+
+        Long total =
+                jdbcTemplate.queryForObject(
+                        UtilsSql.getQuery("device/searchTable.count"), sqlParams, Long.class);
+
+        return new PageImpl<>(
+                devices, PageRequest.of(params.page(), params.size()), total != null ? total : 0);
+    }
+
+    @Override
     public Optional<DeviceOutputDto> findByDeviceId(int deviceId) {
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue(DEVICE_ID, deviceId, Types.INTEGER);
+        MapSqlParameterSource params =
+                new MapSqlParameterSource().addValue(DEVICE_ID, deviceId, Types.INTEGER);
 
         try {
-            DeviceOutputDto device = jdbcTemplate.queryForObject(
-                    UtilsSql.getQuery("device/getDevice"),
-                    params,
-                    getDeviceOutputDtoMapper()
-            );
+            DeviceOutputDto device =
+                    jdbcTemplate.queryForObject(
+                            UtilsSql.getQuery("device/getDevice"),
+                            params,
+                            getDeviceOutputDtoMapper());
             return Optional.ofNullable(device);
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
@@ -185,39 +210,37 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setBudgetFee(rs.getBigDecimal("budget_fee"));
             dto.setServiceValue(rs.getBigDecimal("service_value"));
             dto.setDepartureDate(
-                    rs.getTimestamp("departure_date") != null ? rs.getTimestamp("departure_date").toLocalDateTime()
+                    rs.getTimestamp("departure_date") != null
+                            ? rs.getTimestamp("departure_date").toLocalDateTime()
                             : null);
             dto.setLastUpdate(
-                    rs.getTimestamp("last_update") != null ? rs.getTimestamp("last_update").toLocalDateTime()
+                    rs.getTimestamp("last_update") != null
+                            ? rs.getTimestamp("last_update").toLocalDateTime()
                             : null);
 
             Array colorsArray = rs.getArray("device_colors");
             dto.setDeviceColors(
-                    colorsArray != null ? Arrays.asList((String[]) colorsArray.getArray())
+                    colorsArray != null
+                            ? Arrays.asList((String[]) colorsArray.getArray())
                             : Collections.emptyList());
 
             dto.setCustomerContacts(
-                    JsonResultSetMapper.readJsonList(rs, "customer_contacts", new TypeReference<>() {
-                    }, objectMapper)
-            );
+                    JsonResultSetMapper.readJsonList(
+                            rs, "customer_contacts", new TypeReference<>() {}, objectMapper));
 
             dto.setCustomerPhones(
-                    JsonResultSetMapper.readJsonList(rs, "customer_phones", new TypeReference<>() {
-                    }, objectMapper)
-            );
+                    JsonResultSetMapper.readJsonList(
+                            rs, "customer_phones", new TypeReference<>() {}, objectMapper));
 
             dto.setOtherDevices(
-                    JsonResultSetMapper.readJsonList(rs, "other_devices", new TypeReference<>() {
-                    }, objectMapper)
-            );
+                    JsonResultSetMapper.readJsonList(
+                            rs, "other_devices", new TypeReference<>() {}, objectMapper));
 
             dto.setPayments(
-                    JsonResultSetMapper.readJsonList(rs, "payments", new TypeReference<>() {
-                    }, objectMapper)
-            );
+                    JsonResultSetMapper.readJsonList(
+                            rs, "payments", new TypeReference<>() {}, objectMapper));
 
             return dto;
         };
     }
-
 }

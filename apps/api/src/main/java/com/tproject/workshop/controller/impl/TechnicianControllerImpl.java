@@ -13,15 +13,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/technician")
 public class TechnicianControllerImpl implements TechnicianController {
 
-  private final TechnicianService technicianService;
+    private final TechnicianService technicianService;
 
-  @Override
-  public TechnicianResponseDto find(Integer id) {
-    return technicianService.findByIdDto(id);
-  }
+    @Override
+    public TechnicianResponseDto find(Integer id) {
+        return technicianService.findByIdDto(id);
+    }
 
-  @Override
-  public List<TechnicianResponseDto> list() {
-    return technicianService.findAll();
-  }
+    @Override
+    public List<TechnicianResponseDto> list() {
+        return technicianService.findAll();
+    }
 }

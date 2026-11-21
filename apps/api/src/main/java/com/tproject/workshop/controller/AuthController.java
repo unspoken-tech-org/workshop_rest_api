@@ -18,8 +18,9 @@ public interface AuthController {
 
     @Operation(
             summary = "Get tokens",
-            description = "Exchange a valid API Key for JWT access and refresh tokens. " +
-                    "The API Key must be sent in the X-API-Key header.")
+            description =
+                    "Exchange a valid API Key for JWT access and refresh tokens. "
+                            + "The API Key must be sent in the X-API-Key header.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Tokens generated successfully")
     @PostMapping("/token")

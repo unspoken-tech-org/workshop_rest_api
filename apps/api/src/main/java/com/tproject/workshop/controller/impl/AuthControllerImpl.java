@@ -22,8 +22,7 @@ public class AuthControllerImpl implements AuthController {
 
     @Override
     public TokenResponse getToken(
-            @RequestHeader("X-API-Key") String apiKey,
-            @Valid @RequestBody TokenRequest request) {
+            @RequestHeader("X-API-Key") String apiKey, @Valid @RequestBody TokenRequest request) {
         return authService.authenticate(apiKey, request);
     }
 

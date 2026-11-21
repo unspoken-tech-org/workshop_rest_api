@@ -1,7 +1,12 @@
 package com.tproject.workshop.integration.controller;
 
+import static io.restassured.RestAssured.given;
+
 import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import io.restassured.response.Response;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -9,14 +14,14 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-
-import static io.restassured.RestAssured.given;
-
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql(value = {"/test-scripts/cleanTestData.sql", "/test-scripts/AuthSetup.sql", "/test-scripts/PaymentControllerIT.script.sql", "/test-scripts/resetTablesSequence.sql"})
+@Sql(
+        value = {
+            "/test-scripts/cleanTestData.sql",
+            "/test-scripts/AuthSetup.sql",
+            "/test-scripts/PaymentControllerIT.script.sql",
+            "/test-scripts/resetTablesSequence.sql"
+        })
 public class PaymentControllerIT extends AbstractIntegrationLiveTest {
     private static final String BASE_PATH = "/v1/payment";
 
@@ -35,78 +40,108 @@ public class PaymentControllerIT extends AbstractIntegrationLiveTest {
     @DisplayName("Create payment")
     @MethodSource("createPaymentArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
-    public void createPayment(int index, Integer statusCode, Map<String, Object> arguments, String reason) {
-        Response response = given().spec(getAuthenticatedSpec())
-                .when()
-                .contentType("application/json")
-                .body(arguments)
-                .post(BASE_PATH)
-                .then()
-                .statusCode(statusCode)
-                .extract()
-                .response();
+    public void createPayment(
+            int index, Integer statusCode, Map<String, Object> arguments, String reason) {
+        Response response =
+                given().spec(getAuthenticatedSpec())
+                        .when()
+                        .contentType("application/json")
+                        .body(arguments)
+                        .post(BASE_PATH)
+                        .then()
+                        .statusCode(statusCode)
+                        .extract()
+                        .response();
 
-        super.validateResponseIgnoreAttributes(index, response, List.of("paymentId", "paymentDate", "createdAt"));
+        super.validateResponseIgnoreAttributes(
+                index, response, List.of("paymentId", "paymentDate", "createdAt"));
     }
 
     private static Stream<Arguments> createPaymentArguments() {
         return Stream.of(
-                Arguments.of(1, HttpStatus.SC_CREATED, Map.of(
-                        "deviceId", 1,
-                        "paymentType", "credito",
-                        "value", 150.00,
-                        "category", "servicos",
-                        "receivedBy", "João da Silva"
-                ), "create valid payment")
-                , Arguments.of(2, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "deviceId", 2,
-                        "paymentType", "invalid_type",
-                        "value", 150.00,
-                        "category", "servicos",
-                        "receivedBy", "João da Silva"
-                ), "create payment with invalid type")
-                , Arguments.of(3, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "deviceId", 1,
-                        "paymentType", "credito",
-                        "value", 0,
-                        "category", "servicos",
-                        "receivedBy", "João da Silva"
-                ), "create payment with value equals zero")
-                , Arguments.of(4, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "deviceId", 1,
-                        "value", 150,
-                        "category", "servicos",
-                        "receivedBy", "João da Silva"
-                ), "missing paymentType")
-                , Arguments.of(5, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "paymentType", "credito",
-                        "value", 150.00,
-                        "category", "servicos",
-                        "receivedBy", "João da Silva"
-                ), "missing deviceId")
-                , Arguments.of(6, HttpStatus.SC_CREATED, Map.of(
-                        "deviceId", 1,
-                        "paymentType", "credito",
-                        "value", 200.00,
-                        "category", "servicos",
-                        "paymentDate", "2026-06-01T00:00:00.000",
-                        "receivedBy", "Maria Souza"
-                ), "create payment with explicit paymentDate")
-                , Arguments.of(7, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "deviceId", 1,
-                        "paymentType", "credito",
-                        "value", 100.00,
-                        "category", "servicos",
-                        "paymentDate", "2099-01-01T00:00:00.000",
-                        "receivedBy", "João da Silva"
-                ), "create payment with future date")
-                , Arguments.of(8, HttpStatus.SC_NOT_FOUND, Map.of(
-                        "deviceId", 9999,
-                        "paymentType", "credito",
-                        "value", 100.00,
-                        "category", "servicos",
-                        "receivedBy", "João da Silva"
-                ), "create payment for non-existent device")
-        );
+                Arguments.of(
+                        1,
+                        HttpStatus.SC_CREATED,
+                        Map.of(
+                                "deviceId", 1,
+                                "paymentType", "credito",
+                                "value", 150.00,
+                                "category", "servicos",
+                                "receivedBy", "João da Silva"),
+                        "create valid payment"),
+                Arguments.of(
+                        2,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "deviceId", 2,
+                                "paymentType", "invalid_type",
+                                "value", 150.00,
+                                "category", "servicos",
+                                "receivedBy", "João da Silva"),
+                        "create payment with invalid type"),
+                Arguments.of(
+                        3,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "deviceId", 1,
+                                "paymentType", "credito",
+                                "value", 0,
+                                "category", "servicos",
+                                "receivedBy", "João da Silva"),
+                        "create payment with value equals zero"),
+                Arguments.of(
+                        4,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "deviceId",
+                                1,
+                                "value",
+                                150,
+                                "category",
+                                "servicos",
+                                "receivedBy",
+                                "João da Silva"),
+                        "missing paymentType"),
+                Arguments.of(
+                        5,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "paymentType", "credito",
+                                "value", 150.00,
+                                "category", "servicos",
+                                "receivedBy", "João da Silva"),
+                        "missing deviceId"),
+                Arguments.of(
+                        6,
+                        HttpStatus.SC_CREATED,
+                        Map.of(
+                                "deviceId", 1,
+                                "paymentType", "credito",
+                                "value", 200.00,
+                                "category", "servicos",
+                                "paymentDate", "2026-06-01T00:00:00.000",
+                                "receivedBy", "Maria Souza"),
+                        "create payment with explicit paymentDate"),
+                Arguments.of(
+                        7,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "deviceId", 1,
+                                "paymentType", "credito",
+                                "value", 100.00,
+                                "category", "servicos",
+                                "paymentDate", "2099-01-01T00:00:00.000",
+                                "receivedBy", "João da Silva"),
+                        "create payment with future date"),
+                Arguments.of(
+                        8,
+                        HttpStatus.SC_NOT_FOUND,
+                        Map.of(
+                                "deviceId", 9999,
+                                "paymentType", "credito",
+                                "value", 100.00,
+                                "category", "servicos",
+                                "receivedBy", "João da Silva"),
+                        "create payment for non-existent device"));
     }
 }

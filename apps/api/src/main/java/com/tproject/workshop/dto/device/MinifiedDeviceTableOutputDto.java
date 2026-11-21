@@ -8,13 +8,13 @@ import lombok.experimental.FieldNameConstants;
 @Data
 public class MinifiedDeviceTableOutputDto {
 
-  private int deviceId;
-  private int customerId;
-  private String typeBrandModel;
-  private String deviceStatus;
-  private String problem;
-  private boolean hasUrgency;
-  private boolean revision;
-  private LocalDateTime entryDate;
-  private LocalDateTime departureDate;
+    private int deviceId;
+    private int customerId;
+    private String typeBrandModel;
+    private String deviceStatus;
+    private String problem;
+    private boolean hasUrgency;
+    private boolean revision;
+    private LocalDateTime entryDate;
+    private LocalDateTime departureDate;
 }

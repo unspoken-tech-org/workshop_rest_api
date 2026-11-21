@@ -1,5 +1,11 @@
 package com.tproject.workshop.service.auth;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -15,6 +21,9 @@ import com.tproject.workshop.model.Role;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,49 +32,33 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class ApiKeyServiceTest {
 
-    @Mock
-    private ApiKeyRepository apiKeyRepository;
+    @Mock private ApiKeyRepository apiKeyRepository;
 
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
 
-    @Mock
-    private ObservabilityEventRecorder eventRecorder;
+    @Mock private ObservabilityEventRecorder eventRecorder;
 
-    @InjectMocks
-    private ApiKeyService apiKeyService;
+    @InjectMocks private ApiKeyService apiKeyService;
 
     @Test
     void shouldBindDeviceWhenUnbound() {
-        ApiKey apiKey = ApiKey.builder()
-                .id(1L)
-                .platform(Platform.MOBILE)
-                .boundDeviceId(null)
-                .build();
+        ApiKey apiKey =
+                ApiKey.builder().id(1L).platform(Platform.MOBILE).boundDeviceId(null).build();
 
-        when(apiKeyRepository.bindDevice(eq(1L), eq("device-a"), any(Instant.class)))
-                .thenReturn(1);
+        when(apiKeyRepository.bindDevice(eq(1L), eq("device-a"), any(Instant.class))).thenReturn(1);
 
         apiKeyService.bindDeviceOrThrow(apiKey, "device-a");
 
         ArgumentCaptor<Instant> instantCaptor = ArgumentCaptor.forClass(Instant.class);
         verify(apiKeyRepository).bindDevice(eq(1L), eq("device-a"), instantCaptor.capture());
         assertThat(instantCaptor.getValue()).isNotNull();
-        verify(eventRecorder).record(ObservabilityEventCatalog.API_KEY_DEVICE_BOUND,
-                Map.of("client.platform", "mobile"));
+        verify(eventRecorder)
+                .record(
+                        ObservabilityEventCatalog.API_KEY_DEVICE_BOUND,
+                        Map.of("client.platform", "mobile"));
         assertThat(apiKey.getBoundDeviceId()).isEqualTo("device-a");
         assertThat(apiKey.getBoundAt()).isNotNull();
     }
@@ -83,10 +76,7 @@ class ApiKeyServiceTest {
 
     @Test
     void shouldRejectWhenBoundToAnotherDevice() {
-        ApiKey apiKey = ApiKey.builder()
-                .id(1L)
-                .boundDeviceId("device-a")
-                .build();
+        ApiKey apiKey = ApiKey.builder().id(1L).boundDeviceId("device-a").build();
 
         assertThatThrownBy(() -> apiKeyService.bindDeviceOrThrow(apiKey, "device-b"))
                 .isInstanceOf(ApiKeyDeviceBoundException.class)
@@ -97,10 +87,7 @@ class ApiKeyServiceTest {
 
     @Test
     void shouldResetDeviceBindingAndRevokeTokens() {
-        ApiKey apiKey = ApiKey.builder()
-                .id(2L)
-                .boundDeviceId("device-x")
-                .build();
+        ApiKey apiKey = ApiKey.builder().id(2L).boundDeviceId("device-x").build();
 
         when(apiKeyRepository.findById(2L)).thenReturn(Optional.of(apiKey));
 
@@ -118,7 +105,8 @@ class ApiKeyServiceTest {
         apiKeyService.revokeApiKey(3L);
 
         verify(apiKeyRepository).deactivateById(3L);
-        verify(eventRecorder).record(ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "single"));
+        verify(eventRecorder)
+                .record(ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "single"));
     }
 
     @Test
@@ -129,22 +117,27 @@ class ApiKeyServiceTest {
         apiKeyService.revokeAllByClientName("client-a");
         apiKeyService.revokeAllByClientName("client-b");
 
-        verify(eventRecorder, times(1)).record(ObservabilityEventCatalog.API_KEY_REVOKED,
-                Map.of("scope", "all_by_client"));
+        verify(eventRecorder, times(1))
+                .record(
+                        ObservabilityEventCatalog.API_KEY_REVOKED,
+                        Map.of("scope", "all_by_client"));
     }
 
     @Test
     void shouldStoreSha256HashOnCreateAndReturnPlaintextOnce() {
         when(apiKeyRepository.existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(
-                "client-a", "user-1", Platform.MOBILE)).thenReturn(false);
-        when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(invocation -> {
-            ApiKey entity = invocation.getArgument(0);
-            entity.setId(99L);
-            return entity;
-        });
+                        "client-a", "user-1", Platform.MOBILE))
+                .thenReturn(false);
+        when(apiKeyRepository.save(any(ApiKey.class)))
+                .thenAnswer(invocation -> {
+                    ApiKey entity = invocation.getArgument(0);
+                    entity.setId(99L);
+                    return entity;
+                });
 
-        ApiKeyCreatedResponse response = apiKeyService.createApiKey(
-                "client-a", "user-1", Platform.MOBILE, Role.SERVICE, "desc", null);
+        ApiKeyCreatedResponse response =
+                apiKeyService.createApiKey(
+                        "client-a", "user-1", Platform.MOBILE, Role.SERVICE, "desc", null);
 
         ArgumentCaptor<ApiKey> savedCaptor = ArgumentCaptor.forClass(ApiKey.class);
         verify(apiKeyRepository).save(savedCaptor.capture());
@@ -159,7 +152,8 @@ class ApiKeyServiceTest {
     void shouldLookupBySha256HashAndNotLogKeyPrefixWhenInvalid() {
         String rawKey = "sk_mobile_SECRET_PREFIX_1234567890";
         String expectedHash = KeyGeneratorUtils.sha256Hex(rawKey);
-        when(apiKeyRepository.findByKeyValueAndActiveTrue(expectedHash)).thenReturn(Optional.empty());
+        when(apiKeyRepository.findByKeyValueAndActiveTrue(expectedHash))
+                .thenReturn(Optional.empty());
 
         Logger logger = (Logger) LoggerFactory.getLogger(ApiKeyService.class);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();

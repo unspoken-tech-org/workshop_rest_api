@@ -1,14 +1,13 @@
 package com.tproject.workshop.config;
 
 import com.tproject.workshop.exception.BadRequestException;
-import org.springframework.jdbc.core.StatementCreatorUtils;
-import org.springframework.jdbc.support.SqlValue;
-
 import java.sql.Array;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Locale;
+import org.springframework.jdbc.core.StatementCreatorUtils;
+import org.springframework.jdbc.support.SqlValue;
 
 /**
  * Allow to spring jdbc to convert array of any primitive type, plus String, to preparedStatements

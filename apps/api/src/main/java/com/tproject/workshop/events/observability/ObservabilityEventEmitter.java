@@ -1,21 +1,20 @@
 package com.tproject.workshop.events.observability;
 
+import static net.logstash.logback.argument.StructuredArguments.entries;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.TreeMap;
-
-import static net.logstash.logback.argument.StructuredArguments.entries;
-
 /**
- * Writes committed events as structured JSON logs; Alloy ships them to Loki
- * ({@code otel.logs.exporter=none}). ERROR is written as WARN because ERROR
- * logs from the application count in the deploy canary.
+ * Writes committed events as structured JSON logs; Alloy ships them to Loki ({@code
+ * otel.logs.exporter=none}). ERROR is written as WARN because ERROR logs from the application count
+ * in the deploy canary.
  */
 @Component
 public class ObservabilityEventEmitter {
@@ -28,7 +27,9 @@ public class ObservabilityEventEmitter {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCommitted(PendingObservabilityEvent pending) {
         try {
-            emit(new ObservabilityEvent(pending.contract(), pending.occurredAt(), pending.attributes()));
+            emit(
+                    new ObservabilityEvent(
+                            pending.contract(), pending.occurredAt(), pending.attributes()));
         } catch (RuntimeException e) {
             log.warn("Observability event dropped: {}", pending.contract().name());
         }

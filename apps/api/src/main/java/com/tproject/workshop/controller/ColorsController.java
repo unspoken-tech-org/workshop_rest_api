@@ -15,7 +15,8 @@ public interface ColorsController {
 
     @Operation(
             summary = "List colors",
-            description = "Retrieves the list of colors configured for device registration and UI selection.")
+            description =
+                    "Retrieves the list of colors configured for device registration and UI selection.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Colors retrieved successfully")
     @GetMapping

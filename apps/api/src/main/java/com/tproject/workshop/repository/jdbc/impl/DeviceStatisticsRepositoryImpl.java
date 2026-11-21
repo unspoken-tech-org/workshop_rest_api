@@ -1,18 +1,15 @@
 package com.tproject.workshop.repository.jdbc.impl;
 
-import java.util.Map;
-
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Repository;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tproject.workshop.dto.deviceStatistics.DeviceStatisticsOutputDtoRecord;
 import com.tproject.workshop.repository.jdbc.DeviceStatisticsRepository;
 import com.tproject.workshop.utils.UtilsSql;
-
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
@@ -24,14 +21,12 @@ public class DeviceStatisticsRepositoryImpl implements DeviceStatisticsRepositor
     @Override
     public DeviceStatisticsOutputDtoRecord getDeviceStatistics() {
         try {
-            String jsonResult = jdbcTemplate.queryForObject(
-                    UtilsSql.getQuery("device/deviceStatistics"),
-                    Map.of(),
-                    String.class
-            );
+            String jsonResult =
+                    jdbcTemplate.queryForObject(
+                            UtilsSql.getQuery("device/deviceStatistics"), Map.of(), String.class);
 
-            return objectMapper.readValue(jsonResult, new TypeReference<DeviceStatisticsOutputDtoRecord>() {
-            });
+            return objectMapper.readValue(
+                    jsonResult, new TypeReference<DeviceStatisticsOutputDtoRecord>() {});
         } catch (EmptyResultDataAccessException e) {
             return null;
         } catch (Exception e) {

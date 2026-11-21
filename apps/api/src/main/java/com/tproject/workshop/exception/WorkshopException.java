@@ -1,14 +1,13 @@
 package com.tproject.workshop.exception;
 
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import lombok.Getter;
 
 @Getter
-public class WorkshopException  extends RuntimeException {
+public class WorkshopException extends RuntimeException {
 
     private static final long serialVersionUID = -8592554845261561969L;
     private final List<String> errors;
@@ -32,5 +31,4 @@ public class WorkshopException  extends RuntimeException {
         super(error, exception);
         this.errors = Collections.emptyList();
     }
-
 }

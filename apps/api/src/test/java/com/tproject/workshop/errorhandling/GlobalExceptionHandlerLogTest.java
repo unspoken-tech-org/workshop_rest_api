@@ -1,11 +1,14 @@
 package com.tproject.workshop.errorhandling;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxyUtil;
 import ch.qos.logback.core.read.ListAppender;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import jakarta.persistence.OptimisticLockException;
+import java.sql.SQLException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,10 +20,6 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.servlet.HandlerMapping;
-
-import java.sql.SQLException;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class GlobalExceptionHandlerLogTest {
 
@@ -46,7 +45,8 @@ class GlobalExceptionHandlerLogTest {
     @Test
     void shouldLogClientErrorByCodeAndRouteWithoutMessageValues() {
         handler.handleEntityAlreadyExistsException(
-                new EntityAlreadyExistsException("O CPF " + SENTINEL_CPF + " já está em uso"), request());
+                new EntityAlreadyExistsException("O CPF " + SENTINEL_CPF + " já está em uso"),
+                request());
 
         String logged = appender.list.get(0).getFormattedMessage();
         assertThat(logged).contains("route=/v1/customers/{id}", "recurso.conflito");
@@ -56,19 +56,26 @@ class GlobalExceptionHandlerLogTest {
     @Test
     void shouldLogDatabaseErrorWithoutMessageInLogLine() {
         handler.handleDatabaseException(
-                new DataIntegrityViolationException("Key (cpf)=(" + SENTINEL_CPF + ") already exists"), request());
+                new DataIntegrityViolationException(
+                        "Key (cpf)=(" + SENTINEL_CPF + ") already exists"),
+                request());
 
         ILoggingEvent event = appender.list.get(0);
-        assertThat(event.getFormattedMessage()).contains("database.error").doesNotContain(SENTINEL_CPF);
+        assertThat(event.getFormattedMessage())
+                .contains("database.error")
+                .doesNotContain(SENTINEL_CPF);
         assertThat(ThrowableProxyUtil.asString(event.getThrowableProxy())).isNotBlank();
     }
 
     @Test
     void shouldMapUniqueConstraintViolationTo409ConflictWithoutLeakingValues() {
-        SQLException sqlEx = new SQLException("duplicate key value violates unique constraint", "23505");
-        DataIntegrityViolationException ex = new DataIntegrityViolationException("could not execute statement", sqlEx);
+        SQLException sqlEx =
+                new SQLException("duplicate key value violates unique constraint", "23505");
+        DataIntegrityViolationException ex =
+                new DataIntegrityViolationException("could not execute statement", sqlEx);
 
-        ResponseEntity<ResponseError> response = handler.handleDataIntegrityViolationException(ex, request());
+        ResponseEntity<ResponseError> response =
+                handler.handleDataIntegrityViolationException(ex, request());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody()).isNotNull();
@@ -82,7 +89,8 @@ class GlobalExceptionHandlerLogTest {
         SQLException sqlEx = new SQLException("null value in column", "23502");
         DataIntegrityViolationException ex = new DataIntegrityViolationException("not null", sqlEx);
 
-        ResponseEntity<ResponseError> response = handler.handleDataIntegrityViolationException(ex, request());
+        ResponseEntity<ResponseError> response =
+                handler.handleDataIntegrityViolationException(ex, request());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isNotNull();
@@ -91,22 +99,27 @@ class GlobalExceptionHandlerLogTest {
 
     @Test
     void shouldMapOptimisticLockingExceptionsTo409Conflict() {
-        ResponseEntity<ResponseError> springResponse = handler.handleOptimisticLockingException(
-                new ObjectOptimisticLockingFailureException("devices", 1), request());
-        ResponseEntity<ResponseError> jpaResponse = handler.handleOptimisticLockingException(
-                new OptimisticLockException("stale"), request());
+        ResponseEntity<ResponseError> springResponse =
+                handler.handleOptimisticLockingException(
+                        new ObjectOptimisticLockingFailureException("devices", 1), request());
+        ResponseEntity<ResponseError> jpaResponse =
+                handler.handleOptimisticLockingException(
+                        new OptimisticLockException("stale"), request());
 
         assertThat(springResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(springResponse.getBody()).isNotNull();
-        assertThat(springResponse.getBody().getErrors().getCode()).isEqualTo("recurso.conflito.versao");
+        assertThat(springResponse.getBody().getErrors().getCode())
+                .isEqualTo("recurso.conflito.versao");
 
         assertThat(jpaResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(jpaResponse.getBody()).isNotNull();
-        assertThat(jpaResponse.getBody().getErrors().getCode()).isEqualTo("recurso.conflito.versao");
+        assertThat(jpaResponse.getBody().getErrors().getCode())
+                .isEqualTo("recurso.conflito.versao");
     }
 
     private static ServletWebRequest request() {
-        MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/v1/customers/31781477051");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("PUT", "/v1/customers/31781477051");
         request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/v1/customers/{id}");
         return new ServletWebRequest(request);
     }

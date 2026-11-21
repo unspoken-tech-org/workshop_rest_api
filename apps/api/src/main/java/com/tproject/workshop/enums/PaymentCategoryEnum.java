@@ -27,6 +27,7 @@ public enum PaymentCategoryEnum {
             }
         }
         throw new BadRequestException(
-                "Categoria de pagamento \"%s\" não é válida. Valores aceitos: taxa_orcamento, servicos", value);
+                "Categoria de pagamento \"%s\" não é válida. Valores aceitos: taxa_orcamento, servicos",
+                value);
     }
 }

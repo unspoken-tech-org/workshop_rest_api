@@ -9,13 +9,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
-@Tag(name = "Device Statistics", description = "Operational dashboards for device pipeline and recent activity")
+@Tag(
+        name = "Device Statistics",
+        description = "Operational dashboards for device pipeline and recent activity")
 public interface DeviceStatisticsController {
-
 
     @Operation(
             summary = "Get device statistics",
-            description = "Provides aggregated counts per device status and the latest viewed devices to guide workload balancing.")
+            description =
+                    "Provides aggregated counts per device status and the latest viewed devices to guide workload balancing.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Statistics generated successfully")
     @GetMapping

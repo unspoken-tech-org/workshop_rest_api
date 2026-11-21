@@ -8,8 +8,8 @@ import java.util.Set;
 /**
  * Versioned schema metadata for one structured observability event.
  *
- * <p>This is deliberately a data contract only. It does not publish an
- * application event, create a log record or initialize an OTLP exporter.</p>
+ * <p>This is deliberately a data contract only. It does not publish an application event, create a
+ * log record or initialize an OTLP exporter.
  */
 public record ObservabilityEventContract(
         String name,

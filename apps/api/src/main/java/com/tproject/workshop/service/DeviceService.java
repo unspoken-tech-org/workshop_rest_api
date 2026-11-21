@@ -12,11 +12,6 @@ import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -27,6 +22,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -38,22 +37,23 @@ public class DeviceService {
     private final TechnicianService technicianService;
     private final ObservabilityEventRecorder eventRecorder;
 
-    private static final List<DeviceStatusEnum> STATUS_THAT_RESET_URGENCY_REVISION = List.of(
-            DeviceStatusEnum.PRONTO,
-            DeviceStatusEnum.APROVADO,
-            DeviceStatusEnum.NAO_APROVADO,
-            DeviceStatusEnum.ENTREGUE,
-            DeviceStatusEnum.DESCARTADO
-    );
+    private static final List<DeviceStatusEnum> STATUS_THAT_RESET_URGENCY_REVISION =
+            List.of(
+                    DeviceStatusEnum.PRONTO,
+                    DeviceStatusEnum.APROVADO,
+                    DeviceStatusEnum.NAO_APROVADO,
+                    DeviceStatusEnum.ENTREGUE,
+                    DeviceStatusEnum.DESCARTADO);
 
-    private static final List<DeviceStatusEnum> STATUS_THAT_SET_DEPARTURE_DATE = List.of(
-            DeviceStatusEnum.ENTREGUE, DeviceStatusEnum.DESCARTADO
-    );
+    private static final List<DeviceStatusEnum> STATUS_THAT_SET_DEPARTURE_DATE =
+            List.of(DeviceStatusEnum.ENTREGUE, DeviceStatusEnum.DESCARTADO);
 
     private Device fetchOrThrow(int deviceId) {
-        return deviceRepository.findById(deviceId)
-                .orElseThrow(() -> new NotFoundException(
-                        String.format("Aparelho com id %d não encontrado", deviceId)));
+        return deviceRepository
+                .findById(deviceId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                String.format("Aparelho com id %d não encontrado", deviceId)));
     }
 
     private void addHistory(Device device, String field, String oldValue, String newValue) {
@@ -68,33 +68,43 @@ public class DeviceService {
     }
 
     private void setDepartureDateIfDelivered(Device device, DeviceStatusEnum newStatus) {
-        if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus) && device.getDepartureDate() == null) {
+        if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)
+                && device.getDepartureDate() == null) {
             device.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
         }
     }
 
-    private void recordStatusChange(DeviceStatusEnum previous, DeviceStatusEnum current, String origin) {
-        eventRecorder.record(ObservabilityEventCatalog.DEVICE_STATUS_CHANGED, Map.of(
-                "status.previous", previous.name().toLowerCase(Locale.ROOT),
-                "status.new", current.name().toLowerCase(Locale.ROOT),
-                "change.origin", origin));
+    private void recordStatusChange(
+            DeviceStatusEnum previous, DeviceStatusEnum current, String origin) {
+        eventRecorder.record(
+                ObservabilityEventCatalog.DEVICE_STATUS_CHANGED,
+                Map.of(
+                        "status.previous", previous.name().toLowerCase(Locale.ROOT),
+                        "status.new", current.name().toLowerCase(Locale.ROOT),
+                        "change.origin", origin));
     }
 
-    private void recordClosedIfNeeded(Device device, DeviceStatusEnum previous, DeviceStatusEnum current) {
+    private void recordClosedIfNeeded(
+            Device device, DeviceStatusEnum previous, DeviceStatusEnum current) {
         if (previous == current
-                || (current != DeviceStatusEnum.ENTREGUE && current != DeviceStatusEnum.DESCARTADO)) {
+                || (current != DeviceStatusEnum.ENTREGUE
+                        && current != DeviceStatusEnum.DESCARTADO)) {
             return;
         }
-        Instant entry = Optional.ofNullable(device.getEntryDate()).map(Timestamp::toInstant).orElse(null);
-        eventRecorder.record(ObservabilityEventCatalog.DEVICE_CLOSED, Map.of(
-                "status.new", current.name().toLowerCase(Locale.ROOT),
-                "turnaround.band", TurnaroundBand.of(entry, Instant.now())));
+        Instant entry =
+                Optional.ofNullable(device.getEntryDate()).map(Timestamp::toInstant).orElse(null);
+        eventRecorder.record(
+                ObservabilityEventCatalog.DEVICE_CLOSED,
+                Map.of(
+                        "status.new", current.name().toLowerCase(Locale.ROOT),
+                        "turnaround.band", TurnaroundBand.of(entry, Instant.now())));
     }
 
     private void recordUrgencyChange(boolean previous, boolean current) {
         if (previous != current) {
-            eventRecorder.record(ObservabilityEventCatalog.DEVICE_URGENCY_CHANGED, Map.of(
-                    "device.urgency", current ? "urgent" : "normal"));
+            eventRecorder.record(
+                    ObservabilityEventCatalog.DEVICE_URGENCY_CHANGED,
+                    Map.of("device.urgency", current ? "urgent" : "normal"));
         }
     }
 
@@ -114,17 +124,22 @@ public class DeviceService {
         } else {
             changeType = comparison > 0 ? "increase" : "decrease";
         }
-        eventRecorder.record(ObservabilityEventCatalog.DEVICE_BUDGET_CHANGED, Map.of(
-                "budget.field", field,
-                "budget.change_type", changeType,
-                "budget.value_band", ValueBand.of(after)));
+        eventRecorder.record(
+                ObservabilityEventCatalog.DEVICE_BUDGET_CHANGED,
+                Map.of(
+                        "budget.field", field,
+                        "budget.change_type", changeType,
+                        "budget.value_band", ValueBand.of(after)));
     }
 
     private void revertStatusIfNeeded(Device device, String origin) {
         DeviceStatusEnum current = device.getDeviceStatus();
         if (current == DeviceStatusEnum.ENTREGUE || current == DeviceStatusEnum.DESCARTADO) {
-            addHistory(device, DeviceHistoryFieldEnum.STATUS.getField(),
-                    current.name(), DeviceStatusEnum.NOVO.name());
+            addHistory(
+                    device,
+                    DeviceHistoryFieldEnum.STATUS.getField(),
+                    current.name(),
+                    DeviceStatusEnum.NOVO.name());
             device.setDeviceStatus(DeviceStatusEnum.NOVO);
             recordStatusChange(current, DeviceStatusEnum.NOVO, origin);
         }
@@ -134,8 +149,11 @@ public class DeviceService {
         Device device = fetchOrThrow(deviceId);
         DeviceStatusEnum oldStatus = device.getDeviceStatus();
         if (oldStatus != newStatus) {
-            addHistory(device, DeviceHistoryFieldEnum.STATUS.getField(),
-                    oldStatus.name(), newStatus.name());
+            addHistory(
+                    device,
+                    DeviceHistoryFieldEnum.STATUS.getField(),
+                    oldStatus.name(),
+                    newStatus.name());
             recordStatusChange(oldStatus, newStatus, origin);
         }
         device.setDeviceStatus(newStatus);
@@ -157,10 +175,11 @@ public class DeviceService {
 
     @Transactional(readOnly = true)
     public DeviceOutputDto findDeviceByIdOrThrow(int deviceId) {
-        return deviceRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new NotFoundException(
-                        String.format("Aparelho com id %d não encontrado", deviceId)));
-
+        return deviceRepository
+                .findByDeviceId(deviceId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                String.format("Aparelho com id %d não encontrado", deviceId)));
     }
 
     @Transactional(readOnly = true)
@@ -191,8 +210,11 @@ public class DeviceService {
         }
 
         if (oldUrgency != newUrgency) {
-            addHistory(device, DeviceHistoryFieldEnum.URGENCY.getField(),
-                    String.valueOf(oldUrgency), String.valueOf(newUrgency));
+            addHistory(
+                    device,
+                    DeviceHistoryFieldEnum.URGENCY.getField(),
+                    String.valueOf(oldUrgency),
+                    String.valueOf(newUrgency));
         }
 
         device.setUrgency(newUrgency);
@@ -212,8 +234,11 @@ public class DeviceService {
         }
 
         if (oldRevision != newRevision) {
-            addHistory(device, DeviceHistoryFieldEnum.REVISION.getField(),
-                    String.valueOf(oldRevision), String.valueOf(newRevision));
+            addHistory(
+                    device,
+                    DeviceHistoryFieldEnum.REVISION.getField(),
+                    String.valueOf(oldRevision),
+                    String.valueOf(newRevision));
         }
 
         device.setRevision(newRevision);
@@ -241,13 +266,18 @@ public class DeviceService {
         oldDevice.setUrgency(device.hasUrgency());
         oldDevice.setRevision(device.revision());
         oldDevice.setDeviceStatus(newStatus);
-        Optional.ofNullable(device.technicianId()).ifPresent(id -> {
-            Technician technician = technicianService.findById(id);
-            oldDevice.setTechnician(technician);
-        });
+        Optional.ofNullable(device.technicianId())
+                .ifPresent(id -> {
+                    Technician technician = technicianService.findById(id);
+                    oldDevice.setTechnician(technician);
+                });
 
-        LocalDateTime effectiveEntryDate = Optional.ofNullable(device.entryDate())
-                .orElseGet(() -> oldDevice.getEntryDate() != null ? oldDevice.getEntryDate().toLocalDateTime() : null);
+        LocalDateTime effectiveEntryDate =
+                Optional.ofNullable(device.entryDate())
+                        .orElseGet(() ->
+                                oldDevice.getEntryDate() != null
+                                        ? oldDevice.getEntryDate().toLocalDateTime()
+                                        : null);
 
         LocalDateTime effectiveDepartureDate;
         if (device.departureDate() != null) {
@@ -260,7 +290,8 @@ public class DeviceService {
             effectiveDepartureDate = null;
         }
 
-        if (effectiveEntryDate != null && effectiveDepartureDate != null
+        if (effectiveEntryDate != null
+                && effectiveDepartureDate != null
                 && effectiveDepartureDate.isBefore(effectiveEntryDate)) {
             throw new BadRequestException(
                     "A data de saída (%s) deve ser posterior ou igual à data de entrada (%s)",
@@ -274,7 +305,8 @@ public class DeviceService {
 
         if (device.departureDate() != null) {
             oldDevice.setDepartureDate(Timestamp.valueOf(device.departureDate()));
-        } else if (oldDevice.getDepartureDate() == null && STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+        } else if (oldDevice.getDepartureDate() == null
+                && STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
             oldDevice.setDepartureDate(Timestamp.valueOf(effectiveDepartureDate));
         }
 
@@ -291,13 +323,20 @@ public class DeviceService {
 
     @Transactional
     public CreateDeviceOutputDtoRecord createDevice(DeviceInputDtoRecord device) {
-        Customer customer = customerRepository.findById(device.customerId())
-                .orElseThrow(() -> new NotFoundException(
-                        String.format("Cliente com id %d não encontrado", device.customerId())));
+        Customer customer =
+                customerRepository
+                        .findById(device.customerId())
+                        .orElseThrow(() ->
+                                new NotFoundException(
+                                        String.format(
+                                                "Cliente com id %d não encontrado",
+                                                device.customerId())));
 
-        BrandsModelsTypes brandModelType = typeBrandModelService.createOrReturnExistentBrandModelType(device.typeBrandModel());
+        BrandsModelsTypes brandModelType =
+                typeBrandModelService.createOrReturnExistentBrandModelType(device.typeBrandModel());
 
-        List<Color> colors = device.colors().stream().map(colorService::createOrReturnExistentColor).toList();
+        List<Color> colors =
+                device.colors().stream().map(colorService::createOrReturnExistentColor).toList();
         List<Integer> colorIds = colors.stream().map(Color::getIdColor).toList();
 
         List<DeviceHistory> deviceHistoryList = new ArrayList<>();
@@ -312,36 +351,52 @@ public class DeviceService {
         newDevice.setUrgency(device.hasUrgency());
         newDevice.setDeviceStatus(DeviceStatusEnum.NOVO);
         newDevice.setEntryDate(Timestamp.valueOf(LocalDateTime.now()));
-        Optional.ofNullable(device.technicianId()).ifPresent(id -> {
-            Technician technician = technicianService.findById(id);
-            newDevice.setTechnician(technician);
-        });
-        deviceHistoryList.add(new DeviceHistory(
-                DeviceHistoryFieldEnum.STATUS.getField(), "", DeviceStatusEnum.NOVO.name(), newDevice));
+        Optional.ofNullable(device.technicianId())
+                .ifPresent(id -> {
+                    Technician technician = technicianService.findById(id);
+                    newDevice.setTechnician(technician);
+                });
+        deviceHistoryList.add(
+                new DeviceHistory(
+                        DeviceHistoryFieldEnum.STATUS.getField(),
+                        "",
+                        DeviceStatusEnum.NOVO.name(),
+                        newDevice));
         if (device.hasUrgency()) {
-            deviceHistoryList.add(new DeviceHistory(
-                    DeviceHistoryFieldEnum.URGENCY.getField(), "", "true", newDevice));
+            deviceHistoryList.add(
+                    new DeviceHistory(
+                            DeviceHistoryFieldEnum.URGENCY.getField(), "", "true", newDevice));
         }
         newDevice.setDeviceHistory(deviceHistoryList);
 
         Device savedDevice = deviceRepository.saveAndFlush(newDevice);
-        eventRecorder.record(ObservabilityEventCatalog.DEVICE_CREATED, Map.of(
-                "device.urgency", device.hasUrgency() ? "urgent" : "normal"));
+        eventRecorder.record(
+                ObservabilityEventCatalog.DEVICE_CREATED,
+                Map.of("device.urgency", device.hasUrgency() ? "urgent" : "normal"));
         return new CreateDeviceOutputDtoRecord(savedDevice.getId());
     }
 
     private void addHistories(Device oldDevice, DeviceUpdateInputDtoRecord newDevice) {
         if (oldDevice.isRevision() != newDevice.revision()) {
-            addHistory(oldDevice, DeviceHistoryFieldEnum.REVISION.getField(),
-                    String.valueOf(oldDevice.isRevision()), String.valueOf(newDevice.revision()));
+            addHistory(
+                    oldDevice,
+                    DeviceHistoryFieldEnum.REVISION.getField(),
+                    String.valueOf(oldDevice.isRevision()),
+                    String.valueOf(newDevice.revision()));
         }
         if (oldDevice.isUrgency() != newDevice.hasUrgency()) {
-            addHistory(oldDevice, DeviceHistoryFieldEnum.URGENCY.getField(),
-                    String.valueOf(oldDevice.isUrgency()), String.valueOf(newDevice.hasUrgency()));
+            addHistory(
+                    oldDevice,
+                    DeviceHistoryFieldEnum.URGENCY.getField(),
+                    String.valueOf(oldDevice.isUrgency()),
+                    String.valueOf(newDevice.hasUrgency()));
         }
         if (!oldDevice.getDeviceStatus().name().equalsIgnoreCase(newDevice.deviceStatus())) {
-            addHistory(oldDevice, DeviceHistoryFieldEnum.STATUS.getField(),
-                    oldDevice.getDeviceStatus().name(), newDevice.deviceStatus());
+            addHistory(
+                    oldDevice,
+                    DeviceHistoryFieldEnum.STATUS.getField(),
+                    oldDevice.getDeviceStatus().name(),
+                    newDevice.deviceStatus());
         }
     }
 }

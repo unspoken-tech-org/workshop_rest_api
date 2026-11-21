@@ -13,12 +13,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
-@Tag(name = "Payments", description = "Capture payments associated with device services and repairs")
+@Tag(
+        name = "Payments",
+        description = "Capture payments associated with device services and repairs")
 public interface PaymentController {
 
     @Operation(
             summary = "Register payment for a device",
-            description = "Creates a payment entry linked to a device, keeping billing and cash-flow data consistent.")
+            description =
+                    "Creates a payment entry linked to a device, keeping billing and cash-flow data consistent.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "201", description = "Payment registered successfully")
     @PostMapping

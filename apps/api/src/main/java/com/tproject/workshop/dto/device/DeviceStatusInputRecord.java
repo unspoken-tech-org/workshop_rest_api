@@ -6,8 +6,6 @@ import jakarta.validation.constraints.NotEmpty;
 
 public record DeviceStatusInputRecord(
         @Schema(description = "New status of the device", example = "EM_ANDAMENTO")
-        @NotEmpty(message = "O status do aparelho deve ser fornecido")
-        @ValidDeviceStatus
-        String deviceStatus
-) {
-}
+                @NotEmpty(message = "O status do aparelho deve ser fornecido")
+                @ValidDeviceStatus
+                String deviceStatus) {}

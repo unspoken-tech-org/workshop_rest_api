@@ -1,14 +1,13 @@
 package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -16,26 +15,25 @@ import java.time.LocalDateTime;
 @Builder
 @Entity(name = "customer_phones")
 public class CustomerPhone {
-    
-    @EmbeddedId
-    private CustomerPhoneId id;
-    
+
+    @EmbeddedId private CustomerPhoneId id;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("customerId")
     @JoinColumn(name = "id_customer")
     private Customer customer;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("phoneId")
     @JoinColumn(name = "id_phone")
     private Phone phone;
-    
+
     @Column(name = "is_main")
     private boolean isMain;
 
     @Column(name = "alias")
     private String phoneAlias;
-    
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

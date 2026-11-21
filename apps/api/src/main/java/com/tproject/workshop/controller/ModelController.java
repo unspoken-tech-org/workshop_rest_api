@@ -19,16 +19,18 @@ import org.springframework.web.bind.annotation.*;
 public interface ModelController {
 
     @Operation(
-        summary = "Search models",
-        description = "Full-text fuzzy search across model names, filtered by brand. Supports pagination.")
+            summary = "Search models",
+            description =
+                    "Full-text fuzzy search across model names, filtered by brand. Supports pagination.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     @PostMapping("/search")
     Page<ModelResponseDto> search(@RequestBody @Valid ModelSearchParam params);
 
     @Operation(
-        summary = "Create or return existing model",
-        description = "Creates a new model or returns an existing one if a case-insensitive match is found for the given brand (idempotent).")
+            summary = "Create or return existing model",
+            description =
+                    "Creates a new model or returns an existing one if a case-insensitive match is found for the given brand (idempotent).")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "201", description = "Model created successfully")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

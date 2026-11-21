@@ -30,6 +30,7 @@ public enum PaymentMethodEnum {
             }
         }
         throw new BadRequestException(
-                "Tipo de pagamento \"%s\" não é válido. Valores aceitos: credito, debito, dinheiro, pix, outro", value);
+                "Tipo de pagamento \"%s\" não é válido. Valores aceitos: credito, debito, dinheiro, pix, outro",
+                value);
     }
 }

@@ -12,90 +12,106 @@ public final class ObservabilityEventValidator {
     public static final int MAX_ATTRIBUTE_KEY_LENGTH = 64;
     public static final int MAX_ATTRIBUTE_VALUE_LENGTH = 64;
 
-    private static final Pattern EVENT_NAME = Pattern.compile(
-            "workshop\\.[a-z0-9]+(?:[._-][a-z0-9]+)+");
-    private static final Pattern ATTRIBUTE_NAME = Pattern.compile(
-            "[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*");
-    private static final Pattern NORMALIZED_VALUE = Pattern.compile(
-            "[A-Za-z0-9][A-Za-z0-9._:/+_\\-]{0," + (MAX_ATTRIBUTE_VALUE_LENGTH - 1) + "}");
+    private static final Pattern EVENT_NAME =
+            Pattern.compile("workshop\\.[a-z0-9]+(?:[._-][a-z0-9]+)+");
+    private static final Pattern ATTRIBUTE_NAME =
+            Pattern.compile("[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*");
+    private static final Pattern NORMALIZED_VALUE =
+            Pattern.compile(
+                    "[A-Za-z0-9][A-Za-z0-9._:/+_\\-]{0," + (MAX_ATTRIBUTE_VALUE_LENGTH - 1) + "}");
 
-    private static final Set<String> PROHIBITED_SEGMENTS = Set.of(
-            "authorization",
-            "access_token",
-            "apikey",
-            "api_key",
-            "body",
-            "client_name",
-            "cnpj",
-            "cpf",
-            "device_id",
-            "email",
-            "free_text",
-            "message",
-            "password",
-            "payload",
-            "payment_id",
-            "phone",
-            "query",
-            "query_string",
-            "secret",
-            "span_id",
-            "token",
-            "trace_id",
-            "user_id");
+    private static final Set<String> PROHIBITED_SEGMENTS =
+            Set.of(
+                    "authorization",
+                    "access_token",
+                    "apikey",
+                    "api_key",
+                    "body",
+                    "client_name",
+                    "cnpj",
+                    "cpf",
+                    "device_id",
+                    "email",
+                    "free_text",
+                    "message",
+                    "password",
+                    "payload",
+                    "payment_id",
+                    "phone",
+                    "query",
+                    "query_string",
+                    "secret",
+                    "span_id",
+                    "token",
+                    "trace_id",
+                    "user_id");
 
     /**
-     * Every attribute has a closed vocabulary, so no request-supplied text
-     * (CPF, phone, e-mail, API key, free text) can reach an event. A new
-     * category is an explicit contract change.
+     * Every attribute has a closed vocabulary, so no request-supplied text (CPF, phone, e-mail, API
+     * key, free text) can reach an event. A new category is an explicit contract change.
      */
-    private static final Map<String, Set<String>> CLOSED_VOCABULARIES = Map.ofEntries(
-            Map.entry("actor.role", Set.of("admin", "service", "anonymous")),
-            Map.entry("client.platform", Set.of("mobile", "web", "desktop", "server")),
-            Map.entry("result", Set.of("ok", "failed", "skipped")),
-            Map.entry("device.urgency", Set.of("urgent", "normal")),
-            Map.entry("status.previous", statusValues()),
-            Map.entry("status.new", statusValues()),
-            Map.entry("change.origin", Set.of("status", "device_update", "urgency", "revision", "customer_contact")),
-            Map.entry("budget.field", Set.of("budget_fee", "service_value")),
-            Map.entry("budget.change_type", Set.of("set", "increase", "decrease", "cleared")),
-            Map.entry("budget.value_band", valueBands()),
-            Map.entry("payment.method", Set.of("credito", "debito", "dinheiro", "pix", "outro")),
-            Map.entry("payment.category", Set.of("taxa_orcamento", "servicos")),
-            Map.entry("payment.value_band", valueBands()),
-            Map.entry("contact.made", Set.of("true", "false")),
-            Map.entry("contact.type", Set.of("mensagem", "ligacao", "other")),
-            Map.entry("customer.phone_count_band", Set.of("0", "1", "2_plus")),
-            Map.entry("turnaround.band", Set.of("lt_1d", "1d_3d", "3d_7d", "gt_7d")),
-            Map.entry("catalog.kind", Set.of("type", "brand", "model", "color")),
-            Map.entry("key.role", Set.of("admin", "service")),
-            Map.entry("key.expiry", Set.of("none", "set")),
-            Map.entry("scope", Set.of("single", "all_by_client")),
-            Map.entry("backup.type", Set.of("full", "diff")),
-            Map.entry("duration.band", Set.of("lt_1m", "1m_10m", "10m_60m", "gt_60m")),
-            Map.entry("deploy.service", Set.of("api", "gateway", "observability")),
-            Map.entry("deploy.environment", Set.of("qa", "production")),
-            Map.entry("reason.code", Set.of(
-                    "canary_failed",
-                    "telemetry_no_span",
-                    "health_timeout",
-                    "migration_approval_required",
-                    "migration_ahead_of_image",
-                    "backup_stale",
-                    "backup_info_failed",
-                    "wal_check_failed",
-                    "flyway_history_failed",
-                    "db_not_running",
-                    "admin_request")));
+    private static final Map<String, Set<String>> CLOSED_VOCABULARIES =
+            Map.ofEntries(
+                    Map.entry("actor.role", Set.of("admin", "service", "anonymous")),
+                    Map.entry("client.platform", Set.of("mobile", "web", "desktop", "server")),
+                    Map.entry("result", Set.of("ok", "failed", "skipped")),
+                    Map.entry("device.urgency", Set.of("urgent", "normal")),
+                    Map.entry("status.previous", statusValues()),
+                    Map.entry("status.new", statusValues()),
+                    Map.entry(
+                            "change.origin",
+                            Set.of(
+                                    "status",
+                                    "device_update",
+                                    "urgency",
+                                    "revision",
+                                    "customer_contact")),
+                    Map.entry("budget.field", Set.of("budget_fee", "service_value")),
+                    Map.entry(
+                            "budget.change_type", Set.of("set", "increase", "decrease", "cleared")),
+                    Map.entry("budget.value_band", valueBands()),
+                    Map.entry(
+                            "payment.method",
+                            Set.of("credito", "debito", "dinheiro", "pix", "outro")),
+                    Map.entry("payment.category", Set.of("taxa_orcamento", "servicos")),
+                    Map.entry("payment.value_band", valueBands()),
+                    Map.entry("contact.made", Set.of("true", "false")),
+                    Map.entry("contact.type", Set.of("mensagem", "ligacao", "other")),
+                    Map.entry("customer.phone_count_band", Set.of("0", "1", "2_plus")),
+                    Map.entry("turnaround.band", Set.of("lt_1d", "1d_3d", "3d_7d", "gt_7d")),
+                    Map.entry("catalog.kind", Set.of("type", "brand", "model", "color")),
+                    Map.entry("key.role", Set.of("admin", "service")),
+                    Map.entry("key.expiry", Set.of("none", "set")),
+                    Map.entry("scope", Set.of("single", "all_by_client")),
+                    Map.entry("backup.type", Set.of("full", "diff")),
+                    Map.entry("duration.band", Set.of("lt_1m", "1m_10m", "10m_60m", "gt_60m")),
+                    Map.entry("deploy.service", Set.of("api", "gateway", "observability")),
+                    Map.entry("deploy.environment", Set.of("qa", "production")),
+                    Map.entry(
+                            "reason.code",
+                            Set.of(
+                                    "canary_failed",
+                                    "telemetry_no_span",
+                                    "health_timeout",
+                                    "migration_approval_required",
+                                    "migration_ahead_of_image",
+                                    "backup_stale",
+                                    "backup_info_failed",
+                                    "wal_check_failed",
+                                    "flyway_history_failed",
+                                    "db_not_running",
+                                    "admin_request")));
 
     /** Attributes whose values are bounded by a strict format instead of a list. */
-    private static final Map<String, Pattern> CLOSED_FORMATS = Map.of(
-            "deployment.version", Pattern.compile("v\\d+\\.\\d+\\.\\d+(?:-[0-9a-z.]+)?|[0-9a-f]{7,40}"));
+    private static final Map<String, Pattern> CLOSED_FORMATS =
+            Map.of(
+                    "deployment.version",
+                    Pattern.compile("v\\d+\\.\\d+\\.\\d+(?:-[0-9a-z.]+)?|[0-9a-f]{7,40}"));
 
-    private ObservabilityEventValidator() {
-    }
+    private ObservabilityEventValidator() {}
 
-    public static void validate(ObservabilityEventContract contract, Map<String, String> attributes) {
+    public static void validate(
+            ObservabilityEventContract contract, Map<String, String> attributes) {
         if (contract == null) {
             throw new IllegalArgumentException("event contract must not be null");
         }
@@ -103,14 +119,16 @@ public final class ObservabilityEventValidator {
             throw new IllegalArgumentException("event attributes must not be null");
         }
         if (!EVENT_NAME.matcher(contract.name()).matches()) {
-            throw new IllegalArgumentException("event name does not follow the stable naming contract");
+            throw new IllegalArgumentException(
+                    "event name does not follow the stable naming contract");
         }
         if (attributes.size() > MAX_ATTRIBUTES) {
             throw new IllegalArgumentException("event contains too many attributes");
         }
 
         for (String required : contract.requiredAttributes()) {
-            if (!attributes.containsKey(required) || attributes.get(required) == null
+            if (!attributes.containsKey(required)
+                    || attributes.get(required) == null
                     || attributes.get(required).isBlank()) {
                 throw new IllegalArgumentException("missing required event attribute");
             }
@@ -122,10 +140,9 @@ public final class ObservabilityEventValidator {
     }
 
     private static void validateAttribute(
-            ObservabilityEventContract contract,
-            String name,
-            String value) {
-        if (name == null || name.length() > MAX_ATTRIBUTE_KEY_LENGTH
+            ObservabilityEventContract contract, String name, String value) {
+        if (name == null
+                || name.length() > MAX_ATTRIBUTE_KEY_LENGTH
                 || !ATTRIBUTE_NAME.matcher(name).matches()) {
             throw new IllegalArgumentException("event attribute name is invalid");
         }
@@ -136,7 +153,8 @@ public final class ObservabilityEventValidator {
             throw new IllegalArgumentException("event attribute is prohibited");
         }
         if (value == null || !NORMALIZED_VALUE.matcher(value).matches()) {
-            throw new IllegalArgumentException("event attribute value must be a bounded normalized token");
+            throw new IllegalArgumentException(
+                    "event attribute value must be a bounded normalized token");
         }
         String normalized = value.toLowerCase(Locale.ROOT);
         Set<String> allowedValues = CLOSED_VOCABULARIES.get(name);
@@ -145,10 +163,12 @@ public final class ObservabilityEventValidator {
             throw new IllegalArgumentException("event attribute has no closed vocabulary");
         }
         if (allowedValues != null && !allowedValues.contains(normalized)) {
-            throw new IllegalArgumentException("event attribute value is outside the closed vocabulary");
+            throw new IllegalArgumentException(
+                    "event attribute value is outside the closed vocabulary");
         }
         if (format != null && !format.matcher(normalized).matches()) {
-            throw new IllegalArgumentException("event attribute value does not match its closed format");
+            throw new IllegalArgumentException(
+                    "event attribute value does not match its closed format");
         }
     }
 
@@ -160,7 +180,9 @@ public final class ObservabilityEventValidator {
     private static boolean containsProhibitedSegment(String name) {
         String normalized = name.toLowerCase(Locale.ROOT).replace('-', '_');
         for (String segment : normalized.split("\\.")) {
-            if (PROHIBITED_SEGMENTS.contains(segment) || segment.equals("id") || segment.endsWith("_id")) {
+            if (PROHIBITED_SEGMENTS.contains(segment)
+                    || segment.equals("id")
+                    || segment.endsWith("_id")) {
                 return true;
             }
         }

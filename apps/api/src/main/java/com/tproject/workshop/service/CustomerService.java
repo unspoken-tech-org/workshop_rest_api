@@ -1,17 +1,5 @@
 package com.tproject.workshop.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.cellphone.InputPhoneDto;
 import com.tproject.workshop.dto.customer.CustomerFilterDto;
@@ -34,8 +22,16 @@ import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PhoneRepository;
 import com.tproject.workshop.utils.UtilsString;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -46,33 +42,38 @@ public class CustomerService {
     private final DeviceRepository deviceRepository;
     private final ObservabilityEventRecorder eventRecorder;
 
-
     public CustomerOutputDto findById(int id) {
-        return customerRepository.findCustomerById(id).orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
+        return customerRepository
+                .findCustomerById(id)
+                .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
     }
 
     /**
-     * JPA-based implementation for benchmark comparison with JDBC.
-     * Returns the same CustomerOutputDto but uses Hibernate instead of native SQL.
+     * JPA-based implementation for benchmark comparison with JDBC. Returns the same
+     * CustomerOutputDto but uses Hibernate instead of native SQL.
      */
     @Transactional(readOnly = true)
     public CustomerOutputDto findByIdUsingJpa(int id) {
-        Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
+        Customer customer =
+                customerRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new NotFoundException("Não existe cliente com id " + id));
 
-        List<CellPhoneOutputDeviceDto> phones = customer.getCustomerPhones().stream()
-                .map(cp -> CellPhoneOutputDeviceDto.builder()
-                        .id(cp.getPhone().getIdCellphone())
-                        .number(cp.getPhone().getNumber())
-                        .name(cp.getPhoneAlias())
-                        .main(cp.isMain())
-                        .build())
-                .toList();
+        List<CellPhoneOutputDeviceDto> phones =
+                customer.getCustomerPhones().stream()
+                        .map(cp ->
+                                CellPhoneOutputDeviceDto.builder()
+                                        .id(cp.getPhone().getIdCellphone())
+                                        .number(cp.getPhone().getNumber())
+                                        .name(cp.getPhoneAlias())
+                                        .main(cp.isMain())
+                                        .build())
+                        .toList();
 
         List<Device> devices = deviceRepository.findByCustomerIdCustomerOrderByEntryDateDesc(id);
-        List<MinifiedDeviceTableOutputDto> customerDevices = devices.stream()
-                .map(this::mapDeviceToMinifiedDto)
-                .toList();
+        List<MinifiedDeviceTableOutputDto> customerDevices =
+                devices.stream().map(this::mapDeviceToMinifiedDto).toList();
 
         return CustomerOutputDto.builder()
                 .customerId(customer.getIdCustomer())
@@ -90,12 +91,17 @@ public class CustomerService {
         MinifiedDeviceTableOutputDto dto = new MinifiedDeviceTableOutputDto();
         dto.setDeviceId(device.getId());
         dto.setCustomerId(device.getCustomer().getIdCustomer());
-        dto.setDeviceStatus(device.getDeviceStatus() != null ? device.getDeviceStatus().name() : null);
+        dto.setDeviceStatus(
+                device.getDeviceStatus() != null ? device.getDeviceStatus().name() : null);
         dto.setProblem(device.getProblem());
         dto.setHasUrgency(device.isUrgency());
         dto.setRevision(device.isRevision());
-        dto.setEntryDate(device.getEntryDate() != null ? device.getEntryDate().toLocalDateTime() : null);
-        dto.setDepartureDate(device.getDepartureDate() != null ? device.getDepartureDate().toLocalDateTime() : null);
+        dto.setEntryDate(
+                device.getEntryDate() != null ? device.getEntryDate().toLocalDateTime() : null);
+        dto.setDepartureDate(
+                device.getDepartureDate() != null
+                        ? device.getDepartureDate().toLocalDateTime()
+                        : null);
 
         // Build typeBrandModel string: "Type Brand | Model"
         BrandsModelsTypes bmt = device.getBrandsModelsTypes();
@@ -117,31 +123,36 @@ public class CustomerService {
     @Transactional
     public CustomerOutputDto saveCustomer(InputCustomerDtoRecord inputCustomerDto) {
         String cpfOnlyDigits = UtilsString.onlyDigits(inputCustomerDto.cpf());
-        customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
-            throw new EntityAlreadyExistsException("O CPF informado já está em uso");
-        });
+        customerRepository
+                .findFirstByCpf(cpfOnlyDigits)
+                .ifPresent(customer -> {
+                    throw new EntityAlreadyExistsException("O CPF informado já está em uso");
+                });
 
-        List<InputPhoneDto> phones = Optional.ofNullable(inputCustomerDto.phones()).orElse(new ArrayList<>());
+        List<InputPhoneDto> phones =
+                Optional.ofNullable(inputCustomerDto.phones()).orElse(new ArrayList<>());
         validatePhones(phones, null);
 
-        Customer customer = Customer.builder()
-                .cpf(cpfOnlyDigits)
-                .name(inputCustomerDto.name())
-                .email(inputCustomerDto.email())
-                .gender(inputCustomerDto.gender())
-                .customerPhones(new ArrayList<>())
-                .build();
+        Customer customer =
+                Customer.builder()
+                        .cpf(cpfOnlyDigits)
+                        .name(inputCustomerDto.name())
+                        .email(inputCustomerDto.email())
+                        .gender(inputCustomerDto.gender())
+                        .customerPhones(new ArrayList<>())
+                        .build();
 
         Customer savedCustomer = customerRepository.save(customer);
-        
+
         if (!phones.isEmpty()) {
             createCustomerPhones(savedCustomer, phones);
         }
 
         // The JDBC read below does not see changes still pending in the persistence context
         customerRepository.flush();
-        eventRecorder.record(ObservabilityEventCatalog.CUSTOMER_CREATED, Map.of(
-                "customer.phone_count_band", phoneCountBand(phones.size())));
+        eventRecorder.record(
+                ObservabilityEventCatalog.CUSTOMER_CREATED,
+                Map.of("customer.phone_count_band", phoneCountBand(phones.size())));
 
         return findById(savedCustomer.getIdCustomer());
     }
@@ -156,18 +167,24 @@ public class CustomerService {
 
     @Transactional
     public CustomerOutputDto updateCustomer(int id, InputCustomerDtoRecord inputCustomerDto) {
-        Customer existingCustomer = customerRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
+        Customer existingCustomer =
+                customerRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new NotFoundException("Não existe cliente com id " + id));
 
         String cpfOnlyDigits = UtilsString.onlyDigits(inputCustomerDto.cpf());
 
-        customerRepository.findFirstByCpf(cpfOnlyDigits).ifPresent(customer -> {
-            if (customer.getIdCustomer() != id) {
-                throw new EntityAlreadyExistsException("O CPF informado já está em uso");
-            }
-        });
+        customerRepository
+                .findFirstByCpf(cpfOnlyDigits)
+                .ifPresent(customer -> {
+                    if (customer.getIdCustomer() != id) {
+                        throw new EntityAlreadyExistsException("O CPF informado já está em uso");
+                    }
+                });
 
-        List<InputPhoneDto> phones = Optional.ofNullable(inputCustomerDto.phones()).orElse(new ArrayList<>());
+        List<InputPhoneDto> phones =
+                Optional.ofNullable(inputCustomerDto.phones()).orElse(new ArrayList<>());
         validatePhones(phones, id);
 
         existingCustomer.setCpf(cpfOnlyDigits);
@@ -186,26 +203,34 @@ public class CustomerService {
 
     private void createCustomerPhones(Customer customer, List<InputPhoneDto> phoneDtos) {
         for (InputPhoneDto phoneDto : phoneDtos) {
-            Phone phone = phoneRepository.findByNumber(phoneDto.number())
-                    .orElseGet(() -> {
-                        phoneRepository.insertIgnore(phoneDto.number());
-                        return phoneRepository.findByNumber(phoneDto.number())
-                                .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar telefone"));
-                    });
+            Phone phone =
+                    phoneRepository
+                            .findByNumber(phoneDto.number())
+                            .orElseGet(() -> {
+                                phoneRepository.insertIgnore(phoneDto.number());
+                                return phoneRepository
+                                        .findByNumber(phoneDto.number())
+                                        .orElseThrow(() ->
+                                                new NotFoundException(
+                                                        "Erro ao criar ou buscar telefone"));
+                            });
 
-            Optional<CustomerPhone> existingAssociation = customerPhoneRepository
-                    .findByCustomerIdAndPhoneNumber(customer.getIdCustomer(), phone.getNumber());
-            
+            Optional<CustomerPhone> existingAssociation =
+                    customerPhoneRepository.findByCustomerIdAndPhoneNumber(
+                            customer.getIdCustomer(), phone.getNumber());
+
             if (existingAssociation.isPresent()) {
-                throw new EntityAlreadyExistsException("O numero informado já está associado a este cliente");
+                throw new EntityAlreadyExistsException(
+                        "O numero informado já está associado a este cliente");
             }
 
             if (phoneDto.isPrimary()) {
                 customerPhoneRepository.clearMainPhoneForCustomer(customer.getIdCustomer());
             }
 
-            CustomerPhone customerPhone = new CustomerPhone(customer, phone, phoneDto.isPrimary(), phoneDto.name());
-            
+            CustomerPhone customerPhone =
+                    new CustomerPhone(customer, phone, phoneDto.isPrimary(), phoneDto.name());
+
             customerPhoneRepository.save(customerPhone);
         }
     }
@@ -217,21 +242,21 @@ public class CustomerService {
         }
 
         customerPhoneRepository.deleteByCustomerIdCustomer(customer.getIdCustomer());
-        
+
         createCustomerPhones(customer, phoneDtos);
     }
 
     /**
      * Validate phone numbers for insert/update customer
      *
-     * @param phones     numbers to be validated
+     * @param phones numbers to be validated
      * @param customerId this param must be null on customer insertion
-     * @throws BadRequestException          on:
-     *                                      <p> - Empty phone list
-     *                                      <p> - Multiple primary phones
-     *                                      <p> - Equal phone numbers
+     * @throws BadRequestException on:
+     *     <p>- Empty phone list
+     *     <p>- Multiple primary phones
+     *     <p>- Equal phone numbers
      * @throws EntityAlreadyExistsException on updating customer:
-     *                                      <p> - If new inserted phone already exists
+     *     <p>- If new inserted phone already exists
      */
     private void validatePhones(List<InputPhoneDto> phones, Integer customerId) {
 
@@ -239,36 +264,44 @@ public class CustomerService {
             throw new BadRequestException("É necessário cadastrar ao menos um telefone");
         }
 
-        boolean hasMultiplePrimaryPhones = phones.stream().filter(InputPhoneDto::isPrimary).count() > 1;
+        boolean hasMultiplePrimaryPhones =
+                phones.stream().filter(InputPhoneDto::isPrimary).count() > 1;
         if (hasMultiplePrimaryPhones) {
             throw new BadRequestException("Não é possível ter mais de um telefone primário");
         }
 
-        Set<String> phoneNumbers = phones.stream().map(InputPhoneDto::number).collect(Collectors.toSet());
+        Set<String> phoneNumbers =
+                phones.stream().map(InputPhoneDto::number).collect(Collectors.toSet());
         if (phoneNumbers.size() != phones.size()) {
             throw new BadRequestException("Não é possível ter telefones com números iguais");
         }
 
         for (var phone : phones) {
-            phoneRepository.findByNumber(phone.number()).ifPresent((p) -> {
-                List<CustomerPhone> associations = customerPhoneRepository.findByPhone_IdCellphone(p.getIdCellphone());
-                
-                for (CustomerPhone association : associations) {
-                    Customer associatedCustomer = association.getCustomer();
-                    
-                    // On customer update the phone may already exist for this customer
-                    if (customerId != null && customerId.equals(associatedCustomer.getIdCustomer())) continue;
+            phoneRepository
+                    .findByNumber(phone.number())
+                    .ifPresent(p -> {
+                        List<CustomerPhone> associations =
+                                customerPhoneRepository.findByPhone_IdCellphone(p.getIdCellphone());
 
-                    // Let pass secondary existent phone
-                    if (!phone.isPrimary()) continue;
+                        for (CustomerPhone association : associations) {
+                            Customer associatedCustomer = association.getCustomer();
 
-                    // If trying to use as primary a phone that's already primary for another customer
-                    if (association.isMain()) {
-                        throw new EntityAlreadyExistsException("O numero informado já está cadastrado como principal para outro cliente");
-                    }
-                }
-            });
+                            // On customer update the phone may already exist for this customer
+                            if (customerId != null
+                                    && customerId.equals(associatedCustomer.getIdCustomer()))
+                                continue;
+
+                            // Let pass secondary existent phone
+                            if (!phone.isPrimary()) continue;
+
+                            // If trying to use as primary a phone that's already primary for
+                            // another customer
+                            if (association.isMain()) {
+                                throw new EntityAlreadyExistsException(
+                                        "O numero informado já está cadastrado como principal para outro cliente");
+                            }
+                        }
+                    });
         }
     }
-
 }

@@ -6,8 +6,7 @@ import java.time.Instant;
 /** Maps how long a device stayed in the workshop to a coarse band. */
 public final class TurnaroundBand {
 
-    private TurnaroundBand() {
-    }
+    private TurnaroundBand() {}
 
     public static String of(Instant entry, Instant closed) {
         if (entry == null || closed == null || closed.isBefore(entry)) {

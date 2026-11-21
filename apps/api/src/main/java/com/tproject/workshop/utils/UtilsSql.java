@@ -4,12 +4,11 @@ import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.MustacheFactory;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
+import java.io.StringWriter;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-
-import java.io.StringWriter;
-import java.util.stream.Collectors;
 
 public class UtilsSql {
 
@@ -19,20 +18,24 @@ public class UtilsSql {
     private static final String QUERY_PATH = "db/query/%s.sql";
     private static final MustacheFactory MF = new DefaultMustacheFactory();
 
-
-
     public static String getQuery(String queryName, Pageable pageable, Sort.Order defaultSort) {
         StringWriter stringWriter = new StringWriter();
         try {
             MF.compile(String.format(QUERY_PATH, queryName))
-                    .execute(stringWriter,
-                            getPaginationAndSortingContext(pageable.getPageNumber(), pageable.getPageSize(),
-                                    pageable.getSort(), defaultSort));
+                    .execute(
+                            stringWriter,
+                            getPaginationAndSortingContext(
+                                    pageable.getPageNumber(),
+                                    pageable.getPageSize(),
+                                    pageable.getSort(),
+                                    defaultSort));
             return stringWriter.toString();
         } catch (Exception ex) {
-            //TODO: create an exception for this
-//            throw new PixException(String.format("Não foi possível obter a query %s", queryName), ex);
-            throw new RuntimeException(String.format("Não foi possível obter a query %s", queryName), ex);
+            // TODO: create an exception for this
+            //            throw new PixException(String.format("Não foi possível obter a query %s",
+            // queryName), ex);
+            throw new RuntimeException(
+                    String.format("Não foi possível obter a query %s", queryName), ex);
         } finally {
             try {
                 stringWriter.close();
@@ -52,33 +55,37 @@ public class UtilsSql {
 
     private static String getSortDesc(Sort.Order order) {
         return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, order.getProperty())
-                + " " + order.getDirection();
+                + " "
+                + order.getDirection();
     }
 
-    private static ImmutableMap<String, Object> getPaginationAndSortingContext(int pageNumber, int pageSize,
-                                                                               Sort sort, Sort.Order defaultSort) {
+    private static ImmutableMap<String, Object> getPaginationAndSortingContext(
+            int pageNumber, int pageSize, Sort sort, Sort.Order defaultSort) {
 
         ImmutableMap.Builder<String, Object> contextBuilder = ImmutableMap.builder();
-        contextBuilder.put(PAGINATION_PARAMS, String
-                .format("limit %d offset %d", pageSize + 1, pageSize * pageNumber));
+        contextBuilder.put(
+                PAGINATION_PARAMS,
+                String.format("limit %d offset %d", pageSize + 1, pageSize * pageNumber));
         if (sort.isSorted()) {
 
-            StringBuilder sortCriteria = new StringBuilder(sort.stream()
-                    .map(UtilsSql::getSortDesc)
-                    .collect(Collectors.joining(", ")));
+            StringBuilder sortCriteria =
+                    new StringBuilder(
+                            sort.stream()
+                                    .map(UtilsSql::getSortDesc)
+                                    .collect(Collectors.joining(", ")));
 
             if (defaultSort != null) {
                 sortCriteria.append(", ").append(getSortDesc(defaultSort));
             }
 
-            contextBuilder.put(SORT_STATEMENT, String.format("order by %s", sortCriteria.toString()));
-
+            contextBuilder.put(
+                    SORT_STATEMENT, String.format("order by %s", sortCriteria.toString()));
         }
 
         return contextBuilder.build();
     }
 
-    public static String toLiteralArray(List<?> list){
+    public static String toLiteralArray(List<?> list) {
         if (list == null || list.isEmpty()) {
             return "{}";
         }

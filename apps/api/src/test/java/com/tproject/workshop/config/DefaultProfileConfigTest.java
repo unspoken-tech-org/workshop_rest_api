@@ -1,12 +1,11 @@
 package com.tproject.workshop.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.core.io.ClassPathResource;
-
-import java.util.Properties;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class DefaultProfileConfigTest {
 

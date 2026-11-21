@@ -7,11 +7,10 @@ import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Model;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypesBrandsModelsRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +22,8 @@ public class TypesBrandsModelsService {
     private final ModelService modelService;
 
     @Transactional
-    public BrandsModelsTypes createOrReturnExistentBrandModelType(TypeBrandModelInputDtoRecord typeBrandModel) {
+    public BrandsModelsTypes createOrReturnExistentBrandModelType(
+            TypeBrandModelInputDtoRecord typeBrandModel) {
         var typeInput = typeBrandModel.type();
         var brandInput = typeBrandModel.brand();
         var modelInput = typeBrandModel.model();
@@ -33,14 +33,17 @@ public class TypesBrandsModelsService {
         Model model = modelService.createOrReturnExistentModel(modelInput);
 
         return typesBrandsModelsRepository
-                .findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(), model.getIdModel())
+                .findByIdBrandAndIdModelAndIdType(
+                        type.getIdType(), brand.getIdBrand(), model.getIdModel())
                 .orElseGet(() -> {
                     typesBrandsModelsRepository.insertIgnore(
                             brand.getIdBrand(), model.getIdModel(), type.getIdType());
                     return typesBrandsModelsRepository
-                            .findByIdBrandAndIdModelAndIdType(type.getIdType(), brand.getIdBrand(), model.getIdModel())
-                            .orElseThrow(() -> new RuntimeException(
-                                    "Erro ao criar ou buscar associação de tipo, marca e modelo"));
+                            .findByIdBrandAndIdModelAndIdType(
+                                    type.getIdType(), brand.getIdBrand(), model.getIdModel())
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Erro ao criar ou buscar associação de tipo, marca e modelo"));
                 });
     }
 
@@ -48,5 +51,4 @@ public class TypesBrandsModelsService {
     public List<TypeRecord> getTypesBrandsModels() {
         return typesBrandsModelsRepository.getTypesBrandsModels();
     }
-
 }

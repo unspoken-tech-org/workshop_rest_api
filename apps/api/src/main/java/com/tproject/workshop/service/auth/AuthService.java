@@ -5,14 +5,13 @@ import com.tproject.workshop.dto.auth.RefreshTokenResponse;
 import com.tproject.workshop.dto.auth.TokenRequest;
 import com.tproject.workshop.dto.auth.TokenResponse;
 import com.tproject.workshop.model.ApiKey;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +32,7 @@ public class AuthService {
      * Authenticates using an API Key and returns JWT tokens.
      *
      * @param apiKeyHeader the API Key from header
-     * @param request      device/client data
+     * @param request device/client data
      * @return access token + refresh token
      */
     public TokenResponse authenticate(String apiKeyHeader, TokenRequest request) {
@@ -48,21 +47,19 @@ public class AuthService {
         apiKeyService.bindDeviceOrThrow(apiKey, request.boundDeviceId());
 
         // Generate JWT access token with claims
-        String accessToken = generateAccessToken(apiKey, request.boundDeviceId(), request.appVersion());
+        String accessToken =
+                generateAccessToken(apiKey, request.boundDeviceId(), request.appVersion());
 
         // Generate refresh token linked to the API Key
         String refreshToken = refreshTokenService.createRefreshToken(apiKey);
 
-        log.info("Token generated successfully for platform: {}, role: {}",
-                apiKey.getPlatform(), apiKey.getRole());
+        log.info(
+                "Token generated successfully for platform: {}, role: {}",
+                apiKey.getPlatform(),
+                apiKey.getRole());
 
         return new TokenResponse(
-                accessToken,
-                refreshToken,
-                "Bearer",
-                accessTokenExpiration,
-                refreshTokenExpiration
-        );
+                accessToken, refreshToken, "Bearer", accessTokenExpiration, refreshTokenExpiration);
     }
 
     /**
@@ -75,7 +72,8 @@ public class AuthService {
         log.debug("Refresh token request");
 
         // Validate, rotate refresh token, and get associated API Key
-        RefreshTokenService.RotationResult rotation = refreshTokenService.rotateRefreshToken(request.refreshToken());
+        RefreshTokenService.RotationResult rotation =
+                refreshTokenService.rotateRefreshToken(request.refreshToken());
         ApiKey apiKey = rotation.apiKey();
 
         // We don't have appVersion easily available here without changing
@@ -83,15 +81,13 @@ public class AuthService {
         String boundDeviceId = Optional.ofNullable(apiKey.getBoundDeviceId()).orElse("unknown");
         String accessToken = generateAccessToken(apiKey, boundDeviceId, "unknown");
 
-        log.debug("Access token renewed successfully for platform: {}, role: {}",
-                apiKey.getPlatform(), apiKey.getRole());
+        log.debug(
+                "Access token renewed successfully for platform: {}, role: {}",
+                apiKey.getPlatform(),
+                apiKey.getRole());
 
         return new RefreshTokenResponse(
-                accessToken,
-                rotation.refreshToken(),
-                "Bearer",
-                accessTokenExpiration
-        );
+                accessToken, rotation.refreshToken(), "Bearer", accessTokenExpiration);
     }
 
     /**
@@ -106,14 +102,14 @@ public class AuthService {
     }
 
     private String generateAccessToken(ApiKey apiKey, String boundDeviceId, String appVersion) {
-        Map<String, Object> claims = Map.of(
-                "apiKeyId", apiKey.getId(),
-                "roles", List.of("ROLE_" + apiKey.getRole().name()),
-                "platform", apiKey.getPlatform().name(),
-                "userIdentifier", apiKey.getUserIdentifier(),
-                "boundDeviceId", boundDeviceId,
-                "appVersion", appVersion
-        );
+        Map<String, Object> claims =
+                Map.of(
+                        "apiKeyId", apiKey.getId(),
+                        "roles", List.of("ROLE_" + apiKey.getRole().name()),
+                        "platform", apiKey.getPlatform().name(),
+                        "userIdentifier", apiKey.getUserIdentifier(),
+                        "boundDeviceId", boundDeviceId,
+                        "appVersion", appVersion);
 
         return jwtService.generateAccessToken(apiKey.getClientName(), claims);
     }

@@ -1,11 +1,9 @@
 package com.tproject.workshop.service;
 
-import org.springframework.stereotype.Service;
-
 import com.tproject.workshop.dto.deviceStatistics.DeviceStatisticsOutputDtoRecord;
 import com.tproject.workshop.repository.jdbc.DeviceStatisticsRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor

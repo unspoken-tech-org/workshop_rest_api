@@ -1,6 +1,9 @@
 package com.tproject.workshop.integration;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tproject.workshop.config.TestcontainersConfiguration;
 import com.tproject.workshop.utils.TestFileUtils;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.filter.log.RequestLoggingFilter;
@@ -8,6 +11,12 @@ import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONException;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,20 +28,10 @@ import org.skyscreamer.jsonassert.comparator.CustomComparator;
 import org.skyscreamer.jsonassert.comparator.DefaultComparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-import com.tproject.workshop.config.TestcontainersConfiguration;
-import org.springframework.context.annotation.Import;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.fail;
 
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
@@ -47,13 +46,9 @@ public class AbstractIntegrationLiveTest {
     protected static final int API_PORT = 8081;
     protected static final String API_KEY = TestAuthHelper.MOBILE_API_KEY;
 
+    @Autowired protected JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    protected JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
+    @Autowired private ObjectMapper objectMapper;
 
     protected static final RequestSpecification SPEC = createRequestSpecification(API_PORT);
 
@@ -69,10 +64,12 @@ public class AbstractIntegrationLiveTest {
     }
 
     protected static RequestSpecification createRequestSpecification(int apiPort) {
-        return new RequestSpecBuilder().setContentType(ContentType.JSON)
+        return new RequestSpecBuilder()
+                .setContentType(ContentType.JSON)
                 .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + apiPort)
                 .addFilter(new ResponseLoggingFilter())
-                .addFilter(new RequestLoggingFilter()).build();
+                .addFilter(new RequestLoggingFilter())
+                .build();
     }
 
     /**
@@ -102,7 +99,8 @@ public class AbstractIntegrationLiveTest {
     }
 
     private static RequestSpecification buildAuthenticatedSpec(String token) {
-        return new RequestSpecBuilder().setContentType(ContentType.JSON)
+        return new RequestSpecBuilder()
+                .setContentType(ContentType.JSON)
                 .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT)
                 .addFilter(new ResponseLoggingFilter())
                 .addFilter(new RequestLoggingFilter())
@@ -114,11 +112,17 @@ public class AbstractIntegrationLiveTest {
         validateResponse(index, response, new DefaultComparator(JSONCompareMode.STRICT));
     }
 
-    public void validateResponseIgnoreAttributes(Object index, Object response, List<String> ignoredAttributes) {
+    public void validateResponseIgnoreAttributes(
+            Object index, Object response, List<String> ignoredAttributes) {
 
-        validateResponse(index, response, new CustomComparator(JSONCompareMode.STRICT,
-                ignoredAttributes.stream().map(attr -> new Customization(attr, (o1, o2) -> true))
-                        .toArray(Customization[]::new)));
+        validateResponse(
+                index,
+                response,
+                new CustomComparator(
+                        JSONCompareMode.STRICT,
+                        ignoredAttributes.stream()
+                                .map(attr -> new Customization(attr, (o1, o2) -> true))
+                                .toArray(Customization[]::new)));
     }
 
     public void validateResponse(Object index, Object response, DefaultComparator comparator) {
@@ -130,10 +134,15 @@ public class AbstractIntegrationLiveTest {
         File testFile = new File(resource);
 
         try {
-            String actualPayload = response instanceof Response ? ((Response) response).getBody().prettyPrint() :
-                    objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
+            String actualPayload =
+                    response instanceof Response
+                            ? ((Response) response).getBody().prettyPrint()
+                            : objectMapper
+                                    .writerWithDefaultPrettyPrinter()
+                                    .writeValueAsString(response);
 
-            assertMatchesSnapshot(testFile, filename, actualPayload, comparator, isUpdateSnapshotsEnabled());
+            assertMatchesSnapshot(
+                    testFile, filename, actualPayload, comparator, isUpdateSnapshotsEnabled());
         } catch (JSONException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -152,20 +161,23 @@ public class AbstractIntegrationLiveTest {
             String filename,
             String actualPayload,
             DefaultComparator comparator,
-            boolean updateSnapshots
-    ) throws IOException, JSONException {
+            boolean updateSnapshots)
+            throws IOException, JSONException {
         if (testFile.exists()) {
-            String expectedPayload = FileUtils.readLines(testFile, StandardCharsets.UTF_8.name()).stream()
-                    .collect(Collectors.joining("\n"));
+            String expectedPayload =
+                    FileUtils.readLines(testFile, StandardCharsets.UTF_8.name()).stream()
+                            .collect(Collectors.joining("\n"));
 
-            JSONAssert.assertEquals(String.format("File %s", filename), expectedPayload, actualPayload, comparator);
+            JSONAssert.assertEquals(
+                    String.format("File %s", filename), expectedPayload, actualPayload, comparator);
             return;
         }
 
         if (!updateSnapshots) {
-            fail(String.format(
-                    "Missing JSON snapshot: %s. Re-run with -DupdateSnapshots=true or UPDATE_SNAPSHOTS=true to generate it.",
-                    testFile.getPath()));
+            fail(
+                    String.format(
+                            "Missing JSON snapshot: %s. Re-run with -DupdateSnapshots=true or UPDATE_SNAPSHOTS=true to generate it.",
+                            testFile.getPath()));
         }
 
         File parentDir = testFile.getParentFile();

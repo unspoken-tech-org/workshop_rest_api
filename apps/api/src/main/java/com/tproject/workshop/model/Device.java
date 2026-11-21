@@ -3,16 +3,15 @@ package com.tproject.workshop.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.util.List;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
