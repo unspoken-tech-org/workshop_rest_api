@@ -6,6 +6,7 @@ import com.tproject.workshop.dto.device.DeviceUrgencyInputRecord;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
+import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.model.Device;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
@@ -19,10 +20,14 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -114,6 +119,76 @@ class DeviceServiceTest {
         verify(eventRecorder).record(ObservabilityEventCatalog.DEVICE_URGENCY_CHANGED,
                 Map.of("device.urgency", "normal"));
         verify(deviceRepository, times(2)).saveAndFlush(any(Device.class));
+    }
+
+    @Test
+    void updateDevice_shouldPreservePersistedDepartureDateWhenOmitted() {
+        LocalDateTime entry = LocalDateTime.of(2026, 5, 1, 10, 0);
+        Timestamp persistedDeparture = Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 15, 30));
+        device.setEntryDate(Timestamp.valueOf(entry));
+        device.setDepartureDate(persistedDeparture);
+        device.setDeviceStatus(DeviceStatusEnum.ENTREGUE);
+
+        deviceService.updateDevice(new DeviceUpdateInputDtoRecord(
+                DEVICE_ID, "ENTREGUE", "problema", "obs atualizada", null,
+                new BigDecimal("50.00"), null, false, false, null, null, null));
+
+        assertThat(device.getDepartureDate()).isEqualTo(persistedDeparture);
+    }
+
+    @Test
+    void updateDevice_shouldSetDepartureDateToNowWhenOmittedAndCurrentlyNull() {
+        device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 1, 10, 0)));
+        device.setDepartureDate(null);
+
+        deviceService.updateDevice(new DeviceUpdateInputDtoRecord(
+                DEVICE_ID, "DESCARTADO", "problema", null, null,
+                new BigDecimal("50.00"), null, false, false, null, null, null));
+
+        assertThat(device.getDepartureDate()).isNotNull();
+    }
+
+    @Test
+    void updateDevice_shouldRejectDepartureDateBeforeExistingEntryDate() {
+        device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 10, 0)));
+
+        DeviceUpdateInputDtoRecord request = new DeviceUpdateInputDtoRecord(
+                DEVICE_ID, "ENTREGUE", "problema", null, null,
+                new BigDecimal("50.00"), null, false, false, null,
+                null, LocalDateTime.of(2026, 5, 9, 10, 0));
+
+        assertThatThrownBy(() -> deviceService.updateDevice(request))
+                .isInstanceOf(BadRequestException.class);
+        verify(deviceRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateDevice_shouldRejectEntryDateAfterExistingDepartureDate() {
+        device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 1, 10, 0)));
+        device.setDepartureDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 10, 0)));
+
+        DeviceUpdateInputDtoRecord request = new DeviceUpdateInputDtoRecord(
+                DEVICE_ID, "ENTREGUE", "problema", null, null,
+                new BigDecimal("50.00"), null, false, false, null,
+                LocalDateTime.of(2026, 5, 11, 10, 0), null);
+
+        assertThatThrownBy(() -> deviceService.updateDevice(request))
+                .isInstanceOf(BadRequestException.class);
+        verify(deviceRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateDevice_shouldAllowDepartureDateEqualToEntryDate() {
+        LocalDateTime sameInstant = LocalDateTime.of(2026, 5, 10, 10, 0);
+        device.setEntryDate(Timestamp.valueOf(sameInstant));
+
+        deviceService.updateDevice(new DeviceUpdateInputDtoRecord(
+                DEVICE_ID, "ENTREGUE", "problema", null, null,
+                new BigDecimal("50.00"), null, false, false, null,
+                sameInstant, sameInstant));
+
+        assertThat(device.getDepartureDate()).isEqualTo(Timestamp.valueOf(sameInstant));
+        verify(deviceRepository).saveAndFlush(device);
     }
 
     private static DeviceUpdateInputDtoRecord update(BigDecimal budgetFee, BigDecimal serviceValue, boolean urgency) {

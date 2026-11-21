@@ -7,8 +7,8 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Model;
 import com.tproject.workshop.repository.ModelRepository;
+import com.tproject.workshop.utils.CatalogName;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,28 +34,13 @@ public class ModelService {
 
     @Transactional
     public Model createOrReturnExistentModel(String model) {
-        var modelName = model.toLowerCase().trim().replaceAll("\\s+", " ");
-        var modelFound = modelRepository.findByModelIgnoreCase(modelName);
-
-        if (modelFound.isPresent()) {
-            return modelFound.get();
-        }
-
-        try {
-            var newModel = new Model();
-            newModel.setModel(modelName);
-
-            Model saved = modelRepository.save(newModel);
-            eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "model"));
-            return saved;
-        } catch (DataIntegrityViolationException e) {
-            return findModelOnCreate(modelName, model);
-        }
-    }
-
-    private Model findModelOnCreate(String modelName, String originalModel) {
-        return modelRepository.findByModelIgnoreCase(modelName)
-                .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar modelo: " + originalModel));
+        return CatalogName.findOrCreate(
+                model,
+                modelRepository::findByModelIgnoreCase,
+                modelRepository::insertIgnore,
+                () -> eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "model")),
+                () -> new NotFoundException("Erro ao criar ou buscar modelo: " + model)
+        );
     }
 
     @Transactional(readOnly = true)

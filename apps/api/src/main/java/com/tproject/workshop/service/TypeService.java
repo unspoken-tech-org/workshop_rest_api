@@ -7,8 +7,8 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypeRepository;
+import com.tproject.workshop.utils.CatalogName;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,28 +45,13 @@ public class TypeService {
 
     @Transactional
     public Type createOrReturnExistentType(String type) {
-        var typeName = type.toLowerCase().trim().replaceAll("\\s+", " ");
-        var typeFound = typeRepository.findByTypeIgnoreCase(typeName);
-
-        if (typeFound.isPresent()) {
-            return typeFound.get();
-        }
-
-        try {
-            var newType = new Type();
-            newType.setType(typeName);
-
-            Type saved = typeRepository.save(newType);
-            eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "type"));
-            return saved;
-        } catch (DataIntegrityViolationException e) {
-            return findTypeOnCreate(typeName, type);
-        }
-    }
-
-    private Type findTypeOnCreate(String typeName, String originalType) {
-        return typeRepository.findByTypeIgnoreCase(typeName)
-                .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar tipo: " + originalType));
+        return CatalogName.findOrCreate(
+                type,
+                typeRepository::findByTypeIgnoreCase,
+                typeRepository::insertIgnore,
+                () -> eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "type")),
+                () -> new NotFoundException("Erro ao criar ou buscar tipo: " + type)
+        );
     }
     
     private TypeResponseDto toDto(Type type) {

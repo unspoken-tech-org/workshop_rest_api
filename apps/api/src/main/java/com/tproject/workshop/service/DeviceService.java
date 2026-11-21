@@ -68,7 +68,7 @@ public class DeviceService {
     }
 
     private void setDepartureDateIfDelivered(Device device, DeviceStatusEnum newStatus) {
-        if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+        if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus) && device.getDepartureDate() == null) {
             device.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
         }
     }
@@ -246,12 +246,26 @@ public class DeviceService {
             oldDevice.setTechnician(technician);
         });
 
-        if (device.entryDate() != null && device.departureDate() != null
-                && !device.departureDate().isAfter(device.entryDate())) {
+        LocalDateTime effectiveEntryDate = Optional.ofNullable(device.entryDate())
+                .orElseGet(() -> oldDevice.getEntryDate() != null ? oldDevice.getEntryDate().toLocalDateTime() : null);
+
+        LocalDateTime effectiveDepartureDate;
+        if (device.departureDate() != null) {
+            effectiveDepartureDate = device.departureDate();
+        } else if (oldDevice.getDepartureDate() != null) {
+            effectiveDepartureDate = oldDevice.getDepartureDate().toLocalDateTime();
+        } else if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+            effectiveDepartureDate = LocalDateTime.now();
+        } else {
+            effectiveDepartureDate = null;
+        }
+
+        if (effectiveEntryDate != null && effectiveDepartureDate != null
+                && effectiveDepartureDate.isBefore(effectiveEntryDate)) {
             throw new BadRequestException(
-                    "A data de saída (%s) deve ser posterior à data de entrada (%s)",
-                    device.departureDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                    device.entryDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                    "A data de saída (%s) deve ser posterior ou igual à data de entrada (%s)",
+                    effectiveDepartureDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    effectiveEntryDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         }
 
         if (device.entryDate() != null) {
@@ -260,8 +274,8 @@ public class DeviceService {
 
         if (device.departureDate() != null) {
             oldDevice.setDepartureDate(Timestamp.valueOf(device.departureDate()));
-        } else if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
-            oldDevice.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
+        } else if (oldDevice.getDepartureDate() == null && STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+            oldDevice.setDepartureDate(Timestamp.valueOf(effectiveDepartureDate));
         }
 
         deviceRepository.saveAndFlush(oldDevice);

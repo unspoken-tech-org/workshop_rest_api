@@ -13,7 +13,7 @@ LEFT JOIN LATERAL (
       'id', p.id,
       'number', p.number,
       'main', cp.is_main,
-      'name', p.alias
+      'name', cp.alias
   ) ORDER BY p.id), '[]'::json) AS customer_phones
   FROM customer_phones cp
   INNER JOIN phones p ON p.id = cp.id_phone

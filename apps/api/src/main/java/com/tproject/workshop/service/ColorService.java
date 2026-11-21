@@ -6,8 +6,8 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Color;
 import com.tproject.workshop.repository.ColorRepository;
+import com.tproject.workshop.utils.CatalogName;
 import lombok.AllArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,26 +29,13 @@ public class ColorService {
 
     @Transactional
     public Color createOrReturnExistentColor(String color) {
-        var colorFound = colorRepository.findByColorIgnoreCase(color);
-        if (colorFound.isPresent()) {
-            return colorFound.get();
-        }
-
-        var colorName = color.toLowerCase().trim().replaceAll("\\s+", " ");
-        try {
-            var newColor = new Color();
-            newColor.setColor(colorName);
-            Color saved = colorRepository.save(newColor);
-            eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "color"));
-            return saved;
-        } catch (DataIntegrityViolationException e) {
-            return findColorOnCreate(colorName, color);
-        }
-    }
-
-    private Color findColorOnCreate(String colorName, String originalColor) {
-        return colorRepository.findByColorIgnoreCase(colorName)
-                .orElseThrow(() -> new NotFoundException("Erro ao criar ou buscar cor: " + originalColor));
+        return CatalogName.findOrCreate(
+                color,
+                colorRepository::findByColorIgnoreCase,
+                colorRepository::insertIgnore,
+                () -> eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "color")),
+                () -> new NotFoundException("Erro ao criar ou buscar cor: " + color)
+        );
     }
 
     private ColorResponseDto toDto(Color color) {

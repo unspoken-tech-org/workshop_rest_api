@@ -32,6 +32,9 @@ public class CustomerPhone {
     
     @Column(name = "is_main")
     private boolean isMain;
+
+    @Column(name = "alias")
+    private String phoneAlias;
     
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -43,9 +46,14 @@ public class CustomerPhone {
 
     // Convenience constructor
     public CustomerPhone(Customer customer, Phone phone, boolean isMain) {
+        this(customer, phone, isMain, null);
+    }
+
+    public CustomerPhone(Customer customer, Phone phone, boolean isMain, String phoneAlias) {
         this.customer = customer;
         this.phone = phone;
         this.isMain = isMain;
+        this.phoneAlias = phoneAlias;
         this.id = new CustomerPhoneId(customer.getIdCustomer(), phone.getIdCellphone());
     }
 }

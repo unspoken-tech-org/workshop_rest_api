@@ -24,8 +24,6 @@ public class Phone {
     int idCellphone;
     @Column(name = "number")
     String number;
-    @Column(name = "alias")
-    String phoneAlias;
     
     @OneToMany(mappedBy = "phone", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore

@@ -8,10 +8,13 @@ import com.tproject.workshop.exception.InvalidApiKeyException;
 import com.tproject.workshop.exception.InvalidTokenException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.exception.TokenExpiredException;
+import jakarta.persistence.OptimisticLockException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -95,6 +98,48 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(new ResponseError(HttpStatus.CONFLICT.value(), "Conflito de Recurso",
                 error), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler({ObjectOptimisticLockingFailureException.class, OptimisticLockException.class})
+    public ResponseEntity<ResponseError> handleOptimisticLockingException(final Exception ex, WebRequest request) {
+        logClientError("recurso.conflito.versao", ex, request);
+
+        ErrorMetadata.Error error = new ErrorMetadata.Error(
+                "recurso.conflito.versao",
+                "O registro foi atualizado por outro usuário. Recarregue os dados e tente novamente."
+        );
+
+        return new ResponseEntity<>(new ResponseError(HttpStatus.CONFLICT.value(), "Conflito de Versão",
+                error), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ResponseError> handleDataIntegrityViolationException(
+            final DataIntegrityViolationException ex, WebRequest request) {
+        if (isUniqueConstraintViolation(ex)) {
+            logClientError("recurso.conflito", ex, request);
+
+            ErrorMetadata.Error error = new ErrorMetadata.Error(
+                    "recurso.conflito",
+                    "Registro duplicado: o recurso informado já existe."
+            );
+
+            return new ResponseEntity<>(new ResponseError(HttpStatus.CONFLICT.value(), "Conflito de Recurso",
+                    error), HttpStatus.CONFLICT);
+        }
+
+        return handleDatabaseException(ex, request);
+    }
+
+    private static boolean isUniqueConstraintViolation(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof SQLException sqlEx && "23505".equals(sqlEx.getSQLState())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     @ExceptionHandler(ApiKeyDeviceBoundException.class)
