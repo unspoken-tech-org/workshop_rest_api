@@ -8,8 +8,7 @@ public final class ValueBand {
     private static final BigDecimal LOW_LIMIT = new BigDecimal("100");
     private static final BigDecimal MEDIUM_LIMIT = new BigDecimal("500");
 
-    private ValueBand() {
-    }
+    private ValueBand() {}
 
     public static String of(BigDecimal value) {
         if (value == null || value.signum() <= 0) {

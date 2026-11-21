@@ -1,7 +1,6 @@
 package com.tproject.workshop.util;
 
 import com.tproject.workshop.model.Platform;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -21,9 +20,7 @@ public class KeyGeneratorUtils {
     public static String generateSecureKey(Platform platform) {
         byte[] bytes = new byte[ENTROPY_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
-        String randomPart = Base64.getUrlEncoder()
-                .withoutPadding()
-                .encodeToString(bytes);
+        String randomPart = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         return platform.getPrefix() + randomPart;
     }

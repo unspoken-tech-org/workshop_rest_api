@@ -9,15 +9,19 @@ import java.util.Collections;
 import java.util.List;
 
 public class JsonResultSetMapper {
-  public static <T> List<T> readJsonList(ResultSet rs, String columnName, TypeReference<List<T>> typeRef, ObjectMapper objectMapper) {
-    try {
-      String json = rs.getString(columnName);
-      if (json != null && !json.isBlank()) {
-        return objectMapper.readValue(json, typeRef);
-      }
-    } catch (SQLException | JsonProcessingException e) {
-      throw new RuntimeException("Failed to parse JSON column: " + columnName, e);
+    public static <T> List<T> readJsonList(
+            ResultSet rs,
+            String columnName,
+            TypeReference<List<T>> typeRef,
+            ObjectMapper objectMapper) {
+        try {
+            String json = rs.getString(columnName);
+            if (json != null && !json.isBlank()) {
+                return objectMapper.readValue(json, typeRef);
+            }
+        } catch (SQLException | JsonProcessingException e) {
+            throw new RuntimeException("Failed to parse JSON column: " + columnName, e);
+        }
+        return Collections.emptyList();
     }
-    return Collections.emptyList();
-  }
 }

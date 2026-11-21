@@ -1,10 +1,8 @@
 package com.tproject.workshop.repository;
 
 import com.tproject.workshop.model.Model;
-
-import java.util.Optional;
-
 import com.tproject.workshop.repository.jdbc.ModelRepositoryJdbc;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,7 +15,9 @@ public interface ModelRepository extends JpaRepository<Model, Integer>, ModelRep
     Optional<Model> findByModelIgnoreCase(String name);
 
     @Modifying
-    @Query(value = "INSERT INTO models (model) VALUES (:model) ON CONFLICT (LOWER(TRIM(model))) DO NOTHING", nativeQuery = true)
+    @Query(
+            value =
+                    "INSERT INTO models (model) VALUES (:model) ON CONFLICT (LOWER(TRIM(model))) DO NOTHING",
+            nativeQuery = true)
     int insertIgnore(@Param("model") String model);
-
 }

@@ -6,12 +6,11 @@ import com.tproject.workshop.dto.apikey.ApiKeyResponse;
 import com.tproject.workshop.dto.apikey.CreateApiKeyRequest;
 import com.tproject.workshop.service.auth.ApiKeyService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,8 +27,7 @@ public class ApiKeyControllerImpl implements ApiKeyController {
                 request.platform(),
                 request.role(),
                 request.description(),
-                request.expiresAt()
-        );
+                request.expiresAt());
     }
 
     @Override
@@ -52,4 +50,3 @@ public class ApiKeyControllerImpl implements ApiKeyController {
         apiKeyService.resetDeviceBinding(id);
     }
 }
-

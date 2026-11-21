@@ -2,14 +2,13 @@ package com.tproject.workshop.dto.customer;
 
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.device.MinifiedDeviceTableOutputDto;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldNameConstants;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @Builder
@@ -26,6 +25,4 @@ public class CustomerOutputDto {
     private LocalDateTime createdAt;
     private List<CellPhoneOutputDeviceDto> phones;
     private List<MinifiedDeviceTableOutputDto> customerDevices;
-
-
 }

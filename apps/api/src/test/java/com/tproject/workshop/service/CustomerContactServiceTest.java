@@ -1,5 +1,10 @@
 package com.tproject.workshop.service;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.*;
+
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import com.tproject.workshop.enums.DeviceStatusEnum;
@@ -7,6 +12,9 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,45 +24,32 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CustomerContactServiceTest {
 
     private static final int DEVICE_ID = 1;
 
-    @Mock
-    private CustomerContactRepository customerContactRepository;
-    @Mock
-    private DeviceService deviceService;
-    @Mock
-    private TechnicianService technicianService;
-    @Mock
-    private PhoneService phoneService;
-    @Mock
-    private ObservabilityEventRecorder eventRecorder;
+    @Mock private CustomerContactRepository customerContactRepository;
+    @Mock private DeviceService deviceService;
+    @Mock private TechnicianService technicianService;
+    @Mock private PhoneService phoneService;
+    @Mock private ObservabilityEventRecorder eventRecorder;
 
-    @InjectMocks
-    private CustomerContactService customerContactService;
+    @InjectMocks private CustomerContactService customerContactService;
 
     @BeforeEach
     void setUp() {
-        when(technicianService.findByIdDto(anyInt())).thenReturn(new TechnicianResponseDto(2, "Tecnico", "T002"));
-        when(customerContactRepository.save(any(CustomerContact.class))).thenAnswer(invocation -> {
-            CustomerContact contact = invocation.getArgument(0);
-            if (contact.getId() == null) {
-                contact.setId(10);
-            }
-            return contact;
-        });
+        when(technicianService.findByIdDto(anyInt()))
+                .thenReturn(new TechnicianResponseDto(2, "Tecnico", "T002"));
+        when(customerContactRepository.save(any(CustomerContact.class)))
+                .thenAnswer(invocation -> {
+                    CustomerContact contact = invocation.getArgument(0);
+                    if (contact.getId() == null) {
+                        contact.setId(10);
+                    }
+                    return contact;
+                });
     }
 
     @Test
@@ -81,9 +76,11 @@ class CustomerContactServiceTest {
     @Test
     void save_shouldThrowNotFound_whenDeviceDoesNotExist() {
         doThrow(new NotFoundException("Aparelho com id 1 não encontrado"))
-                .when(deviceService).ensureDeviceExists(DEVICE_ID);
+                .when(deviceService)
+                .ensureDeviceExists(DEVICE_ID);
 
-        assertThatThrownBy(() -> customerContactService.save(input("pronto", "2026-06-03T10:00:00")))
+        assertThatThrownBy(
+                        () -> customerContactService.save(input("pronto", "2026-06-03T10:00:00")))
                 .isInstanceOf(NotFoundException.class);
         verify(customerContactRepository, never()).save(any());
     }
@@ -125,8 +122,8 @@ class CustomerContactServiceTest {
     }
 
     private static CustomerContactInputDto input(String deviceStatus, String contactDate) {
-        return new CustomerContactInputDto(DEVICE_ID, "pessoalmente", 2, null, "teste", true,
-                deviceStatus, contactDate);
+        return new CustomerContactInputDto(
+                DEVICE_ID, "pessoalmente", 2, null, "teste", true, deviceStatus, contactDate);
     }
 
     private static CustomerContact contactWithId(int id, DeviceStatusEnum status) {

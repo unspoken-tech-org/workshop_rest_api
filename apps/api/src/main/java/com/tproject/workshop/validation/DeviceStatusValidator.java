@@ -7,8 +7,7 @@ import jakarta.validation.ConstraintValidatorContext;
 public class DeviceStatusValidator implements ConstraintValidator<ValidDeviceStatus, String> {
 
     @Override
-    public void initialize(ValidDeviceStatus constraintAnnotation) {
-    }
+    public void initialize(ValidDeviceStatus constraintAnnotation) {}
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {

@@ -4,12 +4,9 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.tproject.workshop.utils.UtilsString;
-
 import java.io.IOException;
 
-/**
- * Deserializer to remove special characters from phone number
- */
+/** Deserializer to remove special characters from phone number */
 public class PhoneNumberDeserializer extends JsonDeserializer<String> {
 
     @Override
@@ -20,4 +17,4 @@ public class PhoneNumberDeserializer extends JsonDeserializer<String> {
         }
         return UtilsString.onlyDigits(phoneNumber);
     }
-} 
+}

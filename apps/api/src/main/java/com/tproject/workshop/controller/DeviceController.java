@@ -18,23 +18,28 @@ public interface DeviceController {
 
     @Operation(
             summary = "Filter devices",
-            description = "Provides a paginated list of devices filtered by customer data, status, urgency, and catalog attributes.")
+            description =
+                    "Provides a paginated list of devices filtered by customer data, status, urgency, and catalog attributes.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Devices filtered successfully")
     @PostMapping("/filter")
-    Page<DeviceTableDto> list(@RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam);
+    Page<DeviceTableDto> list(
+            @RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam);
 
     @Operation(
             summary = "Find device by id",
-            description = "Returns the full device details including customer info and status timeline for service desks.")
+            description =
+                    "Returns the full device details including customer info and status timeline for service desks.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Device retrieved successfully")
     @GetMapping("/{deviceId}")
-    DeviceOutputDto findOne(@Parameter(description = "Device identifier") @PathVariable("deviceId") int deviceId);
+    DeviceOutputDto findOne(
+            @Parameter(description = "Device identifier") @PathVariable("deviceId") int deviceId);
 
     @Operation(
             summary = "Update device",
-            description = "Updates device status, pricing details, and ownership data during the repair lifecycle.")
+            description =
+                    "Updates device status, pricing details, and ownership data during the repair lifecycle.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Device updated successfully")
     @PutMapping("/update")
@@ -42,7 +47,8 @@ public interface DeviceController {
 
     @Operation(
             summary = "Update device status",
-            description = "Updates only the device status. Resets urgency and revision for terminal statuses, auto-sets departure date when delivered or discarded.")
+            description =
+                    "Updates only the device status. Resets urgency and revision for terminal statuses, auto-sets departure date when delivered or discarded.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Device status updated successfully")
     @PutMapping("/update/{deviceId}/status")
@@ -52,7 +58,8 @@ public interface DeviceController {
 
     @Operation(
             summary = "Update device urgency",
-            description = "Toggles the urgency flag. Reverts status to NOVO if the device is currently delivered or discarded.")
+            description =
+                    "Toggles the urgency flag. Reverts status to NOVO if the device is currently delivered or discarded.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Device urgency updated successfully")
     @PutMapping("/update/{deviceId}/urgency")
@@ -62,7 +69,8 @@ public interface DeviceController {
 
     @Operation(
             summary = "Update device revision",
-            description = "Toggles the revision flag. Reverts status to NOVO if the device is currently delivered or discarded.")
+            description =
+                    "Toggles the revision flag. Reverts status to NOVO if the device is currently delivered or discarded.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Device revision updated successfully")
     @PutMapping("/update/{deviceId}/revision")
@@ -72,15 +80,18 @@ public interface DeviceController {
 
     @Operation(
             summary = "Create device",
-            description = "Registers a new device intake with catalog mapping, color selection, and urgency flags.")
+            description =
+                    "Registers a new device intake with catalog mapping, color selection, and urgency flags.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "201", description = "Device created successfully")
     @PostMapping("/create")
     @ResponseStatus(code = HttpStatus.CREATED)
     CreateDeviceOutputDtoRecord create(@RequestBody DeviceInputDtoRecord device);
 
-    @Operation(summary = "Search devices",
-            description = "Full-text fuzzy search across device type, brand, model, and customer name. Supports pagination and auxiliary filters (status, urgency, revision, entry dates).")
+    @Operation(
+            summary = "Search devices",
+            description =
+                    "Full-text fuzzy search across device type, brand, model, and customer name. Supports pagination and auxiliary filters (status, urgency, revision, entry dates).")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     @PostMapping("/search")

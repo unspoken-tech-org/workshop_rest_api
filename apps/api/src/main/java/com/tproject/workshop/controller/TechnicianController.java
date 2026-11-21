@@ -12,23 +12,27 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 @PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
-@Tag(name = "Technicians", description = "Access the roster of technicians responsible for device servicing")
+@Tag(
+        name = "Technicians",
+        description = "Access the roster of technicians responsible for device servicing")
 public interface TechnicianController {
 
     @Operation(
             summary = "Find technician by id",
-            description = "Retrieves a technician to attribute devices, follow tasks, or display ownership in dashboards.")
+            description =
+                    "Retrieves a technician to attribute devices, follow tasks, or display ownership in dashboards.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Technician retrieved successfully")
     @GetMapping("/{id}")
-    TechnicianResponseDto find(@Parameter(description = "Technician identifier") @PathVariable("id") Integer id);
+    TechnicianResponseDto find(
+            @Parameter(description = "Technician identifier") @PathVariable("id") Integer id);
 
     @Operation(
             summary = "List technicians",
-            description = "Returns every active technician, supporting assignment dropdowns and routing rules.")
+            description =
+                    "Returns every active technician, supporting assignment dropdowns and routing rules.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Technicians listed successfully")
     @GetMapping
     List<TechnicianResponseDto> list();
-
 }

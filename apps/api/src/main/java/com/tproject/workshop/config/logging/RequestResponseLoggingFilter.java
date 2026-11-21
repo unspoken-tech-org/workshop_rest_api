@@ -4,6 +4,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -12,15 +15,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
-
-
 /**
- * Runs before the Spring Security filter chain so requests rejected there
- * (401/403) are also logged (R18); their route is {@code unmatched}, since
- * they never reach a handler.
+ * Runs before the Spring Security filter chain so requests rejected there (401/403) are also logged
+ * (R18); their route is {@code unmatched}, since they never reach a handler.
  */
 @Component
 @Order(SecurityProperties.DEFAULT_FILTER_ORDER - 1)
@@ -37,9 +34,9 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
 
         Instant start = Instant.now();
 
@@ -59,9 +56,8 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
         return request.getRequestURI().startsWith("/actuator");
     }
 
-    private void logRequest(HttpServletRequest request,
-                            HttpServletResponse response,
-                            long durationMs) {
+    private void logRequest(
+            HttpServletRequest request, HttpServletResponse response, long durationMs) {
 
         String method = request.getMethod();
         // Parameterized route (e.g. /v1/customers/{id}): concrete URIs carry
@@ -74,7 +70,8 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
         MDC.put("httpStatus", String.valueOf(status));
         MDC.put("durationMs", String.valueOf(durationMs));
         // Only requests without a matched route carry their path (scans, 401/403 before mapping).
-        RequestLogSanitizer.unmatchedPath(request).ifPresent(unmatched -> MDC.put("path", unmatched));
+        RequestLogSanitizer.unmatchedPath(request)
+                .ifPresent(unmatched -> MDC.put("path", unmatched));
 
         try {
             boolean isError = status >= 400;

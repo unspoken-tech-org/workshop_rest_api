@@ -1,12 +1,11 @@
 package com.tproject.workshop.model;
 
 import jakarta.persistence.*;
+import java.security.SecureRandom;
+import java.time.Instant;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import java.security.SecureRandom;
-import java.time.Instant;
 
 @Entity
 @Table(name = "api_keys")
@@ -41,8 +40,7 @@ public class ApiKey {
     @Builder.Default
     private Role role = Role.SERVICE;
 
-    @Column
-    private String description;
+    @Column private String description;
 
     @Column(nullable = false)
     @Builder.Default

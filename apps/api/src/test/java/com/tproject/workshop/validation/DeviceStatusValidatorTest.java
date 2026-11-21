@@ -1,17 +1,16 @@
 package com.tproject.workshop.validation;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.tproject.workshop.dto.device.DeviceUpdateInputDtoRecord;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class DeviceStatusValidatorTest {
 
@@ -26,20 +25,20 @@ class DeviceStatusValidatorTest {
     @Test
     void shouldPassValidation_whenDeviceStatusIsValid() {
         // Arrange
-        DeviceUpdateInputDtoRecord dto = new DeviceUpdateInputDtoRecord(
-                1,
-                "NOVO",
-                "Problema no dispositivo",
-                "Observação",
-                "Orçamento",
-                BigDecimal.valueOf(100.0),
-                BigDecimal.valueOf(50.0),
-                false,
-                false,
-                1,
-                null,
-                null
-        );
+        DeviceUpdateInputDtoRecord dto =
+                new DeviceUpdateInputDtoRecord(
+                        1,
+                        "NOVO",
+                        "Problema no dispositivo",
+                        "Observação",
+                        "Orçamento",
+                        BigDecimal.valueOf(100.0),
+                        BigDecimal.valueOf(50.0),
+                        false,
+                        false,
+                        1,
+                        null,
+                        null);
 
         // Act
         Set<ConstraintViolation<DeviceUpdateInputDtoRecord>> violations = validator.validate(dto);
@@ -51,20 +50,20 @@ class DeviceStatusValidatorTest {
     @Test
     void shouldPassValidation_whenDeviceStatusIsValidWithDifferentCase() {
         // Arrange
-        DeviceUpdateInputDtoRecord dto = new DeviceUpdateInputDtoRecord(
-                1,
-                "em_andamento",
-                "Problema no dispositivo",
-                "Observação",
-                "Orçamento",
-                BigDecimal.valueOf(100.0),
-                BigDecimal.valueOf(50.0),
-                false,
-                false,
-                1,
-                null,
-                null
-        );
+        DeviceUpdateInputDtoRecord dto =
+                new DeviceUpdateInputDtoRecord(
+                        1,
+                        "em_andamento",
+                        "Problema no dispositivo",
+                        "Observação",
+                        "Orçamento",
+                        BigDecimal.valueOf(100.0),
+                        BigDecimal.valueOf(50.0),
+                        false,
+                        false,
+                        1,
+                        null,
+                        null);
 
         // Act
         Set<ConstraintViolation<DeviceUpdateInputDtoRecord>> violations = validator.validate(dto);
@@ -76,20 +75,20 @@ class DeviceStatusValidatorTest {
     @Test
     void shouldFailValidation_whenDeviceStatusIsInvalid() {
         // Arrange
-        DeviceUpdateInputDtoRecord dto = new DeviceUpdateInputDtoRecord(
-                1,
-                "STATUS_INVALIDO",
-                "Problema no dispositivo",
-                "Observação",
-                "Orçamento",
-                BigDecimal.valueOf(100.0),
-                BigDecimal.valueOf(50.0),
-                false,
-                false,
-                1,
-                null,
-                null
-        );
+        DeviceUpdateInputDtoRecord dto =
+                new DeviceUpdateInputDtoRecord(
+                        1,
+                        "STATUS_INVALIDO",
+                        "Problema no dispositivo",
+                        "Observação",
+                        "Orçamento",
+                        BigDecimal.valueOf(100.0),
+                        BigDecimal.valueOf(50.0),
+                        false,
+                        false,
+                        1,
+                        null,
+                        null);
 
         // Act
         Set<ConstraintViolation<DeviceUpdateInputDtoRecord>> violations = validator.validate(dto);
@@ -104,20 +103,20 @@ class DeviceStatusValidatorTest {
     @Test
     void shouldPassValidation_whenDeviceStatusIsEmpty() {
         // Arrange
-        DeviceUpdateInputDtoRecord dto = new DeviceUpdateInputDtoRecord(
-                1,
-                "",
-                "Problema no dispositivo",
-                "Observação",
-                "Orçamento",
-                BigDecimal.valueOf(100.0),
-                BigDecimal.valueOf(50.0),
-                false,
-                false,
-                1,
-                null,
-                null
-        );
+        DeviceUpdateInputDtoRecord dto =
+                new DeviceUpdateInputDtoRecord(
+                        1,
+                        "",
+                        "Problema no dispositivo",
+                        "Observação",
+                        "Orçamento",
+                        BigDecimal.valueOf(100.0),
+                        BigDecimal.valueOf(50.0),
+                        false,
+                        false,
+                        1,
+                        null,
+                        null);
 
         // Act
         Set<ConstraintViolation<DeviceUpdateInputDtoRecord>> violations = validator.validate(dto);
@@ -133,20 +132,20 @@ class DeviceStatusValidatorTest {
     @Test
     void shouldPassValidation_whenDeviceStatusIsNull() {
         // Arrange
-        DeviceUpdateInputDtoRecord dto = new DeviceUpdateInputDtoRecord(
-                1,
-                null,
-                "Problema no dispositivo",
-                "Observação",
-                "Orçamento",
-                BigDecimal.valueOf(100.0),
-                BigDecimal.valueOf(50.0),
-                false,
-                false,
-                1,
-                null,
-                null
-        );
+        DeviceUpdateInputDtoRecord dto =
+                new DeviceUpdateInputDtoRecord(
+                        1,
+                        null,
+                        "Problema no dispositivo",
+                        "Observação",
+                        "Orçamento",
+                        BigDecimal.valueOf(100.0),
+                        BigDecimal.valueOf(50.0),
+                        false,
+                        false,
+                        1,
+                        null,
+                        null);
 
         // Act
         Set<ConstraintViolation<DeviceUpdateInputDtoRecord>> violations = validator.validate(dto);

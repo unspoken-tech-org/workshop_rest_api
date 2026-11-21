@@ -4,10 +4,9 @@ import com.tproject.workshop.utils.filter_utils.Ordenation;
 import com.tproject.workshop.utils.filter_utils.OrderByDirection;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.util.List;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
-
-import java.util.List;
 
 @Data
 @FieldNameConstants(asEnum = true)

@@ -1,17 +1,18 @@
 package com.tproject.workshop.config.logging;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.servlet.HandlerMapping;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class RequestLogSanitizerTest {
 
     @Test
     void shouldDescribeRequestByRouteWithoutConcreteValues() {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customers/31781477051");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/v1/customers/31781477051");
         request.setQueryString("email=customer%40example.com&token=secret");
         request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/v1/customers/{id}");
 
@@ -23,9 +24,11 @@ class RequestLogSanitizerTest {
 
     @Test
     void shouldNotFallBackToConcreteUriWhenNoRouteMatched() {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customers/31781477051");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/v1/customers/31781477051");
 
-        assertThat(RequestLogSanitizer.route(new ServletWebRequest(request))).isEqualTo("route=unmatched");
+        assertThat(RequestLogSanitizer.route(new ServletWebRequest(request)))
+                .isEqualTo("route=unmatched");
         assertThat(RequestLogSanitizer.route(request)).isEqualTo("unmatched");
     }
 
@@ -39,7 +42,8 @@ class RequestLogSanitizerTest {
 
     @Test
     void shouldNotExposePathWhenRouteMatched() {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customers/31781477051");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/v1/customers/31781477051");
         request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/v1/customers/{id}");
 
         assertThat(RequestLogSanitizer.unmatchedPath(request)).isEmpty();
@@ -56,15 +60,18 @@ class RequestLogSanitizerTest {
 
     @Test
     void shouldReplaceControlCharactersInUnmatchedPath() {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/probe\r\nINFO forged=true");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/probe\r\nINFO forged=true");
 
         assertThat(RequestLogSanitizer.unmatchedPath(request)).contains("/probe__INFO forged=true");
     }
 
     @Test
     void shouldMaskLongDigitRunsInUnmatchedPath() {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/customer/31781477051/device/123");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/v1/customer/31781477051/device/123");
 
-        assertThat(RequestLogSanitizer.unmatchedPath(request)).contains("/v1/customer/{n}/device/123");
+        assertThat(RequestLogSanitizer.unmatchedPath(request))
+                .contains("/v1/customer/{n}/device/123");
     }
 }

@@ -21,7 +21,8 @@ public class DeviceControllerImpl implements DeviceController {
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public Page<DeviceTableDto> list(@RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam) {
+    public Page<DeviceTableDto> list(
+            @RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam) {
         if (deviceQueryParam == null) {
             deviceQueryParam = new DeviceQueryParam();
         }

@@ -1,8 +1,13 @@
 package com.tproject.workshop.integration.controller;
 
+import static io.restassured.RestAssured.given;
+
 import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import com.tproject.workshop.integration.TestAuthHelper;
 import io.restassured.response.Response;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,20 +15,17 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-
-import static io.restassured.RestAssured.given;
-
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
+@Sql({
+    "/test-scripts/cleanTestData.sql",
+    "/test-scripts/AuthSetup.sql",
+    "/test-scripts/resetTablesSequence.sql"
+})
 public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
 
     private static final String BASE_PATH = "/v1/admin/api-keys";
     private static final String AUTH_PATH = "/api/auth/token";
     private static final String API_KEY_HEADER = "X-API-Key";
-
 
     @BeforeEach
     void setUp() {
@@ -40,36 +42,66 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
         // skips the login after @Sql recreates the keys (R22), so log in here.
         TestAuthHelper.getAccessToken(SPEC, API_KEY);
 
-        Response response = given().spec(getAuthenticatedSpec())
-                .when()
-                .get(BASE_PATH)
-                .then()
-                .statusCode(HttpStatus.SC_OK)
-                .extract()
-                .response();
+        Response response =
+                given().spec(getAuthenticatedSpec())
+                        .when()
+                        .get(BASE_PATH)
+                        .then()
+                        .statusCode(HttpStatus.SC_OK)
+                        .extract()
+                        .response();
 
-        super.validateResponseIgnoreAttributes("list", response, List.of(
-                "[0].id", "[0].createdAt", "[0].updatedAt", "[0].lastUsedAt", "[0].expiresAt",
-                "[1].id", "[1].createdAt", "[1].updatedAt", "[1].lastUsedAt", "[1].expiresAt",
-                "[2].id", "[2].createdAt", "[2].updatedAt", "[2].lastUsedAt", "[2].expiresAt",
-                "[3].id", "[3].createdAt", "[3].updatedAt", "[3].lastUsedAt", "[3].expiresAt",
-                "[4].id", "[4].createdAt", "[4].updatedAt", "[4].lastUsedAt", "[4].expiresAt",
-                "[5].id", "[5].createdAt", "[5].updatedAt", "[5].lastUsedAt", "[5].expiresAt",
-                "[6].id", "[6].createdAt", "[6].updatedAt", "[6].lastUsedAt", "[6].expiresAt",
-                "[7].id", "[7].createdAt", "[7].updatedAt", "[7].lastUsedAt", "[7].expiresAt"
-
-        ));
+        super.validateResponseIgnoreAttributes(
+                "list",
+                response,
+                List.of(
+                        "[0].id",
+                        "[0].createdAt",
+                        "[0].updatedAt",
+                        "[0].lastUsedAt",
+                        "[0].expiresAt",
+                        "[1].id",
+                        "[1].createdAt",
+                        "[1].updatedAt",
+                        "[1].lastUsedAt",
+                        "[1].expiresAt",
+                        "[2].id",
+                        "[2].createdAt",
+                        "[2].updatedAt",
+                        "[2].lastUsedAt",
+                        "[2].expiresAt",
+                        "[3].id",
+                        "[3].createdAt",
+                        "[3].updatedAt",
+                        "[3].lastUsedAt",
+                        "[3].expiresAt",
+                        "[4].id",
+                        "[4].createdAt",
+                        "[4].updatedAt",
+                        "[4].lastUsedAt",
+                        "[4].expiresAt",
+                        "[5].id",
+                        "[5].createdAt",
+                        "[5].updatedAt",
+                        "[5].lastUsedAt",
+                        "[5].expiresAt",
+                        "[6].id",
+                        "[6].createdAt",
+                        "[6].updatedAt",
+                        "[6].lastUsedAt",
+                        "[6].expiresAt",
+                        "[7].id",
+                        "[7].createdAt",
+                        "[7].updatedAt",
+                        "[7].lastUsedAt",
+                        "[7].expiresAt"));
     }
 
     @Order(2)
     @DisplayName("List API Keys - unauthorized")
     @Test
     public void shouldReturn401_whenListingWithoutAuth() {
-        given().spec(SPEC)
-                .when()
-                .get(BASE_PATH)
-                .then()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+        given().spec(SPEC).when().get(BASE_PATH).then().statusCode(HttpStatus.SC_UNAUTHORIZED);
     }
 
     // ========== Create API Key Tests ==========
@@ -78,20 +110,21 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
     @DisplayName("Create API Key")
     @MethodSource("createApiKeyArguments")
     @ParameterizedTest(name = "{displayName} : {0} status {1} reason {3}")
-    public void createApiKey(int index, Integer statusCode, Map<String, Object> body, String reason) {
-        Response response = given().spec(getAuthenticatedSpec())
-                .body(body)
-                .when()
-                .post(BASE_PATH)
-                .then()
-                .statusCode(statusCode)
-                .extract()
-                .response();
+    public void createApiKey(
+            int index, Integer statusCode, Map<String, Object> body, String reason) {
+        Response response =
+                given().spec(getAuthenticatedSpec())
+                        .body(body)
+                        .when()
+                        .post(BASE_PATH)
+                        .then()
+                        .statusCode(statusCode)
+                        .extract()
+                        .response();
 
         if (statusCode == HttpStatus.SC_CREATED) {
-            super.validateResponseIgnoreAttributes(index, response, List.of(
-                    "id", "keyValue", "createdAt", "updatedAt"
-            ));
+            super.validateResponseIgnoreAttributes(
+                    index, response, List.of("id", "keyValue", "createdAt", "updatedAt"));
         } else {
             super.validateResponse(index, response);
         }
@@ -100,47 +133,61 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
     private static Stream<Arguments> createApiKeyArguments() {
         return Stream.of(
                 // Successful creation
-                Arguments.of(1, HttpStatus.SC_CREATED, Map.of(
-                        "clientName", "new_client_mobile",
-                        "userIdentifier", "tech_1",
-                        "platform", "MOBILE",
-                        "description", "New mobile client"
-                ), "create API Key for new mobile client"),
-
-                Arguments.of(2, HttpStatus.SC_CREATED, Map.of(
-                        "clientName", "new_client_web",
-                        "userIdentifier", "web_user",
-                        "platform", "WEB",
-                        "description", "New web client"
-                ), "create API Key for new web client"),
+                Arguments.of(
+                        1,
+                        HttpStatus.SC_CREATED,
+                        Map.of(
+                                "clientName", "new_client_mobile",
+                                "userIdentifier", "tech_1",
+                                "platform", "MOBILE",
+                                "description", "New mobile client"),
+                        "create API Key for new mobile client"),
+                Arguments.of(
+                        2,
+                        HttpStatus.SC_CREATED,
+                        Map.of(
+                                "clientName", "new_client_web",
+                                "userIdentifier", "web_user",
+                                "platform", "WEB",
+                                "description", "New web client"),
+                        "create API Key for new web client"),
 
                 // Validation errors
-                Arguments.of(3, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "userIdentifier", "tech_1",
-                        "platform", "MOBILE",
-                        "description", "Missing client name"
-                ), "create API Key without clientName"),
-
-                Arguments.of(4, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "clientName", "test_client",
-                        "userIdentifier", "tech_1",
-                        "description", "Missing platform"
-                ), "create API Key without platform"),
-
-                Arguments.of(6, HttpStatus.SC_BAD_REQUEST, Map.of(
-                        "clientName", "test_client",
-                        "platform", "MOBILE",
-                        "description", "Missing user identifier"
-                ), "create API Key without userIdentifier"),
+                Arguments.of(
+                        3,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "userIdentifier", "tech_1",
+                                "platform", "MOBILE",
+                                "description", "Missing client name"),
+                        "create API Key without clientName"),
+                Arguments.of(
+                        4,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "clientName", "test_client",
+                                "userIdentifier", "tech_1",
+                                "description", "Missing platform"),
+                        "create API Key without platform"),
+                Arguments.of(
+                        6,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of(
+                                "clientName", "test_client",
+                                "platform", "MOBILE",
+                                "description", "Missing user identifier"),
+                        "create API Key without userIdentifier"),
 
                 // Conflict - duplicate (same client, user and platform)
-                Arguments.of(5, HttpStatus.SC_UNAUTHORIZED, Map.of(
-                        "clientName", "test_app",
-                        "userIdentifier", "admin_user",
-                        "platform", "MOBILE",
-                        "description", "Duplicate - should fail"
-                ), "create duplicate API Key - same client, user and platform")
-        );
+                Arguments.of(
+                        5,
+                        HttpStatus.SC_UNAUTHORIZED,
+                        Map.of(
+                                "clientName", "test_app",
+                                "userIdentifier", "admin_user",
+                                "platform", "MOBILE",
+                                "description", "Duplicate - should fail"),
+                        "create duplicate API Key - same client, user and platform"));
     }
 
     // ========== RBAC Authorization Tests ==========
@@ -150,11 +197,11 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
     @Test
     public void shouldReturn403_whenCreatingWithServiceRole() {
         given().spec(getServiceAuthenticatedSpec())
-                .body(Map.of(
-                        "clientName", "some_client",
-                        "userIdentifier", "some_user",
-                        "platform", "MOBILE"
-                ))
+                .body(
+                        Map.of(
+                                "clientName", "some_client",
+                                "userIdentifier", "some_user",
+                                "platform", "MOBILE"))
                 .when()
                 .post(BASE_PATH)
                 .then()
@@ -178,10 +225,10 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
     public void shouldResetDeviceBinding() {
         given().spec(SPEC)
                 .header(API_KEY_HEADER, TestAuthHelper.WEB_API_KEY)
-                .body(Map.of(
-                        "boundDeviceId", "device-a",
-                        "appVersion", "1.0.0"
-                ))
+                .body(
+                        Map.of(
+                                "boundDeviceId", "device-a",
+                                "appVersion", "1.0.0"))
                 .when()
                 .post(AUTH_PATH)
                 .then()
@@ -195,14 +242,13 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
 
         given().spec(SPEC)
                 .header(API_KEY_HEADER, TestAuthHelper.WEB_API_KEY)
-                .body(Map.of(
-                        "boundDeviceId", "device-b",
-                        "appVersion", "1.0.0"
-                ))
+                .body(
+                        Map.of(
+                                "boundDeviceId", "device-b",
+                                "appVersion", "1.0.0"))
                 .when()
                 .post(AUTH_PATH)
                 .then()
                 .statusCode(HttpStatus.SC_OK);
     }
 }
-

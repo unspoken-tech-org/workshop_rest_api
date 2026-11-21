@@ -14,17 +14,15 @@ import com.tproject.workshop.model.Role;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,10 +33,8 @@ public class ApiKeyService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final ObservabilityEventRecorder eventRecorder;
 
-
     /**
-     * Validates if the API Key is valid and active.
-     * Updates the last used timestamp.
+     * Validates if the API Key is valid and active. Updates the last used timestamp.
      *
      * @param apiKey the API key to be validated
      * @throws InvalidApiKeyException if the key is invalid, inactive, or expired
@@ -49,16 +45,17 @@ public class ApiKeyService {
 
         // Check expiration
         if (key.getExpiresAt() != null && !key.getExpiresAt().isAfter(Instant.now())) {
-            log.warn("Expired API Key for client: {} ({})",
-                    key.getClientName(), key.getPlatform());
+            log.warn("Expired API Key for client: {} ({})", key.getClientName(), key.getPlatform());
             throw new InvalidApiKeyException("Expired API Key");
         }
 
         // Update last used timestamp
         apiKeyRepository.updateLastUsedAt(key.getKeyValue(), Instant.now());
 
-        log.debug("API Key validated for client: {} (platform: {})",
-                key.getClientName(), key.getPlatform());
+        log.debug(
+                "API Key validated for client: {} (platform: {})",
+                key.getClientName(),
+                key.getPlatform());
     }
 
     /**
@@ -74,16 +71,15 @@ public class ApiKeyService {
             throw new InvalidApiKeyException("API Key is required");
         }
         String hashedKey = KeyGeneratorUtils.sha256Hex(apiKey);
-        return apiKeyRepository.findByKeyValueAndActiveTrue(hashedKey)
+        return apiKeyRepository
+                .findByKeyValueAndActiveTrue(hashedKey)
                 .orElseThrow(() -> {
                     log.warn("Invalid or inactive API Key");
                     return new InvalidApiKeyException("Invalid API Key");
                 });
     }
 
-    /**
-     * Binds the API Key to a device or validates an existing binding.
-     */
+    /** Binds the API Key to a device or validates an existing binding. */
     @Transactional
     public void bindDeviceOrThrow(ApiKey apiKey, String boundDeviceId) {
         if (boundDeviceId == null || boundDeviceId.isBlank()) {
@@ -99,9 +95,13 @@ public class ApiKeyService {
             apiKey.setBoundDeviceId(boundDeviceId);
             apiKey.setBoundAt(apiKey.getBoundAt() == null ? now : apiKey.getBoundAt());
             log.info("API Key bound to device (apiKeyId: {})", apiKey.getId());
-            Optional.ofNullable(apiKey.getPlatform()).ifPresent(platform ->
-                    eventRecorder.record(ObservabilityEventCatalog.API_KEY_DEVICE_BOUND, Map.of(
-                            "client.platform", platform.name().toLowerCase(Locale.ROOT))));
+            Optional.ofNullable(apiKey.getPlatform())
+                    .ifPresent(platform ->
+                            eventRecorder.record(
+                                    ObservabilityEventCatalog.API_KEY_DEVICE_BOUND,
+                                    Map.of(
+                                            "client.platform",
+                                            platform.name().toLowerCase(Locale.ROOT))));
             return;
         }
 
@@ -111,13 +111,14 @@ public class ApiKeyService {
         }
     }
 
-    /**
-     * Clears device binding and revokes refresh tokens.
-     */
+    /** Clears device binding and revokes refresh tokens. */
     @Transactional
     public void resetDeviceBinding(Long apiKeyId) {
-        ApiKey apiKey = apiKeyRepository.findById(apiKeyId)
-                .orElseThrow(() -> new NotFoundException("API Key not found with id: " + apiKeyId));
+        ApiKey apiKey =
+                apiKeyRepository
+                        .findById(apiKeyId)
+                        .orElseThrow(() ->
+                                new NotFoundException("API Key not found with id: " + apiKeyId));
 
         apiKeyRepository.clearBoundDevice(apiKeyId);
         refreshTokenRepository.revokeByApiKeyId(apiKeyId);
@@ -129,21 +130,29 @@ public class ApiKeyService {
     /**
      * Creates a new API Key for a client on a specific platform.
      *
-     * @param clientName     client name (Company)
+     * @param clientName client name (Company)
      * @param userIdentifier user identifier (Technician/Device)
-     * @param platform       platform (MOBILE, WEB, DESKTOP, SERVER)
-     * @param role           role (ADMIN, SERVICE)
-     * @param description    optional description
-     * @param expiresAt      optional expiration date
+     * @param platform platform (MOBILE, WEB, DESKTOP, SERVER)
+     * @param role role (ADMIN, SERVICE)
+     * @param description optional description
+     * @param expiresAt optional expiration date
      * @return the generated API Key with full key value (only shown once)
      */
     @Transactional
-    public ApiKeyCreatedResponse createApiKey(String clientName, String userIdentifier,
-                                              Platform platform, Role role,
-                                              String description, Instant expiresAt) {
-        if (apiKeyRepository.existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(clientName, userIdentifier, platform)) {
-            log.warn("An active API Key already exists for client {} and user {} on platform {}",
-                    clientName, userIdentifier, platform);
+    public ApiKeyCreatedResponse createApiKey(
+            String clientName,
+            String userIdentifier,
+            Platform platform,
+            Role role,
+            String description,
+            Instant expiresAt) {
+        if (apiKeyRepository.existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(
+                clientName, userIdentifier, platform)) {
+            log.warn(
+                    "An active API Key already exists for client {} and user {} on platform {}",
+                    clientName,
+                    userIdentifier,
+                    platform);
             throw new InvalidApiKeyException(
                     "An active API Key already exists for this client and user on this platform");
         }
@@ -151,24 +160,31 @@ public class ApiKeyService {
         String rawKey = KeyGeneratorUtils.generateSecureKey(platform);
         String hashedKey = KeyGeneratorUtils.sha256Hex(rawKey);
 
-        ApiKey apiKey = ApiKey.builder()
-                .keyValue(hashedKey)
-                .clientName(clientName)
-                .userIdentifier(userIdentifier)
-                .platform(platform)
-                .role(role != null ? role : Role.SERVICE)
-                .description(description)
-                .expiresAt(expiresAt)
-                .active(true)
-                .build();
+        ApiKey apiKey =
+                ApiKey.builder()
+                        .keyValue(hashedKey)
+                        .clientName(clientName)
+                        .userIdentifier(userIdentifier)
+                        .platform(platform)
+                        .role(role != null ? role : Role.SERVICE)
+                        .description(description)
+                        .expiresAt(expiresAt)
+                        .active(true)
+                        .build();
 
         ApiKey savedKey = apiKeyRepository.save(apiKey);
-        eventRecorder.record(ObservabilityEventCatalog.API_KEY_CREATED, Map.of(
-                "client.platform", platform.name().toLowerCase(Locale.ROOT),
-                "key.role", savedKey.getRole().name().toLowerCase(Locale.ROOT),
-                "key.expiry", expiresAt == null ? "none" : "set"));
-        log.info("API Key created for client: {}, user: {} (platform: {}, role: {})",
-                clientName, userIdentifier, platform, apiKey.getRole());
+        eventRecorder.record(
+                ObservabilityEventCatalog.API_KEY_CREATED,
+                Map.of(
+                        "client.platform", platform.name().toLowerCase(Locale.ROOT),
+                        "key.role", savedKey.getRole().name().toLowerCase(Locale.ROOT),
+                        "key.expiry", expiresAt == null ? "none" : "set"));
+        log.info(
+                "API Key created for client: {}, user: {} (platform: {}, role: {})",
+                clientName,
+                userIdentifier,
+                platform,
+                apiKey.getRole());
 
         return ApiKeyCreatedResponse.fromEntity(savedKey, rawKey);
     }
@@ -197,7 +213,8 @@ public class ApiKeyService {
     @Transactional
     public void revokeAllByClientName(String clientName) {
         if (apiKeyRepository.deactivateByClientName(clientName) > 0) {
-            eventRecorder.record(ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "all_by_client"));
+            eventRecorder.record(
+                    ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "all_by_client"));
         }
         log.info("All API Keys revoked for client: {}", clientName);
     }
@@ -224,7 +241,8 @@ public class ApiKeyService {
      */
     @Transactional(readOnly = true)
     public ApiKeyResponse findById(Long id) {
-        return apiKeyRepository.findById(id)
+        return apiKeyRepository
+                .findById(id)
                 .map(ApiKeyResponse::fromEntity)
                 .orElseThrow(() -> new NotFoundException("API Key not found with id: " + id));
     }

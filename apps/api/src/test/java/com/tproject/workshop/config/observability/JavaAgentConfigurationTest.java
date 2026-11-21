@@ -1,14 +1,13 @@
 package com.tproject.workshop.config.observability;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 /** Guards the versioned Java Agent configuration (the agent ignores Spring YAML). */
 class JavaAgentConfigurationTest {
@@ -28,10 +27,15 @@ class JavaAgentConfigurationTest {
     void shouldNotCaptureHttpHeadersOrPinEnvironmentSpecificValues() throws IOException {
         Properties config = load();
 
-        assertThat(config.getProperty("otel.instrumentation.http.server.capture-request-headers")).isEmpty();
-        assertThat(config.getProperty("otel.instrumentation.http.client.capture-request-headers")).isEmpty();
+        assertThat(config.getProperty("otel.instrumentation.http.server.capture-request-headers"))
+                .isEmpty();
+        assertThat(config.getProperty("otel.instrumentation.http.client.capture-request-headers"))
+                .isEmpty();
         assertThat(config.stringPropertyNames())
-                .doesNotContain("otel.exporter.otlp.endpoint", "otel.exporter.otlp.headers", "otel.service.instance.id");
+                .doesNotContain(
+                        "otel.exporter.otlp.endpoint",
+                        "otel.exporter.otlp.headers",
+                        "otel.service.instance.id");
     }
 
     private static Properties load() throws IOException {

@@ -4,10 +4,8 @@ import com.tproject.workshop.dto.device.DeviceOutputDto;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceSearchParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
-import org.springframework.data.domain.Page;
-
-
 import java.util.Optional;
+import org.springframework.data.domain.Page;
 
 public interface DeviceRepositoryJdbc {
     Page<DeviceTableDto> listTable(DeviceQueryParam params);

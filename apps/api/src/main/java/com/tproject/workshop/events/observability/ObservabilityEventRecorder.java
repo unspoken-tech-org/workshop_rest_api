@@ -1,5 +1,9 @@
 package com.tproject.workshop.events.observability;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -8,14 +12,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 /**
- * Records a domain fact from a service. It never throws: observability must
- * not change the outcome of a business transaction.
+ * Records a domain fact from a service. It never throws: observability must not change the outcome
+ * of a business transaction.
  */
 @Component
 @RequiredArgsConstructor
@@ -32,7 +31,8 @@ public class ObservabilityEventRecorder {
             if (contract.allowedAttributes().contains(ACTOR_ROLE)) {
                 enriched.putIfAbsent(ACTOR_ROLE, currentActorRole());
             }
-            publisher.publishEvent(new PendingObservabilityEvent(contract, Instant.now(), Map.copyOf(enriched)));
+            publisher.publishEvent(
+                    new PendingObservabilityEvent(contract, Instant.now(), Map.copyOf(enriched)));
         } catch (RuntimeException e) {
             log.warn("Observability event not recorded: {}", contract.name());
         }
@@ -41,12 +41,13 @@ public class ObservabilityEventRecorder {
     static String currentActorRole() {
         return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
                 .filter(Authentication::isAuthenticated)
-                .map(authentication -> authentication.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .map(ObservabilityEventRecorder::roleFromAuthority)
-                        .filter(role -> !role.equals("anonymous"))
-                        .findFirst()
-                        .orElse("anonymous"))
+                .map(authentication ->
+                        authentication.getAuthorities().stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .map(ObservabilityEventRecorder::roleFromAuthority)
+                                .filter(role -> !role.equals("anonymous"))
+                                .findFirst()
+                                .orElse("anonymous"))
                 .orElse("anonymous");
     }
 

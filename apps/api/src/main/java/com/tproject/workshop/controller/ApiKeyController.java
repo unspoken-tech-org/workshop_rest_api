@@ -9,19 +9,19 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Tag(name = "API Keys", description = "Administrative endpoints for API Key management")
 public interface ApiKeyController {
 
     @Operation(
             summary = "Create API Key",
-            description = "Creates a new API Key for a client on a specific platform. " +
-                    "The full key value is only returned once at creation time.")
+            description =
+                    "Creates a new API Key for a client on a specific platform. "
+                            + "The full key value is only returned once at creation time.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "201", description = "API Key created successfully")
     @PostMapping
@@ -49,7 +49,8 @@ public interface ApiKeyController {
 
     @Operation(
             summary = "Revoke API Key",
-            description = "Deactivates an API Key. The key will no longer be usable for authentication.")
+            description =
+                    "Deactivates an API Key. The key will no longer be usable for authentication.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "204", description = "API Key revoked successfully")
     @DeleteMapping("/{id}")
@@ -66,5 +67,4 @@ public interface ApiKeyController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
     void resetDevice(@Parameter(description = "API Key identifier") @PathVariable Long id);
-
 }

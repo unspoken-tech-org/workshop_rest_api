@@ -1,9 +1,16 @@
 package com.tproject.workshop.events.observability;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import net.logstash.logback.argument.StructuredArgument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,14 +30,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringJUnitConfig(ObservabilityEventEmitterTest.Config.class)
 class ObservabilityEventEmitterTest {
@@ -53,33 +52,33 @@ class ObservabilityEventEmitterTest {
         }
 
         @Override
-        protected void doBegin(Object transaction, TransactionDefinition definition) {
-        }
+        protected void doBegin(Object transaction, TransactionDefinition definition) {}
 
         @Override
-        protected void doCommit(DefaultTransactionStatus status) {
-        }
+        protected void doCommit(DefaultTransactionStatus status) {}
 
         @Override
-        protected void doRollback(DefaultTransactionStatus status) {
-        }
+        protected void doRollback(DefaultTransactionStatus status) {}
     }
 
-    @Autowired
-    private ObservabilityEventRecorder recorder;
+    @Autowired private ObservabilityEventRecorder recorder;
 
-    @Autowired
-    private PlatformTransactionManager transactionManager;
+    @Autowired private PlatformTransactionManager transactionManager;
 
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
-    private final Logger eventsLogger = (Logger) LoggerFactory.getLogger(ObservabilityEventEmitter.EVENTS_LOGGER);
+    private final Logger eventsLogger =
+            (Logger) LoggerFactory.getLogger(ObservabilityEventEmitter.EVENTS_LOGGER);
 
     @BeforeEach
     void attachAppender() {
         appender.start();
         eventsLogger.addAppender(appender);
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                "subject", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new UsernamePasswordAuthenticationToken(
+                                "subject",
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
     }
 
     @AfterEach
@@ -90,18 +89,23 @@ class ObservabilityEventEmitterTest {
 
     @Test
     void shouldEmitStructuredEventAfterCommit() {
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            recorder.record(ObservabilityEventCatalog.PAYMENT_CREATED, Map.of(
-                    "payment.method", "pix",
-                    "payment.category", "servicos",
-                    "payment.value_band", ValueBand.of(new BigDecimal("150.00"))));
-            assertThat(appender.list).as("nothing is written before the commit").isEmpty();
-        });
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(status -> {
+                    recorder.record(
+                            ObservabilityEventCatalog.PAYMENT_CREATED,
+                            Map.of(
+                                    "payment.method", "pix",
+                                    "payment.category", "servicos",
+                                    "payment.value_band", ValueBand.of(new BigDecimal("150.00"))));
+                    assertThat(appender.list).as("nothing is written before the commit").isEmpty();
+                });
 
         assertThat(appender.list).hasSize(1);
         ILoggingEvent logged = appender.list.getFirst();
         assertThat(logged.getLevel()).isEqualTo(Level.INFO);
-        assertThat(logged.getArgumentArray()).singleElement().isInstanceOf(StructuredArgument.class);
+        assertThat(logged.getArgumentArray())
+                .singleElement()
+                .isInstanceOf(StructuredArgument.class);
         assertThat(logged.getFormattedMessage())
                 .contains("event.name=workshop.payment.created")
                 .contains("event.version=1")
@@ -111,25 +115,32 @@ class ObservabilityEventEmitterTest {
 
     @Test
     void shouldNotEmitWhenTheTransactionRollsBack() {
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            recorder.record(ObservabilityEventCatalog.DEVICE_CREATED, Map.of("device.urgency", "normal"));
-            status.setRollbackOnly();
-        });
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(status -> {
+                    recorder.record(
+                            ObservabilityEventCatalog.DEVICE_CREATED,
+                            Map.of("device.urgency", "normal"));
+                    status.setRollbackOnly();
+                });
 
         assertThat(appender.list).isEmpty();
     }
 
     @Test
     void shouldDropInvalidEventsWithoutFailingTheTransaction() {
-        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
-                recorder.record(ObservabilityEventCatalog.DEVICE_CREATED, Map.of("device.urgency", "12345678909")));
+        new TransactionTemplate(transactionManager)
+                .executeWithoutResult(status ->
+                        recorder.record(
+                                ObservabilityEventCatalog.DEVICE_CREATED,
+                                Map.of("device.urgency", "12345678909")));
 
         assertThat(appender.list).isEmpty();
     }
 
     @Test
     void shouldNotEmitOutsideATransaction() {
-        recorder.record(ObservabilityEventCatalog.DEVICE_CREATED, Map.of("device.urgency", "normal"));
+        recorder.record(
+                ObservabilityEventCatalog.DEVICE_CREATED, Map.of("device.urgency", "normal"));
 
         assertThat(appender.list).isEmpty();
     }
@@ -138,8 +149,12 @@ class ObservabilityEventEmitterTest {
     void shouldResolveActorRoleFromAuthorities() {
         assertThat(ObservabilityEventRecorder.currentActorRole()).isEqualTo("admin");
 
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                "subject", null, List.of(new SimpleGrantedAuthority("ROLE_SERVICE"))));
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new UsernamePasswordAuthenticationToken(
+                                "subject",
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_SERVICE"))));
         assertThat(ObservabilityEventRecorder.currentActorRole()).isEqualTo("service");
 
         SecurityContextHolder.clearContext();

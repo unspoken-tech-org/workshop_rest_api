@@ -14,6 +14,7 @@ public class ResponseError {
 
     private int status;
     private String title;
+
     @JsonProperty("error")
     private ErrorMetadata.Error errors;
 

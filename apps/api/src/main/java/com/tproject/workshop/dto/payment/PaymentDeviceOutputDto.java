@@ -9,10 +9,10 @@ import lombok.Data;
 @Data
 public class PaymentDeviceOutputDto {
 
-  private int paymentId;
-  private LocalDateTime paymentDate;
-  private PaymentMethodEnum paymentType;
-  private BigDecimal paymentValue;
-  private PaymentCategoryEnum category;
-  private String receivedBy;
+    private int paymentId;
+    private LocalDateTime paymentDate;
+    private PaymentMethodEnum paymentType;
+    private BigDecimal paymentValue;
+    private PaymentCategoryEnum category;
+    private String receivedBy;
 }

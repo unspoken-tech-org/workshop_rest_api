@@ -10,12 +10,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
-@Tag(name = "Types/Brands/Models", description = "Provide a fully mapped hierarchy of types, brands, and models")
+@Tag(
+        name = "Types/Brands/Models",
+        description = "Provide a fully mapped hierarchy of types, brands, and models")
 public interface TypesBrandsModelsController {
 
     @Operation(
             summary = "List mapped types, brands, and models",
-            description = "Returns the hierarchical catalog used by the device intake form to prevent invalid combinations.")
+            description =
+                    "Returns the hierarchical catalog used by the device intake form to prevent invalid combinations.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Catalog hierarchy retrieved successfully")
     @GetMapping

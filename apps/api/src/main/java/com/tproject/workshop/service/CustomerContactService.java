@@ -5,23 +5,22 @@ import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
+import com.tproject.workshop.events.observability.ObservabilityEventContract;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
-import com.tproject.workshop.events.observability.ObservabilityEventContract;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
 import com.tproject.workshop.utils.UtilsString;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -53,9 +52,12 @@ public class CustomerContactService {
 
     @Transactional
     public CustomerContactOutputDto update(int id, CustomerContactInputDto contact) {
-        CustomerContact existingContact = customerContactRepository.findById(id).orElseThrow(() ->
-                new NotFoundException(String.format("Contato com id %d não encontrado", id))
-        );
+        CustomerContact existingContact =
+                customerContactRepository
+                        .findById(id)
+                        .orElseThrow(() ->
+                                new NotFoundException(
+                                        String.format("Contato com id %d não encontrado", id)));
 
         DeviceStatusEnum previousStatus = existingContact.getDeviceStatus();
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
@@ -74,27 +76,30 @@ public class CustomerContactService {
     }
 
     /**
-     * O status informado no contato representa o aparelho no momento daquele contato.
-     * Só o contato mais recente (por data, com desempate pelo id) pode refletir no status
-     * atual do aparelho; corrigir ou registrar um contato antigo não reverte, por exemplo,
-     * um aparelho ENTREGUE.
+     * O status informado no contato representa o aparelho no momento daquele contato. Só o contato
+     * mais recente (por data, com desempate pelo id) pode refletir no status atual do aparelho;
+     * corrigir ou registrar um contato antigo não reverte, por exemplo, um aparelho ENTREGUE.
      */
     private void updateDeviceStatusIfLatestContact(CustomerContact contact) {
-        boolean isLatestContact = customerContactRepository
-                .findFirstByDeviceIdOrderByLastContactDescIdDesc(contact.getDeviceId())
-                .map(latest -> latest.getId().equals(contact.getId()))
-                .orElse(false);
+        boolean isLatestContact =
+                customerContactRepository
+                        .findFirstByDeviceIdOrderByLastContactDescIdDesc(contact.getDeviceId())
+                        .map(latest -> latest.getId().equals(contact.getId()))
+                        .orElse(false);
 
         if (isLatestContact) {
             deviceService.updateDeviceStatus(contact.getDeviceId(), contact.getDeviceStatus());
         }
     }
 
-    private void recordContact(ObservabilityEventContract contract, CustomerContact contact, DeviceStatusEnum status) {
-        eventRecorder.record(contract, Map.of(
-                "contact.type", contactTypeOf(contact.getType()),
-                "contact.made", String.valueOf(contact.isHasMadeContact()),
-                "status.new", status.name().toLowerCase(Locale.ROOT)));
+    private void recordContact(
+            ObservabilityEventContract contract, CustomerContact contact, DeviceStatusEnum status) {
+        eventRecorder.record(
+                contract,
+                Map.of(
+                        "contact.type", contactTypeOf(contact.getType()),
+                        "contact.made", String.valueOf(contact.isHasMadeContact()),
+                        "status.new", status.name().toLowerCase(Locale.ROOT)));
     }
 
     private String contactTypeOf(String contactType) {
@@ -107,14 +112,16 @@ public class CustomerContactService {
             if (phoneNumber == null || phoneNumber.isEmpty()) {
                 String joinedNeededContactTypes = String.join(", ", contactTypesThatNeedPhone);
                 throw new BadRequestException(
-                        String.format("O numero de telefone deve ser fornecido para os tipos de contato: %s", joinedNeededContactTypes)
-                );
+                        String.format(
+                                "O numero de telefone deve ser fornecido para os tipos de contato: %s",
+                                joinedNeededContactTypes));
             }
             phoneService.findByNumber(phoneNumber);
         }
     }
 
-    private void mapContactFields(CustomerContact contact, CustomerContactInputDto dto, DeviceStatusEnum status) {
+    private void mapContactFields(
+            CustomerContact contact, CustomerContactInputDto dto, DeviceStatusEnum status) {
         contact.setDeviceId(dto.deviceId());
         contact.setTechnicianId(dto.technicianId());
         contact.setHasMadeContact(dto.contactStatus());
@@ -125,8 +132,9 @@ public class CustomerContactService {
             contact.setLastContact(Timestamp.valueOf(LocalDateTime.parse(dto.contactDate())));
         } catch (DateTimeParseException e) {
             throw new BadRequestException(
-                    String.format("Formato de data inválido: '%s'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)", dto.contactDate())
-            );
+                    String.format(
+                            "Formato de data inválido: '%s'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)",
+                            dto.contactDate()));
         }
         contact.setDeviceStatus(status);
     }
@@ -142,8 +150,6 @@ public class CustomerContactService {
                 model.isHasMadeContact(),
                 model.getLastContact() != null ? model.getLastContact().toLocalDateTime() : null,
                 model.getConversation(),
-                model.getDeviceStatus().name()
-        );
+                model.getDeviceStatus().name());
     }
-
 }

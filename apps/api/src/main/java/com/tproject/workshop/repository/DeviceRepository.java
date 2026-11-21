@@ -1,10 +1,9 @@
 package com.tproject.workshop.repository;
 
-import java.sql.Timestamp;
-import java.util.List;
-
 import com.tproject.workshop.model.Device;
 import com.tproject.workshop.repository.jdbc.DeviceRepositoryJdbc;
+import java.sql.Timestamp;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,5 +16,6 @@ public interface DeviceRepository extends JpaRepository<Device, Integer>, Device
 
     @Modifying
     @Query("UPDATE devices d SET d.lastViewedAt = :lastViewedAt WHERE d.id = :deviceId")
-    int updateLastViewedAt(@Param("deviceId") int deviceId, @Param("lastViewedAt") Timestamp lastViewedAt);
+    int updateLastViewedAt(
+            @Param("deviceId") int deviceId, @Param("lastViewedAt") Timestamp lastViewedAt);
 }

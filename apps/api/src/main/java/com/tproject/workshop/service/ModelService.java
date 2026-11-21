@@ -8,13 +8,12 @@ import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.Model;
 import com.tproject.workshop.repository.ModelRepository;
 import com.tproject.workshop.utils.CatalogName;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Map;
 
 @RequiredArgsConstructor
 @Service
@@ -28,8 +27,11 @@ public class ModelService {
     }
 
     public Model findById(int id) {
-        return modelRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(String.format("Modelo com id %d não encontrada", id)));
+        return modelRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                String.format("Modelo com id %d não encontrada", id)));
     }
 
     @Transactional
@@ -38,9 +40,11 @@ public class ModelService {
                 model,
                 modelRepository::findByModelIgnoreCase,
                 modelRepository::insertIgnore,
-                () -> eventRecorder.record(ObservabilityEventCatalog.CATALOG_ENTRY_CREATED, Map.of("catalog.kind", "model")),
-                () -> new NotFoundException("Erro ao criar ou buscar modelo: " + model)
-        );
+                () ->
+                        eventRecorder.record(
+                                ObservabilityEventCatalog.CATALOG_ENTRY_CREATED,
+                                Map.of("catalog.kind", "model")),
+                () -> new NotFoundException("Erro ao criar ou buscar modelo: " + model));
     }
 
     @Transactional(readOnly = true)
@@ -53,5 +57,4 @@ public class ModelService {
         Model model = createOrReturnExistentModel(modelName);
         return new ModelResponseDto(model.getIdModel(), model.getModel());
     }
-
 }

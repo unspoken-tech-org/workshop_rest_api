@@ -1,10 +1,6 @@
 package com.tproject.workshop.errorhandling;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -13,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -20,10 +19,10 @@ import java.util.regex.Pattern;
 @NoArgsConstructor
 public class ErrorMetadata implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = -4204013823809613543L;
+    @Serial private static final long serialVersionUID = -4204013823809613543L;
     private final transient List<Error> globalErrors = new ArrayList<>();
-    private final transient ConcurrentHashMap<String, Object> fieldErrors = new ConcurrentHashMap<>();
+    private final transient ConcurrentHashMap<String, Object> fieldErrors =
+            new ConcurrentHashMap<>();
 
     public static ErrorsBuilder builder() {
         return new ErrorsBuilder();
@@ -42,7 +41,8 @@ public class ErrorMetadata implements Serializable {
         return this;
     }
 
-    private ErrorMetadata addFieldError(final String field, final String error, final String template) {
+    private ErrorMetadata addFieldError(
+            final String field, final String error, final String template) {
         Map<String, Object> errorMap = fieldErrors;
         List<String> fieldChar = Arrays.asList(field.split(Pattern.quote(".")));
         String value = fieldChar.get(fieldChar.size() - 1);
@@ -81,7 +81,8 @@ public class ErrorMetadata implements Serializable {
             return this;
         }
 
-        public ErrorsBuilder addFieldError(final String field, final String error, final String template) {
+        public ErrorsBuilder addFieldError(
+                final String field, final String error, final String template) {
             this.errors.addFieldError(field, error, template);
             return this;
         }
@@ -91,4 +92,3 @@ public class ErrorMetadata implements Serializable {
         }
     }
 }
-

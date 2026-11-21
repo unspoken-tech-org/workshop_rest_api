@@ -5,13 +5,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
-/**
- * Shared normalization and concurrency-safe find-or-create helper for catalog entities.
- */
+/** Shared normalization and concurrency-safe find-or-create helper for catalog entities. */
 public final class CatalogName {
 
-    private CatalogName() {
-    }
+    private CatalogName() {}
 
     public static String normalize(String raw) {
         if (raw == null) {
@@ -27,12 +24,13 @@ public final class CatalogName {
             Runnable onCreated,
             Supplier<? extends RuntimeException> notFoundSupplier) {
         String normalized = normalize(rawName);
-        return finder.apply(normalized).orElseGet(() -> {
-            int inserted = insertIgnore.applyAsInt(normalized);
-            if (inserted > 0 && onCreated != null) {
-                onCreated.run();
-            }
-            return finder.apply(normalized).orElseThrow(notFoundSupplier);
-        });
+        return finder.apply(normalized)
+                .orElseGet(() -> {
+                    int inserted = insertIgnore.applyAsInt(normalized);
+                    if (inserted > 0 && onCreated != null) {
+                        onCreated.run();
+                    }
+                    return finder.apply(normalized).orElseThrow(notFoundSupplier);
+                });
     }
 }

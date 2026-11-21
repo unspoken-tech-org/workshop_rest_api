@@ -3,12 +3,11 @@ package com.tproject.workshop.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import jakarta.persistence.*;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 
 @Data
 @Entity(name = "customer_contact")

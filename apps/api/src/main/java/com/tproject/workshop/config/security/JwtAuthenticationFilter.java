@@ -8,6 +8,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -17,12 +22,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -39,7 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
         String authHeader = request.getHeader(AUTHORIZATION_HEADER);
 
@@ -83,8 +83,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             String tokenBoundDeviceId = claims.get("boundDeviceId", String.class);
-            if (apiKey.getBoundDeviceId() == null || !apiKey.getBoundDeviceId().equals(tokenBoundDeviceId)) {
-                log.warn("JWT authentication failed: API key device binding mismatch or reset (apiKeyId={})", apiKeyId);
+            if (apiKey.getBoundDeviceId() == null
+                    || !apiKey.getBoundDeviceId().equals(tokenBoundDeviceId)) {
+                log.warn(
+                        "JWT authentication failed: API key device binding mismatch or reset (apiKeyId={})",
+                        apiKeyId);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -92,18 +95,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Extract roles from claims
             @SuppressWarnings("unchecked")
             List<String> roles = claims.get("roles", List.class);
-            List<SimpleGrantedAuthority> authorities = roles == null ? Collections.emptyList() :
-                    roles.stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .toList();
+            List<SimpleGrantedAuthority> authorities =
+                    roles == null
+                            ? Collections.emptyList()
+                            : roles.stream().map(SimpleGrantedAuthority::new).toList();
 
             // Creates authentication in the Spring Security context
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            subject,
-                            null,
-                            authorities
-                    );
+                    new UsernamePasswordAuthenticationToken(subject, null, authorities);
 
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);

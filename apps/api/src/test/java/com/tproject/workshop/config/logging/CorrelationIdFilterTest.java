@@ -1,15 +1,14 @@
 package com.tproject.workshop.config.logging;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import jakarta.servlet.FilterChain;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class CorrelationIdFilterTest {
 
@@ -35,11 +34,11 @@ class CorrelationIdFilterTest {
     @Test
     void shouldGenerateSafeIdForBlankInvalidOrOversizedValues() throws Exception {
         String[] invalidValues = {
-                " ",
-                "request id with spaces",
-                "request/id",
-                "request\nforged-log-line",
-                "x".repeat(RequestIdValidator.MAX_LENGTH + 1)
+            " ",
+            "request id with spaces",
+            "request/id",
+            "request\nforged-log-line",
+            "x".repeat(RequestIdValidator.MAX_LENGTH + 1)
         };
 
         for (String invalidValue : invalidValues) {
@@ -47,10 +46,11 @@ class CorrelationIdFilterTest {
             filter.doFilter(requestWithId(invalidValue), response, new NoopFilterChain());
 
             String generated = response.getHeader(CorrelationIdFilter.HEADER_NAME);
-            assertThat(generated).satisfies(value -> {
-                assertThat(RequestIdValidator.isValid(value)).isTrue();
-                assertThat(UUID.fromString(value)).isNotNull();
-            });
+            assertThat(generated)
+                    .satisfies(value -> {
+                        assertThat(RequestIdValidator.isValid(value)).isTrue();
+                        assertThat(UUID.fromString(value)).isNotNull();
+                    });
         }
     }
 
@@ -70,14 +70,13 @@ class CorrelationIdFilterTest {
     }
 
     private FilterChain chainAssertingMdc(String expectedRequestId) {
-        return (request, response) -> assertThat(MDC.get(CorrelationIdFilter.MDC_KEY))
-                .isEqualTo(expectedRequestId);
+        return (request, response) ->
+                assertThat(MDC.get(CorrelationIdFilter.MDC_KEY)).isEqualTo(expectedRequestId);
     }
 
     private static final class NoopFilterChain implements FilterChain {
         @Override
-        public void doFilter(jakarta.servlet.ServletRequest request,
-                             jakarta.servlet.ServletResponse response) {
-        }
+        public void doFilter(
+                jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response) {}
     }
 }

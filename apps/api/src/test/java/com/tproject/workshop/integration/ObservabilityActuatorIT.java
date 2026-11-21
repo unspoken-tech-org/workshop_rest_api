@@ -1,5 +1,9 @@
 package com.tproject.workshop.integration;
 
+import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,21 +11,19 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.jdbc.Sql;
 
-import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
-
 /** Contract tests for the exposed Actuator surface and its authorization. */
-@Sql({"/test-scripts/cleanTestData.sql", "/test-scripts/AuthSetup.sql",
-        "/test-scripts/resetTablesSequence.sql"})
+@Sql({
+    "/test-scripts/cleanTestData.sql",
+    "/test-scripts/AuthSetup.sql",
+    "/test-scripts/resetTablesSequence.sql"
+})
 class ObservabilityActuatorIT extends AbstractIntegrationLiveTest {
 
     private static final String SCRAPE_USER = "metrics-scraper";
     // Matches the bcrypt hash configured only in application-test.yml.
     private static final String SCRAPE_PASSWORD = "test-only-metrics-scrape-password";
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    @Autowired private ApplicationContext applicationContext;
 
     // The default user would log its generated password at startup.
     @Test
@@ -56,7 +58,9 @@ class ObservabilityActuatorIT extends AbstractIntegrationLiveTest {
     @Test
     void shouldAllowPrometheusOnlyForScrapeIdentity() {
         given().spec(SPEC)
-                .auth().preemptive().basic(SCRAPE_USER, SCRAPE_PASSWORD)
+                .auth()
+                .preemptive()
+                .basic(SCRAPE_USER, SCRAPE_PASSWORD)
                 .when()
                 .get("/actuator/prometheus")
                 .then()
@@ -74,7 +78,9 @@ class ObservabilityActuatorIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_UNAUTHORIZED);
 
         given().spec(SPEC)
-                .auth().preemptive().basic(SCRAPE_USER, "wrong-password")
+                .auth()
+                .preemptive()
+                .basic(SCRAPE_USER, "wrong-password")
                 .when()
                 .get("/actuator/prometheus")
                 .then()

@@ -22,12 +22,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
-@Tag(name = "Customers", description = "Manage customers, their contact details, and device ownership records")
+@Tag(
+        name = "Customers",
+        description = "Manage customers, their contact details, and device ownership records")
 public interface CustomerController {
 
     @Operation(
             summary = "Search customers",
-            description = "Full-text fuzzy search across customer name and email. Supports pagination and auxiliary filters (id, cpf, phone).")
+            description =
+                    "Full-text fuzzy search across customer name and email. Supports pagination and auxiliary filters (id, cpf, phone).")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     @PostMapping("/search")
@@ -35,27 +38,32 @@ public interface CustomerController {
 
     @Operation(
             summary = "Find customer by id",
-            description = "Returns a customer with full profile, phones, and devices to support service desk workflows.")
+            description =
+                    "Returns a customer with full profile, phones, and devices to support service desk workflows.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Customer retrieved successfully")
     @GetMapping("/{id}")
-    CustomerOutputDto findById(@Parameter(description = "Customer identifier") @PathVariable("id") int idCostumer);
+    CustomerOutputDto findById(
+            @Parameter(description = "Customer identifier") @PathVariable("id") int idCostumer);
 
     /**
-     * Temporary endpoint for JPA vs JDBC benchmark comparison.
-     * Returns the same data as findById but uses JPA instead of native SQL.
+     * Temporary endpoint for JPA vs JDBC benchmark comparison. Returns the same data as findById
+     * but uses JPA instead of native SQL.
      */
     @Operation(
             summary = "Find customer by id using JPA",
-            description = "Benchmark endpoint that fetches the same customer data via JPA to compare performance with native SQL.")
+            description =
+                    "Benchmark endpoint that fetches the same customer data via JPA to compare performance with native SQL.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Customer retrieved successfully with JPA")
     @GetMapping("/{id}/jpa")
-    CustomerOutputDto findByIdJpa(@Parameter(description = "Customer identifier") @PathVariable("id") int id);
+    CustomerOutputDto findByIdJpa(
+            @Parameter(description = "Customer identifier") @PathVariable("id") int id);
 
     @Operation(
             summary = "Create customer",
-            description = "Registers a new customer with validated phones to enable device intake and future contact.")
+            description =
+                    "Registers a new customer with validated phones to enable device intake and future contact.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "201", description = "Customer created successfully")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -64,7 +72,8 @@ public interface CustomerController {
 
     @Operation(
             summary = "Update customer",
-            description = "Updates customer core information and phone list to keep communication channels accurate.")
+            description =
+                    "Updates customer core information and phone list to keep communication channels accurate.")
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Customer updated successfully")
     @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)

@@ -19,4 +19,4 @@ public enum DeviceStatusEnum {
             throw new BadRequestException("Não foi encontrado o status: " + status);
         }
     }
-} 
+}
