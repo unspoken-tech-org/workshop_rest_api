@@ -9,13 +9,16 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.tproject.workshop.dto.device.DeviceOutputDto;
+import com.tproject.workshop.dto.device.DeviceStatusInputRecord;
 import com.tproject.workshop.dto.device.DeviceUpdateInputDtoRecord;
 import com.tproject.workshop.dto.device.DeviceUrgencyInputRecord;
+import com.tproject.workshop.enums.DeviceHistoryFieldEnum;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.model.Device;
+import com.tproject.workshop.model.DeviceHistory;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import java.math.BigDecimal;
@@ -274,6 +277,116 @@ class DeviceServiceTest {
 
         assertThat(device.getDepartureDate()).isEqualTo(Timestamp.valueOf(sameInstant));
         verify(deviceRepository).saveAndFlush(device);
+    }
+
+    @Test
+    void updateDevice_shouldResetUrgencyAndRevisionWithCanonicalUppercaseHistory() {
+        device.setUrgency(true);
+        device.setRevision(true);
+
+        deviceService.updateDevice(
+                new DeviceUpdateInputDtoRecord(
+                        DEVICE_ID,
+                        "pronto",
+                        "problema",
+                        null,
+                        null,
+                        new BigDecimal("50.00"),
+                        null,
+                        true,
+                        true,
+                        null,
+                        null,
+                        null));
+
+        assertThat(device.isUrgency()).isFalse();
+        assertThat(device.isRevision()).isFalse();
+        assertThat(device.getDeviceStatus()).isEqualTo(DeviceStatusEnum.PRONTO);
+        assertThat(device.getDeviceHistory())
+                .extracting(
+                        DeviceHistory::getFieldName,
+                        DeviceHistory::getOldValue,
+                        DeviceHistory::getNewValue)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(
+                                DeviceHistoryFieldEnum.STATUS.getField(), "EM_ANDAMENTO", "PRONTO"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                DeviceHistoryFieldEnum.URGENCY.getField(), "true", "false"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                DeviceHistoryFieldEnum.REVISION.getField(), "true", "false"));
+        verify(eventRecorder)
+                .record(
+                        ObservabilityEventCatalog.DEVICE_URGENCY_CHANGED,
+                        Map.of("device.urgency", "normal"));
+    }
+
+    @Test
+    void updateDevice_shouldClearDepartureDateWhenReopeningClosedDevice() {
+        device.setDeviceStatus(DeviceStatusEnum.ENTREGUE);
+        device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 1, 10, 0)));
+        device.setDepartureDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 15, 0)));
+
+        deviceService.updateDevice(
+                new DeviceUpdateInputDtoRecord(
+                        DEVICE_ID,
+                        "em_andamento",
+                        "problema",
+                        null,
+                        null,
+                        new BigDecimal("50.00"),
+                        null,
+                        false,
+                        false,
+                        null,
+                        LocalDateTime.of(2026, 5, 12, 10, 0),
+                        null));
+
+        assertThat(device.getDeviceStatus()).isEqualTo(DeviceStatusEnum.EM_ANDAMENTO);
+        assertThat(device.getDepartureDate()).isNull();
+    }
+
+    @Test
+    void updateDeviceStatus_shouldRecordResetHistoryAndClearDepartureDateWhenReopened() {
+        device.setUrgency(true);
+        device.setRevision(true);
+
+        deviceService.updateDeviceStatus(DEVICE_ID, new DeviceStatusInputRecord("entregue"));
+
+        assertThat(device.isUrgency()).isFalse();
+        assertThat(device.isRevision()).isFalse();
+        assertThat(device.getDepartureDate()).isNotNull();
+        assertThat(device.getDeviceHistory())
+                .extracting(
+                        DeviceHistory::getFieldName,
+                        DeviceHistory::getOldValue,
+                        DeviceHistory::getNewValue)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(
+                                DeviceHistoryFieldEnum.STATUS.getField(),
+                                "EM_ANDAMENTO",
+                                "ENTREGUE"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                DeviceHistoryFieldEnum.URGENCY.getField(), "true", "false"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                DeviceHistoryFieldEnum.REVISION.getField(), "true", "false"));
+
+        deviceService.updateDeviceStatus(DEVICE_ID, new DeviceStatusInputRecord("aguardando"));
+
+        assertThat(device.getDeviceStatus()).isEqualTo(DeviceStatusEnum.AGUARDANDO);
+        assertThat(device.getDepartureDate()).isNull();
+    }
+
+    @Test
+    void updateDeviceUrgency_shouldClearDepartureDateWhenReopeningClosedDevice() {
+        device.setDeviceStatus(DeviceStatusEnum.DESCARTADO);
+        device.setUrgency(false);
+        device.setDepartureDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 15, 0)));
+
+        deviceService.updateDeviceUrgency(DEVICE_ID, new DeviceUrgencyInputRecord(true));
+
+        assertThat(device.getDeviceStatus()).isEqualTo(DeviceStatusEnum.NOVO);
+        assertThat(device.isUrgency()).isTrue();
+        assertThat(device.getDepartureDate()).isNull();
     }
 
     private static DeviceUpdateInputDtoRecord update(
