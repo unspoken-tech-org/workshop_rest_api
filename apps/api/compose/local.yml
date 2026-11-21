@@ -1,7 +1,7 @@
 services:
   workshop-db:
     container_name: workshop-db
-    image: postgres:16.1-alpine
+    image: postgres:16.15-alpine3.24@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
     environment:
       LC_ALL: C.UTF-8
       TZ: America/Sao_Paulo
