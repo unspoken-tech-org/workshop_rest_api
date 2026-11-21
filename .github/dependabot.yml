@@ -78,3 +78,17 @@ updates:
       # Major do Flyway muda suporte a banco e comportamento; migração planejada.
       - dependency-name: "org.flywaydb:*"
         update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "terraform"
+    directory: "/infra/cloudflare"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Sao_Paulo"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"
+      - "terraform"
+    open-pull-requests-limit: 5
