@@ -234,7 +234,7 @@ if [ -n "${PENDING}" ]; then
   echo "WARNING: rolling back the image does NOT revert schema changes"
   if [ "${ALLOW_MIGRATIONS}" != "true" ]; then
     echo "Pending migrations need explicit approval; nothing was swapped." >&2
-    echo "Re-run via workflow_dispatch: gh workflow run deploy-api-prod.yml --ref ${IMAGE_TAG:-vX.Y.Z} -f ref=${IMAGE_TAG:-vX.Y.Z} -f allow_migrations=true" >&2
+    echo "Re-run via workflow_dispatch: gh workflow run deploy-api-prod.yml --ref ${IMAGE_TAG:-vX.Y.Z} -f allow_migrations=true" >&2
     exit 1
   fi
   if [ "${DB_RUNNING}" = "missing" ]; then
