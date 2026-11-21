@@ -325,7 +325,7 @@ public class DeviceService {
 
         List<Color> colors =
                 device.colors().stream().map(colorService::createOrReturnExistentColor).toList();
-        List<Integer> colorIds = colors.stream().map(Color::getIdColor).toList();
+        List<Integer> colorIds = colors.stream().map(Color::getIdColor).distinct().toList();
 
         List<DeviceHistory> deviceHistoryList = new ArrayList<>();
 

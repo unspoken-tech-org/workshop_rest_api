@@ -6,6 +6,7 @@ import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.ApiKeyDeviceBoundException;
 import com.tproject.workshop.exception.BadRequestException;
+import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.InvalidApiKeyException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.ApiKey;
@@ -153,7 +154,7 @@ public class ApiKeyService {
                     clientName,
                     userIdentifier,
                     platform);
-            throw new InvalidApiKeyException(
+            throw new EntityAlreadyExistsException(
                     "An active API Key already exists for this client and user on this platform");
         }
 

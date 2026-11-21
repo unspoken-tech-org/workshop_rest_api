@@ -3,6 +3,7 @@ package com.tproject.workshop.service;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
@@ -14,7 +15,10 @@ import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -119,6 +123,34 @@ class CustomerContactServiceTest {
         customerContactService.update(7, input("pronto", "2026-06-03T10:00:00"));
 
         verify(deviceService).updateDeviceStatus(DEVICE_ID, DeviceStatusEnum.PRONTO);
+    }
+
+    @Test
+    void save_shouldHandleNullContactTypeWithoutNpeAndParseUtcZDate() {
+        when(customerContactRepository.findFirstByDeviceIdOrderByLastContactDescIdDesc(DEVICE_ID))
+                .thenAnswer(invocation ->
+                        Optional.of(contactWithId(10, DeviceStatusEnum.EM_ANDAMENTO)));
+
+        CustomerContactInputDto dto =
+                new CustomerContactInputDto(
+                        DEVICE_ID,
+                        null,
+                        2,
+                        null,
+                        "teste",
+                        true,
+                        "em_andamento",
+                        "2025-08-31T19:55:13Z");
+
+        var saved = customerContactService.save(dto);
+
+        Timestamp expectedTimestamp =
+                Timestamp.valueOf(
+                        OffsetDateTime.parse("2025-08-31T19:55:13Z")
+                                .atZoneSameInstant(ZoneId.systemDefault())
+                                .toLocalDateTime());
+        Assertions.assertThat(saved.lastContact()).isEqualTo(expectedTimestamp.toLocalDateTime());
+        verify(phoneService, never()).findByNumber(anyString());
     }
 
     private static CustomerContactInputDto input(String deviceStatus, String contactDate) {
