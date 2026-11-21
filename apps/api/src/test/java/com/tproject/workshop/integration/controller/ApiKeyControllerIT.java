@@ -181,7 +181,7 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
                 // Conflict - duplicate (same client, user and platform)
                 Arguments.of(
                         5,
-                        HttpStatus.SC_UNAUTHORIZED,
+                        HttpStatus.SC_CONFLICT,
                         Map.of(
                                 "clientName", "test_app",
                                 "userIdentifier", "admin_user",

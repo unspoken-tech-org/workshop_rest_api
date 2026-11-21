@@ -240,4 +240,37 @@ public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
         assertThatThrownBy(() -> paymentRepository.saveAndFlush(stalePayment))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
     }
+
+    @Test
+    @DisplayName("V15 should create foreign key, history timeline, and pg_trgm GIN indexes")
+    void shouldCreateV15ForeignKeyAndTrigramIndexes() {
+        List<String> existingIndexes =
+                jdbcTemplate.queryForList(
+                        "SELECT indexname FROM pg_indexes WHERE schemaname = 'public'",
+                        String.class);
+
+        assertThat(existingIndexes)
+                .contains(
+                        "ix_devices_id_customer",
+                        "ix_devices_id_brand_model_type",
+                        "ix_devices_id_technician",
+                        "ix_devices_last_viewed_at",
+                        "ix_device_history_id_device",
+                        "ix_device_history_history_date",
+                        "ix_payments_id_device",
+                        "ix_customer_contact_id_device_last_contact",
+                        "ix_customer_phones_id_phone",
+                        "ix_customers_name_trgm",
+                        "ix_customers_email_trgm",
+                        "ix_customers_cpf_trgm",
+                        "ix_phones_number_trgm",
+                        "ix_brands_brand_trgm",
+                        "ix_models_model_trgm",
+                        "ix_types_type_trgm");
+
+        String normalized =
+                jdbcTemplate.queryForObject(
+                        "SELECT public.immutable_unaccent('Conceição JoãO')", String.class);
+        assertThat(normalized).isEqualTo("Conceicao JoaO");
+    }
 }

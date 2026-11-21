@@ -13,6 +13,9 @@ public class UtilsString {
     }
 
     public static String normalizeString(String value) {
+        if (value == null) {
+            return null;
+        }
         return value.toLowerCase()
                 .replaceAll("[áàâã]", "a")
                 .replaceAll("[éèê]", "e")

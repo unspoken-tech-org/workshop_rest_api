@@ -57,7 +57,8 @@ public class RaceConditionIT extends AbstractIntegrationLiveTest {
 
     @Test
     @DisplayName("Should handle concurrent creation of technicians without duplicates")
-    public void shouldHandleConcurrentTechnicianCreation() throws InterruptedException {
+    public void shouldHandleConcurrentTechnicianCreation()
+            throws InterruptedException, ExecutionException {
         int threads = 10;
         List<Future<Technician>> futures;
         try (ExecutorService executorService = Executors.newFixedThreadPool(threads)) {
@@ -80,11 +81,7 @@ public class RaceConditionIT extends AbstractIntegrationLiveTest {
         }
 
         for (Future<Technician> future : futures) {
-            try {
-                future.get();
-            } catch (ExecutionException e) {
-                // Ignore expected transient failures if any, but our retry should handle it
-            }
+            assertThat(future.get()).isNotNull();
         }
 
         long count =

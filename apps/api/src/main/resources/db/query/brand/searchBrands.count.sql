@@ -4,8 +4,8 @@ WHERE
     (:QUERY IS NULL OR :QUERY = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(unaccent(b.brand))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(immutable_unaccent(b.brand))
             )
             FROM unnest(string_to_array(:QUERY, ' ')) AS word
             WHERE word <> ''

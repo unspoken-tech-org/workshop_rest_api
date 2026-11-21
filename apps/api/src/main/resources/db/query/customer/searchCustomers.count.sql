@@ -16,8 +16,8 @@ WHERE
     AND (:SEARCH_NAME IS NULL OR :SEARCH_NAME = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(unaccent(c.name))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(immutable_unaccent(c.name))
             )
             FROM unnest(string_to_array(:SEARCH_NAME, ' ')) AS word
             WHERE word <> ''
@@ -26,8 +26,8 @@ WHERE
     AND (:SEARCH_EMAIL IS NULL OR :SEARCH_EMAIL = ''
         OR (
             SELECT bool_and(
-                LOWER(unaccent(word))
-                <% LOWER(unaccent(c.email))
+                LOWER(immutable_unaccent(word))
+                <% LOWER(immutable_unaccent(c.email))
             )
             FROM unnest(string_to_array(:SEARCH_EMAIL, ' ')) AS word
             WHERE word <> ''

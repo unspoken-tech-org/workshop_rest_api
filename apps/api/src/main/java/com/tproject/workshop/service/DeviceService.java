@@ -37,17 +37,6 @@ public class DeviceService {
     private final TechnicianService technicianService;
     private final ObservabilityEventRecorder eventRecorder;
 
-    private static final List<DeviceStatusEnum> STATUS_THAT_RESET_URGENCY_REVISION =
-            List.of(
-                    DeviceStatusEnum.PRONTO,
-                    DeviceStatusEnum.APROVADO,
-                    DeviceStatusEnum.NAO_APROVADO,
-                    DeviceStatusEnum.ENTREGUE,
-                    DeviceStatusEnum.DESCARTADO);
-
-    private static final List<DeviceStatusEnum> STATUS_THAT_SET_DEPARTURE_DATE =
-            List.of(DeviceStatusEnum.ENTREGUE, DeviceStatusEnum.DESCARTADO);
-
     private Device fetchOrThrow(int deviceId) {
         return deviceRepository
                 .findById(deviceId)
@@ -58,20 +47,6 @@ public class DeviceService {
 
     private void addHistory(Device device, String field, String oldValue, String newValue) {
         device.getDeviceHistory().add(new DeviceHistory(field, oldValue, newValue, device));
-    }
-
-    private void resetUrgencyAndRevisionIfNeeded(Device device, DeviceStatusEnum newStatus) {
-        if (STATUS_THAT_RESET_URGENCY_REVISION.contains(newStatus)) {
-            device.setUrgency(false);
-            device.setRevision(false);
-        }
-    }
-
-    private void setDepartureDateIfDelivered(Device device, DeviceStatusEnum newStatus) {
-        if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)
-                && device.getDepartureDate() == null) {
-            device.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
-        }
     }
 
     private void recordStatusChange(
@@ -86,9 +61,7 @@ public class DeviceService {
 
     private void recordClosedIfNeeded(
             Device device, DeviceStatusEnum previous, DeviceStatusEnum current) {
-        if (previous == current
-                || (current != DeviceStatusEnum.ENTREGUE
-                        && current != DeviceStatusEnum.DESCARTADO)) {
+        if (previous == current || !current.isClosed()) {
             return;
         }
         Instant entry =
@@ -133,33 +106,40 @@ public class DeviceService {
     }
 
     private void revertStatusIfNeeded(Device device, String origin) {
-        DeviceStatusEnum current = device.getDeviceStatus();
-        if (current == DeviceStatusEnum.ENTREGUE || current == DeviceStatusEnum.DESCARTADO) {
-            addHistory(
-                    device,
-                    DeviceHistoryFieldEnum.STATUS.getField(),
-                    current.name(),
-                    DeviceStatusEnum.NOVO.name());
-            device.setDeviceStatus(DeviceStatusEnum.NOVO);
-            recordStatusChange(current, DeviceStatusEnum.NOVO, origin);
+        if (device.getDeviceStatus().isClosed()) {
+            applyStatusTransition(device, DeviceStatusEnum.NOVO, origin);
         }
+    }
+
+    private void applyStatusTransition(Device device, DeviceStatusEnum newStatus, String origin) {
+        DeviceStatusEnum oldStatus = device.getDeviceStatus();
+        boolean previousUrgency = device.isUrgency();
+        boolean effectiveUrgency = !newStatus.resetsUrgencyAndRevision() && previousUrgency;
+        boolean effectiveRevision = !newStatus.resetsUrgencyAndRevision() && device.isRevision();
+
+        recordStateHistory(device, newStatus, effectiveUrgency, effectiveRevision);
+        device.setDeviceStatus(newStatus);
+        device.setUrgency(effectiveUrgency);
+        device.setRevision(effectiveRevision);
+
+        if (newStatus.isClosed()) {
+            if (device.getDepartureDate() == null) {
+                device.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
+            }
+        } else if (oldStatus.isClosed()) {
+            device.setDepartureDate(null);
+        }
+
+        if (oldStatus != newStatus) {
+            recordStatusChange(oldStatus, newStatus, origin);
+        }
+        recordUrgencyChange(previousUrgency, effectiveUrgency);
+        recordClosedIfNeeded(device, oldStatus, newStatus);
     }
 
     private Device changeStatus(int deviceId, DeviceStatusEnum newStatus, String origin) {
         Device device = fetchOrThrow(deviceId);
-        DeviceStatusEnum oldStatus = device.getDeviceStatus();
-        if (oldStatus != newStatus) {
-            addHistory(
-                    device,
-                    DeviceHistoryFieldEnum.STATUS.getField(),
-                    oldStatus.name(),
-                    newStatus.name());
-            recordStatusChange(oldStatus, newStatus, origin);
-        }
-        device.setDeviceStatus(newStatus);
-        resetUrgencyAndRevisionIfNeeded(device, newStatus);
-        setDepartureDateIfDelivered(device, newStatus);
-        recordClosedIfNeeded(device, oldStatus, newStatus);
+        applyStatusTransition(device, newStatus, origin);
         return device;
     }
 
@@ -253,18 +233,20 @@ public class DeviceService {
         DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(device.deviceStatus());
         DeviceStatusEnum previousStatus = oldDevice.getDeviceStatus();
         boolean previousUrgency = oldDevice.isUrgency();
+        boolean effectiveUrgency = !newStatus.resetsUrgencyAndRevision() && device.hasUrgency();
+        boolean effectiveRevision = !newStatus.resetsUrgencyAndRevision() && device.revision();
         BigDecimal previousBudgetFee = oldDevice.getBudgetFee();
         BigDecimal previousServiceValue = oldDevice.getServiceValue();
 
-        addHistories(oldDevice, device);
+        recordStateHistory(oldDevice, newStatus, effectiveUrgency, effectiveRevision);
 
         oldDevice.setProblem(device.problem());
         oldDevice.setObservation(device.observation());
         oldDevice.setBudget(device.budget());
         oldDevice.setBudgetFee(device.budgetFee());
         oldDevice.setServiceValue(device.serviceValue());
-        oldDevice.setUrgency(device.hasUrgency());
-        oldDevice.setRevision(device.revision());
+        oldDevice.setUrgency(effectiveUrgency);
+        oldDevice.setRevision(effectiveRevision);
         oldDevice.setDeviceStatus(newStatus);
         Optional.ofNullable(device.technicianId())
                 .ifPresent(id -> {
@@ -279,12 +261,17 @@ public class DeviceService {
                                         ? oldDevice.getEntryDate().toLocalDateTime()
                                         : null);
 
+        boolean reopeningWithoutExplicitDeparture =
+                !newStatus.isClosed() && previousStatus.isClosed();
+
         LocalDateTime effectiveDepartureDate;
         if (device.departureDate() != null) {
             effectiveDepartureDate = device.departureDate();
+        } else if (reopeningWithoutExplicitDeparture) {
+            effectiveDepartureDate = null;
         } else if (oldDevice.getDepartureDate() != null) {
             effectiveDepartureDate = oldDevice.getDepartureDate().toLocalDateTime();
-        } else if (STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+        } else if (newStatus.isClosed()) {
             effectiveDepartureDate = LocalDateTime.now();
         } else {
             effectiveDepartureDate = null;
@@ -305,8 +292,9 @@ public class DeviceService {
 
         if (device.departureDate() != null) {
             oldDevice.setDepartureDate(Timestamp.valueOf(device.departureDate()));
-        } else if (oldDevice.getDepartureDate() == null
-                && STATUS_THAT_SET_DEPARTURE_DATE.contains(newStatus)) {
+        } else if (reopeningWithoutExplicitDeparture) {
+            oldDevice.setDepartureDate(null);
+        } else if (oldDevice.getDepartureDate() == null && newStatus.isClosed()) {
             oldDevice.setDepartureDate(Timestamp.valueOf(effectiveDepartureDate));
         }
 
@@ -317,7 +305,7 @@ public class DeviceService {
         }
         recordBudgetChange("budget_fee", previousBudgetFee, device.budgetFee());
         recordBudgetChange("service_value", previousServiceValue, device.serviceValue());
-        recordUrgencyChange(previousUrgency, device.hasUrgency());
+        recordUrgencyChange(previousUrgency, effectiveUrgency);
         return findDeviceByIdOrThrow(oldDevice.getId());
     }
 
@@ -337,7 +325,7 @@ public class DeviceService {
 
         List<Color> colors =
                 device.colors().stream().map(colorService::createOrReturnExistentColor).toList();
-        List<Integer> colorIds = colors.stream().map(Color::getIdColor).toList();
+        List<Integer> colorIds = colors.stream().map(Color::getIdColor).distinct().toList();
 
         List<DeviceHistory> deviceHistoryList = new ArrayList<>();
 
@@ -376,27 +364,28 @@ public class DeviceService {
         return new CreateDeviceOutputDtoRecord(savedDevice.getId());
     }
 
-    private void addHistories(Device oldDevice, DeviceUpdateInputDtoRecord newDevice) {
-        if (oldDevice.isRevision() != newDevice.revision()) {
+    private void recordStateHistory(
+            Device oldDevice, DeviceStatusEnum newStatus, boolean newUrgency, boolean newRevision) {
+        if (oldDevice.isRevision() != newRevision) {
             addHistory(
                     oldDevice,
                     DeviceHistoryFieldEnum.REVISION.getField(),
                     String.valueOf(oldDevice.isRevision()),
-                    String.valueOf(newDevice.revision()));
+                    String.valueOf(newRevision));
         }
-        if (oldDevice.isUrgency() != newDevice.hasUrgency()) {
+        if (oldDevice.isUrgency() != newUrgency) {
             addHistory(
                     oldDevice,
                     DeviceHistoryFieldEnum.URGENCY.getField(),
                     String.valueOf(oldDevice.isUrgency()),
-                    String.valueOf(newDevice.hasUrgency()));
+                    String.valueOf(newUrgency));
         }
-        if (!oldDevice.getDeviceStatus().name().equalsIgnoreCase(newDevice.deviceStatus())) {
+        if (oldDevice.getDeviceStatus() != newStatus) {
             addHistory(
                     oldDevice,
                     DeviceHistoryFieldEnum.STATUS.getField(),
                     oldDevice.getDeviceStatus().name(),
-                    newDevice.deviceStatus());
+                    newStatus.name());
         }
     }
 }
