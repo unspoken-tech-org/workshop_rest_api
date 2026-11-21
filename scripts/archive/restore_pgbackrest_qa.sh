@@ -23,7 +23,7 @@ cleanup_all() {
 }
 
 # Fail-Closed error handler to destroy unmasked volume on premature abort
-# shellcheck disable=SC2329 # Invoked via trap cleanup_on_error ERR
+# shellcheck disable=SC2317,SC2329 # Invoked via trap cleanup_on_error ERR
 cleanup_on_error() {
   echo ">>> [ALERT] QA Restore failed! Destroying unmasked data volume..."
   docker compose -f "${COMPOSE_FILE}" down -v || true
