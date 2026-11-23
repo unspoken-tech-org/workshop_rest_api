@@ -14,11 +14,11 @@ where
         SELECT 1 FROM customer_phones cp
         LEFT JOIN phones p on p.id = cp.id_phone
         WHERE cp.id_customer = d.id_customer
-        AND p.number ILIKE CONCAT('%', :CUSTOMER_PHONE, '%')
+        AND p.number ILIKE CONCAT('%', REPLACE(REPLACE(REPLACE(:CUSTOMER_PHONE, '\', '\\'), '%', '\%'), '_', '\_'), '%') ESCAPE '\'
         )
     )
     )
-    AND (:CUSTOMER_CPF IS NULL OR (:CUSTOMER_CPF != '' AND c.cpf ilike CONCAT('%', :CUSTOMER_CPF, '%')))
+    AND (:CUSTOMER_CPF IS NULL OR (:CUSTOMER_CPF != '' AND c.cpf ilike CONCAT('%', REPLACE(REPLACE(REPLACE(:CUSTOMER_CPF, '\', '\\'), '%', '\%'), '_', '\_'), '%') ESCAPE '\'))
     AND (COALESCE(array_length(:STATUS::text[], 1), 0) = 0 OR d.device_status = ANY(:STATUS::text[]))
     AND ((:INITIAL_ENTRY_DATE IS NULL AND :FINAL_ENTRY_DATE IS NULL) 
         OR ((:INITIAL_ENTRY_DATE IS NOT NULL AND :FINAL_ENTRY_DATE IS NOT NULL)
@@ -48,10 +48,10 @@ ORDER BY
     CASE
         WHEN :SEARCH_QUERY IS NOT NULL AND :SEARCH_QUERY != ''
         AND (
-            LOWER(immutable_unaccent(t.type)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
-            OR LOWER(immutable_unaccent(b.brand)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
-            OR LOWER(immutable_unaccent(m.model)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
-            OR LOWER(immutable_unaccent(c.name)) LIKE LOWER(immutable_unaccent(:SEARCH_QUERY)) || '%'
+            LOWER(immutable_unaccent(t.type)) LIKE REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:SEARCH_QUERY)), '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
+            OR LOWER(immutable_unaccent(b.brand)) LIKE REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:SEARCH_QUERY)), '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
+            OR LOWER(immutable_unaccent(m.model)) LIKE REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:SEARCH_QUERY)), '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
+            OR LOWER(immutable_unaccent(c.name)) LIKE REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:SEARCH_QUERY)), '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
         )
         THEN 0
         ELSE 1
