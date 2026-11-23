@@ -10,7 +10,7 @@ WHERE
             SELECT 1
             FROM customer_phones cp
             INNER JOIN phones p ON p.id = cp.id_phone
-            WHERE cp.id_customer = c.id AND p.number ILIKE '%' || :PHONE || '%'
+            WHERE cp.id_customer = c.id AND p.number ILIKE '%' || REPLACE(REPLACE(REPLACE(:PHONE, '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
         ))
     )
     AND (:SEARCH_NAME IS NULL OR :SEARCH_NAME = ''

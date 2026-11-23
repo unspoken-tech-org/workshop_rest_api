@@ -46,7 +46,11 @@ public class ApiKeyService {
 
         // Check expiration
         if (key.getExpiresAt() != null && !key.getExpiresAt().isAfter(Instant.now())) {
-            log.warn("Expired API Key for client: {} ({})", key.getClientName(), key.getPlatform());
+            log.warn(
+                    "Expired API Key (apiKeyId: {}, platform: {}, role: {})",
+                    key.getId(),
+                    key.getPlatform(),
+                    key.getRole());
             throw new InvalidApiKeyException("Expired API Key");
         }
 
@@ -54,9 +58,10 @@ public class ApiKeyService {
         apiKeyRepository.updateLastUsedAt(key.getKeyValue(), Instant.now());
 
         log.debug(
-                "API Key validated for client: {} (platform: {})",
-                key.getClientName(),
-                key.getPlatform());
+                "API Key validated (apiKeyId: {}, platform: {}, role: {})",
+                key.getId(),
+                key.getPlatform(),
+                key.getRole());
     }
 
     /**
@@ -150,9 +155,7 @@ public class ApiKeyService {
         if (apiKeyRepository.existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(
                 clientName, userIdentifier, platform)) {
             log.warn(
-                    "An active API Key already exists for client {} and user {} on platform {}",
-                    clientName,
-                    userIdentifier,
+                    "An active API Key already exists for this client and user (platform: {})",
                     platform);
             throw new EntityAlreadyExistsException(
                     "An active API Key already exists for this client and user on this platform");
@@ -181,11 +184,10 @@ public class ApiKeyService {
                         "key.role", savedKey.getRole().name().toLowerCase(Locale.ROOT),
                         "key.expiry", expiresAt == null ? "none" : "set"));
         log.info(
-                "API Key created for client: {}, user: {} (platform: {}, role: {})",
-                clientName,
-                userIdentifier,
+                "API Key created (apiKeyId: {}, platform: {}, role: {})",
+                savedKey.getId(),
                 platform,
-                apiKey.getRole());
+                savedKey.getRole());
 
         return ApiKeyCreatedResponse.fromEntity(savedKey, rawKey);
     }
@@ -213,11 +215,12 @@ public class ApiKeyService {
      */
     @Transactional
     public void revokeAllByClientName(String clientName) {
-        if (apiKeyRepository.deactivateByClientName(clientName) > 0) {
+        int deactivated = apiKeyRepository.deactivateByClientName(clientName);
+        if (deactivated > 0) {
             eventRecorder.record(
                     ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "all_by_client"));
         }
-        log.info("All API Keys revoked for client: {}", clientName);
+        log.info("API Keys revoked by client name (deactivated: {})", deactivated);
     }
 
     /**
