@@ -16,7 +16,7 @@ WHERE
 ORDER BY
     CASE
         WHEN :QUERY IS NOT NULL AND :QUERY != ''
-        AND LOWER(immutable_unaccent(t.type)) LIKE LOWER(immutable_unaccent(:QUERY)) || '%'
+        AND LOWER(immutable_unaccent(t.type)) LIKE REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:QUERY)), '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
         THEN 0
         ELSE 1
     END,

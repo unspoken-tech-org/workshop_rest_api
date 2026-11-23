@@ -1,5 +1,9 @@
 app:
   version: '@project.version@'
+  # Limite de corpo das requisições (JSON incluso), aplicado pelo
+  # RequestBodySizeLimitFilter mesmo sem o Caddy na frente.
+  request:
+    max-body-size: 1MB
 
 spring:
   application:
@@ -25,9 +29,17 @@ server:
   compression:
     enabled: true
   port: 8080
+  # RemoteIpValve: X-Forwarded-* só vale vindo de IPs internos (o Caddy).
+  forward-headers-strategy: native
+  max-http-request-header-size: 8KB
   servlet:
     session:
       timeout: 30
+  tomcat:
+    connection-timeout: 20s
+    keep-alive-timeout: 20s
+    max-http-form-post-size: 1MB
+    max-swallow-size: 1MB
 
 # SpringDoc (OpenAPI JSON e Swagger UI) fica fechado por padrão: só o perfil
 # local o religa. Um perfil novo já nasce sem a documentação exposta.

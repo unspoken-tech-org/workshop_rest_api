@@ -21,7 +21,7 @@ WHERE
             SELECT 1
             FROM customer_phones cp
             INNER JOIN phones p ON p.id = cp.id_phone
-            WHERE cp.id_customer = c.id AND p.number ILIKE '%' || :PHONE || '%'
+            WHERE cp.id_customer = c.id AND p.number ILIKE '%' || REPLACE(REPLACE(REPLACE(:PHONE, '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
         ))
     )
     AND (:SEARCH_NAME IS NULL OR :SEARCH_NAME = ''
@@ -47,7 +47,7 @@ WHERE
 ORDER BY
     CASE
         WHEN :SEARCH_NAME IS NOT NULL AND :SEARCH_NAME != ''
-        AND LOWER(immutable_unaccent(c.name)) LIKE LOWER(immutable_unaccent(:SEARCH_NAME)) || '%'
+        AND LOWER(immutable_unaccent(c.name)) LIKE REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:SEARCH_NAME)), '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
         THEN 0
         ELSE 1
     END,
@@ -64,7 +64,7 @@ ORDER BY
     END ASC NULLS LAST,
     CASE
         WHEN :SEARCH_EMAIL IS NOT NULL AND :SEARCH_EMAIL != ''
-        AND LOWER(immutable_unaccent(c.email)) LIKE LOWER(immutable_unaccent(:SEARCH_EMAIL)) || '%'
+        AND LOWER(immutable_unaccent(c.email)) LIKE REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:SEARCH_EMAIL)), '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\'
         THEN 0
         ELSE 1
     END,
