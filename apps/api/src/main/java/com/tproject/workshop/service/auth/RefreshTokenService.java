@@ -3,6 +3,7 @@ package com.tproject.workshop.service.auth;
 import com.tproject.workshop.exception.InvalidTokenException;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.RefreshToken;
+import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
 import java.security.SecureRandom;
@@ -22,6 +23,7 @@ public class RefreshTokenService {
     public record RotationResult(ApiKey apiKey, String refreshToken) {}
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ApiKeyRepository apiKeyRepository;
 
     @Value("${jwt.refresh-token.expiration}")
     private long refreshTokenExpiration;
@@ -43,7 +45,7 @@ public class RefreshTokenService {
     /**
      * Validates and rotates the refresh token (revoking the presented token and issuing a new one).
      * Detects reuse of already-revoked tokens and revokes all active refresh tokens for the
-     * associated API key to contain theft.
+     * associated API key, and invalidates its access tokens, to contain theft.
      *
      * @param token the plaintext refresh token
      * @return the associated ApiKey and newly issued plaintext refresh token
@@ -68,7 +70,7 @@ public class RefreshTokenService {
             log.warn(
                     "Refresh token reuse detected; revoking active tokens for apiKeyId={}",
                     apiKey.getId());
-            refreshTokenRepository.revokeByApiKeyId(apiKey.getId());
+            revokeAllSessions(apiKey);
             throw new InvalidTokenException("Refresh token revoked");
         }
 
@@ -97,7 +99,7 @@ public class RefreshTokenService {
             log.warn(
                     "Concurrent refresh token reuse detected; revoking active tokens for apiKeyId={}",
                     apiKey.getId());
-            refreshTokenRepository.revokeByApiKeyId(apiKey.getId());
+            revokeAllSessions(apiKey);
             throw new InvalidTokenException("Refresh token revoked");
         }
 
@@ -105,7 +107,7 @@ public class RefreshTokenService {
         return new RotationResult(apiKey, newRefreshToken);
     }
 
-    /** Revokes a specific refresh token. */
+    /** Revokes a specific refresh token (logout) and invalidates the API Key's access tokens. */
     @Transactional
     public void revokeRefreshToken(String token) {
         if (token == null || token.isBlank()) {
@@ -117,6 +119,7 @@ public class RefreshTokenService {
                 .ifPresent(rt -> {
                     rt.setRevoked(true);
                     refreshTokenRepository.save(rt);
+                    apiKeyRepository.incrementAndGetTokenVersion(rt.getApiKey().getId());
                     log.info("Refresh token revoked");
                 });
     }
@@ -126,6 +129,12 @@ public class RefreshTokenService {
     public void revokeAllTokensForClient(String clientName) {
         refreshTokenRepository.revokeAllByClientName(clientName);
         log.info("All refresh tokens revoked for client");
+    }
+
+    /** Reuse detected: revoke every refresh token and every access token of the API Key. */
+    private void revokeAllSessions(ApiKey apiKey) {
+        refreshTokenRepository.revokeByApiKeyId(apiKey.getId());
+        apiKeyRepository.incrementAndGetTokenVersion(apiKey.getId());
     }
 
     private String issueAndSaveRefreshToken(ApiKey apiKey) {

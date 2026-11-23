@@ -92,6 +92,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
+            // tv: access-token version. Logout, refresh-token reuse and a new login increment
+            // api_keys.token_version, invalidating older tokens. Tokens without tv were issued
+            // before V17 and are accepted only while the key was never incremented.
+            Number tokenVersionClaim = claims.get("tv", Number.class);
+            long tokenVersion =
+                    Optional.ofNullable(tokenVersionClaim).map(Number::longValue).orElse(0L);
+            if (tokenVersion != apiKey.getTokenVersion()) {
+                log.warn("JWT authentication failed: access token revoked (apiKeyId={})", apiKeyId);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             // Extract roles from claims
             @SuppressWarnings("unchecked")
             List<String> roles = claims.get("roles", List.class);

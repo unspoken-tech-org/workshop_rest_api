@@ -117,6 +117,18 @@ public class ApiKeyService {
         }
     }
 
+    /**
+     * Increments the API Key's access-token version, invalidating every access token issued before
+     * this call.
+     *
+     * @param apiKeyId the API Key id
+     * @return the new token version, written by this call (use it as the {@code tv} claim)
+     */
+    @Transactional
+    public long incrementTokenVersion(Long apiKeyId) {
+        return apiKeyRepository.incrementAndGetTokenVersion(apiKeyId);
+    }
+
     /** Clears device binding and revokes refresh tokens. */
     @Transactional
     public void resetDeviceBinding(Long apiKeyId) {

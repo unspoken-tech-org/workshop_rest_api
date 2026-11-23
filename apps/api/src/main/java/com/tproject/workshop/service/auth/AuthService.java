@@ -46,9 +46,14 @@ public class AuthService {
 
         apiKeyService.bindDeviceOrThrow(apiKey, request.boundDeviceId());
 
+        // A new login invalidates access tokens from previous sessions. apiKey is detached, so
+        // the version written by this login comes from the UPDATE ... RETURNING itself.
+        long tokenVersion = apiKeyService.incrementTokenVersion(apiKey.getId());
+
         // Generate JWT access token with claims
         String accessToken =
-                generateAccessToken(apiKey, request.boundDeviceId(), request.appVersion());
+                generateAccessToken(
+                        apiKey, tokenVersion, request.boundDeviceId(), request.appVersion());
 
         // Generate refresh token linked to the API Key
         String refreshToken = refreshTokenService.createRefreshToken(apiKey);
@@ -79,7 +84,9 @@ public class AuthService {
         // We don't have appVersion easily available here without changing
         // the refresh request or saving them in the refresh token.
         String boundDeviceId = Optional.ofNullable(apiKey.getBoundDeviceId()).orElse("unknown");
-        String accessToken = generateAccessToken(apiKey, boundDeviceId, "unknown");
+        // A normal rotation keeps token_version so in-flight requests are not dropped.
+        String accessToken =
+                generateAccessToken(apiKey, apiKey.getTokenVersion(), boundDeviceId, "unknown");
 
         log.debug(
                 "Access token renewed successfully for platform: {}, role: {}",
@@ -101,7 +108,8 @@ public class AuthService {
         log.info("Refresh token revoked successfully");
     }
 
-    private String generateAccessToken(ApiKey apiKey, String boundDeviceId, String appVersion) {
+    private String generateAccessToken(
+            ApiKey apiKey, long tokenVersion, String boundDeviceId, String appVersion) {
         Map<String, Object> claims =
                 Map.of(
                         "apiKeyId", apiKey.getId(),
@@ -109,7 +117,8 @@ public class AuthService {
                         "platform", apiKey.getPlatform().name(),
                         "userIdentifier", apiKey.getUserIdentifier(),
                         "boundDeviceId", boundDeviceId,
-                        "appVersion", appVersion);
+                        "appVersion", appVersion,
+                        "tv", tokenVersion);
 
         return jwtService.generateAccessToken(apiKey.getClientName(), claims);
     }

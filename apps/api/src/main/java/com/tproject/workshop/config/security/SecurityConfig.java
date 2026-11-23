@@ -106,7 +106,7 @@ public class SecurityConfig {
                                     response.getWriter()
                                             .write(
                                                     """
-                                                    {"status":401,"message":"Unauthorized","error":{"code":"authentication.required","message":"Authentication is required to access this resource"}}
+                                                    {"status":401,"title":"Unauthorized","error":{"code":"authentication.required","message":"Authentication is required to access this resource"}}
                                                     """);
                                 })
                                 // Write 403 directly: the default handler's /error dispatch is
@@ -119,7 +119,7 @@ public class SecurityConfig {
                                     response.getWriter()
                                             .write(
                                                     """
-                                                    {"status":403,"message":"Acesso Negado","error":{"code":"auth.access.denied","message":"Acesso Negado: Você não tem permissão para realizar esta operação."}}
+                                                    {"status":403,"title":"Acesso Negado","error":{"code":"auth.access.denied","message":"Acesso Negado: Você não tem permissão para realizar esta operação."}}
                                                     """);
                                 }))
                 .authorizeHttpRequests(auth ->

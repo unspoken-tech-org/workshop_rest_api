@@ -3,6 +3,7 @@ package com.tproject.workshop.service.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,7 @@ import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.Platform;
 import com.tproject.workshop.model.RefreshToken;
 import com.tproject.workshop.model.Role;
+import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
 import java.time.Instant;
@@ -30,6 +32,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 class RefreshTokenServiceTest {
 
     @Mock private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock private ApiKeyRepository apiKeyRepository;
 
     @InjectMocks private RefreshTokenService refreshTokenService;
 
@@ -97,6 +101,7 @@ class RefreshTokenServiceTest {
         ArgumentCaptor<RefreshToken> savedCaptor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository).revokeIfActive(42L);
         verify(refreshTokenRepository).save(savedCaptor.capture());
+        verify(apiKeyRepository, never()).incrementAndGetTokenVersion(anyLong());
         assertThat(savedCaptor.getValue().getToken())
                 .isEqualTo(KeyGeneratorUtils.sha256Hex(result.refreshToken()));
     }
@@ -123,6 +128,7 @@ class RefreshTokenServiceTest {
                 .hasMessageContaining("revoked");
 
         verify(refreshTokenRepository).revokeByApiKeyId(15L);
+        verify(apiKeyRepository).incrementAndGetTokenVersion(15L);
         verify(refreshTokenRepository, never()).save(any());
     }
 
@@ -148,6 +154,7 @@ class RefreshTokenServiceTest {
                 .hasMessageContaining("revoked");
 
         verify(refreshTokenRepository).revokeByApiKeyId(16L);
+        verify(apiKeyRepository).incrementAndGetTokenVersion(16L);
         verify(refreshTokenRepository, never()).save(any());
     }
 
@@ -203,6 +210,50 @@ class RefreshTokenServiceTest {
 
         verify(refreshTokenRepository, never()).revokeIfActive(any());
         verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRevokeRefreshTokenAndIncrementTokenVersionOnLogout() {
+        String rawToken = "rt_logout_token";
+        String hashedToken = KeyGeneratorUtils.sha256Hex(rawToken);
+        ApiKey apiKey = activeApiKey(30L, null);
+        RefreshToken refreshToken =
+                RefreshToken.builder()
+                        .id(80L)
+                        .token(hashedToken)
+                        .apiKey(apiKey)
+                        .expiresAt(Instant.now().plusSeconds(600))
+                        .revoked(false)
+                        .build();
+
+        when(refreshTokenRepository.findByToken(hashedToken)).thenReturn(Optional.of(refreshToken));
+
+        refreshTokenService.revokeRefreshToken(rawToken);
+
+        assertThat(refreshToken.isRevoked()).isTrue();
+        verify(refreshTokenRepository).save(refreshToken);
+        verify(apiKeyRepository).incrementAndGetTokenVersion(30L);
+    }
+
+    @Test
+    void shouldNotIncrementTokenVersionWhenLogoutTokenIsUnknown() {
+        String rawToken = "rt_unknown_token";
+        when(refreshTokenRepository.findByToken(KeyGeneratorUtils.sha256Hex(rawToken)))
+                .thenReturn(Optional.empty());
+
+        refreshTokenService.revokeRefreshToken(rawToken);
+
+        verify(apiKeyRepository, never()).incrementAndGetTokenVersion(anyLong());
+    }
+
+    @Test
+    void shouldNotIncrementTokenVersionWhenCreatingRefreshToken() {
+        when(refreshTokenRepository.save(any(RefreshToken.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        refreshTokenService.createRefreshToken(activeApiKey(31L, null));
+
+        verify(apiKeyRepository, never()).incrementAndGetTokenVersion(anyLong());
     }
 
     private static ApiKey activeApiKey(Long id, Instant expiresAt) {
