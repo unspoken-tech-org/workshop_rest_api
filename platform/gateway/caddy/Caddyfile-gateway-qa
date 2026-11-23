@@ -2,7 +2,17 @@
     email {file./run/secrets/admin_email}
     auto_https disable_redirects
     servers {
-        trusted_proxies static 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+        # Só a rede Docker workshop-ingress (cloudflared, faixa 172.16.0.0/12) é proxy
+        # confiável. LAN (192.168.0.0/16) e 10.0.0.0/8 NÃO são: o trusted_proxies_strict
+        # só vale para o X-Forwarded-For e o Cf-Connecting-Ip é aceito inteiro de qualquer
+        # IP confiável, então confiar na LAN deixaria uma máquina dela (que chega no :443
+        # com o IP real 192.168.x) escolher o próprio client_ip e escapar do rate limit.
+        # A LAN da oficina é 192.168.3.0/24 (o DNS estático do roteador aponta a API para
+        # 192.168.3.42), fora de 172.16.0.0/12; se um dia passar a usar essa faixa, fixar a
+        # subnet da workshop-ingress (ipam, igual nos compose do gateway e da API).
+        trusted_proxies static 172.16.0.0/12
+        trusted_proxies_strict
+        client_ip_headers Cf-Connecting-Ip X-Forwarded-For
     }
     # Métricas HTTP (caddy_http_*), expostas só no site interno :9180. Sem per_host:
     # no listener :80, por onde o Tunnel entrega o tráfego, todo host vira "_other".
@@ -35,12 +45,71 @@
     respond @metrics_matrix 404
 }
 
+# Erros gerados pelo próprio Caddy (429 do rate_limit, 413 do request_body).
+# handle_errors só vale no nível do site (não dentro de route nem de handle) e a
+# resposta de erro não passa pelo header do route, então os security headers são
+# repetidos aqui, inclusive os que o Spring Security emite nas respostas normais.
+# Os corpos seguem o contrato ResponseError da API (chave "title"). O Retry-After
+# do 429 vem do próprio rate_limit. Os demais erros (ex.: 502 sem upstream) saem
+# só com o status, como no padrão do Caddy.
+(error_responses) {
+    handle_errors {
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains"
+            Referrer-Policy "no-referrer"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            -Server
+        }
+        @rate_limited expression `{err.status_code} == 429`
+        handle @rate_limited {
+            header Content-Type "application/json; charset=utf-8"
+            respond `{"status":429,"title":"Muitas requisições","error":{"code":"rate.limited","message":"Limite de requisições excedido. Tente novamente em instantes."}}` 429
+        }
+        @payload_too_large expression `{err.status_code} == 413`
+        handle @payload_too_large {
+            header Content-Type "application/json; charset=utf-8"
+            respond `{"status":413,"title":"Payload muito grande","error":{"code":"payload.too.large","message":"O corpo da requisição excede o limite permitido."}}` 413
+        }
+        handle {
+            respond {err.status_code}
+        }
+    }
+}
+
 # Tracing: um span SERVER por requisição da API, exportado por OTLP/HTTP ao
 # Collector da rede workshop-metrics (OTEL_EXPORTER_OTLP_* no compose). O
 # traceparent, o tracestate e o baggage do cliente são descartados antes do span:
 # a origem não escolhe trace_id nem amostragem, o Caddy é sempre a raiz e propaga
-# um traceparent novo à API. Dentro de route a ordem é a escrita, então o bloqueio
-# de métricas fica antes do reverse_proxy.
+# um traceparent novo à API.
+#
+# Dentro de route a ordem é a escrita (sem `order` global):
+# - header logo após o span, para que também o 404 do block_metrics saia com
+#   HSTS. O Spring Security já envia X-Content-Type-Options e X-Frame-Options nas
+#   respostas normais, que não são duplicados aqui; HSTS não, porque o upstream é
+#   HTTP. A remoção do Server é adiada pelo Caddy e cobre o header do upstream.
+# - block_metrics antes de tudo que custa: /actuator/prometheus nunca sai.
+# - rate_limit antes de request_body e coraza_waf: rejeitar rajadas é mais barato
+#   que ler corpo ou rodar regras. Chave {client_ip} (resolvida pelos
+#   trusted_proxies). Limites conservadores por causa do NAT da oficina (vários
+#   desktops sob o mesmo IP público); /actuator/health fica fora das zonas.
+# - request_body: 413 para corpo acima de 1MB (1000000 bytes), com ou sem
+#   Content-Length; sem Content-Length o 413 sai do reverse_proxy ao ler o corpo.
+# - coraza_waf com o OWASP CRS em DetectionOnly (só registra, nunca bloqueia).
+#   Audit só de requisições em que alguma regra disparou ou com status 5xx: 401/403
+#   e demais 4xx já saem no access log do Caddy e no http.access da API.
+#   Audit log só com as partes A (cabeçalho da transação), H (regras que
+#   dispararam; sem ela o DetectionOnly fica cego) e Z: B, C, I e K ficam fora
+#   para que Authorization, X-API-Key e corpos com PII não cheguem ao Loki.
+#   O logdata das regras do CRS (%{MATCHED_VAR}) copia para a parte H (e para o
+#   log de erro do Caddy) o valor do header ou campo que casou com a regra, então
+#   REQUEST_HEADERS:Authorization e REQUEST_HEADERS:X-API-Key saem de todas as
+#   regras do CRS (SecRuleUpdateTargetByTag OWASP_CRS) e nunca chegam ao Loki. O WAF inspeciona só os primeiros 128KB do corpo
+#   (SecRequestBodyLimit + ProcessPartial; o resto segue sem inspeção): o CRS
+#   custa segundos de CPU num corpo de 1MB, e o limite precisa ficar abaixo do
+#   request_body, senão o Coraza esbarra nele num corpo chunked e responde 500
+#   no lugar do 413. Promoção para `SecRuleEngine On` só após janela de
+#   observação em QA sem falsos positivos (e reavaliando a inspeção parcial).
 (api_proxy) {
     route {
         request_header -traceparent
@@ -49,7 +118,52 @@
         tracing {
             span api
         }
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains"
+            Referrer-Policy "no-referrer"
+            -Server
+        }
         import block_metrics
+        rate_limit {
+            zone auth {
+                match {
+                    path /api/auth/*
+                }
+                key {client_ip}
+                events 30
+                window 1m
+            }
+            zone api {
+                match {
+                    path /v1/*
+                }
+                key {client_ip}
+                events 300
+                window 1m
+            }
+        }
+        request_body {
+            max_size 1MB
+        }
+        coraza_waf {
+            load_owasp_crs
+            directives `
+                Include @coraza.conf-recommended
+                Include @crs-setup.conf.example
+                Include @owasp_crs/*.conf
+                SecRuleEngine DetectionOnly
+                SecRequestBodyLimit 131072
+                SecRequestBodyLimitAction ProcessPartial
+                SecResponseBodyAccess Off
+                SecAuditEngine RelevantOnly
+                SecAuditLogRelevantStatus "^5"
+                SecAuditLogParts AHZ
+                SecAuditLogFormat JSON
+                SecAuditLogType Serial
+                SecAuditLog /dev/stdout
+                SecRuleUpdateTargetByTag OWASP_CRS "!REQUEST_HEADERS:Authorization|!REQUEST_HEADERS:X-API-Key"
+            `
+        }
         reverse_proxy {args[0]}
     }
 }
@@ -60,6 +174,7 @@
 # ============================================
 :80 {
     import log
+    import error_responses
     @api_qa host api-qa.eletroluk.com
     handle @api_qa {
         import api_proxy workshop-api-qa:8080
@@ -79,6 +194,7 @@
 # QA API (HTTPS)
 api-qa.eletroluk.com {
     import log
+    import error_responses
     import api_proxy workshop-api-qa:8080
     tls {
         dns cloudflare {file./run/secrets/cf_api_token}
