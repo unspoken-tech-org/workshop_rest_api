@@ -7,18 +7,18 @@ left join models m on m.id = bmt.id_model
 left join "types" t on t.id  = bmt.id_type
 where
     (:DEVICE_ID IS NULL OR d.id = :DEVICE_ID)
-    AND (:CUSTOMER_NAME IS NULL OR (:CUSTOMER_NAME != '' AND LOWER(immutable_unaccent(c.name)) ilike CONCAT('%', LOWER(immutable_unaccent(:CUSTOMER_NAME)), '%')))
+    AND (:CUSTOMER_NAME IS NULL OR (:CUSTOMER_NAME != '' AND LOWER(immutable_unaccent(c.name)) ilike CONCAT('%', REPLACE(REPLACE(REPLACE(LOWER(immutable_unaccent(:CUSTOMER_NAME)), '\', '\\'), '%', '\%'), '_', '\_'), '%') ESCAPE '\'))
         AND (:CUSTOMER_PHONE IS NULL 
         OR (:CUSTOMER_PHONE != '' 
             AND EXISTS(
             SELECT 1 FROM customer_phones cp
             LEFT JOIN phones p on p.id = cp.id_phone
             WHERE cp.id_customer = d.id_customer
-            AND p.number ILIKE CONCAT('%', :CUSTOMER_PHONE, '%')
+            AND p.number ILIKE CONCAT('%', REPLACE(REPLACE(REPLACE(:CUSTOMER_PHONE, '\', '\\'), '%', '\%'), '_', '\_'), '%') ESCAPE '\'
             )
         )
     )
-    AND (:CUSTOMER_CPF IS NULL OR (:CUSTOMER_CPF != '' AND c.cpf ilike CONCAT('%', :CUSTOMER_CPF, '%')))
+    AND (:CUSTOMER_CPF IS NULL OR (:CUSTOMER_CPF != '' AND c.cpf ilike CONCAT('%', REPLACE(REPLACE(REPLACE(:CUSTOMER_CPF, '\', '\\'), '%', '\%'), '_', '\_'), '%') ESCAPE '\'))
     AND (COALESCE(array_length(:STATUS::text[], 1), 0) = 0 OR d.device_status = ANY(:STATUS::text[]))
     AND (COALESCE(array_length(:DEVICE_TYPES::int[], 1), 0) = 0 OR t.id = ANY(:DEVICE_TYPES::int[]))
     AND (COALESCE(array_length(:DEVICE_BRANDS::int[], 1), 0) = 0 OR b.id = ANY(:DEVICE_BRANDS::int[]))

@@ -1,6 +1,8 @@
 package com.tproject.workshop.integration.controller;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.startsWith;
 
 import com.tproject.workshop.config.security.RsaKeyProperties;
 import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
@@ -589,9 +591,50 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
         Assertions.assertNotEquals(plaintextRefresh, storedRefreshHash);
     }
 
-    // ========== Access Token Revocation (token_version) ==========
+    // ========== Input Size Limits ==========
 
     @Order(21)
+    @DisplayName("Reject oversized auth fields with 400")
+    @MethodSource("oversizedAuthFieldArguments")
+    @ParameterizedTest(name = "{displayName} : {0} {1}")
+    public void shouldReturn400_whenAuthFieldExceedsMaxSize(
+            String path, String field, Map<String, Object> body) {
+        given().spec(SPEC)
+                .header(API_KEY_HEADER, TestAuthHelper.MOBILE_API_KEY)
+                .body(body)
+                .when()
+                .post(AUTH_PATH + path)
+                .then()
+                .statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body("status", equalTo(400))
+                .body("title", equalTo("Erro de Validação"))
+                .body("error.code", equalTo("erro.validacao"))
+                .body("error.message", startsWith(field + ":"));
+
+        Integer boundKeys =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM api_keys WHERE bound_device_id IS NOT NULL",
+                        Integer.class);
+        Assertions.assertEquals(0, boundKeys);
+    }
+
+    private static Stream<Arguments> oversizedAuthFieldArguments() {
+        return Stream.of(
+                Arguments.of(
+                        "/token",
+                        "boundDeviceId",
+                        Map.of("boundDeviceId", "d".repeat(101), "appVersion", "1.0.0")),
+                Arguments.of(
+                        "/token",
+                        "appVersion",
+                        Map.of("boundDeviceId", "test-device", "appVersion", "1".repeat(51))),
+                Arguments.of("/refresh", "refreshToken", Map.of("refreshToken", "r".repeat(257))),
+                Arguments.of("/revoke", "refreshToken", Map.of("refreshToken", "r".repeat(257))));
+    }
+
+    // ========== Access Token Revocation (token_version) ==========
+
+    @Order(22)
     @DisplayName("Logout immediately revokes the access token; a new login works")
     @Test
     public void shouldReturn401ForAccessToken_afterLogout() {
@@ -613,7 +656,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
         Assertions.assertEquals(3L, currentTokenVersion(1L));
     }
 
-    @Order(22)
+    @Order(23)
     @DisplayName("A new login revokes access tokens from the previous login")
     @Test
     public void shouldReturn401ForOldAccessToken_afterNewLogin() {
@@ -624,7 +667,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
         assertProtectedStatus(login2.get("accessToken"), HttpStatus.SC_OK);
     }
 
-    @Order(23)
+    @Order(24)
     @DisplayName("Refresh token reuse revokes access tokens of the API Key")
     @Test
     public void shouldReturn401ForAccessTokens_afterRefreshTokenReuse() {
@@ -661,7 +704,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
         assertProtectedStatus(refreshed.get("accessToken"), HttpStatus.SC_UNAUTHORIZED);
     }
 
-    @Order(24)
+    @Order(25)
     @DisplayName("Revoked access token gets the standard 401 body")
     @Test
     public void shouldReturnStandard401Body_whenAccessTokenRevoked() {
