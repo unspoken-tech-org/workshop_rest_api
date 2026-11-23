@@ -7,6 +7,7 @@ import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.InvalidApiKeyException;
 import com.tproject.workshop.exception.InvalidTokenException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.PayloadTooLargeException;
 import com.tproject.workshop.exception.TokenExpiredException;
 import jakarta.persistence.OptimisticLockException;
 import java.sql.SQLException;
@@ -37,6 +38,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger EXCEPTION_LOGGER =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    public static final String PAYLOAD_TOO_LARGE_CODE = "payload.too.large";
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ResponseError> handleAccessDeniedException(
@@ -85,6 +88,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatusCode status,
             WebRequest request) {
 
+        // A body over the limit fails while Jackson reads the stream and arrives wrapped here;
+        // it must stay 413, not become 400.
+        PayloadTooLargeException tooLarge = findCause(ex, PayloadTooLargeException.class);
+        if (tooLarge != null) {
+            logClientError(PAYLOAD_TOO_LARGE_CODE, tooLarge, request);
+            return new ResponseEntity<>(payloadTooLarge(tooLarge), HttpStatus.PAYLOAD_TOO_LARGE);
+        }
+
         Throwable rootCause = ex.getMostSpecificCause();
         if (rootCause instanceof BadRequestException badRequestEx) {
             return buildBadRequestResponse(badRequestEx.getMessage());
@@ -94,6 +105,33 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         logClientError("requisicao.invalida", rootCause, request);
 
         return buildBadRequestResponse("Payload inválido ou malformado. Verifique o JSON enviado.");
+    }
+
+    @ExceptionHandler(PayloadTooLargeException.class)
+    public ResponseEntity<ResponseError> handlePayloadTooLargeException(
+            final PayloadTooLargeException ex, WebRequest request) {
+        logClientError(PAYLOAD_TOO_LARGE_CODE, ex, request);
+
+        return new ResponseEntity<>(payloadTooLarge(ex), HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    /** 413 body, shared with {@code RequestBodySizeLimitFilter} for the Content-Length path. */
+    public static ResponseError payloadTooLarge(PayloadTooLargeException ex) {
+        ErrorMetadata.Error error =
+                new ErrorMetadata.Error(PAYLOAD_TOO_LARGE_CODE, ex.getMessage());
+        return new ResponseError(
+                HttpStatus.PAYLOAD_TOO_LARGE.value(), "Payload muito grande", error);
+    }
+
+    private static <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return type.cast(current);
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private ResponseEntity<Object> buildBadRequestResponse(String message) {

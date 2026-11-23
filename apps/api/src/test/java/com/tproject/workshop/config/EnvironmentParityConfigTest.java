@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -146,6 +147,26 @@ class EnvironmentParityConfigTest {
                     .as("ddl-auto override in %s", profileConfig)
                     .isNull();
         }
+    }
+
+    @Test
+    void shouldKeepTestOnlyConfigAndDevKeysOutOfPackagedJar() throws IOException {
+        // application-test.yml carries a test bcrypt hash: it must live only in test resources.
+        assertThat(Path.of("src", "main", "resources", "application-test.yml")).doesNotExist();
+        assertThat(Path.of("src", "test", "resources", "application-test.yml")).isRegularFile();
+        // Only the test resources copy is on the classpath (no stale copy from main).
+        assertThat(
+                        Collections.list(
+                                Thread.currentThread()
+                                        .getContextClassLoader()
+                                        .getResources("application-test.yml")))
+                .singleElement()
+                .satisfies(url -> assertThat(url.getPath()).contains("/test/"));
+
+        String buildGradle = Files.readString(Path.of("build.gradle"));
+        assertThat(buildGradle)
+                .containsPattern("tasks\\.named\\('bootJar'\\)\\s*\\{\\s*exclude 'keys/\\*\\*'")
+                .containsPattern("tasks\\.named\\('jar'\\)\\s*\\{\\s*exclude 'keys/\\*\\*'");
     }
 
     @Test
