@@ -7,6 +7,7 @@ import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import com.tproject.workshop.integration.TestAuthHelper;
 import com.tproject.workshop.util.KeyGeneratorUtils;
 import io.jsonwebtoken.Jwts;
+import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -525,6 +526,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                         .id(UUID.randomUUID().toString())
                         .claim("apiKeyId", 7L)
                         .claim("boundDeviceId", "guest-device")
+                        .claim("tv", currentTokenVersion(7L))
                         .claim("roles", List.of("ROLE_GUEST"))
                         .signWith(rsaKeyProperties.privateKey(), Jwts.SIG.RS256)
                         .compact();
@@ -585,5 +587,127 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                         createdId);
         Assertions.assertEquals(KeyGeneratorUtils.sha256Hex(plaintextRefresh), storedRefreshHash);
         Assertions.assertNotEquals(plaintextRefresh, storedRefreshHash);
+    }
+
+    // ========== Access Token Revocation (token_version) ==========
+
+    @Order(21)
+    @DisplayName("Logout immediately revokes the access token; a new login works")
+    @Test
+    public void shouldReturn401ForAccessToken_afterLogout() {
+        Map<String, String> login1 = login(TestAuthHelper.MOBILE_API_KEY, "revoke-device");
+        assertProtectedStatus(login1.get("accessToken"), HttpStatus.SC_OK);
+
+        given().spec(SPEC)
+                .body(Map.of("refreshToken", login1.get("refreshToken")))
+                .when()
+                .post(AUTH_PATH + "/revoke")
+                .then()
+                .statusCode(HttpStatus.SC_NO_CONTENT);
+
+        assertProtectedStatus(login1.get("accessToken"), HttpStatus.SC_UNAUTHORIZED);
+
+        Map<String, String> login2 = login(TestAuthHelper.MOBILE_API_KEY, "revoke-device");
+        assertProtectedStatus(login2.get("accessToken"), HttpStatus.SC_OK);
+        assertProtectedStatus(login1.get("accessToken"), HttpStatus.SC_UNAUTHORIZED);
+        Assertions.assertEquals(3L, currentTokenVersion(1L));
+    }
+
+    @Order(22)
+    @DisplayName("A new login revokes access tokens from the previous login")
+    @Test
+    public void shouldReturn401ForOldAccessToken_afterNewLogin() {
+        Map<String, String> login1 = login(TestAuthHelper.MOBILE_API_KEY, "relogin-device");
+        Map<String, String> login2 = login(TestAuthHelper.MOBILE_API_KEY, "relogin-device");
+
+        assertProtectedStatus(login1.get("accessToken"), HttpStatus.SC_UNAUTHORIZED);
+        assertProtectedStatus(login2.get("accessToken"), HttpStatus.SC_OK);
+    }
+
+    @Order(23)
+    @DisplayName("Refresh token reuse revokes access tokens of the API Key")
+    @Test
+    public void shouldReturn401ForAccessTokens_afterRefreshTokenReuse() {
+        Map<String, String> login = login(TestAuthHelper.MOBILE_API_KEY, "reuse-device");
+
+        JsonPath refreshedJson =
+                given().spec(SPEC)
+                        .body(Map.of("refreshToken", login.get("refreshToken")))
+                        .when()
+                        .post(AUTH_PATH + "/refresh")
+                        .then()
+                        .statusCode(HttpStatus.SC_OK)
+                        .extract()
+                        .jsonPath();
+        Map<String, String> refreshed =
+                Map.of(
+                        "accessToken", refreshedJson.getString("accessToken"),
+                        "refreshToken", refreshedJson.getString("refreshToken"));
+
+        // Normal rotation keeps token_version: both access tokens stay valid.
+        assertProtectedStatus(login.get("accessToken"), HttpStatus.SC_OK);
+        assertProtectedStatus(refreshed.get("accessToken"), HttpStatus.SC_OK);
+        long versionBeforeReuse = currentTokenVersion(1L);
+
+        given().spec(SPEC)
+                .body(Map.of("refreshToken", login.get("refreshToken")))
+                .when()
+                .post(AUTH_PATH + "/refresh")
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+
+        Assertions.assertEquals(versionBeforeReuse + 1, currentTokenVersion(1L));
+        assertProtectedStatus(login.get("accessToken"), HttpStatus.SC_UNAUTHORIZED);
+        assertProtectedStatus(refreshed.get("accessToken"), HttpStatus.SC_UNAUTHORIZED);
+    }
+
+    @Order(24)
+    @DisplayName("Revoked access token gets the standard 401 body")
+    @Test
+    public void shouldReturnStandard401Body_whenAccessTokenRevoked() {
+        String oldToken = login(TestAuthHelper.MOBILE_API_KEY, "body-device").get("accessToken");
+        login(TestAuthHelper.MOBILE_API_KEY, "body-device");
+
+        Response response =
+                given().spec(SPEC)
+                        .header("Authorization", "Bearer " + oldToken)
+                        .when()
+                        .get("/v1/colors")
+                        .then()
+                        .statusCode(HttpStatus.SC_UNAUTHORIZED)
+                        .extract()
+                        .response();
+
+        super.validateResponse("revoked_access_token", response);
+    }
+
+    private Map<String, String> login(String apiKey, String boundDeviceId) {
+        JsonPath json =
+                given().spec(SPEC)
+                        .header(API_KEY_HEADER, apiKey)
+                        .body(Map.of("boundDeviceId", boundDeviceId, "appVersion", "1.0.0"))
+                        .when()
+                        .post(AUTH_PATH + "/token")
+                        .then()
+                        .statusCode(HttpStatus.SC_OK)
+                        .extract()
+                        .jsonPath();
+        return Map.of(
+                "accessToken", json.getString("accessToken"),
+                "refreshToken", json.getString("refreshToken"));
+    }
+
+    private void assertProtectedStatus(String accessToken, int expectedStatus) {
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + accessToken)
+                .when()
+                .get("/v1/colors")
+                .then()
+                .statusCode(expectedStatus);
+    }
+
+    private long currentTokenVersion(long apiKeyId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT token_version FROM api_keys WHERE id = ?", Long.class, apiKeyId);
     }
 }
