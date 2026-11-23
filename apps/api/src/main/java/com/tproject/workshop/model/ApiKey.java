@@ -62,6 +62,15 @@ public class ApiKey {
     @Column(name = "bound_at")
     private Instant boundAt;
 
+    /**
+     * Access-token version (JWT claim {@code tv}). Written only by {@code
+     * ApiKeyRepository#incrementAndGetTokenVersion}: excluded from Hibernate inserts/updates so a
+     * dirty-checked stale entity can never roll the counter back.
+     */
+    @Column(name = "token_version", nullable = false, insertable = false, updatable = false)
+    @Builder.Default
+    private long tokenVersion = 0L;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;

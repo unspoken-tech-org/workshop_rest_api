@@ -142,6 +142,123 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
     }
 
+    @Test
+    void shouldAuthenticateWhenTokenVersionMatches() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims = claims(1L, "device-a", List.of("ROLE_SERVICE"), 3L);
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(boundApiKey(3L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void shouldRejectWhenTokenVersionIsOlderThanApiKeyVersion() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims = claims(1L, "device-a", List.of("ROLE_SERVICE"), 2L);
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(boundApiKey(3L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void shouldRejectWhenTokenVersionIsNewerThanApiKeyVersion() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims = claims(1L, "device-a", List.of("ROLE_SERVICE"), 4L);
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(boundApiKey(3L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void shouldAcceptLegacyTokenWithoutTvWhileApiKeyVersionIsZero() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims = claims(1L, "device-a", List.of("ROLE_SERVICE"));
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(boundApiKey(0L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void shouldRejectLegacyTokenWithoutTvOnceApiKeyVersionWasIncremented() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims = claims(1L, "device-a", List.of("ROLE_SERVICE"));
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(boundApiKey(1L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void shouldRejectWhenTvClaimIsNotNumeric() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims =
+                Jwts.claims()
+                        .subject("test_app")
+                        .add("apiKeyId", 1L)
+                        .add("boundDeviceId", "device-a")
+                        .add("roles", List.of("ROLE_SERVICE"))
+                        .add("tv", "0")
+                        .build();
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(boundApiKey(0L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    private static ApiKey boundApiKey(long tokenVersion) {
+        return ApiKey.builder()
+                .id(1L)
+                .active(true)
+                .boundDeviceId("device-a")
+                .platform(Platform.MOBILE)
+                .role(Role.SERVICE)
+                .tokenVersion(tokenVersion)
+                .build();
+    }
+
+    private static Claims claims(
+            Long apiKeyId, String boundDeviceId, List<String> roles, long tokenVersion) {
+        return Jwts.claims()
+                .subject("test_app")
+                .add("apiKeyId", apiKeyId)
+                .add("boundDeviceId", boundDeviceId)
+                .add("roles", roles)
+                .add("tv", tokenVersion)
+                .build();
+    }
+
     private static MockHttpServletRequest requestWithBearer(String token) {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/colors");
         request.addHeader("Authorization", "Bearer " + token);

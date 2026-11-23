@@ -1,0 +1,8 @@
+{
+    "status": 401,
+    "title": "Unauthorized",
+    "error": {
+        "code": "authentication.required",
+        "message": "Authentication is required to access this resource"
+    }
+}

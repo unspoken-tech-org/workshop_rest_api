@@ -8,7 +8,10 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
@@ -52,6 +55,22 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
     @Modifying
     @Query("UPDATE ApiKey a SET a.active = false WHERE a.clientName = :clientName")
     int deactivateByClientName(String clientName);
+
+    /**
+     * Atomically increments the access-token version and returns the value written by this
+     * statement. Invalidates every access token issued with an older {@code tv} claim.
+     *
+     * <p>Not {@code @Modifying}: Spring Data would call {@code executeUpdate()}, which the
+     * PostgreSQL driver rejects for a statement that returns rows ({@code RETURNING}). As a plain
+     * query it is read as a single result. Must join a read-write transaction of the caller.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(
+            value =
+                    "UPDATE api_keys SET token_version = token_version + 1 WHERE id = :id"
+                            + " RETURNING token_version",
+            nativeQuery = true)
+    long incrementAndGetTokenVersion(@Param("id") Long apiKeyId);
 
     /** Checks if there is an active API Key for the client, user and platform. */
     boolean existsByClientNameAndUserIdentifierAndPlatformAndActiveTrue(
