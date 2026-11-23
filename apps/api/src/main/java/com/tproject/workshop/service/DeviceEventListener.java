@@ -25,7 +25,7 @@ public class DeviceEventListener {
     @Async
     public void onDeviceViewed(DeviceViewedEvent event) {
         try {
-            log.info("Device {} viewed, updating lastViewedAt", event.getDeviceId());
+            log.debug("Device {} viewed, updating lastViewedAt", event.getDeviceId());
             int updated =
                     deviceRepository.updateLastViewedAt(
                             event.getDeviceId(), Timestamp.from(Instant.now()));
