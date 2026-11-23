@@ -52,10 +52,9 @@ jwt:
   refresh-token:
     expiration: 604800
 
-# CORS - origens permitidas em QA
+# CORS fechado: QA/PRD atendem só o app desktop Flutter, sem origem de navegador.
 cors:
-  allowed-origins:
-    - https://api-qa.eletroluk.com
+  allowed-origins: []
 
 server:
   shutdown: graceful
