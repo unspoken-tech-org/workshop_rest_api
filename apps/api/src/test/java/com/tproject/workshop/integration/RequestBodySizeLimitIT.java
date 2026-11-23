@@ -1,0 +1,101 @@
+package com.tproject.workshop.integration;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.context.jdbc.Sql;
+
+/**
+ * Bodies above {@code app.request.max-body-size} (1MB) get 413 with the {@code ResponseError}
+ * contract, whether the size is declared up front (Content-Length) or only known while reading
+ * (Transfer-Encoding: chunked).
+ */
+@Sql({
+    "/test-scripts/cleanTestData.sql",
+    "/test-scripts/AuthSetup.sql",
+    "/test-scripts/resetTablesSequence.sql"
+})
+class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
+
+    private static final int ONE_MB = 1024 * 1024;
+    private static final URI TOKEN_URI =
+            URI.create(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT + "/api/auth/token");
+
+    private final HttpClient client =
+            HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    @Test
+    void shouldReturn413_whenContentLengthExceedsLimit() throws Exception {
+        HttpResponse<String> response =
+                send(HttpRequest.BodyPublishers.ofByteArray(tokenBody(ONE_MB + 64)));
+
+        assertPayloadTooLarge(response);
+    }
+
+    @Test
+    void shouldReturn413_whenChunkedBodyExceedsLimit() throws Exception {
+        byte[] body = tokenBody(ONE_MB + 64);
+        // ofInputStream has no known length, so HTTP/1.1 sends it chunked.
+        HttpResponse<String> response =
+                send(
+                        HttpRequest.BodyPublishers.ofInputStream(
+                                () -> new ByteArrayInputStream(body)));
+
+        assertPayloadTooLarge(response);
+    }
+
+    @Test
+    void shouldReadChunkedBodyBelowLimitNormally() throws Exception {
+        byte[] body = tokenBody(ONE_MB - 1024);
+        HttpResponse<String> response =
+                send(
+                        HttpRequest.BodyPublishers.ofInputStream(
+                                () -> new ByteArrayInputStream(body)));
+
+        // Read in full and validated: boundDeviceId is over @Size(max = 100).
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(mapper.readTree(response.body()).at("/error/code").asText())
+                .isEqualTo("erro.validacao");
+    }
+
+    private HttpResponse<String> send(HttpRequest.BodyPublisher publisher) throws Exception {
+        HttpRequest request =
+                HttpRequest.newBuilder(TOKEN_URI)
+                        .timeout(Duration.ofSeconds(30))
+                        .header("Content-Type", "application/json")
+                        .header("X-API-Key", API_KEY)
+                        .POST(publisher)
+                        .build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    }
+
+    private void assertPayloadTooLarge(HttpResponse<String> response) throws Exception {
+        assertThat(response.statusCode()).isEqualTo(413);
+        JsonNode body = mapper.readTree(response.body());
+        assertThat(body.get("status").asInt()).isEqualTo(413);
+        assertThat(body.get("title").asText()).isEqualTo("Payload muito grande");
+        assertThat(body.at("/error/code").asText()).isEqualTo("payload.too.large");
+        assertThat(body.at("/error/message").asText()).contains("1MB");
+    }
+
+    /** A token request whose total size is {@code totalBytes}, padded in boundDeviceId. */
+    private static byte[] tokenBody(int totalBytes) {
+        String prefix = "{\"boundDeviceId\":\"";
+        String suffix = "\",\"appVersion\":\"1.0.0\"}";
+        String padding = "d".repeat(totalBytes - prefix.length() - suffix.length());
+        return (prefix + padding + suffix).getBytes(StandardCharsets.UTF_8);
+    }
+}
