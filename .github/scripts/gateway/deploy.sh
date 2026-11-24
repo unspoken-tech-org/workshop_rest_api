@@ -27,14 +27,14 @@ RECREATE_SERVICES=(caddy-gateway)
 if ! cmp -s /tmp/cloudflare_tunnel_token secrets/cloudflare_tunnel_token; then
   RECREATE_SERVICES+=(cloudflared-prod)
 fi
-for secret_name in cf_api_token admin_email; do
+# Compose bind-mounts file secrets with host permissions. cloudflared runs as
+# non-root, and Caddy runs as root without capabilities (cap_drop ALL, so no
+# DAC_OVERRIDE): both need world-readable files; the 700 directory keeps them
+# private on the host.
+for secret_name in cf_api_token admin_email cloudflare_tunnel_token; do
   mv "/tmp/${secret_name}" "secrets/${secret_name}"
-  chmod 400 "secrets/${secret_name}"
+  chmod 444 "secrets/${secret_name}"
 done
-# cloudflared runs as non-root and Compose bind-mounts the file with host
-# permissions: it must be world-readable; the 700 directory keeps it private.
-mv /tmp/cloudflare_tunnel_token secrets/cloudflare_tunnel_token
-chmod 444 secrets/cloudflare_tunnel_token
 
 LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-workshop/caddy-gateway}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose-gateway.yml}"

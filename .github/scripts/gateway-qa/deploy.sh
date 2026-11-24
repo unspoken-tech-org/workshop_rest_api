@@ -20,14 +20,14 @@ RECREATE_SERVICES=(caddy-gateway-qa)
 if ! cmp -s "${DEPLOY_DIR}/.tmp/cloudflare_tunnel_token" secrets/cloudflare_tunnel_token; then
   RECREATE_SERVICES+=(cloudflared-qa)
 fi
-for secret_name in cf_api_token admin_email; do
+# Compose bind-mounts file secrets with host permissions. cloudflared runs as
+# non-root, and Caddy runs as root without capabilities (cap_drop ALL, so no
+# DAC_OVERRIDE): both need world-readable files; the 700 directory keeps them
+# private on the host.
+for secret_name in cf_api_token admin_email cloudflare_tunnel_token; do
   mv "${DEPLOY_DIR}/.tmp/${secret_name}" "secrets/${secret_name}"
-  chmod 400 "secrets/${secret_name}"
+  chmod 444 "secrets/${secret_name}"
 done
-# cloudflared runs as non-root and Compose bind-mounts the file with host
-# permissions: it must be world-readable; the 700 directory keeps it private.
-mv "${DEPLOY_DIR}/.tmp/cloudflare_tunnel_token" secrets/cloudflare_tunnel_token
-chmod 444 secrets/cloudflare_tunnel_token
 
 # Backup the CURRENT image before pulling the new one
 if docker image inspect "${LOCAL_IMAGE_NAME}:latest" >/dev/null 2>&1; then
