@@ -81,7 +81,9 @@ if [ "$MODE" = "rollback" ]; then
     # shellcheck disable=SC2012
     ROLLBACK_SRC="$(ls -1t "$TARGET_FILE".bak-* 2>/dev/null | head -n1 || true)"
   fi
-  [ -n "$ROLLBACK_SRC" ] && [ -f "$ROLLBACK_SRC" ] || die "nenhum backup encontrado (${TARGET_FILE}.bak-*)."
+  if [ -z "$ROLLBACK_SRC" ] || [ ! -f "$ROLLBACK_SRC" ]; then
+    die "nenhum backup encontrado (${TARGET_FILE}.bak-*)."
+  fi
   [ "$(id -u)" -eq 0 ] || die "rollback exige root (use sudo)."
   validate_json "$ROLLBACK_SRC"
   log "Restaurando $ROLLBACK_SRC -> $TARGET_FILE"
