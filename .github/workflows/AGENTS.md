@@ -60,7 +60,11 @@ generated notes, a pre-release for `-rc.N`, and skips a tag that already has
 one.
 
 PRD deploys are dispatched with `--ref` pointing at the tag (e.g.
-`gh workflow run deploy-api-prod.yml --ref v1.2.0 -f allow_migrations=true`).
+`gh workflow run deploy-api-prod.yml --ref v1.2.0 -f allow_migrations=true`,
+`gh workflow run deploy-gateway-prod.yml --ref v1.2.0 -f confirm=DEPLOY`). PRD
+workflows take no `ref` input: code and image tag come from the dispatched ref,
+the one the Environment policy checks. The QA `ref` input is optional and
+defaults to the dispatched ref.
 
 ## Secrets
 - Names follow `PRD_*`/`PROD_*` and `QA_*` per environment, and `OBS_*` for

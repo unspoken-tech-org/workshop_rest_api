@@ -20,11 +20,10 @@ name: Deploy Gateway (Prod) v2 (Hosted + Tailscale)
 
 on:
   workflow_dispatch:
+    # No `ref` input: the code and the image tag come from the dispatched ref
+    # (`gh workflow run ... --ref vX.Y.Z`), the same ref the `production`
+    # Environment policy checks. An input would let another ref ship under it.
     inputs:
-      ref:
-        description: 'Tag, branch or commit to deploy'
-        required: false
-        default: 'main'
       confirm:
         description: 'Production deploy confirmation'
         type: choice
@@ -79,12 +78,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Prepare image tag
         id: prep
         env:
-          INPUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
+          INPUT_REF: ${{ github.ref_name }}
         run: |
           TAG="${INPUT_REF//\//-}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
@@ -145,7 +144,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Setup Tailscale
         uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
