@@ -27,5 +27,6 @@ WHERE
       )
     )
 ORDER BY
-    c.name
+    c.name ASC,
+    c.id ASC
 LIMIT :PAGE_SIZE OFFSET :OFFSET;
