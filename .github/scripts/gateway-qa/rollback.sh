@@ -11,6 +11,18 @@ if ! docker image inspect "${LOCAL_IMAGE_NAME}:backup" >/dev/null 2>&1; then
 fi
 
 docker tag "${LOCAL_IMAGE_NAME}:backup" "${LOCAL_IMAGE_NAME}:latest"
+
+# Restore previous compose and Caddyfile (snapshotted by the deploy-via-ssh action)
+if [ -f "${COMPOSE_FILE}.previous" ]; then
+  echo "Restoring previous compose file"
+  mv "${COMPOSE_FILE}.previous" "${COMPOSE_FILE}"
+fi
+if [ -f "Caddyfile-gateway-qa.previous" ]; then
+  echo "Restoring previous Caddyfile"
+  rm -rf "Caddyfile-gateway-qa"
+  mv "Caddyfile-gateway-qa.previous" "Caddyfile-gateway-qa"
+fi
+
 docker compose -f "${COMPOSE_FILE}" up -d --force-recreate caddy-gateway-qa
 echo "Rollback executed (alias :latest)"
 

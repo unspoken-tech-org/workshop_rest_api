@@ -110,6 +110,13 @@ runs:
         ssh -o ConnectTimeout=30 \
           "${SSH_TARGET}" "mkdir -p '${DEPLOY_DIR}'"
 
+        # Snapshot the current compose and Caddyfile for rollback.sh (before they are
+        # overwritten or removed below)
+        ssh -o ConnectTimeout=30 \
+          "${SSH_TARGET}" "cd '${DEPLOY_DIR}' && \
+           { [ ! -f '${COMPOSE_FILE}' ] || cp -p '${COMPOSE_FILE}' '${COMPOSE_FILE}.previous'; } && \
+           { [ ! -f Caddyfile-gateway-qa ] || cp -p Caddyfile-gateway-qa Caddyfile-gateway-qa.previous; }"
+
         # Clean up any potential directory-vs-file mounting conflicts for Caddyfile from previous failed runs (idempotency)
         ssh -o ConnectTimeout=30 \
           "${SSH_TARGET}" "docker run --rm -v '${DEPLOY_DIR}:/target' alpine rm -rf /target/Caddyfile-gateway-qa"
