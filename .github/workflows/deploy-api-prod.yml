@@ -34,7 +34,7 @@ on:
           - 'true'
         default: 'false'
       allow_migrations:
-        description: 'Apply pending Flyway migrations (needs a pgBackRest backup < 26h)'
+        description: 'Apply pending Flyway migrations (needs a pgBackRest backup < 48h)'
         required: false
         type: choice
         options:

@@ -18,6 +18,7 @@ public record ModelSearchParam(
                 String query,
         @Schema(description = "Page number (0-based)", example = "0")
                 @Min(value = 0, message = "O numero da pagina deve ser maior ou igual a zero")
+                @Max(value = 100000, message = "O número da página deve ser no máximo 100000")
                 Integer page,
         @Schema(description = "Page size", example = "15")
                 @Min(value = 1, message = "O tamanho da pagina deve ser maior que zero")

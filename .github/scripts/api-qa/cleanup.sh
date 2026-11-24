@@ -4,14 +4,19 @@ set -Eeuo pipefail
 # Same name deploy-api-qa.yml passes to deploy.sh and rollback.sh (not passed to this script)
 LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-workshop_rest_api_qa}"
 PRUNE_AGE_HOURS="${PRUNE_AGE_HOURS:-168}"
+# The gateway stack runs on the same host, with its own cleanup.sh
+GATEWAY_LOCAL_IMAGE_NAME="${GATEWAY_LOCAL_IMAGE_NAME:-workshop/caddy-gateway-qa}"
 
 echo ">>> Pruning dangling images..."
 timeout 60 docker image prune -f
 
-# Rollback images (:latest, *backup) and every PostgreSQL image tag (the previous one serves rollback), matched by ID: several tags can point to one image
+# Rollback images (:latest, *backup), the gateway's (:latest, :backup) and every PostgreSQL image tag (the previous one serves rollback), matched by ID: several tags can point to one image.
+# The gateway image counts as old for 'until' (reproducible build, old Created date): without this its :backup was removed here.
 PROTECTED_IDS=$(docker image ls --no-trunc --format '{{.ID}}' \
   --filter "reference=${LOCAL_IMAGE_NAME}:latest" \
   --filter "reference=${LOCAL_IMAGE_NAME}:*backup" \
+  --filter "reference=${GATEWAY_LOCAL_IMAGE_NAME}:latest" \
+  --filter "reference=${GATEWAY_LOCAL_IMAGE_NAME}:backup" \
   --filter "reference=workshop/postgres16-pgbackrest:*")
 
 # Images used by any container, running or stopped: removing one of its tags would break compose up and rollback
