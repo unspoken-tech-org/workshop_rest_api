@@ -65,7 +65,7 @@ public class UtilsSql {
         ImmutableMap.Builder<String, Object> contextBuilder = ImmutableMap.builder();
         contextBuilder.put(
                 PAGINATION_PARAMS,
-                String.format("limit %d offset %d", pageSize + 1, pageSize * pageNumber));
+                String.format("limit %d offset %d", pageSize + 1, (long) pageSize * pageNumber));
         if (sort.isSorted()) {
 
             StringBuilder sortCriteria =

@@ -367,7 +367,17 @@ public class DeviceControllerIT extends AbstractIntegrationLiveTest {
                         55,
                         HttpStatus.SC_OK,
                         Map.of("page", 0, "size", 100),
-                        "pagination with very large page size"));
+                        "pagination with very large page size"),
+                Arguments.of(
+                        56,
+                        HttpStatus.SC_BAD_REQUEST,
+                        Map.of("page", 100001),
+                        "pagination with page above the maximum"),
+                Arguments.of(
+                        57,
+                        HttpStatus.SC_OK,
+                        Map.of("page", 100000, "size", 100),
+                        "pagination at the maximum page does not overflow the offset"));
     }
 
     @Order(2)
