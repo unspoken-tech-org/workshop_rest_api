@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Tag, branch or commit to deploy'
+        description: 'Tag, branch or commit to deploy (empty: the ref the workflow runs from)'
         required: false
-        default: 'main'
+        default: ''
       confirm:
         description: 'QA deploy confirmation'
         type: choice

@@ -25,9 +25,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Tag, branch or commit to deploy to QA'
+        description: 'Tag, branch or commit to deploy to QA (empty: the ref the workflow runs from)'
         required: false
-        default: 'main'
+        default: ''
 
 permissions:
   contents: read
