@@ -118,8 +118,25 @@ services:
       start_interval: 2s
     networks:
       - workshop-network
-      - workshop-ingress
+      # Tráfego de usuário: só o Caddy alcança a API por aqui. A API não fica na
+      # workshop-ingress, então o cloudflared não pula rate limit, WAF e limite de corpo.
+      - workshop-app
       - workshop-metrics
+    # Hardening de runtime: sem capabilities, sem escalada por setuid e sistema de
+    # arquivos somente leitura. O Tomcat e o JVM escrevem só em /tmp (tmpfs).
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # -Xmx768m limita só o heap; metaspace, threads e o Java Agent somam por fora.
+    deploy:
+      resources:
+        limits:
+          memory: 1280M
+          pids: 512
     logging:
       driver: json-file
       options:
@@ -142,9 +159,12 @@ networks:
   workshop-network:
     name: workshop-network
     driver: bridge
-  workshop-ingress:
-    name: workshop-ingress
+  # Caddy -> API, sem saída. Declarada também no compose do gateway, com a mesma
+  # configuração: quem subir primeiro cria a rede.
+  workshop-app:
+    name: workshop-app
     driver: bridge
+    internal: true
   # Scrape de /actuator/prometheus pelo Edge Collector de produção (projeto
   # workshop-edge), que entra nesta rede como externa, e envio de OTLP (traces) da API
   # e do gateway (Caddy) a esse Collector pelo alias otel-collector; sem saída.
