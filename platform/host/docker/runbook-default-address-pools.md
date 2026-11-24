@@ -57,11 +57,17 @@ sobrepõe a LAN `192.168.3.0/24`: a rota do bridge novo roubaria o tráfego da L
   nasce em `10.200.x.0/24`, fora do `trusted_proxies`: o Caddy deixa de aceitar o
   `Cf-Connecting-Ip`, o `client_ip` vira o do cloudflared e o rate limit passa a
   tratar todo mundo como um só cliente. O restart do Docker por si só não recria
-  redes. Antes de aplicar, decidir e mergear uma das opções: (a) fixar `ipam` da
-  `workshop-ingress` em uma /24 dentro de `172.16.0.0/12` nos compose do gateway
-  (PRD e QA; recria a rede, fazer na janela do gateway), ou (b) acrescentar
-  `10.200.0.0/16` ao `trusted_proxies` conscientemente. Até lá, não rode
-  cleanup/deploy do gateway que derrube a rede entre o restart e a decisão.
+  redes. **Decisão (24/11/2026): fixar a subnet.** Os compose passam a declarar
+  `ipam` com as subnets que as redes já têm hoje, então o `trusted_proxies`
+  continua estrito e o pool `10.200` fica só para redes novas:
+
+  | Host | `workshop-ingress` | `workshop-app` |
+  |---|---|---|
+  | PRD | `172.19.0.0/16` (`platform/gateway/compose/production.yml`) | `172.18.0.0/16` (`apps/api/compose/production.yml` e gateway) |
+  | QA | `172.20.0.0/16` (`platform/gateway/compose/qa.yml`) | `172.31.0.0/16` (`apps/api/compose/qa.yml` e gateway) |
+
+  Ver a seção **Transição das redes com subnet fixa**: o primeiro deploy com
+  esses compose precisa da janela.
 - Fora o gateway, nenhum outro IP 172.x fixo (allowlist, `pg_hba.conf`) foi
   encontrado em `platform/` e `apps/`.
 
@@ -74,7 +80,54 @@ sobrepõe a LAN `192.168.3.0/24`: a rota do bridge novo roubaria o tráfego da L
 4. `docker info | grep -iE 'swarm|live restore'` mostra `Swarm: inactive`.
 5. Anotar `docker ps --format '{{.Names}} {{.Status}}'` (linha de base).
 6. `jq --version` e `dockerd --version` presentes (ambos presentes nos dois hosts; Docker 29.9.3).
-7. Decisão sobre a `workshop-ingress` (item de risco do gateway acima) tomada.
+7. Subnets atuais iguais às fixadas nos compose (tabela acima):
+   `docker network inspect workshop-ingress workshop-app -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'`.
+   Se divergirem, ajuste o compose antes de seguir.
+
+## Transição das redes com subnet fixa
+
+Mudar o `ipam` muda o `com.docker.compose.config-hash` da rede. No próximo `up`,
+o Compose (v5.7.0 nos hosts) tenta recriar a rede divergente, e o comportamento
+depende de quem é o dono dela (label `com.docker.compose.project`). Isso foi
+reproduzido localmente com Compose 5.8.0 em 24/11/2026:
+
+- **Projeto dono, com container de outro projeto ainda na rede:** o Compose
+  **para o container do próprio projeto**, tenta `network rm`, falha com
+  `has active endpoints` e o `up` termina com erro. Em PRD e QA, a `workshop-app`
+  pertence ao projeto da API e tem o Caddy (projeto do gateway) conectado: um
+  deploy normal da API **derrubaria a API e falharia**.
+- **Projeto que não é dono:** só um aviso (`was not created for project`), e o
+  `ipam` novo é ignorado. É o caso do gateway em relação à `workshop-app` e, na
+  QA, à `workshop-ingress` (dona: `observability_stack_qa`, legado).
+- **Projeto dono e só containers dele na rede** (`workshop-ingress` em PRD,
+  projeto `gateway_stack`): o Compose para Caddy e cloudflared, recria a rede e
+  sobe de novo, com indisponibilidade curta.
+
+Os deploys rodam só por tag ou dispatch, então o merge na `main` é seguro. Na
+janela, **antes** do deploy da release que contém essa mudança e junto com o
+restart do Docker, em cada host (QA primeiro):
+
+```bash
+# 1. parar os dois stacks que usam as redes (libera os endpoints)
+#    PRD: gateway_stack (docker-compose-gateway.yml + .override.yml) e workshop_rest_api (docker-compose-production.yml)
+#    QA:  gateway_stack_qa (docker-compose-gateway-qa.yml) e workshop_rest_api_qa (docker-compose-qa.yml)
+#    Os dois projetos da API incluem o workshop-db. NUNCA usar --volumes.
+docker compose -p gateway_stack -f ~/deploy/gateway_stack/docker-compose-gateway.yml -f ~/deploy/gateway_stack/docker-compose-gateway.override.yml down
+docker compose -p workshop_rest_api -f ~/deploy/workshop_rest_api/docker-compose-production.yml down
+# 2. remover as redes, se ainda existirem (sem prune)
+docker network rm workshop-ingress workshop-app
+# 3. aplicar o daemon.json e reiniciar o Docker (seção Passos)
+# 4. deploy da release: API primeiro (cria workshop-app em 172.18 / 172.31), depois o gateway
+```
+
+Antes do `down`, confirme os nomes de projeto e os arquivos com `docker compose ls`
+(valores de 24/11/2026 acima). O `down` também para o `workshop-db`, porque ele
+está no mesmo projeto da API, mas o volume continua intacto. Como o restart do
+Docker derruba tudo de qualquer forma, a parada não acrescenta indisponibilidade
+na janela. Depois
+do deploy: `docker network inspect workshop-ingress workshop-app` deve mostrar as
+subnets da tabela, com labels dos projetos atuais (na QA, a `workshop-ingress`
+passa a pertencer ao projeto do gateway).
 
 ## Passos
 
@@ -136,11 +189,11 @@ networks:
 
 Vale como mitigação para redes novas antes da janela, mas não substitui o pool: é
 preciso manter um registro de faixas por stack para não repetir subnets, e uma
-rede esquecida sem `ipam` volta ao fallback `192.168.0.0/20`. Hoje nenhum compose
-do repositório declara `ipam` (todas as redes herdam o pool). Recomendação: **não**
-alterar os compose existentes agora (recriaria as redes e derrubaria os serviços
-fora da janela); aplicar o pool e, nas redes **novas**, usar subnet explícita só
-quando houver motivo específico. Faixa reservada para isso: `10.201.0.0/16`.
+rede esquecida sem `ipam` volta ao fallback `192.168.0.0/20`. Só `workshop-ingress`
+e `workshop-app` têm `ipam` fixo, por causa do `trusted_proxies` do Caddy. As
+demais redes herdam o pool. Nas redes **novas**, use subnet explícita só quando
+houver motivo específico (allowlist por IP, por exemplo). Faixa reservada para
+isso: `10.201.0.0/16`.
 
 ## Referências
 

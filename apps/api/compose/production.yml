@@ -165,6 +165,13 @@ networks:
     name: workshop-app
     driver: bridge
     internal: true
+    # Subnet fixa: o trusted_proxies do Caddy só confia em 172.16.0.0/12, e o
+    # default-address-pools (10.200.0.0/16) daria outra faixa se a rede fosse recriada.
+    # Ver platform/host/docker/runbook-default-address-pools.md.
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
   # Scrape de /actuator/prometheus pelo Edge Collector de produção (projeto
   # workshop-edge), que entra nesta rede como externa, e envio de OTLP (traces) da API
   # e do gateway (Caddy) a esse Collector pelo alias otel-collector; sem saída.

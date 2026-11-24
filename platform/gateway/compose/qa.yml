@@ -105,12 +105,26 @@ networks:
   workshop-ingress:
     name: workshop-ingress
     driver: bridge
+    # Subnet fixa: o trusted_proxies do Caddy só confia em 172.16.0.0/12, e o
+    # default-address-pools (10.200.0.0/16) daria outra faixa se a rede fosse recriada.
+    # Ver platform/host/docker/runbook-default-address-pools.md.
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
   # Caddy -> API, sem saída. Declarada também no compose da API, com a mesma
   # configuração: quem subir primeiro cria a rede.
   workshop-app:
     name: workshop-app
     driver: bridge
     internal: true
+    # Subnet fixa: o trusted_proxies do Caddy só confia em 172.16.0.0/12, e o
+    # default-address-pools (10.200.0.0/16) daria outra faixa se a rede fosse recriada.
+    # Ver platform/host/docker/runbook-default-address-pools.md.
+    ipam:
+      config:
+        - subnet: 172.31.0.0/16
+          gateway: 172.31.0.1
   # Rede interna criada pelo Compose da API de QA; o Caddy envia traces ao
   # Collector e expõe /metrics na porta 9180 (sem publicação no host) ao scrape interno.
   workshop-metrics:
