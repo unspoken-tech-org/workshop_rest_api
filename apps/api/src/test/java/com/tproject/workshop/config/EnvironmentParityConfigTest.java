@@ -15,6 +15,7 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -181,6 +182,67 @@ class EnvironmentParityConfigTest {
     }
 
     @Test
+    void shouldKeepApiOffTheIngressNetworkAndHardenedInQaAndProduction() throws IOException {
+        Map<Object, Object> production = loadYamlMap(Path.of("compose", "production.yml"));
+        Map<Object, Object> qa = loadYamlMap(Path.of("compose", "qa.yml"));
+        Map<Object, Object> productionApi = service(production, "workshop_spring_app");
+        Map<Object, Object> qaApi = service(qa, "workshop_spring_app_qa");
+
+        for (Map<Object, Object> api : List.of(productionApi, qaApi)) {
+            // Only the Caddy reaches the API (workshop-app); cloudflared stays on workshop-ingress.
+            assertThat(api.get("networks"))
+                    .isEqualTo(List.of("workshop-network", "workshop-app", "workshop-metrics"));
+            assertHardened(api);
+        }
+        assertThat(productionApi.get("deploy")).isEqualTo(qaApi.get("deploy"));
+        assertThat(productionApi.get("tmpfs")).isEqualTo(qaApi.get("tmpfs"));
+
+        for (Map<Object, Object> compose : List.of(production, qa)) {
+            Map<Object, Object> networks = asMap(compose.get("networks"));
+            assertThat(networks).doesNotContainKey("workshop-ingress");
+            assertInternalAppNetwork(networks);
+        }
+    }
+
+    @Test
+    void shouldHardenGatewayContainersEquallyInQaAndProduction() throws IOException {
+        Path gatewayCompose = Path.of("..", "..", "platform", "gateway", "compose");
+        Map<Object, Object> production = loadYamlMap(gatewayCompose.resolve("production.yml"));
+        Map<Object, Object> qa = loadYamlMap(gatewayCompose.resolve("qa.yml"));
+        Map<Object, Object> productionCaddy = service(production, "caddy-gateway");
+        Map<Object, Object> qaCaddy = service(qa, "caddy-gateway-qa");
+        Map<Object, Object> productionTunnel = service(production, "cloudflared-prod");
+        Map<Object, Object> qaTunnel = service(qa, "cloudflared-qa");
+
+        for (Map<Object, Object> caddy : List.of(productionCaddy, qaCaddy)) {
+            assertHardened(caddy);
+            assertThat(caddy.get("cap_add")).isEqualTo(List.of("NET_BIND_SERVICE"));
+            assertThat(caddy.get("networks"))
+                    .isEqualTo(List.of("workshop-ingress", "workshop-app", "workshop-metrics"));
+            assertThat(caddy.get("ports"))
+                    .asInstanceOf(InstanceOfAssertFactories.LIST)
+                    .contains("127.0.0.1:80:80");
+            assertThat(caddy.get("volumes"))
+                    .asInstanceOf(InstanceOfAssertFactories.LIST)
+                    .filteredOn(volume -> volume.toString().contains("/etc/caddy/Caddyfile"))
+                    .singleElement()
+                    .asString()
+                    .endsWith(":ro");
+        }
+        for (Map<Object, Object> tunnel : List.of(productionTunnel, qaTunnel)) {
+            assertHardened(tunnel);
+            assertThat(tunnel.get("networks")).isEqualTo(List.of("workshop-ingress"));
+        }
+        assertThat(productionCaddy.get("deploy")).isEqualTo(qaCaddy.get("deploy"));
+        assertThat(productionCaddy.get("tmpfs")).isEqualTo(qaCaddy.get("tmpfs"));
+        assertThat(productionTunnel.get("deploy")).isEqualTo(qaTunnel.get("deploy"));
+
+        for (Map<Object, Object> compose : List.of(production, qa)) {
+            assertInternalAppNetwork(asMap(compose.get("networks")));
+        }
+    }
+
+    @Test
     void shouldAlignLocalAndTestPostgresImageWithProductionMinorVersion() throws IOException {
         String baseLine =
                 Files.readAllLines(Path.of("docker", "Dockerfile.pgbackrest")).stream()
@@ -213,6 +275,29 @@ class EnvironmentParityConfigTest {
 
         Map<Object, Object> environment = asMap(service.get("environment"));
         assertThat(environment.get("SPRING_PROFILES_ACTIVE")).isEqualTo(expectedProfile);
+    }
+
+    private static Map<Object, Object> service(Map<Object, Object> compose, String name) {
+        return asMap(asMap(compose.get("services")).get(name));
+    }
+
+    /** Runtime hardening shared by the API, Caddy and cloudflared containers. */
+    private static void assertHardened(Map<Object, Object> service) {
+        assertThat(service.get("read_only")).isEqualTo(true);
+        assertThat(service.get("cap_drop")).isEqualTo(List.of("ALL"));
+        assertThat(service.get("security_opt"))
+                .asInstanceOf(InstanceOfAssertFactories.LIST)
+                .contains("no-new-privileges:true");
+        Map<Object, Object> limits =
+                asMap(asMap(asMap(service.get("deploy")).get("resources")).get("limits"));
+        assertThat(limits).containsKeys("memory", "pids");
+    }
+
+    private static void assertInternalAppNetwork(Map<Object, Object> networks) {
+        Map<Object, Object> app = asMap(networks.get("workshop-app"));
+        assertThat(app.get("name")).isEqualTo("workshop-app");
+        assertThat(app.get("internal")).isEqualTo(true);
+        assertThat(app).doesNotContainKey("external");
     }
 
     private static CorsProperties bindCors(String classpathResource) throws IOException {

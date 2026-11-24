@@ -11,7 +11,7 @@
         # com o IP real 192.168.x) escolher o próprio client_ip e escapar do rate limit.
         # A LAN da oficina é 192.168.3.0/24 (o DNS estático do roteador aponta a API para
         # 192.168.3.42), fora de 172.16.0.0/12; se um dia passar a usar essa faixa, fixar a
-        # subnet da workshop-ingress (ipam, igual nos compose do gateway e da API).
+        # subnet da workshop-ingress (ipam, no compose do gateway).
         trusted_proxies static 172.16.0.0/12
         trusted_proxies_strict
         client_ip_headers Cf-Connecting-Ip X-Forwarded-For
