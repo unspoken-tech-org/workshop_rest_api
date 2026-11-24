@@ -63,7 +63,7 @@ public class CustomerRepositoryJdbcImpl implements CustomerRepositoryJdbc {
                                 filters.ordenation().orderByDirection().toString(),
                                 Types.VARCHAR)
                         .addValue("PAGE_SIZE", filters.size(), Types.INTEGER)
-                        .addValue("OFFSET", filters.page() * filters.size(), Types.INTEGER);
+                        .addValue("OFFSET", (long) filters.page() * filters.size(), Types.BIGINT);
 
         List<CustomerListOutputDto> customers =
                 jdbcTemplate.query(

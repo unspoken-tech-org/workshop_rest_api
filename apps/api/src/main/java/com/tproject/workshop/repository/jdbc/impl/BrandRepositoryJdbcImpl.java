@@ -27,7 +27,7 @@ public class BrandRepositoryJdbcImpl implements BrandRepositoryJdbc {
                 new MapSqlParameterSource()
                         .addValue("QUERY", params.query(), Types.VARCHAR)
                         .addValue("PAGE_SIZE", params.size(), Types.INTEGER)
-                        .addValue("OFFSET", params.page() * params.size(), Types.INTEGER);
+                        .addValue("OFFSET", (long) params.page() * params.size(), Types.BIGINT);
 
         List<BrandResponseDto> brands =
                 jdbcTemplate.query(
