@@ -7,6 +7,7 @@ import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class RefreshTokenService {
 
     public record RotationResult(ApiKey apiKey, String refreshToken) {}
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final ApiKeyRepository apiKeyRepository;
+    private final Clock clock;
 
     @Value("${jwt.refresh-token.expiration}")
     private long refreshTokenExpiration;
@@ -74,7 +77,7 @@ public class RefreshTokenService {
             throw new InvalidTokenException("Refresh token revoked");
         }
 
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         if (!refreshToken.getExpiresAt().isAfter(now)) {
             log.warn("Refresh token expired");
             throw new InvalidTokenException("Refresh token expired");
@@ -139,7 +142,7 @@ public class RefreshTokenService {
 
     private String issueAndSaveRefreshToken(ApiKey apiKey) {
         String rawToken = generateSecureToken();
-        Instant now = Instant.now();
+        Instant now = clock.instant();
 
         RefreshToken refreshToken =
                 RefreshToken.builder()

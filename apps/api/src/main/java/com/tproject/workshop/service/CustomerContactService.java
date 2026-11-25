@@ -13,9 +13,9 @@ import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
 import com.tproject.workshop.utils.UtilsString;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CustomerContactService {
 
     private final CustomerContactRepository customerContactRepository;
@@ -33,6 +34,7 @@ public class CustomerContactService {
     private final TechnicianService technicianService;
     private final PhoneService phoneService;
     private final ObservabilityEventRecorder eventRecorder;
+    private final Clock clock;
 
     private final List<String> contactTypesThatNeedPhone = List.of("ligacao", "mensagem");
 
@@ -57,9 +59,7 @@ public class CustomerContactService {
         CustomerContact existingContact =
                 customerContactRepository
                         .findById(id)
-                        .orElseThrow(() ->
-                                new NotFoundException(
-                                        String.format("Contato com id %d não encontrado", id)));
+                        .orElseThrow(() -> NotFoundException.of("Contato", id));
 
         DeviceStatusEnum previousStatus = existingContact.getDeviceStatus();
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
@@ -135,7 +135,7 @@ public class CustomerContactService {
         contact.setDeviceStatus(status);
     }
 
-    private static Timestamp parseContactDate(String rawDate) {
+    private Timestamp parseContactDate(String rawDate) {
         if (rawDate == null || rawDate.isBlank()) {
             throw new BadRequestException(
                     "Formato de data inválido: '%s'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)",
@@ -147,7 +147,7 @@ public class CustomerContactService {
             try {
                 LocalDateTime localDateTime =
                         OffsetDateTime.parse(rawDate)
-                                .atZoneSameInstant(ZoneId.systemDefault())
+                                .atZoneSameInstant(clock.getZone())
                                 .toLocalDateTime();
                 return Timestamp.valueOf(localDateTime);
             } catch (DateTimeParseException e) {

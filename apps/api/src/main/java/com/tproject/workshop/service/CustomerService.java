@@ -12,6 +12,7 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Customer;
 import com.tproject.workshop.model.CustomerPhone;
@@ -35,7 +36,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CustomerService {
+    private static final String CPF_ALREADY_IN_USE = "O CPF informado já está em uso";
+
     private final CustomerRepository customerRepository;
     private final PhoneRepository phoneRepository;
     private final CustomerPhoneRepository customerPhoneRepository;
@@ -52,7 +56,6 @@ public class CustomerService {
      * JPA-based implementation for benchmark comparison with JDBC. Returns the same
      * CustomerOutputDto but uses Hibernate instead of native SQL.
      */
-    @Transactional(readOnly = true)
     public CustomerOutputDto findByIdUsingJpa(int id) {
         Customer customer =
                 customerRepository
@@ -115,7 +118,6 @@ public class CustomerService {
         return dto;
     }
 
-    @Transactional(readOnly = true)
     public Page<CustomerListOutputDto> searchCustomers(CustomerFilterDto filters) {
         return customerRepository.searchCustomers(filters);
     }
@@ -126,7 +128,7 @@ public class CustomerService {
         customerRepository
                 .findFirstByCpf(cpfOnlyDigits)
                 .ifPresent(customer -> {
-                    throw new EntityAlreadyExistsException("O CPF informado já está em uso");
+                    throw new EntityAlreadyExistsException(CPF_ALREADY_IN_USE);
                 });
 
         List<InputPhoneDto> phones =
@@ -179,7 +181,7 @@ public class CustomerService {
                 .findFirstByCpf(cpfOnlyDigits)
                 .ifPresent(customer -> {
                     if (customer.getIdCustomer() != id) {
-                        throw new EntityAlreadyExistsException("O CPF informado já está em uso");
+                        throw new EntityAlreadyExistsException(CPF_ALREADY_IN_USE);
                     }
                 });
 
@@ -211,7 +213,7 @@ public class CustomerService {
                                 return phoneRepository
                                         .findByNumber(phoneDto.number())
                                         .orElseThrow(() ->
-                                                new NotFoundException(
+                                                new WorkshopException(
                                                         "Erro ao criar ou buscar telefone"));
                             });
 

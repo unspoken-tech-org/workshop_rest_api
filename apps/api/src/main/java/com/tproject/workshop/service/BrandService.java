@@ -5,6 +5,7 @@ import com.tproject.workshop.dto.brand.BrandSearchParam;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.model.Brand;
 import com.tproject.workshop.repository.BrandRepository;
 import com.tproject.workshop.utils.CatalogName;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 @Service
+@Transactional(readOnly = true)
 public class BrandService {
 
     private final BrandRepository brandRepository;
@@ -34,8 +36,7 @@ public class BrandService {
     public Brand findById(int id) {
         return brandRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new NotFoundException(String.format("Marca com id %d não encontrada", id)));
+                .orElseThrow(() -> NotFoundException.ofFeminine("Marca", id));
     }
 
     @Transactional
@@ -48,14 +49,13 @@ public class BrandService {
                         eventRecorder.record(
                                 ObservabilityEventCatalog.CATALOG_ENTRY_CREATED,
                                 Map.of("catalog.kind", "brand")),
-                () -> new NotFoundException("Erro ao criar ou buscar marca: " + brand));
+                () -> new WorkshopException("Erro ao criar ou buscar marca: " + brand));
     }
 
     private BrandResponseDto toDto(Brand brand) {
         return new BrandResponseDto(brand.getIdBrand(), brand.getBrand());
     }
 
-    @Transactional(readOnly = true)
     public Page<BrandResponseDto> searchBrands(BrandSearchParam params) {
         return brandRepository.searchBrands(params);
     }

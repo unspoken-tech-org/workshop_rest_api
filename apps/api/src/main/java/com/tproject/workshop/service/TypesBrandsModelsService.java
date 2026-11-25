@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TypesBrandsModelsService {
 
     private final TypesBrandsModelsRepository typesBrandsModelsRepository;
@@ -47,7 +48,6 @@ public class TypesBrandsModelsService {
                 });
     }
 
-    @Transactional(readOnly = true)
     public List<TypeRecord> getTypesBrandsModels() {
         return typesBrandsModelsRepository.getTypesBrandsModels();
     }

@@ -5,6 +5,7 @@ import com.tproject.workshop.dto.model.ModelSearchParam;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.model.Model;
 import com.tproject.workshop.repository.ModelRepository;
 import com.tproject.workshop.utils.CatalogName;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 @Service
+@Transactional(readOnly = true)
 public class ModelService {
 
     private final ModelRepository modelRepository;
@@ -27,11 +29,7 @@ public class ModelService {
     }
 
     public Model findById(int id) {
-        return modelRepository
-                .findById(id)
-                .orElseThrow(() ->
-                        new NotFoundException(
-                                String.format("Modelo com id %d não encontrada", id)));
+        return modelRepository.findById(id).orElseThrow(() -> NotFoundException.of("Modelo", id));
     }
 
     @Transactional
@@ -44,10 +42,9 @@ public class ModelService {
                         eventRecorder.record(
                                 ObservabilityEventCatalog.CATALOG_ENTRY_CREATED,
                                 Map.of("catalog.kind", "model")),
-                () -> new NotFoundException("Erro ao criar ou buscar modelo: " + model));
+                () -> new WorkshopException("Erro ao criar ou buscar modelo: " + model));
     }
 
-    @Transactional(readOnly = true)
     public Page<ModelResponseDto> searchModels(ModelSearchParam params) {
         return modelRepository.searchModels(params);
     }

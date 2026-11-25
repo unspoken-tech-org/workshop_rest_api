@@ -29,6 +29,7 @@ import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -56,6 +58,7 @@ class DeviceServiceTest {
     @Mock private TypesBrandsModelsService typeBrandModelService;
     @Mock private TechnicianService technicianService;
     @Mock private ObservabilityEventRecorder eventRecorder;
+    @Spy private Clock clock = Clock.systemDefaultZone();
 
     @InjectMocks private DeviceService deviceService;
 

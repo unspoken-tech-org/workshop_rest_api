@@ -8,6 +8,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.SignatureException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 public class JwtService {
 
     private final RsaKeyProperties rsaKeys;
+    private final Clock clock;
 
     @Value("${jwt.access-token.expiration}")
     private long accessTokenExpiration;
@@ -32,7 +34,7 @@ public class JwtService {
 
     /** Generates a JWT Access Token signed with RS256. */
     public String generateAccessToken(String subject, Map<String, Object> claims) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         Instant expiry = now.plusSeconds(accessTokenExpiration);
 
         return Jwts.builder()
@@ -63,6 +65,7 @@ public class JwtService {
         try {
             return Jwts.parser()
                     .verifyWith(rsaKeys.publicKey())
+                    .clock(() -> Date.from(clock.instant()))
                     .requireIssuer(ISSUER)
                     .requireAudience(AUDIENCE)
                     .build()
@@ -89,7 +92,7 @@ public class JwtService {
     public boolean isTokenExpired(String token) {
         try {
             Claims claims = validateAndGetClaims(token);
-            return claims.getExpiration().before(new Date());
+            return claims.getExpiration().before(Date.from(clock.instant()));
         } catch (Exception e) {
             return true;
         }

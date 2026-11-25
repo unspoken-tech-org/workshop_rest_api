@@ -22,6 +22,7 @@ import com.tproject.workshop.model.Role;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,8 @@ class ApiKeyServiceTest {
     @Mock private RefreshTokenRepository refreshTokenRepository;
 
     @Mock private ObservabilityEventRecorder eventRecorder;
+
+    @Spy private Clock clock = Clock.systemDefaultZone();
 
     @InjectMocks private ApiKeyService apiKeyService;
 
