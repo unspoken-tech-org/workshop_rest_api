@@ -495,7 +495,7 @@ services:
   # restaurar cópia de produção aqui. Logs do banco não são coletados.
   workshop-api-db:
     profiles: ["api"]
-    image: postgres:16.15-alpine3.24@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+    image: postgres:16.16-alpine3.24@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
     environment:
       LC_ALL: C.UTF-8
       TZ: America/Sao_Paulo
@@ -528,7 +528,7 @@ services:
   # para não quebrar o "up --wait".
   workshop-api-seed:
     profiles: ["seed"]
-    image: postgres:16.15-alpine3.24@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+    image: postgres:16.16-alpine3.24@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
     entrypoint: ["sh", "-c", "PGPASSWORD=\"$$(cat /run/secrets/synthetic_db_password)\" exec psql -h workshop-api-db -U workshop_synthetic -d workshop_synthetic -q -f /seed/seed.sql"]
     secrets:
       - synthetic_db_password
