@@ -23,4 +23,11 @@ public class ResponseError {
         this.status = status;
         this.title = title;
     }
+
+    public static ResponseError of(ErrorCode errorCode, String message) {
+        return new ResponseError(
+                errorCode.status().value(),
+                errorCode.title(),
+                new ErrorMetadata.Error(errorCode.code(), message));
+    }
 }

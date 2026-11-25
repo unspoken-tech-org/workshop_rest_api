@@ -1,6 +1,12 @@
 package com.tproject.workshop.config.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tproject.workshop.errorhandling.ErrorCode;
+import com.tproject.workshop.errorhandling.GlobalExceptionHandler;
+import com.tproject.workshop.errorhandling.ResponseError;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -32,6 +39,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CorsProperties corsProperties;
+    private final ObjectMapper objectMapper;
 
     static final String METRICS_ROLE = "METRICS";
 
@@ -100,28 +108,20 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions ->
                         exceptions
                                 // Return 401 instead of 403 when not authenticated
-                                .authenticationEntryPoint((request, response, authException) -> {
-                                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                                    response.setContentType("application/json");
-                                    response.getWriter()
-                                            .write(
-                                                    """
-                                                    {"status":401,"title":"Unauthorized","error":{"code":"authentication.required","message":"Authentication is required to access this resource"}}
-                                                    """);
-                                })
+                                .authenticationEntryPoint((request, response, authException) ->
+                                        writeErrorResponse(
+                                                response,
+                                                ErrorCode.AUTHENTICATION_REQUIRED,
+                                                GlobalExceptionHandler
+                                                        .AUTHENTICATION_REQUIRED_MESSAGE))
                                 // Write 403 directly: the default handler's /error dispatch is
                                 // not authenticated and would surface as 401 (R19). Same body as
                                 // GlobalExceptionHandler#handleAccessDeniedException.
-                                .accessDeniedHandler((request, response, accessDeniedException) -> {
-                                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                                    response.setContentType("application/json");
-                                    response.setCharacterEncoding("UTF-8");
-                                    response.getWriter()
-                                            .write(
-                                                    """
-                                                    {"status":403,"title":"Acesso Negado","error":{"code":"auth.access.denied","message":"Acesso Negado: Você não tem permissão para realizar esta operação."}}
-                                                    """);
-                                }))
+                                .accessDeniedHandler((request, response, accessDeniedException) ->
+                                        writeErrorResponse(
+                                                response,
+                                                ErrorCode.ACCESS_DENIED,
+                                                GlobalExceptionHandler.ACCESS_DENIED_MESSAGE)))
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(publicPaths)
                                 .permitAll()
@@ -138,6 +138,14 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    private void writeErrorResponse(
+            HttpServletResponse response, ErrorCode errorCode, String message) throws IOException {
+        response.setStatus(errorCode.status().value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        objectMapper.writeValue(response.getOutputStream(), ResponseError.of(errorCode, message));
     }
 
     @Bean
