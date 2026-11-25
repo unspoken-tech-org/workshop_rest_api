@@ -128,7 +128,7 @@ public class DeviceService {
 
         if (newStatus.isClosed()) {
             if (device.getDepartureDate() == null) {
-                device.setDepartureDate(Timestamp.valueOf(LocalDateTime.now(clock)));
+                device.setDepartureDate(Timestamp.from(clock.instant()));
             }
         } else if (oldStatus.isClosed()) {
             device.setDepartureDate(null);
@@ -305,7 +305,7 @@ public class DeviceService {
         } else if (reopeningWithoutExplicitDeparture) {
             oldDevice.setDepartureDate(null);
         } else if (oldDevice.getDepartureDate() == null && newStatus.isClosed()) {
-            oldDevice.setDepartureDate(Timestamp.valueOf(effectiveDepartureDate));
+            oldDevice.setDepartureDate(Timestamp.from(clock.instant()));
         }
 
         deviceRepository.saveAndFlush(oldDevice);
@@ -344,7 +344,7 @@ public class DeviceService {
         newDevice.setBudgetFee(Optional.ofNullable(device.budgetFee()).orElse(BigDecimal.ZERO));
         newDevice.setUrgency(device.hasUrgency());
         newDevice.setDeviceStatus(DeviceStatusEnum.NOVO);
-        newDevice.setEntryDate(Timestamp.valueOf(LocalDateTime.now(clock)));
+        newDevice.setEntryDate(Timestamp.from(clock.instant()));
         Optional.ofNullable(device.technicianId())
                 .ifPresent(id -> {
                     Technician technician = technicianService.findById(id);
