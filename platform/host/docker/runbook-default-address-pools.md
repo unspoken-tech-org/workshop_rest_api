@@ -1,6 +1,7 @@
 # Docker: `default-address-pools` e `live-restore` nos hosts de QA e PRD
 
-**Status:** preparado, NÃO aplicado. Aplicar só na janela da próxima release.
+**Status:** aplicado em QA e PRD em 24/11/2026 (release v1.25.3). Este runbook
+fica para hosts novos e para refazer a transição, se preciso.
 **Arquivos:** `platform/host/docker/daemon.json` (referência) e
 `scripts/host/apply-docker-daemon-config.sh` (aplicação idempotente).
 
@@ -10,14 +11,14 @@ Os dois hosts usam o pool padrão do Docker (`172.17.0.0/16` até `172.31.0.0/16
 máscara /16, 15 faixas) e as 15 já estão ocupadas (verificado só com leitura em
 24/11/2026):
 
-| Host | Faixas 172.x em uso | LAN / outras |
+| Host | Faixas 172.x em uso | Outras redes do host |
 |---|---|---|
-| PRD (`workshop-local`) | 172.17 a 172.31, todas (172.20 e 172.21 órfãs, em remoção) | `eno1` 192.168.3.0/24 (gateway 192.168.3.1), `tailscale0` 100.64.0.0/10 |
-| QA (`100.79.194.54`) | 172.17 a 172.31, todas (inclusive 172.31, usada por `workshop-app`) | `enp0s6` 10.0.0.0/24 (gateway 10.0.0.1), `tailscale0` |
+| PRD | 172.17 a 172.31, todas | LAN privada em `192.168.0.0/16`, Tailscale (`100.64.0.0/10`) |
+| QA | 172.17 a 172.31, todas (inclusive 172.31, usada por `workshop-app`) | rede privada da nuvem (fora de `10.200`), Tailscale |
 
 Quando o pool padrão acaba, o Docker cai para `192.168.0.0/20`, que no PRD
-sobrepõe a LAN `192.168.3.0/24`: a rota do bridge novo roubaria o tráfego da LAN
-(SSH local, gateway). Na QA o fallback também seria problemático.
+sobrepõe a LAN: a rota do bridge novo roubaria o tráfego da LAN (SSH local,
+gateway). Na QA o fallback também seria problemático.
 
 ## O que muda
 
@@ -27,10 +28,8 @@ sobrepõe a LAN `192.168.3.0/24`: a rota do bridge novo roubaria o tráfego da L
 ```
 
 - Pool `10.200.0.0/16` em fatias /24: 256 redes novas, 253 IPs úteis cada.
-- **Não colide:** PRD só tem 127/8, 192.168.3.0/24, 100.x e 172.17-31; QA só tem
-  127/8, 10.0.0.0/24 (`enp0s6`, a `10.200` fica fora dela), 100.x, 169.254/16 e
-  172.17-31. Nenhum dos dois tem interface, rota ou rede Docker em `10.200.0.0/16`.
-  Reconfira na janela (pré-checagem 3).
+- **Não colide:** nenhum dos dois hosts tem interface, rota ou rede Docker em
+  `10.200.0.0/16`. Num host novo, reconfira antes (pré-checagem 3).
 - Chaves atuais (`storage-driver`, `log-driver`, `log-opts`) preservadas.
 - Sem `bip`: `docker0` (172.17.0.0/16) não é usada por nenhum stack; mexer nela
   não ganha nada e exigiria mais uma troca no restart.
@@ -73,8 +72,8 @@ sobrepõe a LAN `192.168.3.0/24`: a rota do bridge novo roubaria o tráfego da L
 
 ## Pré-checagens (cada host, QA primeiro)
 
-1. Janela combinada, backup do banco recente (pgBackRest em PRD) e release
-   pronta para deploy logo depois.
+1. Janela combinada, backup do banco recente (pgBackRest em PRD) e tag da release
+   já criada para o deploy logo depois.
 2. `cat /etc/docker/daemon.json` igual ao esperado (só as 3 chaves atuais).
 3. Sem colisão: `ip -4 addr; ip route; docker network ls -q | xargs docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}' | grep -E ' 10\.'` não pode mostrar `10.200`.
 4. `docker info | grep -iE 'swarm|live restore'` mostra `Swarm: inactive`.
@@ -114,11 +113,24 @@ restart do Docker, em cada host (QA primeiro):
 #    Os dois projetos da API incluem o workshop-db. NUNCA usar --volumes.
 docker compose -p gateway_stack -f ~/deploy/gateway_stack/docker-compose-gateway.yml -f ~/deploy/gateway_stack/docker-compose-gateway.override.yml down
 docker compose -p workshop_rest_api -f ~/deploy/workshop_rest_api/docker-compose-production.yml down
-# 2. remover as redes, se ainda existirem (sem prune)
-docker network rm workshop-ingress workshop-app
-# 3. aplicar o daemon.json e reiniciar o Docker (seção Passos)
+#    O down já remove workshop-ingress e workshop-app. O aviso
+#    "workshop-metrics ... Resource is still in use" é esperado: a observabilidade
+#    continua nela.
+# 2. aplicar o daemon.json e reiniciar o Docker (seção Passos)
+# 3. subir só o banco, antes do deploy da API (compose atual do host; o workshop_db
+#    usa só a workshop-network, então isso não cria a workshop-app)
+docker compose -p workshop_rest_api -f ~/deploy/workshop_rest_api/docker-compose-production.yml up -d workshop_db
 # 4. deploy da release: API primeiro (cria workshop-app em 172.18 / 172.31), depois o gateway
 ```
+
+**Por que subir o banco antes:** o `deploy.sh` da API lê o histórico do Flyway no
+`workshop-db`. Com o banco parado, ele trata o host como primeiro deploy, vê todas
+as migrations como pendentes e para sem trocar nada (pede `allow_migrations=true`).
+**Não** rode com `allow_migrations=true` nesse caso: suba o banco e refaça o deploy.
+
+**Gateway em PRD:** o environment de produção só aceita o deploy a partir da tag
+(`gh workflow run deploy-gateway-prod.yml --ref vX.Y.Z -f confirm=DEPLOY`); a partir
+da `main` ele é recusado.
 
 Antes do `down`, confirme os nomes de projeto e os arquivos com `docker compose ls`
 (valores de 24/11/2026 acima). O `down` também para o `workshop-db`, porque ele
