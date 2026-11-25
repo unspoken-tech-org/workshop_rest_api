@@ -5,6 +5,8 @@ import com.tproject.workshop.dto.auth.RefreshTokenResponse;
 import com.tproject.workshop.dto.auth.TokenRequest;
 import com.tproject.workshop.dto.auth.TokenResponse;
 import com.tproject.workshop.model.ApiKey;
+import com.tproject.workshop.model.Role;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,9 +53,9 @@ public class AuthService {
         long tokenVersion = apiKeyService.incrementTokenVersion(apiKey.getId());
 
         // Generate JWT access token with claims
+        String boundDeviceId = apiKey.getRole() == Role.ADMIN ? null : request.boundDeviceId();
         String accessToken =
-                generateAccessToken(
-                        apiKey, tokenVersion, request.boundDeviceId(), request.appVersion());
+                generateAccessToken(apiKey, tokenVersion, boundDeviceId, request.appVersion());
 
         // Generate refresh token linked to the API Key
         String refreshToken = refreshTokenService.createRefreshToken(apiKey);
@@ -83,7 +85,10 @@ public class AuthService {
 
         // We don't have appVersion easily available here without changing
         // the refresh request or saving them in the refresh token.
-        String boundDeviceId = Optional.ofNullable(apiKey.getBoundDeviceId()).orElse("unknown");
+        String boundDeviceId =
+                apiKey.getRole() == Role.ADMIN
+                        ? null
+                        : Optional.ofNullable(apiKey.getBoundDeviceId()).orElse("unknown");
         // A normal rotation keeps token_version so in-flight requests are not dropped.
         String accessToken =
                 generateAccessToken(apiKey, apiKey.getTokenVersion(), boundDeviceId, "unknown");
@@ -110,15 +115,16 @@ public class AuthService {
 
     private String generateAccessToken(
             ApiKey apiKey, long tokenVersion, String boundDeviceId, String appVersion) {
-        Map<String, Object> claims =
-                Map.of(
-                        "apiKeyId", apiKey.getId(),
-                        "roles", List.of("ROLE_" + apiKey.getRole().name()),
-                        "platform", apiKey.getPlatform().name(),
-                        "userIdentifier", apiKey.getUserIdentifier(),
-                        "boundDeviceId", boundDeviceId,
-                        "appVersion", appVersion,
-                        "tv", tokenVersion);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("apiKeyId", apiKey.getId());
+        claims.put("roles", List.of("ROLE_" + apiKey.getRole().name()));
+        claims.put("platform", apiKey.getPlatform().name());
+        claims.put("userIdentifier", apiKey.getUserIdentifier());
+        if (boundDeviceId != null && !boundDeviceId.isBlank()) {
+            claims.put("boundDeviceId", boundDeviceId);
+        }
+        claims.put("appVersion", appVersion);
+        claims.put("tv", tokenVersion);
 
         return jwtService.generateAccessToken(apiKey.getClientName(), claims);
     }

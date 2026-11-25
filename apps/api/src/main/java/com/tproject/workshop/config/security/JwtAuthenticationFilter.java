@@ -1,6 +1,7 @@
 package com.tproject.workshop.config.security;
 
 import com.tproject.workshop.model.ApiKey;
+import com.tproject.workshop.model.Role;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.service.auth.JwtService;
 import io.jsonwebtoken.Claims;
@@ -82,14 +83,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            String tokenBoundDeviceId = claims.get("boundDeviceId", String.class);
-            if (apiKey.getBoundDeviceId() == null
-                    || !apiKey.getBoundDeviceId().equals(tokenBoundDeviceId)) {
-                log.warn(
-                        "JWT authentication failed: API key device binding mismatch or reset (apiKeyId={})",
-                        apiKeyId);
-                filterChain.doFilter(request, response);
-                return;
+            if (apiKey.getRole() != Role.ADMIN) {
+                String tokenBoundDeviceId = claims.get("boundDeviceId", String.class);
+                if (apiKey.getBoundDeviceId() == null
+                        || !apiKey.getBoundDeviceId().equals(tokenBoundDeviceId)) {
+                    log.warn(
+                            "JWT authentication failed: API key device binding mismatch or reset (apiKeyId={})",
+                            apiKeyId);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
             }
 
             // tv: access-token version. Logout, refresh-token reuse and a new login increment

@@ -95,8 +95,41 @@ class ApiKeyServiceTest {
         apiKeyService.resetDeviceBinding(2L);
 
         verify(apiKeyRepository).clearBoundDevice(2L);
+        verify(apiKeyRepository).incrementAndGetTokenVersion(2L);
         verify(refreshTokenRepository).revokeByApiKeyId(2L);
         verify(eventRecorder).record(ObservabilityEventCatalog.API_KEY_DEVICE_RESET, Map.of());
+    }
+
+    @Test
+    void shouldSkipDeviceBindingForAdminWhenDeviceIdIsNullOrBlank() {
+        ApiKey adminKey =
+                ApiKey.builder().id(1L).platform(Platform.MOBILE).role(Role.ADMIN).build();
+
+        apiKeyService.bindDeviceOrThrow(adminKey, null);
+        apiKeyService.bindDeviceOrThrow(adminKey, "   ");
+
+        assertThat(adminKey.getBoundDeviceId()).isNull();
+        assertThat(adminKey.getBoundAt()).isNull();
+        verifyNoInteractions(apiKeyRepository, eventRecorder);
+    }
+
+    @Test
+    void shouldSkipDeviceBindingForAdminEvenWhenAlreadyBoundToAnotherDevice() {
+        Instant originalBoundAt = Instant.parse("2026-01-01T00:00:00Z");
+        ApiKey adminKey =
+                ApiKey.builder()
+                        .id(1L)
+                        .platform(Platform.MOBILE)
+                        .role(Role.ADMIN)
+                        .boundDeviceId("device-a")
+                        .boundAt(originalBoundAt)
+                        .build();
+
+        apiKeyService.bindDeviceOrThrow(adminKey, "device-b");
+
+        assertThat(adminKey.getBoundDeviceId()).isEqualTo("device-a");
+        assertThat(adminKey.getBoundAt()).isEqualTo(originalBoundAt);
+        verifyNoInteractions(apiKeyRepository, eventRecorder);
     }
 
     @Test
