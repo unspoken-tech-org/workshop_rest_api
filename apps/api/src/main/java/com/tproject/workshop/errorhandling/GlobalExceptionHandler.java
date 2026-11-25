@@ -25,6 +25,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -221,9 +222,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatusCode status,
             WebRequest request) {
 
+        // The log names each field; the response carries only the messages,
+        // which are written for the user and shown as they are by the front.
         String fieldErrors =
                 ex.getBindingResult().getFieldErrors().stream()
                         .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                        .collect(Collectors.joining("; "));
+        String fieldMessages =
+                ex.getBindingResult().getFieldErrors().stream()
+                        .map(FieldError::getDefaultMessage)
                         .collect(Collectors.joining("; "));
 
         String globalErrors =
@@ -237,7 +244,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 fieldErrors,
                 globalErrors);
 
-        ResponseError responseError = getResponseError(fieldErrors, globalErrors);
+        ResponseError responseError = getResponseError(fieldMessages, globalErrors);
 
         return new ResponseEntity<>(responseError, headers, HttpStatus.BAD_REQUEST);
     }
