@@ -5,6 +5,7 @@ import com.tproject.workshop.dto.type.TypeSearchParam;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.model.Type;
 import com.tproject.workshop.repository.TypeRepository;
 import com.tproject.workshop.utils.CatalogName;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TypeService {
     private final TypeRepository typeRepository;
     private final ObservabilityEventRecorder eventRecorder;
@@ -26,10 +28,7 @@ public class TypeService {
     }
 
     public Type findById(int id) {
-        return typeRepository
-                .findById(id)
-                .orElseThrow(() ->
-                        new NotFoundException(String.format("Tipo com id %d não encontrado", id)));
+        return typeRepository.findById(id).orElseThrow(() -> NotFoundException.of("Tipo", id));
     }
 
     public List<Type> findAll(String name) {
@@ -50,14 +49,13 @@ public class TypeService {
                         eventRecorder.record(
                                 ObservabilityEventCatalog.CATALOG_ENTRY_CREATED,
                                 Map.of("catalog.kind", "type")),
-                () -> new NotFoundException("Erro ao criar ou buscar tipo: " + type));
+                () -> new WorkshopException("Erro ao criar ou buscar tipo: " + type));
     }
 
     private TypeResponseDto toDto(Type type) {
         return new TypeResponseDto(type.getIdType(), type.getType());
     }
 
-    @Transactional(readOnly = true)
     public Page<TypeResponseDto> searchTypes(TypeSearchParam params) {
         return typeRepository.searchTypes(params);
     }

@@ -43,29 +43,9 @@
             "entryDate": "2020-10-10T08:41:00.968173"
         }
     ],
-    "pageable": {
-        "pageNumber": 0,
-        "pageSize": 15,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 0,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": true,
-    "totalPages": 1,
-    "totalElements": 3,
-    "first": true,
-    "size": 15,
     "number": 0,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 3,
-    "empty": false
+    "size": 15,
+    "totalElements": 3,
+    "totalPages": 1,
+    "last": true
 }

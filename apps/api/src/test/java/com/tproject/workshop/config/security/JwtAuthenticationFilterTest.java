@@ -12,6 +12,7 @@ import com.tproject.workshop.service.auth.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.FilterChain;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -33,6 +35,8 @@ class JwtAuthenticationFilterTest {
     @Mock private ApiKeyRepository apiKeyRepository;
 
     @Mock private FilterChain filterChain;
+
+    @Spy private Clock clock = Clock.systemDefaultZone();
 
     @InjectMocks private JwtAuthenticationFilter filter;
 

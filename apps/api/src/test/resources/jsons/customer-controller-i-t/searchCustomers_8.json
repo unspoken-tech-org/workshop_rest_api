@@ -10,29 +10,9 @@
             "mainPhone": "4430356678"
         }
     ],
-    "pageable": {
-        "pageNumber": 0,
-        "pageSize": 1,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 0,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": false,
-    "totalPages": 4,
-    "totalElements": 4,
-    "first": true,
-    "size": 1,
     "number": 0,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 1,
-    "empty": false
+    "size": 1,
+    "totalElements": 4,
+    "totalPages": 4,
+    "last": false
 }

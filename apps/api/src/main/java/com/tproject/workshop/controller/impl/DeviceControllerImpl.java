@@ -1,13 +1,13 @@
 package com.tproject.workshop.controller.impl;
 
 import com.tproject.workshop.controller.DeviceController;
+import com.tproject.workshop.dto.PageResponse;
 import com.tproject.workshop.dto.device.*;
 import com.tproject.workshop.events.DeviceViewedEvent;
 import com.tproject.workshop.service.DeviceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,12 +21,12 @@ public class DeviceControllerImpl implements DeviceController {
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public Page<DeviceTableDto> list(
+    public PageResponse<DeviceTableDto> list(
             @RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam) {
         if (deviceQueryParam == null) {
             deviceQueryParam = new DeviceQueryParam();
         }
-        return deviceService.listDevices(deviceQueryParam);
+        return PageResponse.from(deviceService.listDevices(deviceQueryParam));
     }
 
     @Override
@@ -61,7 +61,7 @@ public class DeviceControllerImpl implements DeviceController {
     }
 
     @Override
-    public Page<DeviceTableDto> search(@RequestBody @Valid DeviceSearchParam params) {
-        return deviceService.searchDevices(params);
+    public PageResponse<DeviceTableDto> search(@RequestBody @Valid DeviceSearchParam params) {
+        return PageResponse.from(deviceService.searchDevices(params));
     }
 }

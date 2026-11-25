@@ -14,6 +14,7 @@ import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -23,10 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PaymentService {
     private final PaymentRepository repository;
     private final DeviceRepository deviceRepository;
     private final ObservabilityEventRecorder eventRecorder;
+    private final Clock clock;
 
     @Transactional
     public PaymentResponseDto create(PaymentDeviceInputDto inputPayment) {
@@ -34,11 +37,8 @@ public class PaymentService {
         final var device =
                 deviceRepository
                         .findById(inputPayment.deviceId())
-                        .orElseThrow(() ->
-                                new NotFoundException(
-                                        String.format(
-                                                "Aparelho com id %d não encontrado",
-                                                inputPayment.deviceId())));
+                        .orElseThrow(
+                                () -> NotFoundException.of("Aparelho", inputPayment.deviceId()));
 
         if (!device.getDeviceStatus().allowsPayment(inputPayment.category())) {
             throw new BadRequestException(
@@ -46,10 +46,10 @@ public class PaymentService {
                     inputPayment.category().getDbValue(), device.getDeviceStatus().name());
         }
 
-        final var paymentDate =
-                Optional.ofNullable(inputPayment.paymentDate()).orElse(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now(clock);
+        final var paymentDate = Optional.ofNullable(inputPayment.paymentDate()).orElse(now);
 
-        if (paymentDate.isAfter(LocalDateTime.now())) {
+        if (paymentDate.isAfter(now)) {
             throw new BadRequestException(
                     "A data do pagamento não pode ser maior que a data atual");
         }

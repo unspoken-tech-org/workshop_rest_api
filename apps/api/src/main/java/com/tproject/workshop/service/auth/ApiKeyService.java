@@ -15,6 +15,7 @@ import com.tproject.workshop.model.Role;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import com.tproject.workshop.repository.RefreshTokenRepository;
 import com.tproject.workshop.util.KeyGeneratorUtils;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -28,11 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class ApiKeyService {
 
     private final ApiKeyRepository apiKeyRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final ObservabilityEventRecorder eventRecorder;
+    private final Clock clock;
 
     /**
      * Validates if the API Key is valid and active. Updates the last used timestamp.
@@ -44,8 +47,10 @@ public class ApiKeyService {
     public void validateApiKey(String apiKey) {
         ApiKey key = findByKeyValue(apiKey);
 
+        Instant now = clock.instant();
+
         // Check expiration
-        if (key.getExpiresAt() != null && !key.getExpiresAt().isAfter(Instant.now())) {
+        if (key.getExpiresAt() != null && !key.getExpiresAt().isAfter(now)) {
             log.warn(
                     "Expired API Key (apiKeyId: {}, platform: {}, role: {})",
                     key.getId(),
@@ -55,7 +60,7 @@ public class ApiKeyService {
         }
 
         // Update last used timestamp
-        apiKeyRepository.updateLastUsedAt(key.getKeyValue(), Instant.now());
+        apiKeyRepository.updateLastUsedAt(key.getKeyValue(), now);
 
         log.debug(
                 "API Key validated (apiKeyId: {}, platform: {}, role: {})",
@@ -71,7 +76,6 @@ public class ApiKeyService {
      * @return the ApiKey entity
      * @throws InvalidApiKeyException if not found or inactive
      */
-    @Transactional(readOnly = true)
     public ApiKey findByKeyValue(String apiKey) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new InvalidApiKeyException("API Key is required");
@@ -97,7 +101,7 @@ public class ApiKeyService {
         }
 
         if (apiKey.getBoundDeviceId() == null) {
-            Instant now = Instant.now();
+            Instant now = clock.instant();
             int updated = apiKeyRepository.bindDevice(apiKey.getId(), boundDeviceId, now);
             if (updated == 0) {
                 throw new ApiKeyDeviceBoundException("API Key já vinculada a outro dispositivo");
@@ -139,8 +143,7 @@ public class ApiKeyService {
         ApiKey apiKey =
                 apiKeyRepository
                         .findById(apiKeyId)
-                        .orElseThrow(() ->
-                                new NotFoundException("API Key not found with id: " + apiKeyId));
+                        .orElseThrow(() -> NotFoundException.ofFeminine("API Key", apiKeyId));
 
         apiKeyRepository.clearBoundDevice(apiKeyId);
         refreshTokenRepository.revokeByApiKeyId(apiKeyId);
@@ -218,7 +221,7 @@ public class ApiKeyService {
     @Transactional
     public void revokeApiKey(Long id) {
         if (!apiKeyRepository.existsById(id)) {
-            throw new NotFoundException("API Key not found with id: " + id);
+            throw NotFoundException.ofFeminine("API Key", id);
         }
         apiKeyRepository.deactivateById(id);
         eventRecorder.record(ObservabilityEventCatalog.API_KEY_REVOKED, Map.of("scope", "single"));
@@ -245,7 +248,6 @@ public class ApiKeyService {
      *
      * @return list of all API Keys as DTOs with masked key values
      */
-    @Transactional(readOnly = true)
     public List<ApiKeyResponse> findAll() {
         return apiKeyRepository.findAll().stream()
                 .sorted((a, b) -> Long.compare(a.getId(), b.getId()))
@@ -260,11 +262,10 @@ public class ApiKeyService {
      * @return ApiKeyResponse with masked key value
      * @throws NotFoundException if API Key not found
      */
-    @Transactional(readOnly = true)
     public ApiKeyResponse findById(Long id) {
         return apiKeyRepository
                 .findById(id)
                 .map(ApiKeyResponse::fromEntity)
-                .orElseThrow(() -> new NotFoundException("API Key not found with id: " + id));
+                .orElseThrow(() -> NotFoundException.ofFeminine("API Key", id));
     }
 }

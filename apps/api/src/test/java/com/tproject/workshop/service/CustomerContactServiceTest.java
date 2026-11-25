@@ -14,6 +14,7 @@ import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -39,6 +41,7 @@ class CustomerContactServiceTest {
     @Mock private TechnicianService technicianService;
     @Mock private PhoneService phoneService;
     @Mock private ObservabilityEventRecorder eventRecorder;
+    @Spy private Clock clock = Clock.systemDefaultZone();
 
     @InjectMocks private CustomerContactService customerContactService;
 

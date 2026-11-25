@@ -1,6 +1,7 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
+import com.tproject.workshop.dto.PageResponse;
 import com.tproject.workshop.dto.brand.BrandResponseDto;
 import com.tproject.workshop.dto.brand.BrandSearchParam;
 import com.tproject.workshop.dto.brand.CreateBrandRequest;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,7 +39,7 @@ public interface BrandController {
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     @PostMapping("/search")
-    Page<BrandResponseDto> search(@RequestBody @Valid BrandSearchParam params);
+    PageResponse<BrandResponseDto> search(@RequestBody @Valid BrandSearchParam params);
 
     @Operation(
             summary = "Create or return existing brand",

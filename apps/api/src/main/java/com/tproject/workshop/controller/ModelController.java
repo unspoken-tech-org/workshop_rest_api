@@ -1,6 +1,7 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
+import com.tproject.workshop.dto.PageResponse;
 import com.tproject.workshop.dto.model.CreateModelRequest;
 import com.tproject.workshop.dto.model.ModelResponseDto;
 import com.tproject.workshop.dto.model.ModelSearchParam;
@@ -8,7 +9,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,7 +25,7 @@ public interface ModelController {
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     @PostMapping("/search")
-    Page<ModelResponseDto> search(@RequestBody @Valid ModelSearchParam params);
+    PageResponse<ModelResponseDto> search(@RequestBody @Valid ModelSearchParam params);
 
     @Operation(
             summary = "Create or return existing model",
