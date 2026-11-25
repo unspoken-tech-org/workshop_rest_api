@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "platform: Plataforma é obrigatória"
+        "message": "Plataforma é obrigatória"
     }
 }

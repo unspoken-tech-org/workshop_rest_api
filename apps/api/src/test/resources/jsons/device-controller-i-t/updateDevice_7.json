@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "deviceStatus: O status do aparelho deve ser fornecido"
+        "message": "O status do aparelho deve ser fornecido"
     }
 }

@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "userIdentifier: Identificador do usuário é obrigatório"
+        "message": "Identificador do usuário é obrigatório"
     }
 }

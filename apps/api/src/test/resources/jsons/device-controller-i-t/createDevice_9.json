@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "typeBrandModel.model: O modelo do aparelho é obrigatório"
+        "message": "O modelo do aparelho é obrigatório"
     }
 }

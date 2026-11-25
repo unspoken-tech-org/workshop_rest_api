@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "customerId: O id do cliente é obrigatório"
+        "message": "O id do cliente é obrigatório"
     }
 }

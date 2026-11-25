@@ -3,6 +3,6 @@
     "title": "Erro de Validação",
     "error": {
         "code": "erro.validacao",
-        "message": "clientName: Nome do cliente é obrigatório"
+        "message": "Nome do cliente é obrigatório"
     }
 }
