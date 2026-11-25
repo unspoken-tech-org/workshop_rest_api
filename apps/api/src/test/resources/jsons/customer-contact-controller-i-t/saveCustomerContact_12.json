@@ -1,8 +1,8 @@
 {
-    "status": 404,
+    "type": "about:blank",
     "title": "Entidade não encontrada",
-    "error": {
-        "code": "entity.not.found.for.request",
-        "message": "O numero informado não está cadastrado"
-    }
+    "status": 404,
+    "detail": "O número informado não está cadastrado",
+    "instance": "/v1/customer-contact",
+    "code": "entity.not.found.for.request"
 }

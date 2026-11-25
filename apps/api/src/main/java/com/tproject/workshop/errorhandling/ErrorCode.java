@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
     ACCESS_DENIED("auth.access.denied", HttpStatus.FORBIDDEN, "Acesso Negado"),
-    AUTHENTICATION_REQUIRED("authentication.required", HttpStatus.UNAUTHORIZED, "Unauthorized"),
+    AUTHENTICATION_REQUIRED("authentication.required", HttpStatus.UNAUTHORIZED, "Não Autenticado"),
     INVALID_API_KEY("auth.invalid.api.key", HttpStatus.UNAUTHORIZED, "API Key Inválida"),
     INVALID_TOKEN("auth.invalid.token", HttpStatus.UNAUTHORIZED, "Token Inválido"),
     TOKEN_EXPIRED("auth.token.expired", HttpStatus.UNAUTHORIZED, "Token Expirado"),

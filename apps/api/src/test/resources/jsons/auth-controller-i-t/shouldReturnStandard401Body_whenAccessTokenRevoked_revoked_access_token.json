@@ -1,8 +1,7 @@
 {
+    "type": "about:blank",
+    "title": "Não Autenticado",
     "status": 401,
-    "title": "Unauthorized",
-    "error": {
-        "code": "authentication.required",
-        "message": "Authentication is required to access this resource"
-    }
+    "detail": "Autenticação necessária para acessar este recurso.",
+    "code": "authentication.required"
 }

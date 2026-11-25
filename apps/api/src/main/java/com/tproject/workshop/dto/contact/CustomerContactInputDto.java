@@ -14,7 +14,10 @@ public record CustomerContactInputDto(
                         example = "42")
                 @NotNull(message = "O ID do dispositivo é obrigatório")
                 Integer deviceId,
-        @Schema(description = "Channel used to reach the customer", example = "WHATSAPP")
+        @Schema(
+                        description = "Channel used to reach the customer",
+                        example = "mensagem",
+                        allowableValues = {"ligacao", "mensagem", "pessoalmente", "whatsapp"})
                 @NotBlank(message = "O tipo de contato é obrigatório")
                 String contactType,
         @Schema(description = "Technician responsible for the contact", example = "7")

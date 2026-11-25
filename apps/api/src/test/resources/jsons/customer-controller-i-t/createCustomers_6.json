@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "must not be empty"
-    }
+    "status": 400,
+    "detail": "must not be empty",
+    "instance": "/v1/customer",
+    "code": "erro.validacao"
 }

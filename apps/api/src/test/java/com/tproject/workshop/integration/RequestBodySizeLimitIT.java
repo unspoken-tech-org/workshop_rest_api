@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.context.jdbc.Sql;
 
 /**
- * Bodies above {@code app.request.max-body-size} (1MB) get 413 with the {@code ResponseError}
- * contract, whether the size is declared up front (Content-Length) or only known while reading
- * (Transfer-Encoding: chunked).
+ * Bodies above {@code app.request.max-body-size} (1MB) get 413 with the RFC 9457 {@code
+ * ProblemDetail} contract, whether the size is declared up front (Content-Length) or only known
+ * while reading (Transfer-Encoding: chunked).
  */
 @Sql({
     "/test-scripts/cleanTestData.sql",
@@ -67,7 +67,7 @@ class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
 
         // Read in full and validated: boundDeviceId is over @Size(max = 100).
         assertThat(response.statusCode()).isEqualTo(400);
-        assertThat(mapper.readTree(response.body()).at("/error/code").asText())
+        assertThat(mapper.readTree(response.body()).get("code").asText())
                 .isEqualTo("erro.validacao");
     }
 
@@ -87,8 +87,8 @@ class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
         JsonNode body = mapper.readTree(response.body());
         assertThat(body.get("status").asInt()).isEqualTo(413);
         assertThat(body.get("title").asText()).isEqualTo("Payload muito grande");
-        assertThat(body.at("/error/code").asText()).isEqualTo("payload.too.large");
-        assertThat(body.at("/error/message").asText()).contains("1MB");
+        assertThat(body.get("code").asText()).isEqualTo("payload.too.large");
+        assertThat(body.get("detail").asText()).contains("1MB");
     }
 
     /** A token request whose total size is {@code totalBytes}, padded in boundDeviceId. */

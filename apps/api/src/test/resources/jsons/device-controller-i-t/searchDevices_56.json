@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "O número da página deve ser no máximo 100000"
-    }
+    "status": 400,
+    "detail": "O número da página deve ser no máximo 100000",
+    "instance": "/v1/device/filter",
+    "code": "erro.validacao"
 }

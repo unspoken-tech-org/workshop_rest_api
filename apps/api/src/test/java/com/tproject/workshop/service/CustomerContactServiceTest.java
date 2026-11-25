@@ -10,6 +10,7 @@ import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
+import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
@@ -154,6 +155,42 @@ class CustomerContactServiceTest {
                                 .toLocalDateTime());
         Assertions.assertThat(saved.lastContact()).isEqualTo(expectedTimestamp.toLocalDateTime());
         verify(phoneService, never()).findByNumber(anyString());
+    }
+
+    @Test
+    void save_shouldNormalizeContactChannelAndRequirePhoneForLigacao() {
+        CustomerContactInputDto dto =
+                new CustomerContactInputDto(
+                        DEVICE_ID,
+                        "Ligação",
+                        2,
+                        null,
+                        "teste",
+                        true,
+                        "em_andamento",
+                        "2025-08-31T19:55:13");
+
+        assertThatThrownBy(() -> customerContactService.save(dto))
+                .isInstanceOf(BadRequestException.class);
+        verify(customerContactRepository, never()).save(any());
+    }
+
+    @Test
+    void save_shouldRejectUnknownContactChannel() {
+        CustomerContactInputDto dto =
+                new CustomerContactInputDto(
+                        DEVICE_ID,
+                        "pombo_correio",
+                        2,
+                        null,
+                        "teste",
+                        true,
+                        "em_andamento",
+                        "2025-08-31T19:55:13");
+
+        assertThatThrownBy(() -> customerContactService.save(dto))
+                .isInstanceOf(BadRequestException.class);
+        verify(customerContactRepository, never()).save(any());
     }
 
     private static CustomerContactInputDto input(String deviceStatus, String contactDate) {

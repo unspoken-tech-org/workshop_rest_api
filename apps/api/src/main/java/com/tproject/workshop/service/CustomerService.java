@@ -49,7 +49,7 @@ public class CustomerService {
     public CustomerOutputDto findById(int id) {
         return customerRepository
                 .findCustomerById(id)
-                .orElseThrow(() -> new NotFoundException("Não existe cliente com id " + id));
+                .orElseThrow(() -> NotFoundException.of("Cliente", id));
     }
 
     /**
@@ -60,8 +60,7 @@ public class CustomerService {
         Customer customer =
                 customerRepository
                         .findById(id)
-                        .orElseThrow(
-                                () -> new NotFoundException("Não existe cliente com id " + id));
+                        .orElseThrow(() -> NotFoundException.of("Cliente", id));
 
         List<CellPhoneOutputDeviceDto> phones =
                 customer.getCustomerPhones().stream()
@@ -172,8 +171,7 @@ public class CustomerService {
         Customer existingCustomer =
                 customerRepository
                         .findById(id)
-                        .orElseThrow(
-                                () -> new NotFoundException("Não existe cliente com id " + id));
+                        .orElseThrow(() -> NotFoundException.of("Cliente", id));
 
         String cpfOnlyDigits = UtilsString.onlyDigits(inputCustomerDto.cpf());
 
@@ -223,7 +221,7 @@ public class CustomerService {
 
             if (existingAssociation.isPresent()) {
                 throw new EntityAlreadyExistsException(
-                        "O numero informado já está associado a este cliente");
+                        "O número informado já está associado a este cliente");
             }
 
             if (phoneDto.isPrimary()) {
@@ -300,7 +298,7 @@ public class CustomerService {
                             // another customer
                             if (association.isMain()) {
                                 throw new EntityAlreadyExistsException(
-                                        "O numero informado já está cadastrado como principal para outro cliente");
+                                        "O número informado já está cadastrado como principal para outro cliente");
                             }
                         }
                     });

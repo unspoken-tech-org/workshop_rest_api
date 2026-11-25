@@ -14,6 +14,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -40,13 +41,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             "Acesso Negado: Você não tem permissão para realizar esta operação.";
 
     public static final String AUTHENTICATION_REQUIRED_MESSAGE =
-            "Authentication is required to access this resource";
+            "Autenticação necessária para acessar este recurso.";
 
     private static final String INTERNAL_ERROR_MESSAGE =
             "Ocorreu um erro interno. Por favor, tente novamente ou contate o suporte.";
 
     @ExceptionHandler(DomainException.class)
-    public ResponseEntity<ResponseError> handleDomainException(
+    public ResponseEntity<ProblemDetail> handleDomainException(
             final DomainException ex, WebRequest request) {
         ErrorCode errorCode = ex.getErrorCode();
         if (errorCode.status().is5xxServerError()) {
@@ -64,14 +65,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ResponseError> handleAccessDeniedException(
+    public ResponseEntity<ProblemDetail> handleAccessDeniedException(
             final AccessDeniedException ex, WebRequest request) {
         logClientError(ErrorCode.ACCESS_DENIED.code(), ex, request);
         return buildResponse(ErrorCode.ACCESS_DENIED, ACCESS_DENIED_MESSAGE);
     }
 
     @ExceptionHandler(EmptyResultDataAccessException.class)
-    public ResponseEntity<ResponseError> handleEmptyResultDataAccessException(
+    public ResponseEntity<ProblemDetail> handleEmptyResultDataAccessException(
             final EmptyResultDataAccessException ex, WebRequest request) {
         logClientError(ErrorCode.ENTITY_NOT_FOUND.code(), ex, request);
         return buildResponse(ErrorCode.ENTITY_NOT_FOUND, ex.getMessage());
@@ -105,15 +106,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(PayloadTooLargeException.class)
-    public ResponseEntity<ResponseError> handlePayloadTooLargeException(
+    public ResponseEntity<ProblemDetail> handlePayloadTooLargeException(
             final PayloadTooLargeException ex, WebRequest request) {
         logClientError(PAYLOAD_TOO_LARGE_CODE, ex, request);
         return new ResponseEntity<>(payloadTooLarge(ex), ErrorCode.PAYLOAD_TOO_LARGE.status());
     }
 
     /** 413 body, shared with {@code RequestBodySizeLimitFilter} for the Content-Length path. */
-    public static ResponseError payloadTooLarge(PayloadTooLargeException ex) {
-        return ResponseError.of(ErrorCode.PAYLOAD_TOO_LARGE, ex.getMessage());
+    public static ProblemDetail payloadTooLarge(PayloadTooLargeException ex) {
+        return toProblemDetail(ErrorCode.PAYLOAD_TOO_LARGE, ex.getMessage());
+    }
+
+    public static ProblemDetail toProblemDetail(ErrorCode errorCode, String message) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(errorCode.status(), message);
+        problem.setTitle(errorCode.title());
+        problem.setProperty("code", errorCode.code());
+        return problem;
     }
 
     private static <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
@@ -129,14 +137,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private ResponseEntity<Object> buildBadRequestResponse(String message) {
         return new ResponseEntity<>(
-                ResponseError.of(ErrorCode.BAD_REQUEST, message), ErrorCode.BAD_REQUEST.status());
+                toProblemDetail(ErrorCode.BAD_REQUEST, message), ErrorCode.BAD_REQUEST.status());
     }
 
     @ExceptionHandler({
         ObjectOptimisticLockingFailureException.class,
         OptimisticLockException.class
     })
-    public ResponseEntity<ResponseError> handleOptimisticLockingException(
+    public ResponseEntity<ProblemDetail> handleOptimisticLockingException(
             final Exception ex, WebRequest request) {
         logClientError(ErrorCode.VERSION_CONFLICT.code(), ex, request);
         return buildResponse(
@@ -145,7 +153,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ResponseError> handleDataIntegrityViolationException(
+    public ResponseEntity<ProblemDetail> handleDataIntegrityViolationException(
             final DataIntegrityViolationException ex, WebRequest request) {
         if (isUniqueConstraintViolation(ex)) {
             logClientError(ErrorCode.RESOURCE_CONFLICT.code(), ex, request);
@@ -197,9 +205,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 fieldErrors,
                 globalErrors);
 
-        ResponseError responseError = getResponseError(fieldMessages, globalErrors);
+        ProblemDetail problem = buildValidationProblemDetail(fieldMessages, globalErrors);
 
-        return new ResponseEntity<>(responseError, headers, ErrorCode.VALIDATION_ERROR.status());
+        return new ResponseEntity<>(problem, headers, ErrorCode.VALIDATION_ERROR.status());
     }
 
     // Client errors are logged by stable code and exception type only:
@@ -212,7 +220,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 ex.getClass().getSimpleName());
     }
 
-    private static ResponseError getResponseError(String fieldErrors, String globalErrors) {
+    private static ProblemDetail buildValidationProblemDetail(
+            String fieldErrors, String globalErrors) {
         StringBuilder errorMessage = new StringBuilder();
         if (!fieldErrors.isEmpty()) {
             errorMessage.append(fieldErrors);
@@ -228,11 +237,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             errorMessage.append("Erro de validação desconhecido.");
         }
 
-        return ResponseError.of(ErrorCode.VALIDATION_ERROR, errorMessage.toString());
+        return toProblemDetail(ErrorCode.VALIDATION_ERROR, errorMessage.toString());
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ResponseError> handleGenericException(
+    public ResponseEntity<ProblemDetail> handleGenericException(
             final Exception ex, WebRequest request) {
         // The stack trace is kept for diagnosis; messages are not repeated in
         // the log line. Unknown exception messages remain a residual risk.
@@ -247,7 +256,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler({DataAccessException.class, SQLException.class})
-    public ResponseEntity<ResponseError> handleDatabaseException(
+    public ResponseEntity<ProblemDetail> handleDatabaseException(
             final Exception ex, WebRequest request) {
         // PostgreSQL "Detail" (row values) is disabled by logServerErrorDetail=false.
         EXCEPTION_LOGGER.error(
@@ -262,8 +271,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 "Erro ao acessar o banco de dados. Por favor, tente novamente.");
     }
 
-    private static ResponseEntity<ResponseError> buildResponse(
+    private static ResponseEntity<ProblemDetail> buildResponse(
             ErrorCode errorCode, String message) {
-        return new ResponseEntity<>(ResponseError.of(errorCode, message), errorCode.status());
+        return new ResponseEntity<>(toProblemDetail(errorCode, message), errorCode.status());
     }
 }

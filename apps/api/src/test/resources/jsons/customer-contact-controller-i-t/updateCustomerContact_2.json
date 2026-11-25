@@ -4,7 +4,7 @@
     "technicianId": 2,
     "technicianName": "Contact Test Tech",
     "phone": "44987654321",
-    "type": "WHATSAPP",
+    "type": "whatsapp",
     "hasMadeContact": true,
     "lastContact": "2025-06-03T23:08:14.110245",
     "conversation": "device is ready",

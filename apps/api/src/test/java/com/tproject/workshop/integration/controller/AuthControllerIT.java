@@ -608,8 +608,8 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_BAD_REQUEST)
                 .body("status", equalTo(400))
                 .body("title", equalTo("Erro de Validação"))
-                .body("error.code", equalTo("erro.validacao"))
-                .body("error.message", startsWith(field + " deve ter no máximo "));
+                .body("code", equalTo("erro.validacao"))
+                .body("detail", startsWith(field + " deve ter no máximo "));
 
         Integer boundKeys =
                 jdbcTemplate.queryForObject(
@@ -802,7 +802,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .then()
                 .statusCode(HttpStatus.SC_BAD_REQUEST)
                 .body("status", equalTo(400))
-                .body("error.code", equalTo("requisicao.invalida"));
+                .body("code", equalTo("requisicao.invalida"));
     }
 
     private Map<String, String> login(String apiKey, String boundDeviceId) {

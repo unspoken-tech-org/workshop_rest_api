@@ -3,6 +3,7 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.dto.contact.CustomerContactInputDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
+import com.tproject.workshop.enums.ContactChannel;
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventContract;
@@ -11,15 +12,14 @@ import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
-import com.tproject.workshop.utils.UtilsString;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,20 +36,23 @@ public class CustomerContactService {
     private final ObservabilityEventRecorder eventRecorder;
     private final Clock clock;
 
-    private final List<String> contactTypesThatNeedPhone = List.of("ligacao", "mensagem");
-
     @Transactional
     public CustomerContactOutputDto save(CustomerContactInputDto contact) {
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
         DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
-        validatePhoneIfNeeded(contact.contactType(), contact.phoneNumber());
+        Optional<ContactChannel> channel = ContactChannel.fromNullable(contact.contactType());
+        validatePhoneIfNeeded(channel.orElse(null), contact.phoneNumber());
         deviceService.ensureDeviceExists(contact.deviceId());
 
         CustomerContact newContact = new CustomerContact();
-        mapContactFields(newContact, contact, status);
+        mapContactFields(newContact, contact, channel.orElse(null), status);
         CustomerContact saved = customerContactRepository.save(newContact);
         updateDeviceStatusIfLatestContact(saved);
-        recordContact(ObservabilityEventCatalog.CUSTOMER_CONTACT_REGISTERED, saved, status);
+        recordContact(
+                ObservabilityEventCatalog.CUSTOMER_CONTACT_REGISTERED,
+                channel.orElse(null),
+                saved,
+                status);
 
         return toDto(saved, technician.name());
     }
@@ -64,15 +67,20 @@ public class CustomerContactService {
         DeviceStatusEnum previousStatus = existingContact.getDeviceStatus();
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
         DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
-        validatePhoneIfNeeded(contact.contactType(), contact.phoneNumber());
+        Optional<ContactChannel> channel = ContactChannel.fromNullable(contact.contactType());
+        validatePhoneIfNeeded(channel.orElse(null), contact.phoneNumber());
         deviceService.ensureDeviceExists(contact.deviceId());
 
-        mapContactFields(existingContact, contact, status);
+        mapContactFields(existingContact, contact, channel.orElse(null), status);
         CustomerContact saved = customerContactRepository.save(existingContact);
         if (previousStatus != status) {
             updateDeviceStatusIfLatestContact(saved);
         }
-        recordContact(ObservabilityEventCatalog.CUSTOMER_CONTACT_UPDATED, saved, status);
+        recordContact(
+                ObservabilityEventCatalog.CUSTOMER_CONTACT_UPDATED,
+                channel.orElse(null),
+                saved,
+                status);
 
         return toDto(saved, technician.name());
     }
@@ -95,41 +103,39 @@ public class CustomerContactService {
     }
 
     private void recordContact(
-            ObservabilityEventContract contract, CustomerContact contact, DeviceStatusEnum status) {
+            ObservabilityEventContract contract,
+            ContactChannel channel,
+            CustomerContact contact,
+            DeviceStatusEnum status) {
+        String contactType = channel != null ? channel.observabilityValue() : "other";
         eventRecorder.record(
                 contract,
                 Map.of(
-                        "contact.type", contactTypeOf(contact.getType()),
+                        "contact.type", contactType,
                         "contact.made", String.valueOf(contact.isHasMadeContact()),
                         "status.new", status.name().toLowerCase(Locale.ROOT)));
     }
 
-    private String contactTypeOf(String contactType) {
-        String normalized = contactType == null ? "" : UtilsString.normalizeString(contactType);
-        return contactTypesThatNeedPhone.contains(normalized) ? normalized : "other";
-    }
-
-    private void validatePhoneIfNeeded(String contactType, String phoneNumber) {
-        String normalizedType = contactType == null ? "" : UtilsString.normalizeString(contactType);
-        if (contactTypesThatNeedPhone.contains(normalizedType)) {
+    private void validatePhoneIfNeeded(ContactChannel channel, String phoneNumber) {
+        if (channel != null && channel.requiresPhone()) {
             if (phoneNumber == null || phoneNumber.isEmpty()) {
-                String joinedNeededContactTypes = String.join(", ", contactTypesThatNeedPhone);
                 throw new BadRequestException(
-                        String.format(
-                                "O numero de telefone deve ser fornecido para os tipos de contato: %s",
-                                joinedNeededContactTypes));
+                        "O número de telefone deve ser fornecido para os tipos de contato: ligacao, mensagem");
             }
             phoneService.findByNumber(phoneNumber);
         }
     }
 
     private void mapContactFields(
-            CustomerContact contact, CustomerContactInputDto dto, DeviceStatusEnum status) {
+            CustomerContact contact,
+            CustomerContactInputDto dto,
+            ContactChannel channel,
+            DeviceStatusEnum status) {
         contact.setDeviceId(dto.deviceId());
         contact.setTechnicianId(dto.technicianId());
         contact.setHasMadeContact(dto.contactStatus());
         contact.setConversation(dto.message());
-        contact.setType(dto.contactType());
+        contact.setType(channel != null ? channel.wireValue() : null);
         contact.setPhone(dto.phoneNumber());
         contact.setLastContact(parseContactDate(dto.contactDate()));
         contact.setDeviceStatus(status);

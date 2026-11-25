@@ -1,8 +1,8 @@
 {
-    "status": 409,
+    "type": "about:blank",
     "title": "Conflito de Recurso",
-    "error": {
-        "code": "recurso.conflito",
-        "message": "O CPF informado já está em uso"
-    }
+    "status": 409,
+    "detail": "O CPF informado já está em uso",
+    "instance": "/v1/customer/1",
+    "code": "recurso.conflito"
 }

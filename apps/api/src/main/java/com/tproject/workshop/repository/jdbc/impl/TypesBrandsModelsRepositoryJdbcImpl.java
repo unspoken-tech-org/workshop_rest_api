@@ -3,6 +3,7 @@ package com.tproject.workshop.repository.jdbc.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tproject.workshop.dto.typesBrandsModels.TypeRecord;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.repository.jdbc.TypesBrandsModelsRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
 import java.util.List;
@@ -35,7 +36,7 @@ public class TypesBrandsModelsRepositoryJdbcImpl implements TypesBrandsModelsRep
         } catch (EmptyResultDataAccessException e) {
             return List.of();
         } catch (Exception e) {
-            throw new RuntimeException("Falha ao processar o resultado JSON do banco de dados", e);
+            throw new WorkshopException("Falha ao processar o resultado JSON do banco de dados", e);
         }
     }
 }

@@ -16,6 +16,6 @@ public class PhoneService {
     public Phone findByNumber(String number) {
         return cellphoneRepository
                 .findByNumber(number)
-                .orElseThrow(() -> new NotFoundException("O numero informado não está cadastrado"));
+                .orElseThrow(() -> new NotFoundException("O número informado não está cadastrado"));
     }
 }

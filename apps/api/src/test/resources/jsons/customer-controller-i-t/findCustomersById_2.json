@@ -1,8 +1,8 @@
 {
-    "status": 404,
+    "type": "about:blank",
     "title": "Entidade não encontrada",
-    "error": {
-        "code": "entity.not.found.for.request",
-        "message": "Não existe cliente com id 250"
-    }
+    "status": 404,
+    "detail": "Cliente com id 250 não encontrado",
+    "instance": "/v1/customer/250",
+    "code": "entity.not.found.for.request"
 }

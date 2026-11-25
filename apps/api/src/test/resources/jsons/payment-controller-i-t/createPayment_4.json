@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "Tipo de pagamento não pode ser nulo"
-    }
+    "status": 400,
+    "detail": "Tipo de pagamento não pode ser nulo",
+    "instance": "/v1/payment",
+    "code": "erro.validacao"
 }

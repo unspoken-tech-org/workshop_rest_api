@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "O valor do orçamento não pode ser negativo"
-    }
+    "status": 400,
+    "detail": "O valor do orçamento não pode ser negativo",
+    "instance": "/v1/device/update",
+    "code": "erro.validacao"
 }

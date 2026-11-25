@@ -3,7 +3,6 @@ package com.tproject.workshop.config.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tproject.workshop.errorhandling.ErrorCode;
 import com.tproject.workshop.errorhandling.GlobalExceptionHandler;
-import com.tproject.workshop.errorhandling.ResponseError;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -143,9 +142,11 @@ public class SecurityConfig {
     private void writeErrorResponse(
             HttpServletResponse response, ErrorCode errorCode, String message) throws IOException {
         response.setStatus(errorCode.status().value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        objectMapper.writeValue(response.getOutputStream(), ResponseError.of(errorCode, message));
+        objectMapper.writeValue(
+                response.getOutputStream(),
+                GlobalExceptionHandler.toProblemDetail(errorCode, message));
     }
 
     @Bean

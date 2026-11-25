@@ -3,6 +3,7 @@ package com.tproject.workshop.repository.jdbc.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tproject.workshop.dto.deviceStatistics.DeviceStatisticsOutputDtoRecord;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.repository.jdbc.DeviceStatisticsRepository;
 import com.tproject.workshop.utils.UtilsSql;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class DeviceStatisticsRepositoryImpl implements DeviceStatisticsRepositor
         } catch (EmptyResultDataAccessException e) {
             return null;
         } catch (Exception e) {
-            throw new RuntimeException("Falha ao processar o resultado JSON do banco de dados", e);
+            throw new WorkshopException("Falha ao processar o resultado JSON do banco de dados", e);
         }
     }
 }
