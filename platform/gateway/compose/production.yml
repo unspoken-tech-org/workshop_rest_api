@@ -10,7 +10,7 @@ services:
       # host usa a porta apenas no verify do deploy (.github/scripts/gateway/verify.sh).
       # Publicada em 0.0.0.0, servia a API em HTTP puro para a LAN.
       - "127.0.0.1:80:80"
-      # :443 aberta na LAN de propósito: o DNS do roteador aponta a API para 192.168.3.42.
+      # :443 aberta na LAN de propósito: o DNS do roteador aponta a API para o host.
       - "443:443"
     environment:
       # Tracing (snippet api_proxy do Caddyfile): OTLP/HTTP ao Collector de borda, pela rede
