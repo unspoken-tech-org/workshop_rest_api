@@ -224,7 +224,7 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
     @Test
     public void shouldResetDeviceBinding() {
         given().spec(SPEC)
-                .header(API_KEY_HEADER, TestAuthHelper.WEB_API_KEY)
+                .header(API_KEY_HEADER, TestAuthHelper.SERVICE_API_KEY)
                 .body(
                         Map.of(
                                 "boundDeviceId", "device-a",
@@ -236,12 +236,12 @@ public class ApiKeyControllerIT extends AbstractIntegrationLiveTest {
 
         given().spec(getAuthenticatedSpec())
                 .when()
-                .post(BASE_PATH + "/2/reset-device")
+                .post(BASE_PATH + "/7/reset-device")
                 .then()
                 .statusCode(HttpStatus.SC_NO_CONTENT);
 
         given().spec(SPEC)
-                .header(API_KEY_HEADER, TestAuthHelper.WEB_API_KEY)
+                .header(API_KEY_HEADER, TestAuthHelper.SERVICE_API_KEY)
                 .body(
                         Map.of(
                                 "boundDeviceId", "device-b",

@@ -80,6 +80,61 @@ class AuthServiceTest {
         verify(apiKeyService, never()).incrementTokenVersion(anyLong());
     }
 
+    @Test
+    void adminLoginWithNullBoundDeviceIdShouldOmitClaimAndIncrementTokenVersion() {
+        ApiKey apiKey = adminApiKey(4L);
+        when(apiKeyService.findByKeyValue(API_KEY_VALUE)).thenReturn(apiKey);
+        when(apiKeyService.incrementTokenVersion(1L)).thenReturn(5L);
+        when(jwtService.generateAccessToken(eq("client"), anyMap())).thenReturn("access.jwt");
+        when(refreshTokenService.createRefreshToken(apiKey)).thenReturn("rt_new");
+
+        var response = authService.authenticate(API_KEY_VALUE, new TokenRequest(null, "1.0.0"));
+
+        assertThat(response.accessToken()).isEqualTo("access.jwt");
+        Map<String, Object> claims = capturedClaims();
+        assertThat(claims).containsEntry("tv", 5L).doesNotContainKey("boundDeviceId");
+
+        InOrder order = inOrder(apiKeyService, jwtService);
+        order.verify(apiKeyService).bindDeviceOrThrow(apiKey, null);
+        order.verify(apiKeyService).incrementTokenVersion(1L);
+        order.verify(jwtService).generateAccessToken(eq("client"), anyMap());
+    }
+
+    @Test
+    void adminLoginWithBoundDeviceIdShouldOmitClaimAndIncrementTokenVersion() {
+        ApiKey apiKey = adminApiKey(4L);
+        when(apiKeyService.findByKeyValue(API_KEY_VALUE)).thenReturn(apiKey);
+        when(apiKeyService.incrementTokenVersion(1L)).thenReturn(5L);
+        when(jwtService.generateAccessToken(eq("client"), anyMap())).thenReturn("access.jwt");
+        when(refreshTokenService.createRefreshToken(apiKey)).thenReturn("rt_new");
+
+        var response =
+                authService.authenticate(API_KEY_VALUE, new TokenRequest("device-a", "1.0.0"));
+
+        assertThat(response.accessToken()).isEqualTo("access.jwt");
+        Map<String, Object> claims = capturedClaims();
+        assertThat(claims).containsEntry("tv", 5L).doesNotContainKey("boundDeviceId");
+
+        InOrder order = inOrder(apiKeyService, jwtService);
+        order.verify(apiKeyService).bindDeviceOrThrow(apiKey, "device-a");
+        order.verify(apiKeyService).incrementTokenVersion(1L);
+        order.verify(jwtService).generateAccessToken(eq("client"), anyMap());
+    }
+
+    @Test
+    void adminRefreshShouldOmitBoundDeviceIdAndKeepTokenVersion() {
+        ApiKey apiKey = adminApiKey(7L);
+        when(refreshTokenService.rotateRefreshToken("rt_old"))
+                .thenReturn(new RefreshTokenService.RotationResult(apiKey, "rt_rotated"));
+        when(jwtService.generateAccessToken(eq("client"), anyMap())).thenReturn("access.jwt");
+
+        var response = authService.refreshToken(new RefreshTokenRequest("rt_old"));
+
+        assertThat(response.refreshToken()).isEqualTo("rt_rotated");
+        assertThat(capturedClaims()).containsEntry("tv", 7L).doesNotContainKey("boundDeviceId");
+        verify(apiKeyService, never()).incrementTokenVersion(anyLong());
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> capturedClaims() {
         ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
@@ -96,6 +151,19 @@ class AuthServiceTest {
                 .role(Role.SERVICE)
                 .active(true)
                 .boundDeviceId("device-a")
+                .tokenVersion(tokenVersion)
+                .build();
+    }
+
+    private static ApiKey adminApiKey(long tokenVersion) {
+        return ApiKey.builder()
+                .id(1L)
+                .clientName("client")
+                .userIdentifier("user")
+                .platform(Platform.MOBILE)
+                .role(Role.ADMIN)
+                .active(true)
+                .boundDeviceId(null)
                 .tokenVersion(tokenVersion)
                 .build();
     }

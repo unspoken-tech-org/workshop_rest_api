@@ -92,6 +92,10 @@ public class ApiKeyService {
     /** Binds the API Key to a device or validates an existing binding. */
     @Transactional
     public void bindDeviceOrThrow(ApiKey apiKey, String boundDeviceId) {
+        if (apiKey.getRole() == Role.ADMIN) {
+            return;
+        }
+
         if (boundDeviceId == null || boundDeviceId.isBlank()) {
             throw new BadRequestException("boundDeviceId é obrigatório");
         }
@@ -143,6 +147,7 @@ public class ApiKeyService {
 
         apiKeyRepository.clearBoundDevice(apiKeyId);
         refreshTokenRepository.revokeByApiKeyId(apiKeyId);
+        apiKeyRepository.incrementAndGetTokenVersion(apiKeyId);
         eventRecorder.record(ObservabilityEventCatalog.API_KEY_DEVICE_RESET, Map.of());
 
         log.info("API Key binding reset for id: {}", apiKeyId);

@@ -241,6 +241,39 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
     }
 
+    @Test
+    void shouldAuthenticateAdminWithoutBoundDeviceId() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims = claimsWithoutBoundDeviceId(1L, List.of("ROLE_ADMIN"), 3L);
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(adminApiKey(3L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
+                .extracting("authority")
+                .containsExactly("ROLE_ADMIN");
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void shouldRejectAdminWhenTokenVersionMismatches() throws Exception {
+        MockHttpServletRequest request = requestWithBearer("valid.jwt");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Claims claims = claimsWithoutBoundDeviceId(1L, List.of("ROLE_ADMIN"), 2L);
+
+        when(jwtService.validateAndGetClaims("valid.jwt")).thenReturn(claims);
+        when(apiKeyRepository.findById(1L)).thenReturn(Optional.of(adminApiKey(3L)));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
     private static ApiKey boundApiKey(long tokenVersion) {
         return ApiKey.builder()
                 .id(1L)
@@ -249,6 +282,27 @@ class JwtAuthenticationFilterTest {
                 .platform(Platform.MOBILE)
                 .role(Role.SERVICE)
                 .tokenVersion(tokenVersion)
+                .build();
+    }
+
+    private static ApiKey adminApiKey(long tokenVersion) {
+        return ApiKey.builder()
+                .id(1L)
+                .active(true)
+                .boundDeviceId(null)
+                .platform(Platform.MOBILE)
+                .role(Role.ADMIN)
+                .tokenVersion(tokenVersion)
+                .build();
+    }
+
+    private static Claims claimsWithoutBoundDeviceId(
+            Long apiKeyId, List<String> roles, long tokenVersion) {
+        return Jwts.claims()
+                .subject("test_app")
+                .add("apiKeyId", apiKeyId)
+                .add("roles", roles)
+                .add("tv", tokenVersion)
                 .build();
     }
 

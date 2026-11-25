@@ -356,7 +356,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
     @Test
     public void shouldReturn409_whenApiKeyBoundToAnotherDevice() {
         given().spec(SPEC)
-                .header(API_KEY_HEADER, TestAuthHelper.MOBILE_API_KEY)
+                .header(API_KEY_HEADER, TestAuthHelper.SERVICE_API_KEY)
                 .body(
                         Map.of(
                                 "boundDeviceId", "device-a",
@@ -367,7 +367,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .statusCode(HttpStatus.SC_OK);
 
         given().spec(SPEC)
-                .header(API_KEY_HEADER, TestAuthHelper.MOBILE_API_KEY)
+                .header(API_KEY_HEADER, TestAuthHelper.SERVICE_API_KEY)
                 .body(
                         Map.of(
                                 "boundDeviceId", "device-b",
@@ -722,6 +722,87 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                         .response();
 
         super.validateResponse("revoked_access_token", response);
+    }
+
+    @Order(26)
+    @DisplayName("ADMIN login without boundDeviceId succeeds, keeps DB unbound, and refreshes")
+    @Test
+    public void shouldAllowAdminLoginWithoutBoundDeviceIdAndRefresh() {
+        JsonPath loginJson =
+                given().spec(SPEC)
+                        .header(API_KEY_HEADER, TestAuthHelper.MOBILE_API_KEY)
+                        .body(Map.of("appVersion", "1.0.0"))
+                        .when()
+                        .post(AUTH_PATH + "/token")
+                        .then()
+                        .statusCode(HttpStatus.SC_OK)
+                        .extract()
+                        .jsonPath();
+
+        String accessToken = loginJson.getString("accessToken");
+        String refreshToken = loginJson.getString("refreshToken");
+
+        Map<String, Object> dbRow =
+                jdbcTemplate.queryForMap(
+                        "SELECT bound_device_id, bound_at FROM api_keys WHERE id = 1");
+        Assertions.assertNull(dbRow.get("bound_device_id"));
+        Assertions.assertNull(dbRow.get("bound_at"));
+
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + accessToken)
+                .when()
+                .get("/v1/admin/api-keys")
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+
+        String refreshedAccessToken =
+                given().spec(SPEC)
+                        .body(Map.of("refreshToken", refreshToken))
+                        .when()
+                        .post(AUTH_PATH + "/refresh")
+                        .then()
+                        .statusCode(HttpStatus.SC_OK)
+                        .extract()
+                        .jsonPath()
+                        .getString("accessToken");
+
+        given().spec(SPEC)
+                .header("Authorization", "Bearer " + refreshedAccessToken)
+                .when()
+                .get("/v1/admin/api-keys")
+                .then()
+                .statusCode(HttpStatus.SC_OK);
+    }
+
+    @Order(27)
+    @DisplayName("ADMIN login across different devices succeeds with single-session enforcement")
+    @Test
+    public void shouldAllowAdminLoginFromDifferentDevicesAndEnforceSingleSession() {
+        Map<String, String> login1 = login(TestAuthHelper.MOBILE_API_KEY, "device-a");
+        Map<String, String> login2 = login(TestAuthHelper.MOBILE_API_KEY, "device-b");
+
+        assertProtectedStatus(login1.get("accessToken"), HttpStatus.SC_UNAUTHORIZED);
+        assertProtectedStatus(login2.get("accessToken"), HttpStatus.SC_OK);
+
+        String boundDeviceId =
+                jdbcTemplate.queryForObject(
+                        "SELECT bound_device_id FROM api_keys WHERE id = 1", String.class);
+        Assertions.assertNull(boundDeviceId);
+    }
+
+    @Order(28)
+    @DisplayName("SERVICE login without boundDeviceId returns 400")
+    @Test
+    public void shouldReturn400_whenServiceLoginWithoutBoundDeviceId() {
+        given().spec(SPEC)
+                .header(API_KEY_HEADER, TestAuthHelper.SERVICE_API_KEY)
+                .body(Map.of("appVersion", "1.0.0"))
+                .when()
+                .post(AUTH_PATH + "/token")
+                .then()
+                .statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body("status", equalTo(400))
+                .body("error.code", equalTo("requisicao.invalida"));
     }
 
     private Map<String, String> login(String apiKey, String boundDeviceId) {
