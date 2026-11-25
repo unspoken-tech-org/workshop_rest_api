@@ -609,7 +609,7 @@ public class AuthControllerIT extends AbstractIntegrationLiveTest {
                 .body("status", equalTo(400))
                 .body("title", equalTo("Erro de Validação"))
                 .body("error.code", equalTo("erro.validacao"))
-                .body("error.message", startsWith(field + ":"));
+                .body("error.message", startsWith(field + " deve ter no máximo "));
 
         Integer boundKeys =
                 jdbcTemplate.queryForObject(
