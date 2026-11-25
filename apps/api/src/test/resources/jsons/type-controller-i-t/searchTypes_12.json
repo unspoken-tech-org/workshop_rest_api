@@ -9,29 +9,9 @@
             "type": "Lava e Seca"
         }
     ],
-    "pageable": {
-        "pageNumber": 0,
-        "pageSize": 2,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 0,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": false,
-    "totalPages": 2,
-    "totalElements": 3,
-    "first": true,
-    "size": 2,
     "number": 0,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 2,
-    "empty": false
+    "size": 2,
+    "totalElements": 3,
+    "totalPages": 2,
+    "last": false
 }

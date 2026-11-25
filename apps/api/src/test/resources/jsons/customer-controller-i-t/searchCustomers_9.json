@@ -37,29 +37,9 @@
             "mainPhone": "99988887777"
         }
     ],
-    "pageable": {
-        "pageNumber": 0,
-        "pageSize": 10,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 0,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": true,
-    "totalPages": 1,
-    "totalElements": 4,
-    "first": true,
-    "size": 10,
     "number": 0,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 4,
-    "empty": false
+    "size": 10,
+    "totalElements": 4,
+    "totalPages": 1,
+    "last": true
 }
