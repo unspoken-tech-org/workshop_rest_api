@@ -16,6 +16,7 @@ import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DeviceService {
     private final DeviceRepository deviceRepository;
     private final CustomerRepository customerRepository;
@@ -39,13 +41,12 @@ public class DeviceService {
     private final TypesBrandsModelsService typeBrandModelService;
     private final TechnicianService technicianService;
     private final ObservabilityEventRecorder eventRecorder;
+    private final Clock clock;
 
     private Device fetchOrThrow(int deviceId) {
         return deviceRepository
                 .findById(deviceId)
-                .orElseThrow(() ->
-                        new NotFoundException(
-                                String.format("Aparelho com id %d não encontrado", deviceId)));
+                .orElseThrow(() -> NotFoundException.of("Aparelho", deviceId));
     }
 
     private void addHistory(Device device, String field, String oldValue, String newValue) {
@@ -73,7 +74,7 @@ public class DeviceService {
                 ObservabilityEventCatalog.DEVICE_CLOSED,
                 Map.of(
                         "status.new", current.name().toLowerCase(Locale.ROOT),
-                        "turnaround.band", TurnaroundBand.of(entry, Instant.now())));
+                        "turnaround.band", TurnaroundBand.of(entry, clock.instant())));
     }
 
     private void recordUrgencyChange(boolean previous, boolean current) {
@@ -127,7 +128,7 @@ public class DeviceService {
 
         if (newStatus.isClosed()) {
             if (device.getDepartureDate() == null) {
-                device.setDepartureDate(Timestamp.valueOf(LocalDateTime.now()));
+                device.setDepartureDate(Timestamp.from(clock.instant()));
             }
         } else if (oldStatus.isClosed()) {
             device.setDepartureDate(null);
@@ -146,26 +147,20 @@ public class DeviceService {
         return device;
     }
 
-    @Transactional(readOnly = true)
     public Page<DeviceTableDto> listDevices(DeviceQueryParam deviceQueryParam) {
         return deviceRepository.listTable(deviceQueryParam);
     }
 
-    @Transactional(readOnly = true)
     public Page<DeviceTableDto> searchDevices(DeviceSearchParam params) {
         return deviceRepository.searchTable(params);
     }
 
-    @Transactional(readOnly = true)
     public DeviceOutputDto findDeviceByIdOrThrow(int deviceId) {
         return deviceRepository
                 .findByDeviceId(deviceId)
-                .orElseThrow(() ->
-                        new NotFoundException(
-                                String.format("Aparelho com id %d não encontrado", deviceId)));
+                .orElseThrow(() -> NotFoundException.of("Aparelho", deviceId));
     }
 
-    @Transactional(readOnly = true)
     public void ensureDeviceExists(int deviceId) {
         fetchOrThrow(deviceId);
     }
@@ -287,7 +282,7 @@ public class DeviceService {
         } else if (oldDevice.getDepartureDate() != null) {
             effectiveDepartureDate = oldDevice.getDepartureDate().toLocalDateTime();
         } else if (newStatus.isClosed()) {
-            effectiveDepartureDate = LocalDateTime.now();
+            effectiveDepartureDate = LocalDateTime.now(clock);
         } else {
             effectiveDepartureDate = null;
         }
@@ -310,7 +305,7 @@ public class DeviceService {
         } else if (reopeningWithoutExplicitDeparture) {
             oldDevice.setDepartureDate(null);
         } else if (oldDevice.getDepartureDate() == null && newStatus.isClosed()) {
-            oldDevice.setDepartureDate(Timestamp.valueOf(effectiveDepartureDate));
+            oldDevice.setDepartureDate(Timestamp.from(clock.instant()));
         }
 
         deviceRepository.saveAndFlush(oldDevice);
@@ -329,11 +324,7 @@ public class DeviceService {
         Customer customer =
                 customerRepository
                         .findById(device.customerId())
-                        .orElseThrow(() ->
-                                new NotFoundException(
-                                        String.format(
-                                                "Cliente com id %d não encontrado",
-                                                device.customerId())));
+                        .orElseThrow(() -> NotFoundException.of("Cliente", device.customerId()));
 
         BrandsModelsTypes brandModelType =
                 typeBrandModelService.createOrReturnExistentBrandModelType(device.typeBrandModel());
@@ -353,7 +344,7 @@ public class DeviceService {
         newDevice.setBudgetFee(Optional.ofNullable(device.budgetFee()).orElse(BigDecimal.ZERO));
         newDevice.setUrgency(device.hasUrgency());
         newDevice.setDeviceStatus(DeviceStatusEnum.NOVO);
-        newDevice.setEntryDate(Timestamp.valueOf(LocalDateTime.now()));
+        newDevice.setEntryDate(Timestamp.from(clock.instant()));
         Optional.ofNullable(device.technicianId())
                 .ifPresent(id -> {
                     Technician technician = technicianService.findById(id);

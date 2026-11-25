@@ -2,8 +2,9 @@ package com.tproject.workshop.dto.device;
 
 import com.tproject.workshop.utils.filter_utils.Ordenation;
 import com.tproject.workshop.utils.filter_utils.OrderByDirection;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import com.tproject.workshop.validation.PageBounds;
+import com.tproject.workshop.validation.ValidPageNumber;
+import com.tproject.workshop.validation.ValidPageSize;
 import java.util.List;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
@@ -34,13 +35,9 @@ public class DeviceQueryParam {
 
     String finalEntryDate;
 
-    @Min(value = 0, message = "O número da página deve ser maior ou igual a zero")
-    @Max(value = 100000, message = "O número da página deve ser no máximo 100000")
-    int page = 0;
+    @ValidPageNumber int page = PageBounds.DEFAULT_PAGE;
 
-    @Min(value = 1, message = "O tamanho da página deve ser maior que zero")
-    @Max(value = 100, message = "O tamanho da página deve ser no máximo 100")
-    int size = 15;
+    @ValidPageSize int size = PageBounds.DEFAULT_SIZE;
 
     Ordenation ordenation = new Ordenation("entry_date", OrderByDirection.DESC);
 }

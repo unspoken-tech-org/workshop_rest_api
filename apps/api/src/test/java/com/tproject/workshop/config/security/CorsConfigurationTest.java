@@ -76,7 +76,7 @@ class CorsConfigurationTest {
     private static CorsConfiguration configFor(CorsProperties properties) {
         MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", PATH);
         CorsConfiguration config =
-                new SecurityConfig(null, properties)
+                new SecurityConfig(null, properties, null)
                         .corsConfigurationSource()
                         .getCorsConfiguration(request);
         assertThat(config).isNotNull();

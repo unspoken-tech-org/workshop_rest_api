@@ -3,6 +3,7 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.dto.technician.TechnicianResponseDto;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.model.Technician;
 import com.tproject.workshop.repository.TechnicianRepository;
 import com.tproject.workshop.utils.CatalogName;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 @Service
+@Transactional(readOnly = true)
 public class TechnicianService {
 
     private final TechnicianRepository technicianRepository;
@@ -29,9 +31,7 @@ public class TechnicianService {
     public Technician findById(int id) {
         return technicianRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new NotFoundException(
-                                String.format("Técnico com id %d não encontrado", id)));
+                .orElseThrow(() -> NotFoundException.of("Técnico", id));
     }
 
     @Transactional
@@ -46,7 +46,7 @@ public class TechnicianService {
                 normalized -> technicianRepository.insertIgnore(normalized, number),
                 null,
                 () ->
-                        new NotFoundException(
+                        new WorkshopException(
                                 "Erro ao criar ou buscar técnico: " + technician.getName()));
     }
 

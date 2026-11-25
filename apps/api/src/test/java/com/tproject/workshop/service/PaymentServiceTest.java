@@ -27,6 +27,7 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -37,6 +38,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -50,6 +52,7 @@ class PaymentServiceTest {
     @Mock private PaymentRepository paymentRepository;
     @Mock private DeviceRepository deviceRepository;
     @Mock private ObservabilityEventRecorder eventRecorder;
+    @Spy private Clock clock = Clock.systemDefaultZone();
 
     @InjectMocks private PaymentService paymentService;
 

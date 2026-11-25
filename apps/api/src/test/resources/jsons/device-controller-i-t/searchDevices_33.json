@@ -45,29 +45,9 @@
             "departureDate": "2023-01-08T14:41:00.968173"
         }
     ],
-    "pageable": {
-        "pageNumber": 0,
-        "pageSize": 3,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 0,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": false,
-    "totalPages": 5,
-    "totalElements": 15,
-    "first": true,
-    "size": 3,
     "number": 0,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 3,
-    "empty": false
+    "size": 3,
+    "totalElements": 15,
+    "totalPages": 5,
+    "last": false
 }

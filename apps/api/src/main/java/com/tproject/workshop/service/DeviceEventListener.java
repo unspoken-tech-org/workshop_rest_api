@@ -3,7 +3,7 @@ package com.tproject.workshop.service;
 import com.tproject.workshop.events.DeviceViewedEvent;
 import com.tproject.workshop.repository.DeviceRepository;
 import java.sql.Timestamp;
-import java.time.Instant;
+import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -19,6 +19,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class DeviceEventListener {
 
     private final DeviceRepository deviceRepository;
+    private final Clock clock;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -28,7 +29,7 @@ public class DeviceEventListener {
             log.debug("Device {} viewed, updating lastViewedAt", event.getDeviceId());
             int updated =
                     deviceRepository.updateLastViewedAt(
-                            event.getDeviceId(), Timestamp.from(Instant.now()));
+                            event.getDeviceId(), Timestamp.from(clock.instant()));
             if (updated == 0) {
                 log.warn("Device {} not found, lastViewedAt not updated", event.getDeviceId());
             }

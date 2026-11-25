@@ -217,29 +217,9 @@
             "departureDate": "2021-04-28T08:41:00.968173"
         }
     ],
-    "pageable": {
-        "pageNumber": 0,
-        "pageSize": 100,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 0,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": true,
-    "totalPages": 1,
-    "totalElements": 15,
-    "first": true,
-    "size": 100,
     "number": 0,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 15,
-    "empty": false
+    "size": 100,
+    "totalElements": 15,
+    "totalPages": 1,
+    "last": true
 }

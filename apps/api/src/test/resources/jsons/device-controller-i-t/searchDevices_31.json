@@ -72,29 +72,9 @@
             "entryDate": "2021-09-03T08:41:00.968173"
         }
     ],
-    "pageable": {
-        "pageNumber": 1,
-        "pageSize": 5,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 5,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": false,
-    "totalPages": 3,
-    "totalElements": 15,
-    "first": false,
-    "size": 5,
     "number": 1,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 5,
-    "empty": false
+    "size": 5,
+    "totalElements": 15,
+    "totalPages": 3,
+    "last": false
 }

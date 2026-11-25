@@ -40,29 +40,9 @@
             "entryDate": "2024-12-20T00:00:00"
         }
     ],
-    "pageable": {
-        "pageNumber": 0,
-        "pageSize": 3,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 0,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": false,
-    "totalPages": 19,
-    "totalElements": 55,
-    "size": 3,
     "number": 0,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "first": true,
-    "numberOfElements": 3,
-    "empty": false
+    "size": 3,
+    "totalElements": 55,
+    "totalPages": 19,
+    "last": false
 }

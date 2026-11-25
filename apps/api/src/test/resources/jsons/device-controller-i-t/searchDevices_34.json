@@ -1,30 +1,8 @@
 {
-    "content": [
-        
-    ],
-    "pageable": {
-        "pageNumber": 10,
-        "pageSize": 5,
-        "sort": {
-            "empty": true,
-            "sorted": false,
-            "unsorted": true
-        },
-        "offset": 50,
-        "paged": true,
-        "unpaged": false
-    },
-    "last": true,
-    "totalPages": 3,
-    "totalElements": 15,
-    "first": false,
-    "size": 5,
+    "content": [],
     "number": 10,
-    "sort": {
-        "empty": true,
-        "sorted": false,
-        "unsorted": true
-    },
-    "numberOfElements": 0,
-    "empty": true
+    "size": 5,
+    "totalElements": 15,
+    "totalPages": 3,
+    "last": true
 }

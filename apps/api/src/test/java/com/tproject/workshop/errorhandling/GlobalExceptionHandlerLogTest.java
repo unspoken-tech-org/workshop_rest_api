@@ -47,9 +47,15 @@ class GlobalExceptionHandlerLogTest {
 
     @Test
     void shouldLogClientErrorByCodeAndRouteWithoutMessageValues() {
-        handler.handleEntityAlreadyExistsException(
-                new EntityAlreadyExistsException("O CPF " + SENTINEL_CPF + " já está em uso"),
-                request());
+        ResponseEntity<ResponseError> response =
+                handler.handleDomainException(
+                        new EntityAlreadyExistsException(
+                                "O CPF " + SENTINEL_CPF + " já está em uso"),
+                        request());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getErrors().getCode()).isEqualTo("recurso.conflito");
 
         String logged = appender.list.get(0).getFormattedMessage();
         assertThat(logged).contains("route=/v1/customers/{id}", "recurso.conflito");

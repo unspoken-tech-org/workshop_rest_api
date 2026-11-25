@@ -1,6 +1,7 @@
 package com.tproject.workshop.controller.impl;
 
 import com.tproject.workshop.controller.BrandController;
+import com.tproject.workshop.dto.PageResponse;
 import com.tproject.workshop.dto.brand.BrandResponseDto;
 import com.tproject.workshop.dto.brand.BrandSearchParam;
 import com.tproject.workshop.dto.brand.CreateBrandRequest;
@@ -8,7 +9,6 @@ import com.tproject.workshop.service.BrandService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,8 +25,8 @@ public class BrandControllerImpl implements BrandController {
     }
 
     @Override
-    public Page<BrandResponseDto> search(@Valid BrandSearchParam params) {
-        return brandService.searchBrands(params);
+    public PageResponse<BrandResponseDto> search(@Valid BrandSearchParam params) {
+        return PageResponse.from(brandService.searchBrands(params));
     }
 
     @Override

@@ -2,9 +2,10 @@ package com.tproject.workshop.dto.device;
 
 import com.tproject.workshop.utils.filter_utils.Ordenation;
 import com.tproject.workshop.utils.filter_utils.OrderByDirection;
+import com.tproject.workshop.validation.PageBounds;
+import com.tproject.workshop.validation.ValidPageNumber;
+import com.tproject.workshop.validation.ValidPageSize;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
@@ -32,20 +33,14 @@ public record DeviceSearchParam(
                 String initialEntryDate,
         @Schema(description = "End date for entry date range (yyyy-MM-dd)", example = "2026-06-10")
                 String finalEntryDate,
-        @Schema(description = "Page number (0-based)", example = "0")
-                @Min(value = 0, message = "O número da página deve ser maior ou igual a zero")
-                @Max(value = 100000, message = "O número da página deve ser no máximo 100000")
-                Integer page,
-        @Schema(description = "Page size", example = "15")
-                @Min(value = 1, message = "O tamanho da página deve ser maior que zero")
-                @Max(value = 100, message = "O tamanho da página deve ser no máximo 100")
-                Integer size,
+        @Schema(description = "Page number (0-based)", example = "0") @ValidPageNumber Integer page,
+        @Schema(description = "Page size", example = "15") @ValidPageSize Integer size,
         @Schema(description = "Ordering configuration (field and direction)")
                 Ordenation ordenation) {
     public DeviceSearchParam {
         if (status == null) status = List.of();
-        if (page == null) page = 0;
-        if (size == null) size = 15;
+        page = PageBounds.normalizePage(page);
+        size = PageBounds.normalizeSize(size);
         if (ordenation == null) ordenation = new Ordenation("entry_date", OrderByDirection.DESC);
         if (searchQuery != null && searchQuery.isBlank()) searchQuery = null;
     }

@@ -1,13 +1,13 @@
 package com.tproject.workshop.controller;
 
 import com.tproject.workshop.config.openapi.ApiGlobalResponses;
+import com.tproject.workshop.dto.PageResponse;
 import com.tproject.workshop.dto.device.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +23,7 @@ public interface DeviceController {
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Devices filtered successfully")
     @PostMapping("/filter")
-    Page<DeviceTableDto> list(
+    PageResponse<DeviceTableDto> list(
             @RequestBody(required = false) @Valid DeviceQueryParam deviceQueryParam);
 
     @Operation(
@@ -95,5 +95,5 @@ public interface DeviceController {
     @ApiGlobalResponses
     @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     @PostMapping("/search")
-    Page<DeviceTableDto> search(@RequestBody @Valid DeviceSearchParam params);
+    PageResponse<DeviceTableDto> search(@RequestBody @Valid DeviceSearchParam params);
 }
