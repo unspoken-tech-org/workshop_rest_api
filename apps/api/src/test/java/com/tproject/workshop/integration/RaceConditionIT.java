@@ -28,9 +28,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.context.jdbc.Sql;
 
-@Sql({"/test-scripts/cleanTestData.sql"})
 public class RaceConditionIT extends AbstractIntegrationTest {
 
     private static final List<String> VALID_CPFS =

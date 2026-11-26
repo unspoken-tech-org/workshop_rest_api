@@ -3,7 +3,6 @@ package com.tproject.workshop.integration.support;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tproject.workshop.integration.TestAuthHelper;
 import com.tproject.workshop.utils.TestFileUtils;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.LogConfig;
@@ -33,17 +32,22 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.TestExecutionListeners.MergeMode;
 
 @Import(TestcontainersConfig.class)
 @ActiveProfiles("test")
 @Tag("integration")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestExecutionListeners(
+        listeners = DatabaseCleanerTestExecutionListener.class,
+        mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
 public abstract class AbstractIntegrationTest {
 
     protected static final String TESTS_HOST = "localhost";
     protected static final String PROTOCOL_HTTP = "http://";
 
-    protected static final String API_KEY = TestAuthHelper.MOBILE_API_KEY;
+    protected static final String API_KEY = TestAuthClient.MOBILE_API_KEY;
 
     @LocalServerPort protected int port;
 
@@ -52,6 +56,7 @@ public abstract class AbstractIntegrationTest {
     @Autowired private ObjectMapper objectMapper;
 
     protected RequestSpecification SPEC;
+    protected TestAuthClient authClient;
 
     // Lazy-initialized authenticated spec (cached after first use)
     private RequestSpecification cachedAuthenticatedSpec;
@@ -59,8 +64,8 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeEach
     void setUpBaseIntegrationTest() {
-        TestAuthHelper.invalidateTokenCache();
         SPEC = createRequestSpecification(port);
+        authClient = new TestAuthClient(SPEC);
         cachedAuthenticatedSpec = null;
         cachedServiceAuthenticatedSpec = null;
     }
@@ -84,7 +89,7 @@ public abstract class AbstractIntegrationTest {
      */
     protected RequestSpecification getAuthenticatedSpec() {
         if (cachedAuthenticatedSpec == null) {
-            String token = TestAuthHelper.getAccessToken(SPEC, API_KEY);
+            String token = authClient.getAccessToken(API_KEY);
             cachedAuthenticatedSpec = buildAuthenticatedSpec(token);
         }
         return cachedAuthenticatedSpec;
@@ -97,7 +102,7 @@ public abstract class AbstractIntegrationTest {
      */
     protected RequestSpecification getServiceAuthenticatedSpec() {
         if (cachedServiceAuthenticatedSpec == null) {
-            String token = TestAuthHelper.getAccessToken(SPEC, TestAuthHelper.SERVICE_API_KEY);
+            String token = authClient.getAccessToken(TestAuthClient.SERVICE_API_KEY);
             cachedServiceAuthenticatedSpec = buildAuthenticatedSpec(token);
         }
         return cachedServiceAuthenticatedSpec;

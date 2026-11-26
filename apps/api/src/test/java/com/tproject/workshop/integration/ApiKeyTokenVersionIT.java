@@ -13,11 +13,7 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
 public class ApiKeyTokenVersionIT extends AbstractIntegrationTest {
 
     private static final long API_KEY_ID = 1L;

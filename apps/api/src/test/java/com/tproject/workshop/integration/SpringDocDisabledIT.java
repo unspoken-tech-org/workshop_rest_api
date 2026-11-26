@@ -13,11 +13,7 @@ import org.springframework.test.context.jdbc.Sql;
  * SpringDoc is off by default (application.yml) and only the local profile turns it on, so the test
  * profile mirrors QA and PRD: no public OpenAPI or Swagger UI.
  */
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
 class SpringDocDisabledIT extends AbstractIntegrationTest {
 
     @ParameterizedTest

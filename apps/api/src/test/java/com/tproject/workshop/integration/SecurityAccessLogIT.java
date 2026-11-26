@@ -17,11 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.test.context.jdbc.Sql;
 
 /** Requests rejected by Spring Security also produce an access log (R18). */
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
 class SecurityAccessLogIT extends AbstractIntegrationTest {
 
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();

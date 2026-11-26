@@ -1,4 +1,4 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
