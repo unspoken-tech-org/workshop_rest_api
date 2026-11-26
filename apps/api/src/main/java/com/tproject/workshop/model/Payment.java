@@ -5,12 +5,17 @@ import com.tproject.workshop.enums.PaymentMethodEnum;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @Entity(name = "payments")
 public class Payment {
@@ -42,6 +47,7 @@ public class Payment {
 
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_device")
+    @ToString.Exclude
     private Device device;
 
     @UpdateTimestamp
@@ -51,4 +57,17 @@ public class Payment {
     @Version
     @Column(name = "version", nullable = false)
     private Long version = 0L;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        Payment that = (Payment) o;
+        return getId() != null && getId().equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
+    }
 }

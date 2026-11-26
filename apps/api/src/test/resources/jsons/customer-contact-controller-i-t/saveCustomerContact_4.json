@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Requisição Inválida",
-    "status": 400,
-    "detail": "O número de telefone deve ser fornecido para os tipos de contato: ligacao, mensagem",
-    "instance": "/v1/customer-contact",
-    "code": "requisicao.invalida"
-}

@@ -1,250 +1,230 @@
 package com.tproject.workshop.integration.controller;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import com.tproject.workshop.integration.TestAuthHelper;
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
-import io.restassured.response.Response;
+import com.tproject.workshop.integration.support.TestAuthClient;
+import com.tproject.workshop.support.fixtures.IntegrationFixtures;
+import io.restassured.path.json.JsonPath;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
-import org.apache.http.HttpStatus;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.test.context.jdbc.Sql;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
-public class ApiKeyControllerIT extends AbstractIntegrationTest {
+class ApiKeyControllerIT extends AbstractIntegrationTest {
 
     private static final String BASE_PATH = "/v1/admin/api-keys";
     private static final String AUTH_PATH = "/api/auth/token";
     private static final String API_KEY_HEADER = "X-API-Key";
 
+    @Autowired private ApplicationContext context;
+
+    private IntegrationFixtures fixtures;
+    private long adminId;
+    private long serviceId;
+
     @BeforeEach
-    void setUp() {
-        TestAuthHelper.invalidateTokenCache();
+    void seedApiKeys() {
+        fixtures = new IntegrationFixtures(jdbcTemplate, context);
+        adminId = fixtures.adminApiKey();
+        serviceId = fixtures.serviceApiKey();
     }
 
-    // ========== List API Keys Tests ==========
-
-    @Order(1)
-    @DisplayName("List all API Keys")
     @Test
-    public void shouldListAllApiKeys() {
-        // The snapshot expects lastUsedAt on the default key; the cached token
-        // skips the login after @Sql recreates the keys (R22), so log in here.
-        TestAuthHelper.getAccessToken(SPEC, API_KEY);
+    @DisplayName("Lists the API keys without exposing their value")
+    void shouldListApiKeys_whenAuthenticatedAsAdmin() {
+        long inactiveId =
+                fixtures.apiKey(
+                        "sk_mobile_TEST_KEY_INACTIVE_12345678901234567890",
+                        "test_inactive",
+                        "inactive_user",
+                        "MOBILE",
+                        "SERVICE",
+                        false,
+                        null);
+        // Authenticating records lastUsedAt on the admin key.
+        getAuthenticatedSpec();
 
-        Response response =
+        List<Map<String, Object>> keys =
                 given().spec(getAuthenticatedSpec())
-                        .when()
                         .get(BASE_PATH)
                         .then()
-                        .statusCode(HttpStatus.SC_OK)
+                        .statusCode(HttpStatus.OK.value())
                         .extract()
-                        .response();
+                        .jsonPath()
+                        .getList("$");
 
-        super.validateResponseIgnoreAttributes(
-                "list",
-                response,
-                List.of(
-                        "[0].id",
-                        "[0].createdAt",
-                        "[0].updatedAt",
-                        "[0].lastUsedAt",
-                        "[0].expiresAt",
-                        "[1].id",
-                        "[1].createdAt",
-                        "[1].updatedAt",
-                        "[1].lastUsedAt",
-                        "[1].expiresAt",
-                        "[2].id",
-                        "[2].createdAt",
-                        "[2].updatedAt",
-                        "[2].lastUsedAt",
-                        "[2].expiresAt",
-                        "[3].id",
-                        "[3].createdAt",
-                        "[3].updatedAt",
-                        "[3].lastUsedAt",
-                        "[3].expiresAt",
-                        "[4].id",
-                        "[4].createdAt",
-                        "[4].updatedAt",
-                        "[4].lastUsedAt",
-                        "[4].expiresAt",
-                        "[5].id",
-                        "[5].createdAt",
-                        "[5].updatedAt",
-                        "[5].lastUsedAt",
-                        "[5].expiresAt",
-                        "[6].id",
-                        "[6].createdAt",
-                        "[6].updatedAt",
-                        "[6].lastUsedAt",
-                        "[6].expiresAt",
-                        "[7].id",
-                        "[7].createdAt",
-                        "[7].updatedAt",
-                        "[7].lastUsedAt",
-                        "[7].expiresAt"));
+        assertThat(keys).hasSize(3);
+        assertThat(keys).allSatisfy(key -> assertThat(key.get("maskedKeyValue")).isEqualTo("****"));
+        assertThat(keys).allSatisfy(key -> assertThat(key).doesNotContainKey("keyValue"));
+        Map<String, Object> admin = byId(keys, adminId);
+        assertThat(admin)
+                .containsEntry("clientName", "test_app")
+                .containsEntry("userIdentifier", "admin_user")
+                .containsEntry("platform", "MOBILE")
+                .containsEntry("role", "ADMIN")
+                .containsEntry("active", true);
+        assertThat(admin.get("lastUsedAt")).isNotNull();
+        assertThat(byId(keys, serviceId)).containsEntry("role", "SERVICE");
+        assertThat(byId(keys, inactiveId)).containsEntry("active", false);
     }
 
-    @Order(2)
-    @DisplayName("List API Keys - unauthorized")
     @Test
-    public void shouldReturn401_whenListingWithoutAuth() {
-        given().spec(SPEC).when().get(BASE_PATH).then().statusCode(HttpStatus.SC_UNAUTHORIZED);
+    @DisplayName("Rejects listing without JWT")
+    void shouldReturn401_whenListingWithoutAuth() {
+        given().spec(SPEC).get(BASE_PATH).then().statusCode(HttpStatus.UNAUTHORIZED.value());
     }
 
-    // ========== Create API Key Tests ==========
+    @ParameterizedTest(name = "{0} / {1}")
+    @CsvSource({
+        "new_client_mobile,tech_1,MOBILE,sk_mobile_",
+        "new_client_web,web_user,WEB,sk_web_"
+    })
+    @DisplayName("Creates an API key and returns the plaintext value once")
+    void shouldCreateApiKey_whenRequestIsValid(
+            String clientName, String userIdentifier, String platform, String prefix) {
+        JsonPath body =
+                create(
+                        Map.of(
+                                "clientName", clientName,
+                                "userIdentifier", userIdentifier,
+                                "platform", platform,
+                                "description", "New client"),
+                        HttpStatus.CREATED);
 
-    @Order(3)
-    @DisplayName("Create API Key")
-    @MethodSource("createApiKeyArguments")
-    @ParameterizedTest(name = "{displayName} : {0} status {1} reason {3}")
-    public void createApiKey(
-            int index, Integer statusCode, Map<String, Object> body, String reason) {
-        Response response =
-                given().spec(getAuthenticatedSpec())
-                        .body(body)
-                        .when()
-                        .post(BASE_PATH)
-                        .then()
-                        .statusCode(statusCode)
-                        .extract()
-                        .response();
-
-        if (statusCode == HttpStatus.SC_CREATED) {
-            super.validateResponseIgnoreAttributes(
-                    index, response, List.of("id", "keyValue", "createdAt", "updatedAt"));
-        } else {
-            super.validateResponse(index, response);
-        }
+        assertThat(body.getString("keyValue")).startsWith(prefix);
+        assertThat(body.getString("clientName")).isEqualTo(clientName);
+        assertThat(body.getString("userIdentifier")).isEqualTo(userIdentifier);
+        assertThat(body.getString("platform")).isEqualTo(platform);
+        assertThat(body.getString("role")).isEqualTo("SERVICE");
+        assertThat(body.getString("description")).isEqualTo("New client");
+        assertThat(body.getString("createdAt")).isNotBlank();
+        assertThat(body.getLong("id")).isNotIn(adminId, serviceId);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT key_value FROM api_keys WHERE id = ?",
+                                String.class,
+                                body.getLong("id")))
+                .isNotEqualTo(body.getString("keyValue"));
     }
 
-    private static Stream<Arguments> createApiKeyArguments() {
-        return Stream.of(
-                // Successful creation
-                Arguments.of(
-                        1,
-                        HttpStatus.SC_CREATED,
-                        Map.of(
-                                "clientName", "new_client_mobile",
-                                "userIdentifier", "tech_1",
-                                "platform", "MOBILE",
-                                "description", "New mobile client"),
-                        "create API Key for new mobile client"),
-                Arguments.of(
-                        2,
-                        HttpStatus.SC_CREATED,
-                        Map.of(
-                                "clientName", "new_client_web",
-                                "userIdentifier", "web_user",
-                                "platform", "WEB",
-                                "description", "New web client"),
-                        "create API Key for new web client"),
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "clientName|Nome do cliente é obrigatório",
+                "platform|Plataforma é obrigatória",
+                "userIdentifier|Identificador do usuário é obrigatório"
+            })
+    @DisplayName("Rejects a request missing a required field")
+    void shouldReturn400_whenRequiredFieldIsMissing(String missing, String detail) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("clientName", "test_client");
+        request.put("userIdentifier", "tech_1");
+        request.put("platform", "MOBILE");
+        request.put("description", "desc");
+        request.remove(missing);
 
-                // Validation errors
-                Arguments.of(
-                        3,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "userIdentifier", "tech_1",
-                                "platform", "MOBILE",
-                                "description", "Missing client name"),
-                        "create API Key without clientName"),
-                Arguments.of(
-                        4,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "clientName", "test_client",
-                                "userIdentifier", "tech_1",
-                                "description", "Missing platform"),
-                        "create API Key without platform"),
-                Arguments.of(
-                        6,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "clientName", "test_client",
-                                "platform", "MOBILE",
-                                "description", "Missing user identifier"),
-                        "create API Key without userIdentifier"),
+        JsonPath body = create(request, HttpStatus.BAD_REQUEST);
 
-                // Conflict - duplicate (same client, user and platform)
-                Arguments.of(
-                        5,
-                        HttpStatus.SC_CONFLICT,
+        assertThat(body.getString("code")).isEqualTo("erro.validacao");
+        assertThat(body.getString("detail")).isEqualTo(detail);
+        assertThat(countKeys()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Rejects a second active key for the same client, user and platform")
+    void shouldReturn409_whenKeyAlreadyExistsForClientUserAndPlatform() {
+        JsonPath body =
+                create(
                         Map.of(
                                 "clientName", "test_app",
                                 "userIdentifier", "admin_user",
                                 "platform", "MOBILE",
                                 "description", "Duplicate - should fail"),
-                        "create duplicate API Key - same client, user and platform"));
+                        HttpStatus.CONFLICT);
+
+        assertThat(body.getString("code")).isEqualTo("recurso.conflito");
+        assertThat(countKeys()).isEqualTo(2);
     }
 
-    // ========== RBAC Authorization Tests ==========
-
-    @Order(4)
-    @DisplayName("Create API Key - Forbidden (Service Role)")
     @Test
-    public void shouldReturn403_whenCreatingWithServiceRole() {
+    @DisplayName("SERVICE role cannot create API keys")
+    void shouldReturn403_whenCreatingWithServiceRole() {
         given().spec(getServiceAuthenticatedSpec())
                 .body(
                         Map.of(
                                 "clientName", "some_client",
                                 "userIdentifier", "some_user",
                                 "platform", "MOBILE"))
-                .when()
                 .post(BASE_PATH)
                 .then()
-                .statusCode(HttpStatus.SC_FORBIDDEN);
+                .statusCode(HttpStatus.FORBIDDEN.value());
+        assertThat(countKeys()).isEqualTo(2);
     }
 
-    @Order(5)
-    @DisplayName("Revoke API Key - Forbidden (Service Role)")
     @Test
-    public void shouldReturn403_whenRevokingWithServiceRole() {
+    @DisplayName("SERVICE role cannot revoke API keys")
+    void shouldReturn403_whenRevokingWithServiceRole() {
         given().spec(getServiceAuthenticatedSpec())
-                .when()
-                .delete(BASE_PATH + "/1")
+                .delete(BASE_PATH + "/" + adminId)
                 .then()
-                .statusCode(HttpStatus.SC_FORBIDDEN);
+                .statusCode(HttpStatus.FORBIDDEN.value());
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT active FROM api_keys WHERE id = ?", Boolean.class, adminId))
+                .isTrue();
     }
 
-    @Order(6)
-    @DisplayName("Reset API Key device binding")
     @Test
-    public void shouldResetDeviceBinding() {
-        given().spec(SPEC)
-                .header(API_KEY_HEADER, TestAuthHelper.SERVICE_API_KEY)
-                .body(
-                        Map.of(
-                                "boundDeviceId", "device-a",
-                                "appVersion", "1.0.0"))
-                .when()
-                .post(AUTH_PATH)
-                .then()
-                .statusCode(HttpStatus.SC_OK);
+    @DisplayName("Resetting the device binding lets the key log in from another device")
+    void shouldResetDeviceBinding() {
+        login(TestAuthClient.SERVICE_API_KEY, "device-a", HttpStatus.OK);
+        login(TestAuthClient.SERVICE_API_KEY, "device-b", HttpStatus.CONFLICT);
 
         given().spec(getAuthenticatedSpec())
-                .when()
-                .post(BASE_PATH + "/7/reset-device")
+                .post(BASE_PATH + "/" + serviceId + "/reset-device")
                 .then()
-                .statusCode(HttpStatus.SC_NO_CONTENT);
+                .statusCode(HttpStatus.NO_CONTENT.value());
 
+        login(TestAuthClient.SERVICE_API_KEY, "device-b", HttpStatus.OK);
+    }
+
+    private void login(String apiKey, String deviceId, HttpStatus expected) {
         given().spec(SPEC)
-                .header(API_KEY_HEADER, TestAuthHelper.SERVICE_API_KEY)
-                .body(
-                        Map.of(
-                                "boundDeviceId", "device-b",
-                                "appVersion", "1.0.0"))
-                .when()
+                .header(API_KEY_HEADER, apiKey)
+                .body(Map.of("boundDeviceId", deviceId, "appVersion", "1.0.0"))
                 .post(AUTH_PATH)
                 .then()
-                .statusCode(HttpStatus.SC_OK);
+                .statusCode(expected.value());
+    }
+
+    private JsonPath create(Map<String, Object> body, HttpStatus expected) {
+        return given().spec(getAuthenticatedSpec())
+                .body(body)
+                .post(BASE_PATH)
+                .then()
+                .statusCode(expected.value())
+                .extract()
+                .jsonPath();
+    }
+
+    private int countKeys() {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM api_keys", Integer.class);
+    }
+
+    private static Map<String, Object> byId(List<Map<String, Object>> keys, long id) {
+        return keys.stream()
+                .filter(key -> ((Number) key.get("id")).longValue() == id)
+                .findFirst()
+                .orElseThrow();
     }
 }

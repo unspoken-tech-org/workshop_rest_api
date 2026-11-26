@@ -6,14 +6,18 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.FieldNameConstants;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @FieldNameConstants(asEnum = true)
 @Entity(name = "devices")
@@ -98,5 +102,18 @@ public class Device {
 
     public Device(int id) {
         this.id = id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        Device that = (Device) o;
+        return getId() != 0 && getId() == that.getId();
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
     }
 }

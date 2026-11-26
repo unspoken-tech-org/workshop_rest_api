@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "API Key Inválida",
-    "status": 401,
-    "detail": "Expired API Key",
-    "instance": "/api/auth/token",
-    "code": "auth.invalid.api.key"
-}

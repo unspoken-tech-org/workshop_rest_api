@@ -3,12 +3,16 @@ package com.tproject.workshop.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-@Data
+@Getter
+@Setter
+@ToString
 @Entity(name = "models")
 public class Model {
     @Id
@@ -33,4 +37,17 @@ public class Model {
 
     @Column(name = "name_key", insertable = false, updatable = false)
     private String nameKey;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        Model that = (Model) o;
+        return getIdModel() != null && getIdModel().equals(that.getIdModel());
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
+    }
 }

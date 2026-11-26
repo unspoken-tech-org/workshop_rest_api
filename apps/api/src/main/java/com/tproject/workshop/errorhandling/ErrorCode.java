@@ -15,6 +15,12 @@ public enum ErrorCode {
     VALIDATION_ERROR("erro.validacao", HttpStatus.BAD_REQUEST, "Erro de Validação"),
     RESOURCE_CONFLICT("recurso.conflito", HttpStatus.CONFLICT, "Conflito de Recurso"),
     VERSION_CONFLICT("recurso.conflito.versao", HttpStatus.CONFLICT, "Conflito de Versão"),
+    IDEMPOTENCY_KEY_REUSED(
+            "idempotency.key.reused",
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            "Idempotency-Key Reutilizada"),
+    IDEMPOTENCY_REQUEST_IN_PROGRESS(
+            "idempotency.request.in.progress", HttpStatus.CONFLICT, "Requisição em Processamento"),
     PAYLOAD_TOO_LARGE("payload.too.large", HttpStatus.PAYLOAD_TOO_LARGE, "Payload muito grande"),
     DATABASE_ERROR("database.error", HttpStatus.INTERNAL_SERVER_ERROR, "Erro de Banco de Dados"),
     INTERNAL_SERVER_ERROR(

@@ -4,481 +4,396 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
-import io.restassured.response.Response;
-import java.util.List;
+import com.tproject.workshop.support.fixtures.IntegrationFixtures;
+import io.restassured.path.json.JsonPath;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
-import org.apache.http.HttpStatus;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.test.context.jdbc.Sql;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/CustomerContactControllerIT.script.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
-public class CustomerContactControllerIT extends AbstractIntegrationTest {
+class CustomerContactControllerIT extends AbstractIntegrationTest {
+
     private static final String BASE_PATH = "/v1/customer-contact";
+    private static final String CONTACT_PHONE = "44987654321";
+    private static final String CONTACT_DATE = "2025-06-03T23:08:14.110245";
 
-    @Order(0)
-    @DisplayName("Reject access without JWT")
+    @Autowired private ApplicationContext context;
+
+    private int deviceId;
+    private int technicianId;
+    private int existingContactId;
+
+    @BeforeEach
+    void seedDevice() {
+        IntegrationFixtures fixtures = new IntegrationFixtures(jdbcTemplate, context);
+        fixtures.adminApiKey();
+        int customer = fixtures.customer("Test Customer CContact");
+        fixtures.customerPhone(customer, CONTACT_PHONE, true, "Telefone Teste");
+        int defaultTechnician = fixtures.technician("Default Tech", "T001");
+        technicianId = fixtures.technician("Contact Test Tech", "T002");
+        deviceId =
+                fixtures.device(
+                        customer, fixtures.anyBrandModelType(), defaultTechnician, "EM_ANDAMENTO");
+        existingContactId =
+                fixtures.customerContact(
+                        deviceId, defaultTechnician, "2024-01-10 09:00:00", "EM_ANDAMENTO");
+    }
+
     @Test
-    public void shouldReturn401_whenNoJwt() {
+    @DisplayName("Rejects access without JWT")
+    void shouldReturn401_whenNoJwt() {
         given().spec(SPEC)
-                .when()
-                .get(BASE_PATH + "/1")
+                .body(validBody())
+                .post(BASE_PATH)
                 .then()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+                .statusCode(HttpStatus.UNAUTHORIZED.value());
     }
 
-    @Order(1)
-    @DisplayName("Save customer contact")
-    @MethodSource("saveCustomerContactArguments")
-    @ParameterizedTest(name = "{displayName} : {0} status {1} body {2} reason {3}")
-    public void saveCustomerContact(
-            int index, Integer statusCode, Map<String, Object> arguments, String reason) {
-        Response response =
-                given().spec(getAuthenticatedSpec())
-                        .when()
-                        .contentType("application/json")
-                        .body(arguments)
-                        .post(BASE_PATH)
-                        .then()
-                        .statusCode(statusCode)
-                        .extract()
-                        .response();
+    // -------------------------------------------------------------------- save
 
-        super.validateResponseIgnoreAttributes(index, response, List.of("lastContact"));
-    }
-
-    private static Stream<Arguments> saveCustomerContactArguments() {
-        return Stream.of(
-                Arguments.of(
-                        1,
-                        HttpStatus.SC_CREATED,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "create valid customer contact"),
-                Arguments.of(
-                        2,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing deviceId"),
-                Arguments.of(
-                        3,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing technicianId"),
-                Arguments.of(
-                        4,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing phoneNumber"),
-                Arguments.of(
-                        5,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "empty message"),
-                Arguments.of(
-                        6,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing message"),
-                Arguments.of(
-                        7,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing contactStatus"),
-                Arguments.of(
-                        8,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing deviceStatus"),
-                Arguments.of(
-                        9,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue"),
-                        "missing contactDate"),
-                Arguments.of(
-                        10,
-                        HttpStatus.SC_NOT_FOUND,
-                        Map.of(
-                                "deviceId", 999,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste service fail",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "non-existent deviceId"),
-                Arguments.of(
-                        11,
-                        HttpStatus.SC_NOT_FOUND,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 999,
-                                "phoneNumber", "44987654321",
-                                "message", "teste service fail",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "non-existent technicianId"),
-                Arguments.of(
-                        12,
-                        HttpStatus.SC_NOT_FOUND,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "99999999999",
-                                "message", "teste service fail",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "non-existent phoneNumber"),
-                Arguments.of(
-                        13,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste service fail",
-                                "contactStatus", true,
-                                "deviceStatus", "non_existent_status",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "non-existent deviceStatus"),
-                Arguments.of(
-                        14,
-                        HttpStatus.SC_BAD_REQUEST,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "9999",
-                                "message", "teste service fail",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "phoneNumber does not have min 10 digits"),
-                Arguments.of(
-                        15,
-                        HttpStatus.SC_CREATED,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "(44) 98765-4321",
-                                "message", "teste service fail",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "phoneNumber with special characters"));
-    }
-
-    @Order(2)
-    @DisplayName("Update customer contact")
-    @MethodSource("updateCustomerContactArguments")
-    @ParameterizedTest(name = "{displayName} : {0} status {1} id {2} body {3} reason {4}")
-    public void updateCustomerContact(
-            int index,
-            Integer statusCode,
-            Integer id,
-            Map<String, Object> arguments,
-            String reason) {
-        Response response =
-                given().spec(getAuthenticatedSpec())
-                        .when()
-                        .contentType("application/json")
-                        .body(arguments)
-                        .put(BASE_PATH + "/{id}", id)
-                        .then()
-                        .statusCode(statusCode)
-                        .extract()
-                        .response();
-
-        super.validateResponseIgnoreAttributes(index, response, List.of("lastContact"));
-    }
-
-    private static Stream<Arguments> updateCustomerContactArguments() {
-        return Stream.of(
-                Arguments.of(
-                        1,
-                        HttpStatus.SC_OK,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "updated message",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "update all fields"),
-                Arguments.of(
-                        2,
-                        HttpStatus.SC_OK,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "WHATSAPP",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "device is ready",
-                                "contactStatus", true,
-                                "deviceStatus", "PRONTO",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "update device status to PRONTO"),
-                Arguments.of(
-                        3,
-                        HttpStatus.SC_BAD_REQUEST,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing phoneNumber for mensagem"),
-                Arguments.of(
-                        4,
-                        HttpStatus.SC_BAD_REQUEST,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "non_existent_status",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "invalid device status"),
-                Arguments.of(
-                        5,
-                        HttpStatus.SC_BAD_REQUEST,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "invalid_date"),
-                        "invalid date format"),
-                Arguments.of(
-                        6,
-                        HttpStatus.SC_BAD_REQUEST,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "9999",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "phoneNumber less than 10 digits"),
-                Arguments.of(
-                        7,
-                        HttpStatus.SC_NOT_FOUND,
-                        999,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "non-existent contact id"),
-                Arguments.of(
-                        8,
-                        HttpStatus.SC_NOT_FOUND,
-                        1,
-                        Map.of(
-                                "deviceId", 999,
-                                "contactType", "mensagem",
-                                "technicianId", 2,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "non-existent device id"),
-                Arguments.of(
-                        9,
-                        HttpStatus.SC_NOT_FOUND,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "mensagem",
-                                "technicianId", 999,
-                                "phoneNumber", "44987654321",
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "non-existent technician id"),
-                Arguments.of(
-                        10,
-                        HttpStatus.SC_BAD_REQUEST,
-                        1,
-                        Map.of(
-                                "deviceId", 1,
-                                "contactType", "ligacao",
-                                "technicianId", 2,
-                                "message", "teste",
-                                "contactStatus", true,
-                                "deviceStatus", "entregue",
-                                "contactDate", "2025-06-03T23:08:14.110245"),
-                        "missing phoneNumber for ligacao"));
-    }
-
-    @Order(3)
-    @DisplayName("Only the latest contact changes the current device status")
     @Test
-    public void shouldOnlyChangeDeviceStatus_whenContactIsTheLatest() {
-        // Contato mais recente (2025) marca o aparelho como ENTREGUE.
-        postContact(contactBody("entregue", "2025-06-03T10:00:00"), HttpStatus.SC_CREATED);
+    @DisplayName("Saves a contact and returns it")
+    void shouldSaveContact_whenRequestIsValid() {
+        JsonPath body = save(validBody(), HttpStatus.CREATED);
+
+        assertThat(body.getInt("id")).isNotEqualTo(existingContactId).isPositive();
+        assertThat(body.getInt("deviceId")).isEqualTo(deviceId);
+        assertThat(body.getInt("technicianId")).isEqualTo(technicianId);
+        assertThat(body.getString("technicianName")).isEqualTo("Contact Test Tech");
+        assertThat(body.getString("phone")).isEqualTo(CONTACT_PHONE);
+        assertThat(body.getString("type")).isEqualTo("mensagem");
+        assertThat(body.getBoolean("hasMadeContact")).isTrue();
+        assertThat(body.getString("conversation")).isEqualTo("teste");
+        assertThat(body.getString("deviceStatus")).isEqualTo("ENTREGUE");
+        assertThat(body.getString("lastContact")).isEqualTo(CONTACT_DATE);
+        assertThat(countContacts()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Accepts a phone number with formatting characters")
+    void shouldNormalizePhone_whenNumberHasSpecialCharacters() {
+        Map<String, Object> request = validBody();
+        request.put("phoneNumber", "(44) 98765-4321");
+
+        JsonPath body = save(request, HttpStatus.CREATED);
+
+        assertThat(body.getString("phone")).isEqualTo(CONTACT_PHONE);
+    }
+
+    @ParameterizedTest(name = "missing {0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "deviceId|O ID do dispositivo é obrigatório",
+                "technicianId|O ID do técnico é obrigatório",
+                "message|A mensagem é obrigatória",
+                "contactStatus|O status do contato é obrigatório",
+                "deviceStatus|O status do dispositivo é obrigatório",
+                "contactDate|A data do contato é obrigatória"
+            })
+    @DisplayName("Rejects a contact missing a required field")
+    void shouldReturn400_whenRequiredFieldIsMissing(String field, String detail) {
+        Map<String, Object> request = validBody();
+        request.remove(field);
+
+        JsonPath body = save(request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("code")).isEqualTo("erro.validacao");
+        assertThat(body.getString("detail")).isEqualTo(detail);
+        assertThat(countContacts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Rejects an empty message")
+    void shouldReturn400_whenMessageIsEmpty() {
+        Map<String, Object> request = validBody();
+        request.put("message", "");
+
+        JsonPath body = save(request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("detail")).isEqualTo("A mensagem é obrigatória");
+    }
+
+    @Test
+    @DisplayName("Rejects a message contact without phone number")
+    void shouldReturn400_whenPhoneIsMissingForMessage() {
+        Map<String, Object> request = validBody();
+        request.remove("phoneNumber");
+
+        JsonPath body = save(request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("code")).isEqualTo("requisicao.invalida");
+        assertThat(body.getString("detail"))
+                .isEqualTo(
+                        "O número de telefone deve ser fornecido para os tipos de contato: ligacao, mensagem");
+    }
+
+    @Test
+    @DisplayName("Rejects a phone number shorter than 10 digits")
+    void shouldReturn400_whenPhoneIsTooShort() {
+        Map<String, Object> request = validBody();
+        request.put("phoneNumber", "9999");
+
+        JsonPath body = save(request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo(
+                        "O número de telefone, se preenchido, deve ter no mínimo 10 caracteres e no máximo 11");
+    }
+
+    @Test
+    @DisplayName("Rejects an unknown device status")
+    void shouldReturn400_whenDeviceStatusIsUnknown() {
+        Map<String, Object> request = validBody();
+        request.put("deviceStatus", "non_existent_status");
+
+        JsonPath body = save(request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo("Não foi encontrado o status: non_existent_status");
+    }
+
+    @Test
+    @DisplayName("Returns 404 for an unknown device")
+    void shouldReturn404_whenDeviceDoesNotExist() {
+        Map<String, Object> request = validBody();
+        request.put("deviceId", deviceId + 999);
+
+        JsonPath body = save(request, HttpStatus.NOT_FOUND);
+
+        assertThat(body.getString("code")).isEqualTo("entity.not.found.for.request");
+        assertThat(body.getString("detail"))
+                .isEqualTo("Aparelho com id " + (deviceId + 999) + " não encontrado");
+        assertThat(countContacts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Returns 404 for an unknown technician")
+    void shouldReturn404_whenTechnicianDoesNotExist() {
+        Map<String, Object> request = validBody();
+        request.put("technicianId", technicianId + 999);
+
+        JsonPath body = save(request, HttpStatus.NOT_FOUND);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo("Técnico com id " + (technicianId + 999) + " não encontrado");
+    }
+
+    @Test
+    @DisplayName("Returns 404 for a phone number that is not registered")
+    void shouldReturn404_whenPhoneIsNotRegistered() {
+        Map<String, Object> request = validBody();
+        request.put("phoneNumber", "99999999999");
+
+        JsonPath body = save(request, HttpStatus.NOT_FOUND);
+
+        assertThat(body.getString("detail")).isEqualTo("O número informado não está cadastrado");
+    }
+
+    // ------------------------------------------------------------------ update
+
+    @Test
+    @DisplayName("Updates every field of a contact")
+    void shouldUpdateContact_whenRequestIsValid() {
+        Map<String, Object> request = validBody();
+        request.put("message", "updated message");
+
+        JsonPath body = update(existingContactId, request, HttpStatus.OK);
+
+        assertThat(body.getInt("id")).isEqualTo(existingContactId);
+        assertThat(body.getInt("technicianId")).isEqualTo(technicianId);
+        assertThat(body.getString("technicianName")).isEqualTo("Contact Test Tech");
+        assertThat(body.getString("conversation")).isEqualTo("updated message");
+        assertThat(body.getString("deviceStatus")).isEqualTo("ENTREGUE");
+        assertThat(countContacts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Updates the contact type and status")
+    void shouldUpdateTypeAndStatus_whenUpdating() {
+        Map<String, Object> request = validBody();
+        request.put("contactType", "WHATSAPP");
+        request.put("deviceStatus", "PRONTO");
+        request.put("message", "device is ready");
+
+        JsonPath body = update(existingContactId, request, HttpStatus.OK);
+
+        assertThat(body.getString("type")).isEqualTo("whatsapp");
+        assertThat(body.getString("deviceStatus")).isEqualTo("PRONTO");
+        assertThat(body.getString("conversation")).isEqualTo("device is ready");
+    }
+
+    @ParameterizedTest(name = "{0} contact without phone")
+    @CsvSource({"mensagem", "ligacao"})
+    @DisplayName("Rejects an update without phone for phone-based contact types")
+    void shouldReturn400_whenUpdatingWithoutPhone(String type) {
+        Map<String, Object> request = validBody();
+        request.put("contactType", type);
+        request.remove("phoneNumber");
+
+        JsonPath body = update(existingContactId, request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo(
+                        "O número de telefone deve ser fornecido para os tipos de contato: ligacao, mensagem");
+    }
+
+    @Test
+    @DisplayName("Rejects an unknown device status on update")
+    void shouldReturn400_whenUpdatingWithUnknownStatus() {
+        Map<String, Object> request = validBody();
+        request.put("deviceStatus", "non_existent_status");
+
+        JsonPath body = update(existingContactId, request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo("Não foi encontrado o status: non_existent_status");
+    }
+
+    @Test
+    @DisplayName("Rejects an invalid date on update")
+    void shouldReturn400_whenUpdatingWithInvalidDate() {
+        Map<String, Object> request = validBody();
+        request.put("contactDate", "invalid_date");
+
+        JsonPath body = update(existingContactId, request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo(
+                        "Formato de data inválido: 'invalid_date'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)");
+    }
+
+    @Test
+    @DisplayName("Rejects a short phone number on update")
+    void shouldReturn400_whenUpdatingWithShortPhone() {
+        Map<String, Object> request = validBody();
+        request.put("phoneNumber", "9999");
+
+        JsonPath body = update(existingContactId, request, HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("code")).isEqualTo("erro.validacao");
+    }
+
+    @Test
+    @DisplayName("Returns 404 when updating an unknown contact")
+    void shouldReturn404_whenContactDoesNotExist() {
+        int unknown = existingContactId + 999;
+
+        JsonPath body = update(unknown, validBody(), HttpStatus.NOT_FOUND);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo("Contato com id " + unknown + " não encontrado");
+    }
+
+    @Test
+    @DisplayName("Returns 404 when updating with an unknown device")
+    void shouldReturn404_whenUpdatingWithUnknownDevice() {
+        Map<String, Object> request = validBody();
+        request.put("deviceId", deviceId + 999);
+
+        JsonPath body = update(existingContactId, request, HttpStatus.NOT_FOUND);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo("Aparelho com id " + (deviceId + 999) + " não encontrado");
+    }
+
+    @Test
+    @DisplayName("Returns 404 when updating with an unknown technician")
+    void shouldReturn404_whenUpdatingWithUnknownTechnician() {
+        Map<String, Object> request = validBody();
+        request.put("technicianId", technicianId + 999);
+
+        JsonPath body = update(existingContactId, request, HttpStatus.NOT_FOUND);
+
+        assertThat(body.getString("detail"))
+                .isEqualTo("Técnico com id " + (technicianId + 999) + " não encontrado");
+    }
+
+    // -------------------------------------------------------- latest contact
+
+    @Test
+    @DisplayName("Only the latest contact changes the current device status")
+    void shouldOnlyChangeDeviceStatus_whenContactIsTheLatest() {
+        // The newest contact (2025) marks the device as ENTREGUE.
+        int latestId =
+                save(contactBody("entregue", "2025-06-03T10:00:00"), HttpStatus.CREATED)
+                        .getInt("id");
         assertDeviceStatus("ENTREGUE");
 
-        // Corrigir o contato antigo (id 1, 2024) não reverte o aparelho.
-        given().spec(getAuthenticatedSpec())
-                .contentType("application/json")
-                .body(contactBody("em_andamento", "2024-01-10T09:00:00"))
-                .put(BASE_PATH + "/{id}", 1)
-                .then()
-                .statusCode(HttpStatus.SC_OK);
+        // Fixing the old contact (2024) does not revert the device.
+        update(
+                existingContactId,
+                contactBody("em_andamento", "2024-01-10T09:00:00"),
+                HttpStatus.OK);
         assertDeviceStatus("ENTREGUE");
 
-        // Registrar um contato retroativo também não altera o status atual.
-        postContact(contactBody("aguardando", "2023-01-01T09:00:00"), HttpStatus.SC_CREATED);
+        // A retroactive contact does not change the current status either.
+        save(contactBody("aguardando", "2023-01-01T09:00:00"), HttpStatus.CREATED);
         assertDeviceStatus("ENTREGUE");
 
-        // Alterar o status do contato mais recente (id 2) reflete no aparelho.
-        given().spec(getAuthenticatedSpec())
-                .contentType("application/json")
-                .body(contactBody("pronto", "2025-06-03T10:00:00"))
-                .put(BASE_PATH + "/{id}", 2)
-                .then()
-                .statusCode(HttpStatus.SC_OK);
+        // Changing the status of the latest contact is reflected on the device.
+        update(latestId, contactBody("pronto", "2025-06-03T10:00:00"), HttpStatus.OK);
         assertDeviceStatus("PRONTO");
     }
 
-    private void postContact(Map<String, Object> body, int expectedStatus) {
-        given().spec(getAuthenticatedSpec())
-                .contentType("application/json")
-                .body(body)
-                .post(BASE_PATH)
-                .then()
-                .statusCode(expectedStatus);
-    }
+    // ----------------------------------------------------------------- helpers
 
     private void assertDeviceStatus(String expected) {
         String status =
                 jdbcTemplate.queryForObject(
-                        "SELECT device_status FROM devices WHERE id = 1", String.class);
+                        "SELECT device_status FROM devices WHERE id = ?", String.class, deviceId);
         assertThat(status).isEqualTo(expected);
     }
 
-    private static Map<String, Object> contactBody(String deviceStatus, String contactDate) {
-        return Map.of(
-                "deviceId",
-                1,
-                "contactType",
-                "pessoalmente",
-                "technicianId",
-                2,
-                "message",
-                "teste",
-                "contactStatus",
-                true,
-                "deviceStatus",
-                deviceStatus,
-                "contactDate",
-                contactDate);
+    private int countContacts() {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM customer_contact", Integer.class);
+    }
+
+    private JsonPath save(Map<String, Object> body, HttpStatus expected) {
+        return given().spec(getAuthenticatedSpec())
+                .body(body)
+                .post(BASE_PATH)
+                .then()
+                .statusCode(expected.value())
+                .extract()
+                .jsonPath();
+    }
+
+    private JsonPath update(int id, Map<String, Object> body, HttpStatus expected) {
+        return given().spec(getAuthenticatedSpec())
+                .body(body)
+                .put(BASE_PATH + "/{id}", id)
+                .then()
+                .statusCode(expected.value())
+                .extract()
+                .jsonPath();
+    }
+
+    private Map<String, Object> validBody() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("deviceId", deviceId);
+        body.put("contactType", "mensagem");
+        body.put("technicianId", technicianId);
+        body.put("phoneNumber", CONTACT_PHONE);
+        body.put("message", "teste");
+        body.put("contactStatus", true);
+        body.put("deviceStatus", "entregue");
+        body.put("contactDate", CONTACT_DATE);
+        return body;
+    }
+
+    private Map<String, Object> contactBody(String deviceStatus, String contactDate) {
+        Map<String, Object> body = validBody();
+        body.put("contactType", "pessoalmente");
+        body.remove("phoneNumber");
+        body.put("deviceStatus", deviceStatus);
+        body.put("contactDate", contactDate);
+        return body;
     }
 }

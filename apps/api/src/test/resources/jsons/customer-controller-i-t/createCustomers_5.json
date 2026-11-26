@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Erro de Validação",
-    "status": 400,
-    "detail": "must not be blank",
-    "instance": "/v1/customer",
-    "code": "erro.validacao"
-}
