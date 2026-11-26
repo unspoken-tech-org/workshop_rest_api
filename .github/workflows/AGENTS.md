@@ -43,7 +43,7 @@ Applies to `.github/` (workflows, composite actions, scripts). The root
 | --- | --- | --- | --- |
 | `ci.yml` | push, PR | — | — |
 | `deploy-api-prod.yml` | tag `vX.Y.Z`, dispatch (`skip_rc`) | `production` | tag `vX.Y.Z` on a commit in `main` or `release/*`, with a `vX.Y.Z-rc.N` whose QA deploy succeeded (`skip_rc` skips only the rc and QA checks) |
-| `deploy-api-qa.yml` | tag `vX.Y.Z-rc.N`, dispatch | `qa` (no reviewer) | any |
+| `deploy-api-qa.yml` | tag `vX.Y.Z-rc.N`, dispatch | `qa` (no reviewer) | any (rc tags on `main`, `release/*` or `feature/*`) |
 | `deploy-gateway-prod.yml` | dispatch + `confirm` | `production` | tags `v*.*.*`, `release/*` |
 | `deploy-gateway-qa.yml` | dispatch + `confirm` | — | any |
 | `deploy-observability-control-plane-qa.yml` | dispatch + `confirm` | `qa-observability` | `main` (commit must be on `main`) |

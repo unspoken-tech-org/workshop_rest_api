@@ -18,6 +18,8 @@ name: Deploy API (QA) v2 (Hosted + Tailscale)
 
 on:
   # Release candidates (vX.Y.Z-rc.N) deploy to QA; final tags go to production.
+  # No branch check here on purpose: an rc on feature/* validates a multi-PR
+  # feature before its final PR. Production still requires main or release/*.
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
