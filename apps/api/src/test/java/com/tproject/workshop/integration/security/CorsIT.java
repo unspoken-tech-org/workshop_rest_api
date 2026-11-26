@@ -1,4 +1,4 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.security;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
@@ -6,10 +6,10 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
-import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpStatus;
 
 /**
  * CORS preflight through the real filter chain. The test profile lists only its own origins, so any
@@ -30,7 +30,7 @@ class CorsIT extends AbstractIntegrationTest {
                 .when()
                 .options(PATH)
                 .then()
-                .statusCode(HttpStatus.SC_FORBIDDEN)
+                .statusCode(HttpStatus.FORBIDDEN.value())
                 .header("Access-Control-Allow-Origin", nullValue())
                 .header("Access-Control-Allow-Credentials", nullValue());
     }
@@ -45,7 +45,7 @@ class CorsIT extends AbstractIntegrationTest {
                 .when()
                 .options(PATH)
                 .then()
-                .statusCode(HttpStatus.SC_OK)
+                .statusCode(HttpStatus.OK.value())
                 .header("Access-Control-Allow-Origin", equalTo("http://127.0.0.1:8081"))
                 .header("Access-Control-Allow-Headers", containsStringIgnoringCase("X-API-Key"))
                 .header("Access-Control-Allow-Credentials", nullValue());

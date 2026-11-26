@@ -1,4 +1,4 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,6 +12,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
 /**
@@ -60,7 +61,7 @@ class RequestBodySizeLimitIT extends AbstractIntegrationTest {
                                 () -> new ByteArrayInputStream(body)));
 
         // Read in full and validated: boundDeviceId is over @Size(max = 100).
-        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.BAD_REQUEST.value());
         assertThat(mapper.readTree(response.body()).get("code").asText())
                 .isEqualTo("erro.validacao");
     }
@@ -77,9 +78,9 @@ class RequestBodySizeLimitIT extends AbstractIntegrationTest {
     }
 
     private void assertPayloadTooLarge(HttpResponse<String> response) throws Exception {
-        assertThat(response.statusCode()).isEqualTo(413);
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE.value());
         JsonNode body = mapper.readTree(response.body());
-        assertThat(body.get("status").asInt()).isEqualTo(413);
+        assertThat(body.get("status").asInt()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE.value());
         assertThat(body.get("title").asText()).isEqualTo("Payload muito grande");
         assertThat(body.get("code").asText()).isEqualTo("payload.too.large");
         assertThat(body.get("detail").asText()).contains("1MB");

@@ -1,4 +1,4 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
-public class RaceConditionIT extends AbstractIntegrationTest {
+class RaceConditionIT extends AbstractIntegrationTest {
 
     private static final List<String> VALID_CPFS =
             List.of("31781477051", "75386544020", "46203912042", "45931651055", "52998224725");
@@ -56,7 +56,7 @@ public class RaceConditionIT extends AbstractIntegrationTest {
 
     @Test
     @DisplayName("Should handle concurrent creation of technicians without duplicates")
-    public void shouldHandleConcurrentTechnicianCreation()
+    void shouldHandleConcurrentTechnicianCreation()
             throws InterruptedException, ExecutionException {
         int threads = 10;
         List<Future<Technician>> futures;
@@ -93,7 +93,7 @@ public class RaceConditionIT extends AbstractIntegrationTest {
 
     @Test
     @DisplayName("Should handle concurrent creation of Type-Brand-Model without duplicates")
-    public void shouldHandleConcurrentTypeBrandModelCreation()
+    void shouldHandleConcurrentTypeBrandModelCreation()
             throws InterruptedException, ExecutionException {
         int threads = 10;
         List<Future<Object>> futures;
@@ -125,8 +125,7 @@ public class RaceConditionIT extends AbstractIntegrationTest {
     @Test
     @DisplayName(
             "Should handle concurrent creation of catalog entries (color, brand, type, model) without aborting transaction")
-    public void shouldHandleConcurrentCatalogCreation()
-            throws InterruptedException, ExecutionException {
+    void shouldHandleConcurrentCatalogCreation() throws InterruptedException, ExecutionException {
         int threads = 10;
         List<Future<Color>> colorFutures;
         try (ExecutorService executorService = Executors.newFixedThreadPool(threads)) {
@@ -171,7 +170,7 @@ public class RaceConditionIT extends AbstractIntegrationTest {
     @Test
     @DisplayName(
             "Should handle concurrent customer creation sharing the same phone number without transaction abort")
-    public void shouldHandleConcurrentSharedPhoneCreation()
+    void shouldHandleConcurrentSharedPhoneCreation()
             throws InterruptedException, ExecutionException {
         int threads = VALID_CPFS.size();
         String sharedNumber = "11999998888";
@@ -216,7 +215,7 @@ public class RaceConditionIT extends AbstractIntegrationTest {
     @Test
     @DisplayName(
             "Should reject concurrent customer creation with duplicate CPF without creating duplicate rows")
-    public void shouldRejectConcurrentDuplicateCpf() throws InterruptedException {
+    void shouldRejectConcurrentDuplicateCpf() throws InterruptedException {
         int threads = 5;
         String duplicateCpf = "31781477051";
         AtomicInteger successes = new AtomicInteger();
