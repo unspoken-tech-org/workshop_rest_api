@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.Platform;
 import com.tproject.workshop.model.Role;
@@ -13,7 +14,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.FilterChain;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +36,7 @@ class JwtAuthenticationFilterTest {
 
     @Mock private FilterChain filterChain;
 
-    @Spy private Clock clock = Clock.systemDefaultZone();
+    @Spy private Clock clock = TestClock.FIXED;
 
     @InjectMocks private JwtAuthenticationFilter filter;
 
@@ -82,7 +82,7 @@ class JwtAuthenticationFilterTest {
                                 ApiKey.builder()
                                         .id(1L)
                                         .active(true)
-                                        .expiresAt(Instant.now().minusSeconds(10))
+                                        .expiresAt(TestClock.DEFAULT_INSTANT.minusSeconds(10))
                                         .boundDeviceId("device-a")
                                         .platform(Platform.MOBILE)
                                         .role(Role.SERVICE)
@@ -131,7 +131,7 @@ class JwtAuthenticationFilterTest {
                                 ApiKey.builder()
                                         .id(1L)
                                         .active(true)
-                                        .expiresAt(Instant.now().plusSeconds(3600))
+                                        .expiresAt(TestClock.DEFAULT_INSTANT.plusSeconds(3600))
                                         .boundDeviceId("device-a")
                                         .platform(Platform.MOBILE)
                                         .role(Role.SERVICE)

@@ -12,27 +12,23 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
+import com.tproject.workshop.support.fixtures.CustomerContactTestBuilder;
 import java.sql.Timestamp;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.Optional;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class CustomerContactServiceTest {
 
     private static final int DEVICE_ID = 1;
@@ -42,14 +38,21 @@ class CustomerContactServiceTest {
     @Mock private TechnicianService technicianService;
     @Mock private PhoneService phoneService;
     @Mock private ObservabilityEventRecorder eventRecorder;
-    @Spy private Clock clock = Clock.systemDefaultZone();
+    @Spy private Clock clock = TestClock.FIXED;
 
     @InjectMocks private CustomerContactService customerContactService;
 
-    @BeforeEach
-    void setUp() {
+    private void stubTechnician() {
         when(technicianService.findByIdDto(anyInt()))
                 .thenReturn(new TechnicianResponseDto(2, "Tecnico", "T002"));
+    }
+
+    private void stubSaveAndTechnician() {
+        stubTechnician();
+        stubSave();
+    }
+
+    private void stubSave() {
         when(customerContactRepository.save(any(CustomerContact.class)))
                 .thenAnswer(invocation -> {
                     CustomerContact contact = invocation.getArgument(0);
@@ -62,6 +65,7 @@ class CustomerContactServiceTest {
 
     @Test
     void save_shouldUpdateDeviceStatus_whenNewContactIsTheLatest() {
+        stubSaveAndTechnician();
         when(customerContactRepository.findFirstByDeviceIdOrderByLastContactDescIdDesc(DEVICE_ID))
                 .thenAnswer(invocation -> Optional.of(contactWithId(10, DeviceStatusEnum.PRONTO)));
 
@@ -73,6 +77,7 @@ class CustomerContactServiceTest {
 
     @Test
     void save_shouldNotUpdateDeviceStatus_whenBackdatedContactIsNotTheLatest() {
+        stubSaveAndTechnician();
         when(customerContactRepository.findFirstByDeviceIdOrderByLastContactDescIdDesc(DEVICE_ID))
                 .thenReturn(Optional.of(contactWithId(5, DeviceStatusEnum.ENTREGUE)));
 
@@ -95,6 +100,7 @@ class CustomerContactServiceTest {
 
     @Test
     void update_shouldNotRevertDeviceStatus_whenEditingAnOldContact() {
+        stubSaveAndTechnician();
         CustomerContact oldContact = contactWithId(3, DeviceStatusEnum.EM_ANDAMENTO);
         when(customerContactRepository.findById(3)).thenReturn(Optional.of(oldContact));
         when(customerContactRepository.findFirstByDeviceIdOrderByLastContactDescIdDesc(DEVICE_ID))
@@ -107,18 +113,20 @@ class CustomerContactServiceTest {
 
     @Test
     void update_shouldNotTouchDeviceStatus_whenContactStatusDidNotChange() {
+        stubSaveAndTechnician();
         CustomerContact latestContact = contactWithId(7, DeviceStatusEnum.EM_ANDAMENTO);
         when(customerContactRepository.findById(7)).thenReturn(Optional.of(latestContact));
-        when(customerContactRepository.findFirstByDeviceIdOrderByLastContactDescIdDesc(DEVICE_ID))
-                .thenReturn(Optional.of(latestContact));
 
         customerContactService.update(7, input("em_andamento", "2026-06-03T10:00:00"));
 
         verify(deviceService, never()).updateDeviceStatus(anyInt(), any(DeviceStatusEnum.class));
+        verify(customerContactRepository, never())
+                .findFirstByDeviceIdOrderByLastContactDescIdDesc(anyInt());
     }
 
     @Test
     void update_shouldUpdateDeviceStatus_whenLatestContactStatusChanges() {
+        stubSaveAndTechnician();
         CustomerContact latestContact = contactWithId(7, DeviceStatusEnum.EM_ANDAMENTO);
         when(customerContactRepository.findById(7)).thenReturn(Optional.of(latestContact));
         when(customerContactRepository.findFirstByDeviceIdOrderByLastContactDescIdDesc(DEVICE_ID))
@@ -131,6 +139,7 @@ class CustomerContactServiceTest {
 
     @Test
     void save_shouldHandleNullContactTypeWithoutNpeAndParseUtcZDate() {
+        stubSaveAndTechnician();
         when(customerContactRepository.findFirstByDeviceIdOrderByLastContactDescIdDesc(DEVICE_ID))
                 .thenAnswer(invocation ->
                         Optional.of(contactWithId(10, DeviceStatusEnum.EM_ANDAMENTO)));
@@ -151,7 +160,7 @@ class CustomerContactServiceTest {
         Timestamp expectedTimestamp =
                 Timestamp.valueOf(
                         OffsetDateTime.parse("2025-08-31T19:55:13Z")
-                                .atZoneSameInstant(ZoneId.systemDefault())
+                                .atZoneSameInstant(TestClock.DEFAULT_ZONE)
                                 .toLocalDateTime());
         Assertions.assertThat(saved.lastContact()).isEqualTo(expectedTimestamp.toLocalDateTime());
         verify(phoneService, never()).findByNumber(anyString());
@@ -206,12 +215,10 @@ class CustomerContactServiceTest {
     }
 
     private static CustomerContact contactWithId(int id, DeviceStatusEnum status) {
-        CustomerContact contact = new CustomerContact();
-        contact.setId(id);
-        contact.setDeviceId(DEVICE_ID);
-        contact.setType("pessoalmente");
-        contact.setDeviceStatus(status);
-        contact.setLastContact(Timestamp.valueOf(LocalDateTime.of(2026, 1, 1, 0, 0)));
-        return contact;
+        return CustomerContactTestBuilder.aCustomerContact()
+                .withId(id)
+                .withDeviceId(DEVICE_ID)
+                .withStatus(status)
+                .build();
     }
 }
