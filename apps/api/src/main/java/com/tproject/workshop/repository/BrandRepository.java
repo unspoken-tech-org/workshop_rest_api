@@ -17,10 +17,11 @@ public interface BrandRepository extends JpaRepository<Brand, Integer>, BrandRep
 
     List<Brand> findByBrandContainingIgnoreCase(String brand);
 
+    Optional<Brand> findByNameKey(String nameKey);
+
     @Modifying
     @Query(
-            value =
-                    "INSERT INTO brands (brand) VALUES (:brand) ON CONFLICT (LOWER(TRIM(brand))) DO NOTHING",
+            value = "INSERT INTO brands (brand) VALUES (:brand) ON CONFLICT (name_key) DO NOTHING",
             nativeQuery = true)
     int insertIgnore(@Param("brand") String brand);
 }

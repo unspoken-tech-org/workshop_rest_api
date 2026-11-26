@@ -30,4 +30,7 @@ public class Model {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "name_key", insertable = false, updatable = false)
+    private String nameKey;
 }

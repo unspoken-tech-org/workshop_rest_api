@@ -17,10 +17,11 @@ public interface TypeRepository extends JpaRepository<Type, Integer>, TypeReposi
 
     Optional<Type> findByTypeIgnoreCase(String type);
 
+    Optional<Type> findByNameKey(String nameKey);
+
     @Modifying
     @Query(
-            value =
-                    "INSERT INTO types (type) VALUES (:type) ON CONFLICT (LOWER(TRIM(type))) DO NOTHING",
+            value = "INSERT INTO types (type) VALUES (:type) ON CONFLICT (name_key) DO NOTHING",
             nativeQuery = true)
     int insertIgnore(@Param("type") String type);
 }

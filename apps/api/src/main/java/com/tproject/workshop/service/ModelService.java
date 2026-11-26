@@ -34,9 +34,9 @@ public class ModelService {
 
     @Transactional
     public Model createOrReturnExistentModel(String model) {
-        return CatalogName.findOrCreate(
+        return CatalogName.findOrCreateByKey(
                 model,
-                modelRepository::findByModelIgnoreCase,
+                modelRepository::findByNameKey,
                 modelRepository::insertIgnore,
                 () ->
                         eventRecorder.record(
