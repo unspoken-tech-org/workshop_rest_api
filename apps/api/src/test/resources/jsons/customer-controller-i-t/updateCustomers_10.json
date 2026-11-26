@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Erro de Validação",
-    "status": 400,
-    "detail": "Número de telefone deve ter entre 10 e 11 dígitos",
-    "instance": "/v1/customer/1",
-    "code": "erro.validacao"
-}
