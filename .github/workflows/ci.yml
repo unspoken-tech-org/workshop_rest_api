@@ -26,6 +26,7 @@ on:
       - 'gradlew.bat'
       - '.github/**'
       - 'scripts/**'
+      - '.spectral.yaml'
   # No paths filter on pull_request: the jobs below are required checks on
   # main, and a workflow that does not trigger leaves them stuck as "Expected".
   pull_request:
@@ -134,6 +135,11 @@ jobs:
 
       - name: Run Integration Tests
         run: ./gradlew :apps:api:integrationTests
+
+      # OpenApiExportIT writes the SpringDoc document to build/openapi/openapi.json;
+      # the ruleset (.spectral.yaml) locks the REST contract of new routes.
+      - name: Lint OpenAPI contract (Spectral)
+        run: npx --yes @stoplight/spectral-cli@6.15.0 lint apps/api/build/openapi/openapi.json --fail-severity=error
 
       - name: Generate JaCoCo Integration Test Report
         run: ./gradlew :apps:api:jacocoTestReport

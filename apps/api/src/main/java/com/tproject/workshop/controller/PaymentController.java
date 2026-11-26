@@ -6,6 +6,7 @@ import com.tproject.workshop.dto.payment.PaymentResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public interface PaymentController {
             name = "Idempotency-Key",
             in = ParameterIn.HEADER,
             required = false,
+            schema = @Schema(type = "string", maxLength = 255),
             description =
                     "Optional. Repeating the request with the same key and body returns the first"
                             + " response without creating another payment (24h).")

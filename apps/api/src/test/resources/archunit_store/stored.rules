@@ -7,4 +7,3 @@ no\ classes\ should\ depend\ on\ classes\ that\ have\ fully\ qualified\ name\ 'o
 no\ classes\ should\ reside\ in\ a\ package\ '..util..'=50d3f41a-c7c0-40d0-ab08-025a17b5f995
 no\ classes\ that\ reside\ in\ a\ package\ '..controller..'\ should\ depend\ on\ classes\ that\ reside\ in\ a\ package\ '..repository..'=f9815a99-d7b6-47d1-ab20-78b8963094e3
 no\ classes\ that\ reside\ in\ a\ package\ '..controller.impl..'\ should\ be\ annotated\ with\ @RequestMapping=86623c25-5833-4a7e-8c00-217a890c6cb5
-no\ methods\ that\ are\ declared\ in\ classes\ that\ are\ annotated\ with\ @Entity\ should\ have\ name\ 'canEqual'=2e03ef54-5ece-4765-ba9c-59b0786136d0
