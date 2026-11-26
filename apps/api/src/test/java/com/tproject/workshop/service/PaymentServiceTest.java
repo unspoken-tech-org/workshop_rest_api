@@ -19,10 +19,12 @@ import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.Payment;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
+import com.tproject.workshop.support.fixtures.DeviceTestBuilder;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
@@ -40,19 +42,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class PaymentServiceTest {
 
     private static final int DEVICE_ID = 10;
+    private static final LocalDate TODAY = LocalDate.now(TestClock.FIXED);
 
     @Mock private PaymentRepository paymentRepository;
     @Mock private DeviceRepository deviceRepository;
     @Mock private ObservabilityEventRecorder eventRecorder;
-    @Spy private Clock clock = Clock.systemDefaultZone();
+    @Spy private Clock clock = TestClock.FIXED;
 
     @InjectMocks private PaymentService paymentService;
 
@@ -63,19 +63,22 @@ class PaymentServiceTest {
     void setUp() {
         validator = Validation.buildDefaultValidatorFactory().getValidator();
 
-        device = new Device();
-        device.setId(DEVICE_ID);
-        device.setDeviceStatus(DeviceStatusEnum.EM_ANDAMENTO);
-        device.setEntryDate(Timestamp.valueOf(LocalDate.now().minusDays(2).atTime(14, 30)));
-        device.setBudgetFee(new BigDecimal("50.00"));
-        device.setServiceValue(new BigDecimal("200.00"));
-        device.setBudgetFeeCollected(false);
+        device =
+                DeviceTestBuilder.aDevice()
+                        .withId(DEVICE_ID)
+                        .withStatus(DeviceStatusEnum.EM_ANDAMENTO)
+                        .withEntryDate(Timestamp.valueOf(TODAY.minusDays(2).atTime(14, 30)))
+                        .withBudgetFee(new BigDecimal("50.00"))
+                        .withServiceValue(new BigDecimal("200.00"))
+                        .withBudgetFeeCollected(false)
+                        .build();
+    }
 
+    private void stubDeviceFound() {
         when(deviceRepository.findById(DEVICE_ID)).thenReturn(Optional.of(device));
-        when(paymentRepository.sumPaymentValueByDeviceId(DEVICE_ID)).thenReturn(BigDecimal.ZERO);
-        when(paymentRepository.sumPaymentValueByDeviceIdAndCategory(
-                        DEVICE_ID, PaymentCategoryEnum.TAXA_ORCAMENTO.getDbValue()))
-                .thenReturn(BigDecimal.ZERO);
+    }
+
+    private void stubPaymentSave() {
         when(paymentRepository.save(any(Payment.class)))
                 .thenAnswer(invocation -> {
                     Payment p = invocation.getArgument(0);
@@ -86,6 +89,8 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldPersistServicePayment_whenWithinServiceValue() {
+        stubDeviceFound();
+        stubPaymentSave();
         when(paymentRepository.sumPaymentValueByDeviceId(DEVICE_ID))
                 .thenReturn(new BigDecimal("50.00"));
 
@@ -95,7 +100,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("150.00"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         PaymentResponseDto result = paymentService.create(dto);
@@ -107,7 +112,10 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldAllowSameDayMidnightPayment_whenEntryDateIsLaterInSameDay() {
-        device.setEntryDate(Timestamp.valueOf(LocalDate.now().atTime(15, 45)));
+        stubDeviceFound();
+        stubPaymentSave();
+        when(paymentRepository.sumPaymentValueByDeviceId(DEVICE_ID)).thenReturn(BigDecimal.ZERO);
+        device.setEntryDate(Timestamp.valueOf(TODAY.atTime(15, 45)));
 
         PaymentDeviceInputDto dto =
                 new PaymentDeviceInputDto(
@@ -115,7 +123,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.CREDITO,
                         new BigDecimal("100.00"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         PaymentResponseDto result = paymentService.create(dto);
@@ -125,13 +133,18 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldSetBudgetFeeCollected_whenBudgetFeePaymentReachesBudgetFee() {
+        stubDeviceFound();
+        stubPaymentSave();
+        when(paymentRepository.sumPaymentValueByDeviceIdAndCategory(
+                        DEVICE_ID, PaymentCategoryEnum.TAXA_ORCAMENTO.getDbValue()))
+                .thenReturn(BigDecimal.ZERO);
         PaymentDeviceInputDto dto =
                 new PaymentDeviceInputDto(
                         DEVICE_ID,
                         PaymentMethodEnum.DINHEIRO,
                         new BigDecimal("50.00"),
                         PaymentCategoryEnum.TAXA_ORCAMENTO,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "Maria");
 
         paymentService.create(dto);
@@ -142,6 +155,11 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldAllowBudgetFeePayment_whenServiceValueIsNull() {
+        stubDeviceFound();
+        stubPaymentSave();
+        when(paymentRepository.sumPaymentValueByDeviceIdAndCategory(
+                        DEVICE_ID, PaymentCategoryEnum.TAXA_ORCAMENTO.getDbValue()))
+                .thenReturn(BigDecimal.ZERO);
         device.setServiceValue(null);
 
         PaymentDeviceInputDto dto =
@@ -150,7 +168,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("50.00"),
                         PaymentCategoryEnum.TAXA_ORCAMENTO,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "Maria");
 
         PaymentResponseDto result = paymentService.create(dto);
@@ -161,6 +179,11 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldAllowBudgetFeePayment_whenDeviceIsNovo() {
+        stubDeviceFound();
+        stubPaymentSave();
+        when(paymentRepository.sumPaymentValueByDeviceIdAndCategory(
+                        DEVICE_ID, PaymentCategoryEnum.TAXA_ORCAMENTO.getDbValue()))
+                .thenReturn(BigDecimal.ZERO);
         device.setDeviceStatus(DeviceStatusEnum.NOVO);
 
         PaymentDeviceInputDto dto =
@@ -169,7 +192,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("50.00"),
                         PaymentCategoryEnum.TAXA_ORCAMENTO,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "Maria");
 
         PaymentResponseDto result = paymentService.create(dto);
@@ -180,6 +203,7 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldThrowBadRequest_whenServicosPaymentOnNovoDevice() {
+        stubDeviceFound();
         device.setDeviceStatus(DeviceStatusEnum.NOVO);
 
         PaymentDeviceInputDto dto =
@@ -188,7 +212,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("50.00"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThatThrownBy(() -> paymentService.create(dto))
@@ -201,6 +225,7 @@ class PaymentServiceTest {
             value = PaymentCategoryEnum.class,
             names = {"TAXA_ORCAMENTO", "SERVICOS"})
     void create_shouldThrowBadRequest_whenDeviceIsDescartado(PaymentCategoryEnum category) {
+        stubDeviceFound();
         device.setDeviceStatus(DeviceStatusEnum.DESCARTADO);
 
         PaymentDeviceInputDto dto =
@@ -209,7 +234,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("50.00"),
                         category,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThatThrownBy(() -> paymentService.create(dto))
@@ -219,6 +244,7 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldThrowBadRequest_whenPaymentDateBeforeEntryDate() {
+        stubDeviceFound();
         LocalDateTime beforeEntry =
                 device.getEntryDate().toLocalDateTime().toLocalDate().minusDays(1).atStartOfDay();
 
@@ -238,6 +264,7 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldThrowBadRequest_whenTotalPaidExceedsServiceValue() {
+        stubDeviceFound();
         when(paymentRepository.sumPaymentValueByDeviceId(DEVICE_ID))
                 .thenReturn(new BigDecimal("150.00"));
 
@@ -247,7 +274,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.CREDITO,
                         new BigDecimal("60.00"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThatThrownBy(() -> paymentService.create(dto))
@@ -257,6 +284,7 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldThrowBadRequest_whenServiceValueNotDefinedForServicos() {
+        stubDeviceFound();
         device.setServiceValue(null);
 
         PaymentDeviceInputDto dto =
@@ -265,7 +293,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.CREDITO,
                         new BigDecimal("60.00"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThatThrownBy(() -> paymentService.create(dto))
@@ -274,6 +302,7 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldThrowBadRequest_whenBudgetFeeNotDefinedForTaxaOrcamento() {
+        stubDeviceFound();
         device.setBudgetFee(BigDecimal.ZERO);
 
         PaymentDeviceInputDto dto =
@@ -282,7 +311,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("20.00"),
                         PaymentCategoryEnum.TAXA_ORCAMENTO,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThatThrownBy(() -> paymentService.create(dto))
@@ -291,6 +320,7 @@ class PaymentServiceTest {
 
     @Test
     void create_shouldThrowBadRequest_whenBudgetFeePaymentsExceedBudgetFee() {
+        stubDeviceFound();
         when(paymentRepository.sumPaymentValueByDeviceIdAndCategory(
                         DEVICE_ID, PaymentCategoryEnum.TAXA_ORCAMENTO.getDbValue()))
                 .thenReturn(new BigDecimal("30.00"));
@@ -301,7 +331,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("25.00"),
                         PaymentCategoryEnum.TAXA_ORCAMENTO,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThatThrownBy(() -> paymentService.create(dto))
@@ -318,7 +348,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("50.00"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThatThrownBy(() -> paymentService.create(dto)).isInstanceOf(NotFoundException.class);
@@ -332,7 +362,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("10.005"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         PaymentDeviceInputDto tooManyIntegers =
@@ -341,7 +371,7 @@ class PaymentServiceTest {
                         PaymentMethodEnum.PIX,
                         new BigDecimal("12345678901234.00"),
                         PaymentCategoryEnum.SERVICOS,
-                        LocalDate.now().atStartOfDay(),
+                        TODAY.atStartOfDay(),
                         "João");
 
         assertThat(validator.validate(tooManyDecimals)).isNotEmpty();

@@ -1,0 +1,10 @@
+#
+#Thu Nov 26 13:59:55 GMT-03:00 2026
+classes\ that\ have\ simple\ name\ ending\ with\ 'IT'\ and\ reside\ outside\ of\ package\ '..integration.support..'\ should\ be\ assignable\ to\ com.tproject.workshop.integration.support.AbstractIntegrationTest=105e7761-2aa8-49d3-8569-84b403e1c52d
+classes\ that\ reside\ in\ a\ package\ '..dto..'\ and\ are\ top\ level\ classes\ and\ are\ not\ enums\ should\ be\ records\ and\ should\ have\ name\ matching\ '.*(Request|Response|Query)$'=f3157757-6413-4328-9031-a5457df010d6
+classes\ that\ reside\ in\ a\ package\ '..exception..'\ and\ are\ assignable\ to\ java.lang.Throwable\ should\ be\ assignable\ to\ com.tproject.workshop.exception.DomainException=6f2d62f1-1189-45d7-8cdd-710fb37320af
+no\ classes\ should\ depend\ on\ classes\ that\ have\ fully\ qualified\ name\ 'org.apache.http.HttpStatus'=36d62be1-6ac0-4aa1-b80b-f5166afdc45b
+no\ classes\ should\ reside\ in\ a\ package\ '..util..'=50d3f41a-c7c0-40d0-ab08-025a17b5f995
+no\ classes\ that\ reside\ in\ a\ package\ '..controller..'\ should\ depend\ on\ classes\ that\ reside\ in\ a\ package\ '..repository..'=f9815a99-d7b6-47d1-ab20-78b8963094e3
+no\ classes\ that\ reside\ in\ a\ package\ '..controller.impl..'\ should\ be\ annotated\ with\ @RequestMapping=86623c25-5833-4a7e-8c00-217a890c6cb5
+no\ methods\ that\ are\ declared\ in\ classes\ that\ are\ annotated\ with\ @Entity\ should\ have\ name\ 'canEqual'=2e03ef54-5ece-4765-ba9c-59b0786136d0

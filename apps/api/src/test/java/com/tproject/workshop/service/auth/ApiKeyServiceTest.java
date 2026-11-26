@@ -16,6 +16,7 @@ import com.tproject.workshop.exception.ApiKeyDeviceBoundException;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
 import com.tproject.workshop.exception.InvalidApiKeyException;
+import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.Platform;
 import com.tproject.workshop.model.Role;
@@ -44,7 +45,7 @@ class ApiKeyServiceTest {
 
     @Mock private ObservabilityEventRecorder eventRecorder;
 
-    @Spy private Clock clock = Clock.systemDefaultZone();
+    @Spy private Clock clock = TestClock.FIXED;
 
     @InjectMocks private ApiKeyService apiKeyService;
 

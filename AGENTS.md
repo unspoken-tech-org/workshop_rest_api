@@ -13,6 +13,7 @@ Read the matching file before the task (load it only then):
 
 | Before you... | Read |
 | --- | --- |
+| write or review code or tests | `CONVENTIONS.md` |
 | create a branch or fix a bug | `instructions/git/branches.md` |
 | commit | `instructions/git/commits.md` |
 | open or update a PR | `instructions/git/pull-requests.md` |

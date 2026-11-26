@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.tproject.workshop.events.DeviceViewedEvent;
+import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.repository.DeviceRepository;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -20,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class DeviceEventListenerTest {
 
     @Mock private DeviceRepository deviceRepository;
-    @Spy private Clock clock = Clock.systemDefaultZone();
+    @Spy private Clock clock = TestClock.FIXED;
 
     @InjectMocks private DeviceEventListener deviceEventListener;
 

@@ -19,6 +19,7 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventCatalog;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
+import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Color;
 import com.tproject.workshop.model.Customer;
@@ -27,11 +28,11 @@ import com.tproject.workshop.model.DeviceHistory;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
+import com.tproject.workshop.support.fixtures.DeviceTestBuilder;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,11 +43,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class DeviceServiceTest {
 
     private static final int DEVICE_ID = 1;
@@ -58,7 +56,7 @@ class DeviceServiceTest {
     @Mock private TypesBrandsModelsService typeBrandModelService;
     @Mock private TechnicianService technicianService;
     @Mock private ObservabilityEventRecorder eventRecorder;
-    @Spy private Clock clock = Clock.systemDefaultZone();
+    @Spy private Clock clock = TestClock.FIXED;
 
     @InjectMocks private DeviceService deviceService;
 
@@ -66,19 +64,28 @@ class DeviceServiceTest {
 
     @BeforeEach
     void setUp() {
-        device = new Device();
-        device.setId(DEVICE_ID);
-        device.setDeviceStatus(DeviceStatusEnum.EM_ANDAMENTO);
-        device.setDeviceHistory(new ArrayList<>());
-        device.setBudgetFee(new BigDecimal("50.00"));
-        device.setServiceValue(null);
+        device =
+                DeviceTestBuilder.aDevice()
+                        .withId(DEVICE_ID)
+                        .withStatus(DeviceStatusEnum.EM_ANDAMENTO)
+                        .withBudgetFee(new BigDecimal("50.00"))
+                        .withServiceValue(null)
+                        .build();
+    }
+
+    private void stubFindById() {
         when(deviceRepository.findById(DEVICE_ID)).thenReturn(Optional.of(device));
+    }
+
+    private void stubDeviceLookup() {
+        stubFindById();
         when(deviceRepository.findByDeviceId(anyInt()))
                 .thenReturn(Optional.of(mock(DeviceOutputDto.class)));
     }
 
     @Test
     void updateDevice_shouldRecordBudgetChangesWithBandsOnly() {
+        stubDeviceLookup();
         deviceService.updateDevice(
                 update(new BigDecimal("150.00"), new BigDecimal("600.00"), false));
 
@@ -106,6 +113,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldRecordClearedAndDecrease() {
+        stubDeviceLookup();
         device.setServiceValue(new BigDecimal("300.00"));
 
         deviceService.updateDevice(update(BigDecimal.ZERO, new BigDecimal("80.00"), false));
@@ -134,6 +142,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldNotRecordBudgetOrUrgency_whenUnchanged() {
+        stubDeviceLookup();
         deviceService.updateDevice(update(new BigDecimal("50"), BigDecimal.ZERO, false));
 
         verify(eventRecorder, never())
@@ -144,6 +153,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldRecordUrgencyChange() {
+        stubDeviceLookup();
         deviceService.updateDevice(update(new BigDecimal("50.00"), null, true));
 
         verify(eventRecorder)
@@ -154,6 +164,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDeviceUrgency_shouldRecordOnlyWhenUrgencyChanges() {
+        stubDeviceLookup();
         device.setUrgency(true);
 
         deviceService.updateDeviceUrgency(DEVICE_ID, new DeviceUrgencyInputRecord(true));
@@ -170,6 +181,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldPreservePersistedDepartureDateWhenOmitted() {
+        stubDeviceLookup();
         LocalDateTime entry = LocalDateTime.of(2026, 5, 1, 10, 0);
         Timestamp persistedDeparture = Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 15, 30));
         device.setEntryDate(Timestamp.valueOf(entry));
@@ -196,7 +208,8 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldSetDepartureDateToNowWhenOmittedAndCurrentlyNull() {
-        device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 1, 10, 0)));
+        stubDeviceLookup();
+        device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 1, 1, 10, 0)));
         device.setDepartureDate(null);
 
         deviceService.updateDevice(
@@ -219,6 +232,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldRejectDepartureDateBeforeExistingEntryDate() {
+        stubFindById();
         device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 10, 0)));
 
         DeviceUpdateInputDtoRecord request =
@@ -243,6 +257,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldRejectEntryDateAfterExistingDepartureDate() {
+        stubFindById();
         device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 1, 10, 0)));
         device.setDepartureDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 10, 0)));
 
@@ -268,6 +283,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldAllowDepartureDateEqualToEntryDate() {
+        stubDeviceLookup();
         LocalDateTime sameInstant = LocalDateTime.of(2026, 5, 10, 10, 0);
         device.setEntryDate(Timestamp.valueOf(sameInstant));
 
@@ -292,6 +308,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldResetUrgencyAndRevisionWithCanonicalUppercaseHistory() {
+        stubDeviceLookup();
         device.setUrgency(true);
         device.setRevision(true);
 
@@ -333,6 +350,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDevice_shouldClearDepartureDateWhenReopeningClosedDevice() {
+        stubDeviceLookup();
         device.setDeviceStatus(DeviceStatusEnum.ENTREGUE);
         device.setEntryDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 1, 10, 0)));
         device.setDepartureDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 15, 0)));
@@ -358,6 +376,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDeviceStatus_shouldRecordResetHistoryAndClearDepartureDateWhenReopened() {
+        stubDeviceLookup();
         device.setUrgency(true);
         device.setRevision(true);
 
@@ -389,6 +408,7 @@ class DeviceServiceTest {
 
     @Test
     void updateDeviceUrgency_shouldClearDepartureDateWhenReopeningClosedDevice() {
+        stubDeviceLookup();
         device.setDeviceStatus(DeviceStatusEnum.DESCARTADO);
         device.setUrgency(false);
         device.setDepartureDate(Timestamp.valueOf(LocalDateTime.of(2026, 5, 10, 15, 0)));
