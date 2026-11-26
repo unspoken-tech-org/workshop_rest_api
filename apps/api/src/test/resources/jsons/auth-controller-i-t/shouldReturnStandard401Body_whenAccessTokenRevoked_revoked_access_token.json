@@ -1,7 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Não Autenticado",
-    "status": 401,
-    "detail": "Autenticação necessária para acessar este recurso.",
-    "code": "authentication.required"
-}
