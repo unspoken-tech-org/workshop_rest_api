@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "Nome do cliente é obrigatório"
-    }
+    "status": 400,
+    "detail": "Nome do cliente é obrigatório",
+    "instance": "/v1/admin/api-keys",
+    "code": "erro.validacao"
 }

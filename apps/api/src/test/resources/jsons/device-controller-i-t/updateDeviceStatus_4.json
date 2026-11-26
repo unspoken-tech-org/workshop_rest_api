@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "Status do aparelho inválido. Valores aceitos: NOVO, EM_ANDAMENTO, AGUARDANDO, ENTREGUE, DESCARTADO, APROVADO, NAO_APROVADO, PRONTO"
-    }
+    "status": 400,
+    "detail": "Status do aparelho inválido. Valores aceitos: NOVO, EM_ANDAMENTO, AGUARDANDO, ENTREGUE, DESCARTADO, APROVADO, NAO_APROVADO, PRONTO",
+    "instance": "/v1/device/update/1/status",
+    "code": "erro.validacao"
 }

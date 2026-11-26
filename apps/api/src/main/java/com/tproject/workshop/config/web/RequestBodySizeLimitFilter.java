@@ -63,7 +63,7 @@ public class RequestBodySizeLimitFilter extends OncePerRequestFilter {
                     GlobalExceptionHandler.PAYLOAD_TOO_LARGE_CODE,
                     ex.getClass().getSimpleName());
             response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             objectMapper.writeValue(
                     response.getOutputStream(), GlobalExceptionHandler.payloadTooLarge(ex));

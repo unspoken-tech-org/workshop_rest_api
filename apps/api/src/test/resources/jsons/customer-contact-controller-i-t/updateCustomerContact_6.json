@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "O número de telefone, se preenchido, deve ter no mínimo 10 caracteres e no máximo 11"
-    }
+    "status": 400,
+    "detail": "O número de telefone, se preenchido, deve ter no mínimo 10 caracteres e no máximo 11",
+    "instance": "/v1/customer-contact/1",
+    "code": "erro.validacao"
 }

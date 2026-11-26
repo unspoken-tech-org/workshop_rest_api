@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.tproject.workshop.exception.PayloadTooLargeException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +13,8 @@ import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.json.ProblemDetailJacksonMixin;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.util.unit.DataSize;
@@ -20,7 +23,10 @@ class RequestBodySizeLimitFilterTest {
 
     private static final int LIMIT = 16;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper =
+            JsonMapper.builder()
+                    .addMixIn(ProblemDetail.class, ProblemDetailJacksonMixin.class)
+                    .build();
     private final RequestBodySizeLimitFilter filter =
             new RequestBodySizeLimitFilter(DataSize.ofBytes(LIMIT), objectMapper);
 
@@ -34,13 +40,13 @@ class RequestBodySizeLimitFilterTest {
 
         assertThat(chainCalled).isFalse();
         assertThat(response.getStatus()).isEqualTo(413);
-        assertThat(response.getContentType()).startsWith("application/json");
+        assertThat(response.getContentType()).startsWith("application/problem+json");
 
         JsonNode body = objectMapper.readTree(response.getContentAsByteArray());
         assertThat(body.get("status").asInt()).isEqualTo(413);
         assertThat(body.get("title").asText()).isEqualTo("Payload muito grande");
-        assertThat(body.at("/error/code").asText()).isEqualTo("payload.too.large");
-        assertThat(body.at("/error/message").asText()).contains("16 bytes");
+        assertThat(body.get("code").asText()).isEqualTo("payload.too.large");
+        assertThat(body.get("detail").asText()).contains("16 bytes");
     }
 
     @Test

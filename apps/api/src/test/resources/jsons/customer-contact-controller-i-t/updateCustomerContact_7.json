@@ -1,8 +1,8 @@
 {
-    "status": 404,
+    "type": "about:blank",
     "title": "Entidade não encontrada",
-    "error": {
-        "code": "entity.not.found.for.request",
-        "message": "Contato com id 999 não encontrado"
-    }
+    "status": 404,
+    "detail": "Contato com id 999 não encontrado",
+    "instance": "/v1/customer-contact/999",
+    "code": "entity.not.found.for.request"
 }

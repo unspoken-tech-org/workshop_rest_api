@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "A data do contato é obrigatória"
-    }
+    "status": 400,
+    "detail": "A data do contato é obrigatória",
+    "instance": "/v1/customer-contact",
+    "code": "erro.validacao"
 }

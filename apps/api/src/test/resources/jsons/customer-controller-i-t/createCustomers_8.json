@@ -1,8 +1,8 @@
 {
-    "status": 409,
+    "type": "about:blank",
     "title": "Conflito de Recurso",
-    "error": {
-        "code": "recurso.conflito",
-        "message": "O numero informado já está cadastrado como principal para outro cliente"
-    }
+    "status": 409,
+    "detail": "O número informado já está cadastrado como principal para outro cliente",
+    "instance": "/v1/customer",
+    "code": "recurso.conflito"
 }

@@ -1,8 +1,8 @@
 {
-    "status": 401,
+    "type": "about:blank",
     "title": "API Key Inválida",
-    "error": {
-        "code": "auth.invalid.api.key",
-        "message": "Invalid API Key"
-    }
+    "status": 401,
+    "detail": "Invalid API Key",
+    "instance": "/api/auth/token",
+    "code": "auth.invalid.api.key"
 }

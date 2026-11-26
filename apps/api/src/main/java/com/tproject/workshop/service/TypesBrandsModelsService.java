@@ -2,6 +2,7 @@ package com.tproject.workshop.service;
 
 import com.tproject.workshop.dto.device.TypeBrandModelInputDtoRecord;
 import com.tproject.workshop.dto.typesBrandsModels.TypeRecord;
+import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.model.Brand;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Model;
@@ -43,7 +44,7 @@ public class TypesBrandsModelsService {
                             .findByIdBrandAndIdModelAndIdType(
                                     type.getIdType(), brand.getIdBrand(), model.getIdModel())
                             .orElseThrow(() ->
-                                    new RuntimeException(
+                                    new WorkshopException(
                                             "Erro ao criar ou buscar associação de tipo, marca e modelo"));
                 });
     }

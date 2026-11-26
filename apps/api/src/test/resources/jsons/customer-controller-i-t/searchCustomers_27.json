@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "O tamanho da página deve ser maior que zero"
-    }
+    "status": 400,
+    "detail": "O tamanho da página deve ser maior que zero",
+    "instance": "/v1/customer/search",
+    "code": "erro.validacao"
 }

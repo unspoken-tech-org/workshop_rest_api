@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "O problema do aparelho não pode estar vazio. Adicione o problema"
-    }
+    "status": 400,
+    "detail": "O problema do aparelho não pode estar vazio. Adicione o problema",
+    "instance": "/v1/device/update",
+    "code": "erro.validacao"
 }

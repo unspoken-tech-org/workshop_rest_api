@@ -1,8 +1,8 @@
 {
-    "status": 401,
+    "type": "about:blank",
     "title": "Token Inválido",
-    "error": {
-        "code": "auth.invalid.token",
-        "message": "Refresh token not found"
-    }
+    "status": 401,
+    "detail": "Refresh token not found",
+    "instance": "/api/auth/refresh",
+    "code": "auth.invalid.token"
 }

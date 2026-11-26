@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "A relação entre tipo, marca e modelo do aparelho é obrigatória"
-    }
+    "status": 400,
+    "detail": "A relação entre tipo, marca e modelo do aparelho é obrigatória",
+    "instance": "/v1/device/create",
+    "code": "erro.validacao"
 }

@@ -1,8 +1,8 @@
 {
-    "status": 401,
+    "type": "about:blank",
     "title": "Token Inválido",
-    "error": {
-        "code": "auth.invalid.token",
-        "message": "Refresh token expired"
-    }
+    "status": 401,
+    "detail": "Refresh token expired",
+    "instance": "/api/auth/refresh",
+    "code": "auth.invalid.token"
 }

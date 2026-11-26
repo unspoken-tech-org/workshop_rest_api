@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
@@ -47,7 +48,7 @@ class GlobalExceptionHandlerLogTest {
 
     @Test
     void shouldLogClientErrorByCodeAndRouteWithoutMessageValues() {
-        ResponseEntity<ResponseError> response =
+        ResponseEntity<ProblemDetail> response =
                 handler.handleDomainException(
                         new EntityAlreadyExistsException(
                                 "O CPF " + SENTINEL_CPF + " já está em uso"),
@@ -55,7 +56,7 @@ class GlobalExceptionHandlerLogTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getErrors().getCode()).isEqualTo("recurso.conflito");
+        assertThat(errorCode(response.getBody())).isEqualTo("recurso.conflito");
 
         String logged = appender.list.get(0).getFormattedMessage();
         assertThat(logged).contains("route=/v1/customers/{id}", "recurso.conflito");
@@ -83,13 +84,13 @@ class GlobalExceptionHandlerLogTest {
         DataIntegrityViolationException ex =
                 new DataIntegrityViolationException("could not execute statement", sqlEx);
 
-        ResponseEntity<ResponseError> response =
+        ResponseEntity<ProblemDetail> response =
                 handler.handleDataIntegrityViolationException(ex, request());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getStatus()).isEqualTo(409);
-        assertThat(response.getBody().getErrors().getCode()).isEqualTo("recurso.conflito");
+        assertThat(errorCode(response.getBody())).isEqualTo("recurso.conflito");
         assertThat(appender.list.get(0).getFormattedMessage()).contains("recurso.conflito");
     }
 
@@ -98,42 +99,40 @@ class GlobalExceptionHandlerLogTest {
         SQLException sqlEx = new SQLException("null value in column", "23502");
         DataIntegrityViolationException ex = new DataIntegrityViolationException("not null", sqlEx);
 
-        ResponseEntity<ResponseError> response =
+        ResponseEntity<ProblemDetail> response =
                 handler.handleDataIntegrityViolationException(ex, request());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getErrors().getCode()).isEqualTo("database.error");
+        assertThat(errorCode(response.getBody())).isEqualTo("database.error");
     }
 
     @Test
     void shouldMapOptimisticLockingExceptionsTo409Conflict() {
-        ResponseEntity<ResponseError> springResponse =
+        ResponseEntity<ProblemDetail> springResponse =
                 handler.handleOptimisticLockingException(
                         new ObjectOptimisticLockingFailureException("devices", 1), request());
-        ResponseEntity<ResponseError> jpaResponse =
+        ResponseEntity<ProblemDetail> jpaResponse =
                 handler.handleOptimisticLockingException(
                         new OptimisticLockException("stale"), request());
 
         assertThat(springResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(springResponse.getBody()).isNotNull();
-        assertThat(springResponse.getBody().getErrors().getCode())
-                .isEqualTo("recurso.conflito.versao");
+        assertThat(errorCode(springResponse.getBody())).isEqualTo("recurso.conflito.versao");
 
         assertThat(jpaResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(jpaResponse.getBody()).isNotNull();
-        assertThat(jpaResponse.getBody().getErrors().getCode())
-                .isEqualTo("recurso.conflito.versao");
+        assertThat(errorCode(jpaResponse.getBody())).isEqualTo("recurso.conflito.versao");
     }
 
     @Test
     void shouldMapPayloadTooLargeTo413() {
-        ResponseEntity<ResponseError> response =
+        ResponseEntity<ProblemDetail> response =
                 handler.handlePayloadTooLargeException(
                         new PayloadTooLargeException(1024 * 1024), request());
 
         assertPayloadTooLarge(response);
-        assertThat(response.getBody().getErrors().getMessage()).contains("1MB");
+        assertThat(response.getBody().getDetail()).contains("1MB");
         assertThat(appender.list.get(0).getFormattedMessage()).contains("payload.too.large");
     }
 
@@ -150,11 +149,11 @@ class GlobalExceptionHandlerLogTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
-        assertThat(response.getBody()).isInstanceOf(ResponseError.class);
-        ResponseError body = (ResponseError) response.getBody();
+        assertThat(response.getBody()).isInstanceOf(ProblemDetail.class);
+        ProblemDetail body = (ProblemDetail) response.getBody();
         assertThat(body.getStatus()).isEqualTo(413);
         assertThat(body.getTitle()).isEqualTo("Payload muito grande");
-        assertThat(body.getErrors().getCode()).isEqualTo("payload.too.large");
+        assertThat(errorCode(body)).isEqualTo("payload.too.large");
     }
 
     @Test
@@ -169,12 +168,16 @@ class GlobalExceptionHandlerLogTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
-    private static void assertPayloadTooLarge(ResponseEntity<ResponseError> response) {
+    private static void assertPayloadTooLarge(ResponseEntity<ProblemDetail> response) {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getStatus()).isEqualTo(413);
         assertThat(response.getBody().getTitle()).isEqualTo("Payload muito grande");
-        assertThat(response.getBody().getErrors().getCode()).isEqualTo("payload.too.large");
+        assertThat(errorCode(response.getBody())).isEqualTo("payload.too.large");
+    }
+
+    private static Object errorCode(ProblemDetail problem) {
+        return problem.getProperties() != null ? problem.getProperties().get("code") : null;
     }
 
     private static ServletWebRequest request() {

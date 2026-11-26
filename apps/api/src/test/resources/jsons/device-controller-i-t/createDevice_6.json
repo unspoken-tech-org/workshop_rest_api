@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "O id do cliente é obrigatório"
-    }
+    "status": 400,
+    "detail": "O id do cliente é obrigatório",
+    "instance": "/v1/device/create",
+    "code": "erro.validacao"
 }

@@ -1,8 +1,8 @@
 {
-    "status": 400,
+    "type": "about:blank",
     "title": "Erro de Validação",
-    "error": {
-        "code": "erro.validacao",
-        "message": "O id do aparelho deve ser fornecido"
-    }
+    "status": 400,
+    "detail": "O id do aparelho deve ser fornecido",
+    "instance": "/v1/device/update",
+    "code": "erro.validacao"
 }
