@@ -5,10 +5,16 @@ a tag deploys. Deploy details: `.github/workflows/AGENTS.md`.
 
 - Semver: minor = feature, patch = fix, major = breaking the front contract.
   Latest: `git tag --sort=-v:refname | head`.
-- `vX.Y.Z-rc.N` (with a dot) on `main` or `release/X.Y` goes to QA. `vX.Y.Z` on
-  the same commit as the rc goes to production once that rc's QA deploy
-  succeeded; the commit must be in `main` or `release/*`. A hotfix patch skips
-  the rc and QA checks (`skip_rc`), not the branch check. The front uses the same suffixes.
+- `vX.Y.Z-rc.N` (with a dot) on `main`, `release/X.Y` or `feature/<name>` goes
+  to QA. `vX.Y.Z` on the same commit as the rc goes to production once that
+  rc's QA deploy succeeded; the commit must be in `main` or `release/*`. A
+  hotfix patch skips the rc and QA checks (`skip_rc`), not the branch check.
+  The front uses the same suffixes.
+- An rc on `feature/<name>` validates the feature in QA before its final PR.
+  It never becomes the final: the merge commit into `main` is a new commit, so
+  tag a new rc there (next `N`) and promote that one. Use the minor the
+  feature will ship as; QA keeps only the last deploy, so warn before replacing
+  an rc of `main` that is still under test.
 - `git tag -a vX.Y.Z -m "<summary>" <sha> && git push origin vX.Y.Z`.
   Production needs approval in the `production` Environment.
 - After a tag deploys, the workflow publishes a GitHub Release with notes
