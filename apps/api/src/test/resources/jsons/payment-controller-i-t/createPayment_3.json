@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Erro de Validação",
-    "status": 400,
-    "detail": "Valor do pagamento deve ser maior que zero",
-    "instance": "/v1/payment",
-    "code": "erro.validacao"
-}
