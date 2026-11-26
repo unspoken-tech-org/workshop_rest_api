@@ -2,6 +2,7 @@ package com.tproject.workshop.dto.contact;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.tproject.workshop.config.jackson.PhoneNumberDeserializer;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -48,7 +49,7 @@ public record CustomerContactInputDto(
                         description = "Current device status when the contact was logged",
                         example = "EM_ANDAMENTO")
                 @NotNull(message = "O status do dispositivo é obrigatório")
-                String deviceStatus,
+                DeviceStatusEnum deviceStatus,
         @Schema(
                         description = "Date and time when the contact happened",
                         example = "2025-08-31T19:55:13Z")

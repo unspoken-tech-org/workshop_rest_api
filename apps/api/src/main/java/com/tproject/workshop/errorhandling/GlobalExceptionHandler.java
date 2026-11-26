@@ -1,6 +1,8 @@
 package com.tproject.workshop.errorhandling;
 
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.tproject.workshop.config.logging.RequestLogSanitizer;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.DomainException;
 import com.tproject.workshop.exception.PayloadTooLargeException;
@@ -25,6 +27,7 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -96,6 +99,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         Throwable rootCause = ex.getMostSpecificCause();
         if (rootCause instanceof BadRequestException badRequestEx) {
+            if (isDeviceStatusValidationRoute(ex, request)) {
+                return new ResponseEntity<>(
+                        toProblemDetail(
+                                ErrorCode.VALIDATION_ERROR,
+                                "Status do aparelho inválido. Valores aceitos: NOVO, EM_ANDAMENTO, AGUARDANDO, ENTREGUE, DESCARTADO, APROVADO, NAO_APROVADO, PRONTO"),
+                        ErrorCode.VALIDATION_ERROR.status());
+            }
             return buildBadRequestResponse(badRequestEx.getMessage());
         }
 
@@ -122,6 +132,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setTitle(errorCode.title());
         problem.setProperty("code", errorCode.code());
         return problem;
+    }
+
+    private static boolean isDeviceStatusValidationRoute(
+            HttpMessageNotReadableException ex, WebRequest request) {
+        return ex.getCause() instanceof ValueInstantiationException vie
+                && vie.getType() != null
+                && vie.getType().getRawClass() == DeviceStatusEnum.class
+                && request instanceof ServletWebRequest swr
+                && swr.getRequest().getRequestURI().startsWith("/v1/device/");
     }
 
     private static <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
