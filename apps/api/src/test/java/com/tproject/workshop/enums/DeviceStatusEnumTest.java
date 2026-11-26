@@ -3,6 +3,9 @@ package com.tproject.workshop.enums;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import com.tproject.workshop.dto.device.DeviceStatusInputRecord;
 import com.tproject.workshop.exception.BadRequestException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -57,5 +60,25 @@ class DeviceStatusEnumTest {
                 .isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> DeviceStatusEnum.fromString("INVALIDO"))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void shouldSerializeAndDeserializeStatusViaJackson() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+
+        String json =
+                mapper.writeValueAsString(new DeviceStatusInputRecord(DeviceStatusEnum.PRONTO));
+        assertThat(json).isEqualTo("{\"deviceStatus\":\"PRONTO\"}");
+
+        DeviceStatusInputRecord deserialized =
+                mapper.readValue(
+                        "{\"deviceStatus\":\"  em_andamento \"}", DeviceStatusInputRecord.class);
+        assertThat(deserialized.deviceStatus()).isEqualTo(DeviceStatusEnum.EM_ANDAMENTO);
+
+        assertThatThrownBy(() ->
+                        mapper.readValue(
+                                "{\"deviceStatus\":\"INVALIDO\"}", DeviceStatusInputRecord.class))
+                .isInstanceOf(ValueInstantiationException.class)
+                .hasCauseInstanceOf(BadRequestException.class);
     }
 }

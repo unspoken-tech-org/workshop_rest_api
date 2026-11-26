@@ -152,7 +152,7 @@ class CustomerContactServiceTest {
                         null,
                         "teste",
                         true,
-                        "em_andamento",
+                        DeviceStatusEnum.EM_ANDAMENTO,
                         "2025-08-31T19:55:13Z");
 
         var saved = customerContactService.save(dto);
@@ -176,7 +176,7 @@ class CustomerContactServiceTest {
                         null,
                         "teste",
                         true,
-                        "em_andamento",
+                        DeviceStatusEnum.EM_ANDAMENTO,
                         "2025-08-31T19:55:13");
 
         assertThatThrownBy(() -> customerContactService.save(dto))
@@ -194,7 +194,7 @@ class CustomerContactServiceTest {
                         null,
                         "teste",
                         true,
-                        "em_andamento",
+                        DeviceStatusEnum.EM_ANDAMENTO,
                         "2025-08-31T19:55:13");
 
         assertThatThrownBy(() -> customerContactService.save(dto))
@@ -204,7 +204,14 @@ class CustomerContactServiceTest {
 
     private static CustomerContactInputDto input(String deviceStatus, String contactDate) {
         return new CustomerContactInputDto(
-                DEVICE_ID, "pessoalmente", 2, null, "teste", true, deviceStatus, contactDate);
+                DEVICE_ID,
+                "pessoalmente",
+                2,
+                null,
+                "teste",
+                true,
+                DeviceStatusEnum.fromString(deviceStatus),
+                contactDate);
     }
 
     private static CustomerContact contactWithId(int id, DeviceStatusEnum status) {

@@ -383,7 +383,7 @@ class PaymentServiceTest {
         DeviceUpdateInputDtoRecord nullBudgetFee =
                 new DeviceUpdateInputDtoRecord(
                         1,
-                        "EM_ANDAMENTO",
+                        DeviceStatusEnum.EM_ANDAMENTO,
                         "Problema",
                         null,
                         null,
@@ -398,7 +398,7 @@ class PaymentServiceTest {
         DeviceUpdateInputDtoRecord invalidServiceScale =
                 new DeviceUpdateInputDtoRecord(
                         1,
-                        "EM_ANDAMENTO",
+                        DeviceStatusEnum.EM_ANDAMENTO,
                         "Problema",
                         null,
                         null,
