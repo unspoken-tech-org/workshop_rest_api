@@ -1,5 +1,7 @@
 package com.tproject.workshop.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.tproject.workshop.exception.BadRequestException;
 import java.util.Locale;
 
@@ -45,6 +47,12 @@ public enum DeviceStatusEnum {
         return true;
     }
 
+    @JsonValue
+    public String getValue() {
+        return name();
+    }
+
+    @JsonCreator
     public static DeviceStatusEnum fromString(String status) {
         if (status == null || status.isBlank()) {
             throw new BadRequestException("Não foi encontrado o status: " + status);

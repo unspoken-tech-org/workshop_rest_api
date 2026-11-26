@@ -179,7 +179,7 @@ class DeviceServiceTest {
         deviceService.updateDevice(
                 new DeviceUpdateInputDtoRecord(
                         DEVICE_ID,
-                        "ENTREGUE",
+                        DeviceStatusEnum.ENTREGUE,
                         "problema",
                         "obs atualizada",
                         null,
@@ -202,7 +202,7 @@ class DeviceServiceTest {
         deviceService.updateDevice(
                 new DeviceUpdateInputDtoRecord(
                         DEVICE_ID,
-                        "DESCARTADO",
+                        DeviceStatusEnum.DESCARTADO,
                         "problema",
                         null,
                         null,
@@ -224,7 +224,7 @@ class DeviceServiceTest {
         DeviceUpdateInputDtoRecord request =
                 new DeviceUpdateInputDtoRecord(
                         DEVICE_ID,
-                        "ENTREGUE",
+                        DeviceStatusEnum.ENTREGUE,
                         "problema",
                         null,
                         null,
@@ -249,7 +249,7 @@ class DeviceServiceTest {
         DeviceUpdateInputDtoRecord request =
                 new DeviceUpdateInputDtoRecord(
                         DEVICE_ID,
-                        "ENTREGUE",
+                        DeviceStatusEnum.ENTREGUE,
                         "problema",
                         null,
                         null,
@@ -274,7 +274,7 @@ class DeviceServiceTest {
         deviceService.updateDevice(
                 new DeviceUpdateInputDtoRecord(
                         DEVICE_ID,
-                        "ENTREGUE",
+                        DeviceStatusEnum.ENTREGUE,
                         "problema",
                         null,
                         null,
@@ -298,7 +298,7 @@ class DeviceServiceTest {
         deviceService.updateDevice(
                 new DeviceUpdateInputDtoRecord(
                         DEVICE_ID,
-                        "pronto",
+                        DeviceStatusEnum.PRONTO,
                         "problema",
                         null,
                         null,
@@ -340,7 +340,7 @@ class DeviceServiceTest {
         deviceService.updateDevice(
                 new DeviceUpdateInputDtoRecord(
                         DEVICE_ID,
-                        "em_andamento",
+                        DeviceStatusEnum.EM_ANDAMENTO,
                         "problema",
                         null,
                         null,
@@ -361,7 +361,8 @@ class DeviceServiceTest {
         device.setUrgency(true);
         device.setRevision(true);
 
-        deviceService.updateDeviceStatus(DEVICE_ID, new DeviceStatusInputRecord("entregue"));
+        deviceService.updateDeviceStatus(
+                DEVICE_ID, new DeviceStatusInputRecord(DeviceStatusEnum.ENTREGUE));
 
         assertThat(device.isUrgency()).isFalse();
         assertThat(device.isRevision()).isFalse();
@@ -381,7 +382,8 @@ class DeviceServiceTest {
                         org.assertj.core.groups.Tuple.tuple(
                                 DeviceHistoryFieldEnum.REVISION.getField(), "true", "false"));
 
-        deviceService.updateDeviceStatus(DEVICE_ID, new DeviceStatusInputRecord("aguardando"));
+        deviceService.updateDeviceStatus(
+                DEVICE_ID, new DeviceStatusInputRecord(DeviceStatusEnum.AGUARDANDO));
 
         assertThat(device.getDeviceStatus()).isEqualTo(DeviceStatusEnum.AGUARDANDO);
         assertThat(device.getDepartureDate()).isNull();
@@ -439,7 +441,7 @@ class DeviceServiceTest {
             BigDecimal budgetFee, BigDecimal serviceValue, boolean urgency) {
         return new DeviceUpdateInputDtoRecord(
                 DEVICE_ID,
-                "em_andamento",
+                DeviceStatusEnum.EM_ANDAMENTO,
                 "problema",
                 null,
                 null,

@@ -59,6 +59,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
       - name: Setup Java 25
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
@@ -70,6 +73,19 @@ jobs:
 
       - name: Run Checks and Unit Tests
         run: ./gradlew check
+
+      - name: Generate JaCoCo Unit Test Report
+        run: ./gradlew :apps:api:jacocoTestReport
+
+      - name: Upload JaCoCo Unit Test Report
+        if: always()
+        uses: actions/upload-artifact@6b68470975f00706eebefb1dd4cc04ee70160b7a # v6
+        with:
+          name: jacoco-unit-report
+          path: |
+            apps/api/build/reports/jacoco/test/
+            apps/api/build/jacoco/test.exec
+          retention-days: 14
 
       - name: Build Application JAR and Security Module
         run: ./gradlew :apps:api:bootJar :apps:security:jar -x test
@@ -118,6 +134,19 @@ jobs:
 
       - name: Run Integration Tests
         run: ./gradlew :apps:api:integrationTests
+
+      - name: Generate JaCoCo Integration Test Report
+        run: ./gradlew :apps:api:jacocoTestReport
+
+      - name: Upload JaCoCo Integration Test Report
+        if: always()
+        uses: actions/upload-artifact@6b68470975f00706eebefb1dd4cc04ee70160b7a # v6
+        with:
+          name: jacoco-integration-report
+          path: |
+            apps/api/build/reports/jacoco/test/
+            apps/api/build/jacoco/integrationTests.exec
+          retention-days: 14
 
   # ===========================================
   # JOB 3: SECURITY SCAN (TRIVY)

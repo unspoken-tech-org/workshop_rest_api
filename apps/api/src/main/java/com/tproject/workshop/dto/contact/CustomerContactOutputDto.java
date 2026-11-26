@@ -1,5 +1,6 @@
 package com.tproject.workshop.dto.contact;
 
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 
@@ -14,4 +15,4 @@ public record CustomerContactOutputDto(
         @Schema(example = "true") boolean hasMadeContact,
         @Schema(hidden = true) LocalDateTime lastContact,
         @Schema(example = "Aparelho pronto para retirada") String conversation,
-        @Schema(example = "NOVO, PRONTO, APROVADO") String deviceStatus) {}
+        @Schema(example = "NOVO, PRONTO, APROVADO") DeviceStatusEnum deviceStatus) {}
