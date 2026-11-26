@@ -3,6 +3,7 @@ package com.tproject.workshop.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-public class ApiKeyTokenVersionIT extends AbstractIntegrationLiveTest {
+public class ApiKeyTokenVersionIT extends AbstractIntegrationTest {
 
     private static final long API_KEY_ID = 1L;
 

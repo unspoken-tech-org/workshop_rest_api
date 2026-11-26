@@ -4,6 +4,7 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,7 @@ import org.springframework.test.context.jdbc.Sql;
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-class ObservabilityActuatorIT extends AbstractIntegrationLiveTest {
+class ObservabilityActuatorIT extends AbstractIntegrationTest {
 
     private static final String SCRAPE_USER = "metrics-scraper";
     // Matches the bcrypt hash configured only in application-test.yml.

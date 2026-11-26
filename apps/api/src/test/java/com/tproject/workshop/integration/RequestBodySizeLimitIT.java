@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import java.io.ByteArrayInputStream;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -24,11 +24,9 @@ import org.springframework.test.context.jdbc.Sql;
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
+class RequestBodySizeLimitIT extends AbstractIntegrationTest {
 
     private static final int ONE_MB = 1024 * 1024;
-    private static final URI TOKEN_URI =
-            URI.create(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT + "/api/auth/token");
 
     private final HttpClient client =
             HttpClient.newBuilder()
@@ -73,7 +71,7 @@ class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
 
     private HttpResponse<String> send(HttpRequest.BodyPublisher publisher) throws Exception {
         HttpRequest request =
-                HttpRequest.newBuilder(TOKEN_URI)
+                HttpRequest.newBuilder(uri("/api/auth/token"))
                         .timeout(Duration.ofSeconds(30))
                         .header("Content-Type", "application/json")
                         .header("X-API-Key", API_KEY)

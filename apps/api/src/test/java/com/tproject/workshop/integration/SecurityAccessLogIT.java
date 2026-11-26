@@ -7,6 +7,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import java.util.List;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -21,7 +22,7 @@ import org.springframework.test.context.jdbc.Sql;
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-class SecurityAccessLogIT extends AbstractIntegrationLiveTest {
+class SecurityAccessLogIT extends AbstractIntegrationTest {
 
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
     private Logger accessLogger;

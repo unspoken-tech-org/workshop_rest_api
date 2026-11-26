@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,7 +29,7 @@ class SnapshotAssertionTest {
                 assertThrows(
                         AssertionFailedError.class,
                         () ->
-                                AbstractIntegrationLiveTest.assertMatchesSnapshot(
+                                AbstractIntegrationTest.assertMatchesSnapshot(
                                         missingSnapshot,
                                         "nested/example_1.json",
                                         "{\"status\":\"ok\"}",
@@ -44,7 +45,7 @@ class SnapshotAssertionTest {
         File newSnapshot = tempDir.resolve("nested/example_1.json").toFile();
         String payload = "{\n  \"status\" : \"ok\"\n}";
 
-        AbstractIntegrationLiveTest.assertMatchesSnapshot(
+        AbstractIntegrationTest.assertMatchesSnapshot(
                 newSnapshot, "nested/example_1.json", payload, STRICT_COMPARATOR, true);
 
         assertTrue(newSnapshot.exists());
@@ -57,7 +58,7 @@ class SnapshotAssertionTest {
         File existingSnapshot = tempDir.resolve("example_1.json").toFile();
         Files.writeString(existingSnapshot.toPath(), "{\"status\":\"ok\"}", StandardCharsets.UTF_8);
 
-        AbstractIntegrationLiveTest.assertMatchesSnapshot(
+        AbstractIntegrationTest.assertMatchesSnapshot(
                 existingSnapshot,
                 "example_1.json",
                 "{\"status\":\"ok\"}",
@@ -67,7 +68,7 @@ class SnapshotAssertionTest {
         assertThrows(
                 AssertionError.class,
                 () ->
-                        AbstractIntegrationLiveTest.assertMatchesSnapshot(
+                        AbstractIntegrationTest.assertMatchesSnapshot(
                                 existingSnapshot,
                                 "example_1.json",
                                 "{\"status\":\"changed\"}",
@@ -80,10 +81,10 @@ class SnapshotAssertionTest {
         String previous = System.getProperty("updateSnapshots");
         try {
             System.setProperty("updateSnapshots", "true");
-            assertTrue(AbstractIntegrationLiveTest.isUpdateSnapshotsEnabled());
+            assertTrue(AbstractIntegrationTest.isUpdateSnapshotsEnabled());
 
             System.setProperty("updateSnapshots", "false");
-            assertFalse(AbstractIntegrationLiveTest.isUpdateSnapshotsEnabled());
+            assertFalse(AbstractIntegrationTest.isUpdateSnapshotsEnabled());
         } finally {
             if (previous == null) {
                 System.clearProperty("updateSnapshots");

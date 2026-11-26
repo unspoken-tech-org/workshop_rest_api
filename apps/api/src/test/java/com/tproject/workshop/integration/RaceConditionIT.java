@@ -7,6 +7,7 @@ import com.tproject.workshop.dto.customer.CustomerOutputDto;
 import com.tproject.workshop.dto.customer.InputCustomerDtoRecord;
 import com.tproject.workshop.dto.device.TypeBrandModelInputDtoRecord;
 import com.tproject.workshop.exception.EntityAlreadyExistsException;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import com.tproject.workshop.model.Color;
 import com.tproject.workshop.model.Technician;
 import com.tproject.workshop.repository.ColorRepository;
@@ -30,7 +31,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.jdbc.Sql;
 
 @Sql({"/test-scripts/cleanTestData.sql"})
-public class RaceConditionIT extends AbstractIntegrationLiveTest {
+public class RaceConditionIT extends AbstractIntegrationTest {
 
     private static final List<String> VALID_CPFS =
             List.of("31781477051", "75386544020", "46203912042", "45931651055", "52998224725");

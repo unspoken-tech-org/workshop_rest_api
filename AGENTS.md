@@ -34,8 +34,8 @@ Read the matching file before the task (load it only then):
 - All API tests: `./gradlew :apps:api:test :apps:api:integrationTests`
 - Format check and unit tests (all modules): `./gradlew check`
 - Integration tests are a separate task (`:apps:api:integrationTests`, tag
-  `integration`), extend `AbstractIntegrationLiveTest`, and run the app on port
-  `8081` with the `test` profile; the DB must be running.
+  `integration`), extend `AbstractIntegrationTest`, and run the app on a
+  dynamic port (`RANDOM_PORT`) with the `test` profile and Testcontainers.
 - Missing JSON snapshots in `apps/api/src/test/resources/jsons/` fail the test
   by default; pass `-DupdateSnapshots=true` (or `UPDATE_SNAPSHOTS=true`) to
   generate new snapshots, and review them before committing.

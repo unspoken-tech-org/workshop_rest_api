@@ -2,7 +2,7 @@ package com.tproject.workshop.integration.controller;
 
 import static io.restassured.RestAssured.given;
 
-import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import io.restassured.response.Response;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,7 @@ import org.springframework.test.context.jdbc.Sql;
     "/test-scripts/CustomerControllerIT.script.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-public class CustomerControllerIT extends AbstractIntegrationLiveTest {
+public class CustomerControllerIT extends AbstractIntegrationTest {
     private static final String BASE_PATH = "/v1/customer";
 
     @Order(0)
