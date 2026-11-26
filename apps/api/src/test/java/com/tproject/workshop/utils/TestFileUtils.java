@@ -9,8 +9,7 @@ public final class TestFileUtils {
         StackWalker walker = StackWalker.getInstance();
         return walker.walk(stream ->
                         stream.filter(f -> f.getClassName().contains(packageName))
-                                .filter(f ->
-                                        !f.getClassName().contains("AbstractIntegrationLiveTest"))
+                                .filter(f -> !f.getClassName().contains("AbstractIntegrationTest"))
                                 .filter(f -> !f.getClassName().contains("TestFileUtils"))
                                 .findFirst())
                 .orElseThrow(() -> new RuntimeException("Could not find test spec"));

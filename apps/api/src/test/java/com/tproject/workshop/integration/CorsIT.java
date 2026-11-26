@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,7 +16,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  * other origin (including the old localhost:3000 default) gets no CORS headers, and credentials are
  * never allowed.
  */
-class CorsIT extends AbstractIntegrationLiveTest {
+class CorsIT extends AbstractIntegrationTest {
 
     private static final String PATH = "/api/auth/token";
 

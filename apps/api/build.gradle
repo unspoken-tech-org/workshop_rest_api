@@ -141,9 +141,7 @@ tasks.register('integrationTests', Test) {
     // Gradle 9 no longer wires custom Test tasks to the test source set; without this the task is NO-SOURCE.
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
-    useJUnitPlatform() {
+    useJUnitPlatform {
         includeTags("integration")
-        excludeTags("unit")
-        excludeTags("swagger")
     }
 }

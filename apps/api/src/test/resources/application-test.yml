@@ -23,9 +23,6 @@ spring:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.temp.use_jdbc_metadata_defaults: false
 
-server:
-  port: 8081
-
 # Timezone
 spring.main.banner-mode: off
 logging:

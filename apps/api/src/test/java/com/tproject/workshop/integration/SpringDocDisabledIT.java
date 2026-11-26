@@ -3,6 +3,7 @@ package com.tproject.workshop.integration;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.not;
 
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -17,7 +18,7 @@ import org.springframework.test.context.jdbc.Sql;
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-class SpringDocDisabledIT extends AbstractIntegrationLiveTest {
+class SpringDocDisabledIT extends AbstractIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(

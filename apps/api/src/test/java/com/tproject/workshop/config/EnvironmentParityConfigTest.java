@@ -3,6 +3,7 @@ package com.tproject.workshop.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tproject.workshop.config.security.CorsProperties;
+import com.tproject.workshop.integration.support.TestcontainersConfig;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -263,7 +264,7 @@ class EnvironmentParityConfigTest {
         String localImage = (String) imageObj;
         assertThat(localImage)
                 .matches("^postgres:" + Pattern.quote(pgMinorVersion) + "-.+@sha256:[0-9a-f]{64}$");
-        assertThat(TestcontainersConfiguration.POSTGRES_IMAGE).isEqualTo(localImage);
+        assertThat(TestcontainersConfig.POSTGRES_IMAGE).isEqualTo(localImage);
     }
 
     private static void assertComposeServiceHasNoCommand(
