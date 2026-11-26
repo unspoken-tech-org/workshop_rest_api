@@ -14,10 +14,11 @@ public interface ModelRepository extends JpaRepository<Model, Integer>, ModelRep
 
     Optional<Model> findByModelIgnoreCase(String name);
 
+    Optional<Model> findByNameKey(String nameKey);
+
     @Modifying
     @Query(
-            value =
-                    "INSERT INTO models (model) VALUES (:model) ON CONFLICT (LOWER(TRIM(model))) DO NOTHING",
+            value = "INSERT INTO models (model) VALUES (:model) ON CONFLICT (name_key) DO NOTHING",
             nativeQuery = true)
     int insertIgnore(@Param("model") String model);
 }

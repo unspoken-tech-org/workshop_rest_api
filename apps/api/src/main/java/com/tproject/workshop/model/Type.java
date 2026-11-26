@@ -37,6 +37,9 @@ public class Type {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "name_key", insertable = false, updatable = false)
+    private String nameKey;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
