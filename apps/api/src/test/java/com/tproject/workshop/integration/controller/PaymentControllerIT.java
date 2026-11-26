@@ -17,7 +17,6 @@ import org.springframework.test.context.jdbc.Sql;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Sql(
         value = {
-            "/test-scripts/cleanTestData.sql",
             "/test-scripts/AuthSetup.sql",
             "/test-scripts/PaymentControllerIT.script.sql",
             "/test-scripts/resetTablesSequence.sql"

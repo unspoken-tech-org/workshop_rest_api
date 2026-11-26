@@ -13,11 +13,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.jdbc.Sql;
 
 /** Contract tests for the exposed Actuator surface and its authorization. */
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
 class ObservabilityActuatorIT extends AbstractIntegrationTest {
 
     private static final String SCRAPE_USER = "metrics-scraper";

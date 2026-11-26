@@ -15,7 +15,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
 @Sql({
-    "/test-scripts/cleanTestData.sql",
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/DeviceFuzzySearchIT.script.sql",
     "/test-scripts/resetTablesSequence.sql"

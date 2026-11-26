@@ -29,11 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
 public class AuthControllerIT extends AbstractIntegrationTest {
 
     private static final String AUTH_PATH = "/api/auth";

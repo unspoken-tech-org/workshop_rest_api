@@ -19,7 +19,6 @@ import org.springframework.test.context.jdbc.Sql;
  * and {@code \} never breaks the pattern (no 500).
  */
 @Sql({
-    "/test-scripts/cleanTestData.sql",
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/LikeEscapeSearchIT.script.sql",
     "/test-scripts/resetTablesSequence.sql"

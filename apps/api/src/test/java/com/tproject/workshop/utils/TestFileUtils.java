@@ -1,7 +1,5 @@
 package com.tproject.workshop.utils;
 
-import dev.mccue.guava.base.CaseFormat;
-
 public final class TestFileUtils {
     private TestFileUtils() {}
 
@@ -18,13 +16,27 @@ public final class TestFileUtils {
     public static String getClassName(String packageName) {
         var stackFrame = getClassNameAndMethodName(packageName);
         final String fullClassName = stackFrame.getClassName();
-        return CaseFormat.UPPER_CAMEL.to(
-                CaseFormat.LOWER_HYPHEN,
-                fullClassName.substring(fullClassName.lastIndexOf(".") + 1));
+        return toLowerHyphen(fullClassName.substring(fullClassName.lastIndexOf(".") + 1));
     }
 
     public static String getMethodName(String packageName) {
         var stackFrame = getClassNameAndMethodName(packageName);
         return stackFrame.getMethodName();
+    }
+
+    static String toLowerHyphen(String upperCamel) {
+        StringBuilder result = new StringBuilder(upperCamel.length() + 8);
+        for (int i = 0; i < upperCamel.length(); i++) {
+            char ch = upperCamel.charAt(i);
+            if (Character.isUpperCase(ch)) {
+                if (i > 0) {
+                    result.append('-');
+                }
+                result.append(Character.toLowerCase(ch));
+            } else {
+                result.append(ch);
+            }
+        }
+        return result.toString();
     }
 }

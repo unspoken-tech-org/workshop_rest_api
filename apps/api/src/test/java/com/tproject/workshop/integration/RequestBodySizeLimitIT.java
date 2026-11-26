@@ -19,11 +19,7 @@ import org.springframework.test.context.jdbc.Sql;
  * ProblemDetail} contract, whether the size is declared up front (Content-Length) or only known
  * while reading (Transfer-Encoding: chunked).
  */
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
 class RequestBodySizeLimitIT extends AbstractIntegrationTest {
 
     private static final int ONE_MB = 1024 * 1024;
