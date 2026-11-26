@@ -7,11 +7,11 @@ import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.apache.http.HttpStatus;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
 /**
@@ -23,7 +23,7 @@ import org.springframework.test.context.jdbc.Sql;
     "/test-scripts/LikeEscapeSearchIT.script.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-public class LikeEscapeSearchIT extends AbstractIntegrationTest {
+class LikeEscapeSearchIT extends AbstractIntegrationTest {
 
     private static final String LOJA_100 = "Loja 100% Eletrica";
     private static final String LOJA_1000 = "Loja 1000 Eletrica";
@@ -119,7 +119,7 @@ public class LikeEscapeSearchIT extends AbstractIntegrationTest {
                 .when()
                 .post(path)
                 .then()
-                .statusCode(HttpStatus.SC_OK)
+                .statusCode(HttpStatus.OK.value())
                 .extract()
                 .jsonPath();
     }

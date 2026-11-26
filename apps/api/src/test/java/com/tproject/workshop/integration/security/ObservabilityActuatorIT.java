@@ -1,14 +1,14 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.security;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
-import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.jdbc.Sql;
 
@@ -34,21 +34,21 @@ class ObservabilityActuatorIT extends AbstractIntegrationTest {
                 .when()
                 .get("/actuator/health")
                 .then()
-                .statusCode(HttpStatus.SC_OK)
+                .statusCode(HttpStatus.OK.value())
                 .body(containsString("\"status\""));
 
         given().spec(SPEC)
                 .when()
                 .get("/actuator/info")
                 .then()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+                .statusCode(HttpStatus.UNAUTHORIZED.value());
 
         // An authenticated role without permission gets 403, not 401 (R19).
         given().spec(getServiceAuthenticatedSpec())
                 .when()
                 .get("/actuator/info")
                 .then()
-                .statusCode(HttpStatus.SC_FORBIDDEN)
+                .statusCode(HttpStatus.FORBIDDEN.value())
                 .body(containsString("auth.access.denied"));
     }
 
@@ -61,7 +61,7 @@ class ObservabilityActuatorIT extends AbstractIntegrationTest {
                 .when()
                 .get("/actuator/prometheus")
                 .then()
-                .statusCode(HttpStatus.SC_OK)
+                .statusCode(HttpStatus.OK.value())
                 .body(containsString("# HELP"))
                 .body(containsString("http_server_requests_seconds_bucket"));
     }
@@ -72,7 +72,7 @@ class ObservabilityActuatorIT extends AbstractIntegrationTest {
                 .when()
                 .get("/actuator/prometheus")
                 .then()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+                .statusCode(HttpStatus.UNAUTHORIZED.value());
 
         given().spec(SPEC)
                 .auth()
@@ -81,13 +81,13 @@ class ObservabilityActuatorIT extends AbstractIntegrationTest {
                 .when()
                 .get("/actuator/prometheus")
                 .then()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+                .statusCode(HttpStatus.UNAUTHORIZED.value());
 
         // An admin session is not a scrape identity (least privilege).
         given().spec(getAuthenticatedSpec())
                 .when()
                 .get("/actuator/prometheus")
                 .then()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+                .statusCode(HttpStatus.UNAUTHORIZED.value());
     }
 }

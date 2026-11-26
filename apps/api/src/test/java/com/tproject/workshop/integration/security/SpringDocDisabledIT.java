@@ -1,12 +1,12 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.security;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.equalTo;
 
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
-import org.apache.http.HttpStatus;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
 /**
@@ -25,7 +25,7 @@ class SpringDocDisabledIT extends AbstractIntegrationTest {
                 "/swagger-ui/index.html"
             })
     void shouldNotExposeSpringDocAnonymously(String path) {
-        given().spec(SPEC).when().get(path).then().statusCode(HttpStatus.SC_UNAUTHORIZED);
+        given().spec(SPEC).when().get(path).then().statusCode(HttpStatus.UNAUTHORIZED.value());
     }
 
     @ParameterizedTest
@@ -35,6 +35,7 @@ class SpringDocDisabledIT extends AbstractIntegrationTest {
                 .when()
                 .get(path)
                 .then()
-                .statusCode(not(HttpStatus.SC_OK));
+                .statusCode(HttpStatus.UNAUTHORIZED.value())
+                .body("code", equalTo("authentication.required"));
     }
 }
