@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Requisição Inválida",
-    "status": 400,
-    "detail": "Não foi encontrado o status: non_existent_status",
-    "instance": "/v1/customer-contact/1",
-    "code": "requisicao.invalida"
-}

@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Entidade não encontrada",
-    "status": 404,
-    "detail": "Aparelho com id 999 não encontrado",
-    "instance": "/v1/customer-contact",
-    "code": "entity.not.found.for.request"
-}

@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Erro de Validação",
-    "status": 400,
-    "detail": "O status do dispositivo é obrigatório",
-    "instance": "/v1/customer-contact",
-    "code": "erro.validacao"
-}
