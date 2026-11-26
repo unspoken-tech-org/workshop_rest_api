@@ -1,141 +1,198 @@
 package com.tproject.workshop.integration.controller;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
-import io.restassured.response.Response;
+import com.tproject.workshop.support.fixtures.IntegrationFixtures;
+import io.restassured.path.json.JsonPath;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
-import org.apache.http.HttpStatus;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.test.context.jdbc.Sql;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 
-@Sql({
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/BrandControllerIT.script.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
-public class BrandControllerIT extends AbstractIntegrationTest {
+class BrandControllerIT extends AbstractIntegrationTest {
+
     private static final String BASE_PATH = "/v1/brand";
 
-    @DisplayName("Search brands")
-    @MethodSource("searchBrandsArguments")
-    @ParameterizedTest(name = "{displayName} : {0} {2}")
-    public void searchBrands(int index, Map<String, Object> params, String reason) {
-        Response response =
-                given().spec(getAuthenticatedSpec())
-                        .when()
-                        .body(params)
-                        .post(BASE_PATH + "/search")
-                        .then()
-                        .statusCode(HttpStatus.SC_OK)
-                        .extract()
-                        .response();
+    @Autowired private ApplicationContext context;
 
-        super.validateResponse(index, response);
+    private IntegrationFixtures fixtures;
+    private int samsungId;
+
+    @BeforeEach
+    void seedCatalog() {
+        fixtures = new IntegrationFixtures(jdbcTemplate, context);
+        fixtures.adminApiKey();
+        samsungId = fixtures.brand("Samsung");
+        for (String brand :
+                List.of("LG", "LG Pro", "Brastemp", "Electrolux", "Consul", "Panasonic", "Midea")) {
+            fixtures.brand(brand);
+        }
     }
 
-    private static Stream<Arguments> searchBrandsArguments() {
-        return Stream.of(
-                // All brands (empty query)
-                Arguments.of(1, Map.of(), "get all brands (empty query)"),
-                Arguments.of(2, Map.of("query", "sam"), "search 'sam'"),
-                Arguments.of(3, Map.of("query", "SAM"), "search 'SAM' uppercase"),
-                Arguments.of(4, Map.of("query", "LG"), "search 'LG'"),
-                Arguments.of(5, Map.of("query", "brast"), "search 'brast' partial"),
-                Arguments.of(6, Map.of("query", "electro"), "search 'electro'"),
-
-                // Non-existent brand
-                Arguments.of(16, Map.of("query", "xyz123"), "non-existent brand returns empty"),
-
-                // Pagination
-                Arguments.of(17, Map.of("page", 0, "size", 2), "pagination first page size 2"),
-                Arguments.of(
-                        18, Map.of("query", "LG", "page", 0, "size", 1), "filtered pagination"));
+    @Test
+    @DisplayName("Rejects search without JWT")
+    void shouldReturn401_whenSearchingWithoutJwt() {
+        given().spec(SPEC)
+                .body(Map.of())
+                .post(BASE_PATH + "/search")
+                .then()
+                .statusCode(HttpStatus.UNAUTHORIZED.value());
     }
 
-    @DisplayName("Create brand")
-    @MethodSource("createBrandArguments")
-    @ParameterizedTest(name = "{displayName} : {0} status {1} {2}")
-    public void createBrand(
-            int index, Integer statusCode, Map<String, Object> body, String reason) {
-        Response response =
-                given().spec(getAuthenticatedSpec())
-                        .when()
-                        .body(body)
-                        .post(BASE_PATH)
-                        .then()
-                        .statusCode(statusCode)
-                        .extract()
-                        .response();
+    @Test
+    @DisplayName("Empty query lists every brand with default pagination")
+    void shouldListAllBrands_whenQueryIsEmpty() {
+        JsonPath body = search(Map.of());
 
-        super.validateResponse(index, response);
+        assertThat(body.getList("content.brand", String.class))
+                .containsExactlyInAnyOrder(
+                        "samsung",
+                        "lg",
+                        "lg pro",
+                        "brastemp",
+                        "electrolux",
+                        "consul",
+                        "panasonic",
+                        "midea");
+        assertThat(body.getInt("totalElements")).isEqualTo(8);
+        assertThat(body.getInt("totalPages")).isEqualTo(1);
+        assertThat(body.getInt("size")).isEqualTo(15);
+        assertThat(body.getBoolean("last")).isTrue();
     }
 
-    private static Stream<Arguments> createBrandArguments() {
-        return Stream.of(
-                Arguments.of(
-                        19,
-                        HttpStatus.SC_CREATED,
-                        Map.of("brand", "Whirlpool"),
-                        "create new brand"),
-                Arguments.of(
-                        20,
-                        HttpStatus.SC_CREATED,
-                        Map.of("brand", "  Bosch  "),
-                        "create brand with whitespace"),
-                Arguments.of(
-                        21,
-                        HttpStatus.SC_CREATED,
-                        Map.of("brand", "Sharp"),
-                        "create another brand"));
+    @ParameterizedTest(name = "query \"{0}\" -> {1}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "sam|samsung",
+                "SAM|samsung",
+                "LG|lg,lg pro",
+                "brast|brastemp",
+                "electro|electrolux",
+                "xyz123|"
+            })
+    @DisplayName("Search matches brands case-insensitively")
+    void shouldFilterBrands_whenQueryIsGiven(String query, String expected) {
+        JsonPath body = search(Map.of("query", query));
+
+        List<String> expectedBrands = expected == null ? List.of() : List.of(expected.split(","));
+        assertThat(body.getList("content.brand", String.class))
+                .containsExactlyInAnyOrderElementsOf(expectedBrands);
+        assertThat(body.getInt("totalElements")).isEqualTo(expectedBrands.size());
     }
 
-    @DisplayName("Create brand - idempotent (returns existing)")
-    @MethodSource("createBrandExistingArguments")
-    @ParameterizedTest(name = "{displayName} : {0} {1}")
-    public void createBrandExisting(int index, Map<String, Object> body, String reason) {
-        Response response =
-                given().spec(getAuthenticatedSpec())
-                        .when()
-                        .body(body)
-                        .post(BASE_PATH)
-                        .then()
-                        .statusCode(HttpStatus.SC_CREATED)
-                        .extract()
-                        .response();
+    @Test
+    @DisplayName("Search returns the persisted id of each brand")
+    void shouldReturnBrandId_whenSearching() {
+        JsonPath body = search(Map.of("query", "samsung"));
 
-        super.validateResponse(index, response);
+        assertThat(body.getList("content.idBrand", Integer.class)).containsExactly(samsungId);
     }
 
-    private static Stream<Arguments> createBrandExistingArguments() {
-        return Stream.of(
-                Arguments.of(22, Map.of("brand", "Samsung"), "existing brand returns same"),
-                Arguments.of(23, Map.of("brand", "samsung"), "existing brand case insensitive"),
-                Arguments.of(24, Map.of("brand", "LG"), "existing brand another"));
+    @Test
+    @DisplayName("Paginates results")
+    void shouldPaginate_whenPageAndSizeAreGiven() {
+        JsonPath firstPage = search(Map.of("page", 0, "size", 2));
+        JsonPath lastPage = search(Map.of("page", 3, "size", 2));
+
+        assertThat(firstPage.getList("content")).hasSize(2);
+        assertThat(firstPage.getInt("totalElements")).isEqualTo(8);
+        assertThat(firstPage.getInt("totalPages")).isEqualTo(4);
+        assertThat(firstPage.getBoolean("last")).isFalse();
+        assertThat(lastPage.getList("content")).hasSize(2);
+        assertThat(lastPage.getBoolean("last")).isTrue();
     }
 
-    @DisplayName("Create brand - validation")
-    @MethodSource("createBrandValidationArguments")
-    @ParameterizedTest(name = "{displayName} : status {0} {1}")
-    public void createBrandValidation(Integer statusCode, Map<String, Object> body, String reason) {
-        given().spec(getAuthenticatedSpec())
-                .when()
+    @Test
+    @DisplayName("Paginates filtered results")
+    void shouldPaginateFilteredResults_whenQueryAndSizeAreGiven() {
+        JsonPath body = search(Map.of("query", "LG", "page", 0, "size", 1));
+
+        assertThat(body.getList("content")).hasSize(1);
+        assertThat(body.getInt("totalElements")).isEqualTo(2);
+        assertThat(body.getInt("totalPages")).isEqualTo(2);
+        assertThat(body.getBoolean("last")).isFalse();
+    }
+
+    @ParameterizedTest(name = "\"{0}\" is stored as \"{1}\"")
+    @CsvSource({"Whirlpool,whirlpool", "'  Bosch  ',bosch", "Sharp   Corp,sharp corp"})
+    @DisplayName("Creates a brand with a normalized name")
+    void shouldCreateBrand_whenNameIsNew(String raw, String normalized) {
+        int before = countBrands();
+
+        JsonPath body = create(Map.of("brand", raw), HttpStatus.CREATED);
+
+        assertThat(body.getString("brand")).isEqualTo(normalized);
+        Integer id = body.getInt("idBrand");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT brand FROM brands WHERE id = ?", String.class, id))
+                .isEqualTo(normalized);
+        assertThat(countBrands()).isEqualTo(before + 1);
+    }
+
+    @ParameterizedTest(name = "\"{0}\" returns the existing brand")
+    @ValueSource(strings = {"Samsung", "samsung", "SAMSUNG", "  Samsung  "})
+    @DisplayName("Create is idempotent for existing names")
+    void shouldReturnExistingBrand_whenNameAlreadyExists(String raw) {
+        int before = countBrands();
+
+        JsonPath body = create(Map.of("brand", raw), HttpStatus.CREATED);
+
+        assertThat(body.getInt("idBrand")).isEqualTo(samsungId);
+        assertThat(body.getString("brand")).isEqualTo("samsung");
+        assertThat(countBrands()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("Rejects an empty body")
+    void shouldReturn400_whenBodyIsEmpty() {
+        create(new HashMap<>(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ParameterizedTest(name = "blank brand \"{0}\"")
+    @ValueSource(strings = {"", "  "})
+    @DisplayName("Rejects a blank brand name")
+    void shouldReturn400_whenBrandIsBlank(String brand) {
+        int before = countBrands();
+
+        JsonPath body = create(Map.of("brand", brand), HttpStatus.BAD_REQUEST);
+
+        assertThat(body.getString("code")).isEqualTo("erro.validacao");
+        assertThat(countBrands()).isEqualTo(before);
+    }
+
+    private JsonPath search(Map<String, Object> params) {
+        return given().spec(getAuthenticatedSpec())
+                .body(params)
+                .post(BASE_PATH + "/search")
+                .then()
+                .statusCode(HttpStatus.OK.value())
+                .extract()
+                .jsonPath();
+    }
+
+    private JsonPath create(Map<String, Object> body, HttpStatus expected) {
+        return given().spec(getAuthenticatedSpec())
                 .body(body)
                 .post(BASE_PATH)
                 .then()
-                .statusCode(statusCode);
+                .statusCode(expected.value())
+                .extract()
+                .jsonPath();
     }
 
-    private static Stream<Arguments> createBrandValidationArguments() {
-        return Stream.of(
-                Arguments.of(HttpStatus.SC_BAD_REQUEST, new HashMap<>(), "empty body"),
-                Arguments.of(HttpStatus.SC_BAD_REQUEST, Map.of("brand", ""), "blank brand"),
-                Arguments.of(
-                        HttpStatus.SC_BAD_REQUEST, Map.of("brand", "  "), "whitespace-only brand"));
+    private int countBrands() {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM brands", Integer.class);
     }
 }
