@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Erro de Validação",
-    "status": 400,
-    "detail": "Número de CPF inválido",
-    "instance": "/v1/customer/1",
-    "code": "erro.validacao"
-}

@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Requisição Inválida",
-    "status": 400,
-    "detail": "Não é possível ter telefones com números iguais",
-    "instance": "/v1/customer/1",
-    "code": "requisicao.invalida"
-}

@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Conflito de Recurso",
-    "status": 409,
-    "detail": "An active API Key already exists for this client and user on this platform",
-    "instance": "/v1/admin/api-keys",
-    "code": "recurso.conflito"
-}

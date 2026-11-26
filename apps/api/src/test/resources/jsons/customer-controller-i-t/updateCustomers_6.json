@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Entidade não encontrada",
-    "status": 404,
-    "detail": "Cliente com id 250 não encontrado",
-    "instance": "/v1/customer/250",
-    "code": "entity.not.found.for.request"
-}

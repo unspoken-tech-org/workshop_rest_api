@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Erro de Validação",
-    "status": 400,
-    "detail": "O tamanho da página deve ser maior que zero",
-    "instance": "/v1/customer/search",
-    "code": "erro.validacao"
-}
