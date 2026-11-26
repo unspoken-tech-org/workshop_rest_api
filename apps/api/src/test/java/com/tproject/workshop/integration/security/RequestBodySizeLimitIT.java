@@ -1,17 +1,18 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import java.io.ByteArrayInputStream;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
 /**
@@ -19,16 +20,10 @@ import org.springframework.test.context.jdbc.Sql;
  * ProblemDetail} contract, whether the size is declared up front (Content-Length) or only known
  * while reading (Transfer-Encoding: chunked).
  */
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
-class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
+class RequestBodySizeLimitIT extends AbstractIntegrationTest {
 
     private static final int ONE_MB = 1024 * 1024;
-    private static final URI TOKEN_URI =
-            URI.create(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT + "/api/auth/token");
 
     private final HttpClient client =
             HttpClient.newBuilder()
@@ -66,14 +61,14 @@ class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
                                 () -> new ByteArrayInputStream(body)));
 
         // Read in full and validated: boundDeviceId is over @Size(max = 100).
-        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.BAD_REQUEST.value());
         assertThat(mapper.readTree(response.body()).get("code").asText())
                 .isEqualTo("erro.validacao");
     }
 
     private HttpResponse<String> send(HttpRequest.BodyPublisher publisher) throws Exception {
         HttpRequest request =
-                HttpRequest.newBuilder(TOKEN_URI)
+                HttpRequest.newBuilder(uri("/api/auth/token"))
                         .timeout(Duration.ofSeconds(30))
                         .header("Content-Type", "application/json")
                         .header("X-API-Key", API_KEY)
@@ -83,9 +78,9 @@ class RequestBodySizeLimitIT extends AbstractIntegrationLiveTest {
     }
 
     private void assertPayloadTooLarge(HttpResponse<String> response) throws Exception {
-        assertThat(response.statusCode()).isEqualTo(413);
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE.value());
         JsonNode body = mapper.readTree(response.body());
-        assertThat(body.get("status").asInt()).isEqualTo(413);
+        assertThat(body.get("status").asInt()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE.value());
         assertThat(body.get("title").asText()).isEqualTo("Payload muito grande");
         assertThat(body.get("code").asText()).isEqualTo("payload.too.large");
         assertThat(body.get("detail").asText()).contains("1MB");

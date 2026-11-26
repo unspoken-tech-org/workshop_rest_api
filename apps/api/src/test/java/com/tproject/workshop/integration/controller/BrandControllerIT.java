@@ -2,7 +2,7 @@ package com.tproject.workshop.integration.controller;
 
 import static io.restassured.RestAssured.given;
 
-import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import io.restassured.response.Response;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,12 +15,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.test.context.jdbc.Sql;
 
 @Sql({
-    "/test-scripts/cleanTestData.sql",
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/BrandControllerIT.script.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-public class BrandControllerIT extends AbstractIntegrationLiveTest {
+public class BrandControllerIT extends AbstractIntegrationTest {
     private static final String BASE_PATH = "/v1/brand";
 
     @DisplayName("Search brands")

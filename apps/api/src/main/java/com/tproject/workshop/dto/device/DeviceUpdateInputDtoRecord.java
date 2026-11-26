@@ -1,6 +1,6 @@
 package com.tproject.workshop.dto.device;
 
-import com.tproject.workshop.validation.ValidDeviceStatus;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -14,9 +14,8 @@ public record DeviceUpdateInputDtoRecord(
                 @NotNull(message = "O id do aparelho deve ser fornecido")
                 Integer deviceId,
         @Schema(description = "New status of the device", example = "EM_ANDAMENTO")
-                @NotEmpty(message = "O status do aparelho deve ser fornecido")
-                @ValidDeviceStatus
-                String deviceStatus,
+                @NotNull(message = "O status do aparelho deve ser fornecido")
+                DeviceStatusEnum deviceStatus,
         @Schema(
                         description = "Updated problem description",
                         example = "Replacing broken screen and battery")

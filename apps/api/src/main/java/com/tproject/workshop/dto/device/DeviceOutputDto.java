@@ -3,6 +3,7 @@ package com.tproject.workshop.dto.device;
 import com.tproject.workshop.dto.cellphone.CellPhoneOutputDeviceDto;
 import com.tproject.workshop.dto.contact.CustomerContactOutputDto;
 import com.tproject.workshop.dto.payment.PaymentDeviceOutputDto;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,7 +20,7 @@ public class DeviceOutputDto {
     private int deviceId;
     private int customerId;
     private String customerName;
-    private String deviceStatus;
+    private DeviceStatusEnum deviceStatus;
     private String brandName;
     private String modelName;
     private String typeName;

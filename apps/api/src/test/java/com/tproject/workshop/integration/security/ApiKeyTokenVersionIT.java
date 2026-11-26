@@ -1,8 +1,9 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.repository.ApiKeyRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -12,12 +13,8 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
-public class ApiKeyTokenVersionIT extends AbstractIntegrationLiveTest {
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
+class ApiKeyTokenVersionIT extends AbstractIntegrationTest {
 
     private static final long API_KEY_ID = 1L;
 
@@ -27,7 +24,7 @@ public class ApiKeyTokenVersionIT extends AbstractIntegrationLiveTest {
 
     @Test
     @DisplayName("incrementAndGetTokenVersion returns 1 then 2 via native UPDATE ... RETURNING")
-    public void shouldIncrementAndReturnNewTokenVersion() {
+    void shouldIncrementAndReturnNewTokenVersion() {
         assertThat(currentTokenVersion()).isZero();
 
         Long first =
@@ -44,7 +41,7 @@ public class ApiKeyTokenVersionIT extends AbstractIntegrationLiveTest {
 
     @Test
     @DisplayName("incrementAndGetTokenVersion requires a caller transaction")
-    public void shouldRequireTransaction() {
+    void shouldRequireTransaction() {
         assertThatThrownBy(() -> apiKeyRepository.incrementAndGetTokenVersion(API_KEY_ID))
                 .isInstanceOf(IllegalTransactionStateException.class);
         assertThat(currentTokenVersion()).isZero();
@@ -52,7 +49,7 @@ public class ApiKeyTokenVersionIT extends AbstractIntegrationLiveTest {
 
     @Test
     @DisplayName("Saving a stale ApiKey entity never rolls token_version back")
-    public void shouldNotOverwriteTokenVersionFromStaleEntity() {
+    void shouldNotOverwriteTokenVersionFromStaleEntity() {
         ApiKey stale = apiKeyRepository.findById(API_KEY_ID).orElseThrow();
         assertThat(stale.getTokenVersion()).isZero();
 

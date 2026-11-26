@@ -1,4 +1,4 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -11,6 +11,7 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.enums.PaymentCategoryEnum;
 import com.tproject.workshop.enums.PaymentMethodEnum;
 import com.tproject.workshop.events.DeviceViewedEvent;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Customer;
 import com.tproject.workshop.model.Device;
@@ -30,10 +31,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.test.context.jdbc.Sql;
 
-@Sql({"/test-scripts/cleanTestData.sql"})
-public class DomainIntegrityIT extends AbstractIntegrationLiveTest {
+class DomainIntegrityIT extends AbstractIntegrationTest {
 
     @Autowired private CustomerService customerService;
 

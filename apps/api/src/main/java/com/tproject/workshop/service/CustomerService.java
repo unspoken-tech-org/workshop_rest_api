@@ -93,8 +93,7 @@ public class CustomerService {
         MinifiedDeviceTableOutputDto dto = new MinifiedDeviceTableOutputDto();
         dto.setDeviceId(device.getId());
         dto.setCustomerId(device.getCustomer().getIdCustomer());
-        dto.setDeviceStatus(
-                device.getDeviceStatus() != null ? device.getDeviceStatus().name() : null);
+        dto.setDeviceStatus(device.getDeviceStatus());
         dto.setProblem(device.getProblem());
         dto.setHasUrgency(device.isUrgency());
         dto.setRevision(device.isRevision());

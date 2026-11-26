@@ -172,7 +172,7 @@ public class DeviceService {
 
     @Transactional
     public DeviceOutputDto updateDeviceStatus(int deviceId, DeviceStatusInputRecord dto) {
-        DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(dto.deviceStatus());
+        DeviceStatusEnum newStatus = dto.deviceStatus();
         deviceRepository.saveAndFlush(changeStatus(deviceId, newStatus, "status"));
         return findDeviceByIdOrThrow(deviceId);
     }
@@ -228,7 +228,7 @@ public class DeviceService {
     public DeviceOutputDto updateDevice(DeviceUpdateInputDtoRecord device) {
         Device oldDevice = fetchOrThrow(device.deviceId());
 
-        DeviceStatusEnum newStatus = DeviceStatusEnum.fromString(device.deviceStatus());
+        DeviceStatusEnum newStatus = device.deviceStatus();
         DeviceStatusEnum previousStatus = oldDevice.getDeviceStatus();
         boolean previousUrgency = oldDevice.isUrgency();
         boolean effectiveUrgency = !newStatus.resetsUrgencyAndRevision() && device.hasUrgency();

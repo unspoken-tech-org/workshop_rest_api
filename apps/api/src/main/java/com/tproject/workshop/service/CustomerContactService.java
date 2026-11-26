@@ -39,7 +39,7 @@ public class CustomerContactService {
     @Transactional
     public CustomerContactOutputDto save(CustomerContactInputDto contact) {
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
-        DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
+        DeviceStatusEnum status = contact.deviceStatus();
         Optional<ContactChannel> channel = ContactChannel.fromNullable(contact.contactType());
         validatePhoneIfNeeded(channel.orElse(null), contact.phoneNumber());
         deviceService.ensureDeviceExists(contact.deviceId());
@@ -66,7 +66,7 @@ public class CustomerContactService {
 
         DeviceStatusEnum previousStatus = existingContact.getDeviceStatus();
         TechnicianResponseDto technician = technicianService.findByIdDto(contact.technicianId());
-        DeviceStatusEnum status = DeviceStatusEnum.fromString(contact.deviceStatus());
+        DeviceStatusEnum status = contact.deviceStatus();
         Optional<ContactChannel> channel = ContactChannel.fromNullable(contact.contactType());
         validatePhoneIfNeeded(channel.orElse(null), contact.phoneNumber());
         deviceService.ensureDeviceExists(contact.deviceId());
@@ -176,6 +176,6 @@ public class CustomerContactService {
                 model.isHasMadeContact(),
                 model.getLastContact() != null ? model.getLastContact().toLocalDateTime() : null,
                 model.getConversation(),
-                model.getDeviceStatus().name());
+                model.getDeviceStatus());
     }
 }

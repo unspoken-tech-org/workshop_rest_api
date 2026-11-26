@@ -1,18 +1,18 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.integration.support;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tproject.workshop.config.TestcontainersConfiguration;
 import com.tproject.workshop.utils.TestFileUtils;
 import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.filter.log.RequestLoggingFilter;
-import io.restassured.filter.log.ResponseLoggingFilter;
+import io.restassured.config.LogConfig;
+import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
@@ -28,47 +28,57 @@ import org.skyscreamer.jsonassert.comparator.CustomComparator;
 import org.skyscreamer.jsonassert.comparator.DefaultComparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.TestExecutionListeners.MergeMode;
 
-@Import(TestcontainersConfiguration.class)
+@Import(TestcontainersConfig.class)
 @ActiveProfiles("test")
 @Tag("integration")
-@TestPropertySource(locations = "classpath:application-test.yml")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-public class AbstractIntegrationLiveTest {
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestExecutionListeners(
+        listeners = DatabaseCleanerTestExecutionListener.class,
+        mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
+public abstract class AbstractIntegrationTest {
 
     protected static final String TESTS_HOST = "localhost";
     protected static final String PROTOCOL_HTTP = "http://";
 
-    protected static final int API_PORT = 8081;
-    protected static final String API_KEY = TestAuthHelper.MOBILE_API_KEY;
+    protected static final String API_KEY = TestAuthClient.MOBILE_API_KEY;
+
+    @LocalServerPort protected int port;
 
     @Autowired protected JdbcTemplate jdbcTemplate;
 
     @Autowired private ObjectMapper objectMapper;
 
-    protected static final RequestSpecification SPEC = createRequestSpecification(API_PORT);
+    protected RequestSpecification SPEC;
+    protected TestAuthClient authClient;
 
     // Lazy-initialized authenticated spec (cached after first use)
-    private static RequestSpecification cachedAuthenticatedSpec;
-    private static RequestSpecification cachedServiceAuthenticatedSpec;
+    private RequestSpecification cachedAuthenticatedSpec;
+    private RequestSpecification cachedServiceAuthenticatedSpec;
 
     @BeforeEach
-    void resetAuthCache() {
-        TestAuthHelper.invalidateTokenCache();
+    void setUpBaseIntegrationTest() {
+        SPEC = createRequestSpecification(port);
+        authClient = new TestAuthClient(SPEC);
         cachedAuthenticatedSpec = null;
         cachedServiceAuthenticatedSpec = null;
+    }
+
+    protected URI uri(String path) {
+        return URI.create(PROTOCOL_HTTP + TESTS_HOST + ":" + port + path);
     }
 
     protected static RequestSpecification createRequestSpecification(int apiPort) {
         return new RequestSpecBuilder()
                 .setContentType(ContentType.JSON)
                 .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + apiPort)
-                .addFilter(new ResponseLoggingFilter())
-                .addFilter(new RequestLoggingFilter())
+                .setConfig(loggingOnFailureConfig())
                 .build();
     }
 
@@ -77,9 +87,9 @@ public class AbstractIntegrationLiveTest {
      *
      * @return RequestSpecification with JWT authentication
      */
-    protected static RequestSpecification getAuthenticatedSpec() {
+    protected RequestSpecification getAuthenticatedSpec() {
         if (cachedAuthenticatedSpec == null) {
-            String token = TestAuthHelper.getAccessToken(SPEC, API_KEY);
+            String token = authClient.getAccessToken(API_KEY);
             cachedAuthenticatedSpec = buildAuthenticatedSpec(token);
         }
         return cachedAuthenticatedSpec;
@@ -90,22 +100,27 @@ public class AbstractIntegrationLiveTest {
      *
      * @return RequestSpecification with JWT authentication
      */
-    protected static RequestSpecification getServiceAuthenticatedSpec() {
+    protected RequestSpecification getServiceAuthenticatedSpec() {
         if (cachedServiceAuthenticatedSpec == null) {
-            String token = TestAuthHelper.getAccessToken(SPEC, TestAuthHelper.SERVICE_API_KEY);
+            String token = authClient.getAccessToken(TestAuthClient.SERVICE_API_KEY);
             cachedServiceAuthenticatedSpec = buildAuthenticatedSpec(token);
         }
         return cachedServiceAuthenticatedSpec;
     }
 
-    private static RequestSpecification buildAuthenticatedSpec(String token) {
+    private RequestSpecification buildAuthenticatedSpec(String token) {
         return new RequestSpecBuilder()
                 .setContentType(ContentType.JSON)
-                .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + API_PORT)
-                .addFilter(new ResponseLoggingFilter())
-                .addFilter(new RequestLoggingFilter())
+                .setBaseUri(PROTOCOL_HTTP + TESTS_HOST + ":" + port)
+                .setConfig(loggingOnFailureConfig())
                 .addHeader("Authorization", "Bearer " + token)
                 .build();
+    }
+
+    private static RestAssuredConfig loggingOnFailureConfig() {
+        return RestAssuredConfig.config()
+                .logConfig(
+                        LogConfig.logConfig().enableLoggingOfRequestAndResponseIfValidationFails());
     }
 
     public void validateResponse(Object index, Object response) {
@@ -148,7 +163,7 @@ public class AbstractIntegrationLiveTest {
         }
     }
 
-    static boolean isUpdateSnapshotsEnabled() {
+    public static boolean isUpdateSnapshotsEnabled() {
         String property = System.getProperty("updateSnapshots");
         if (property != null) {
             return Boolean.parseBoolean(property);
@@ -156,7 +171,7 @@ public class AbstractIntegrationLiveTest {
         return Boolean.parseBoolean(System.getenv().getOrDefault("UPDATE_SNAPSHOTS", "false"));
     }
 
-    static void assertMatchesSnapshot(
+    public static void assertMatchesSnapshot(
             File testFile,
             String filename,
             String actualPayload,

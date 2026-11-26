@@ -5,8 +5,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 
 import com.tproject.workshop.config.security.RsaKeyProperties;
-import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
 import com.tproject.workshop.integration.TestAuthHelper;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import com.tproject.workshop.util.KeyGeneratorUtils;
 import io.jsonwebtoken.Jwts;
 import io.restassured.path.json.JsonPath;
@@ -29,12 +29,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Sql({
-    "/test-scripts/cleanTestData.sql",
-    "/test-scripts/AuthSetup.sql",
-    "/test-scripts/resetTablesSequence.sql"
-})
-public class AuthControllerIT extends AbstractIntegrationLiveTest {
+@Sql({"/test-scripts/AuthSetup.sql", "/test-scripts/resetTablesSequence.sql"})
+public class AuthControllerIT extends AbstractIntegrationTest {
 
     private static final String AUTH_PATH = "/api/auth";
     private static final String API_KEY_HEADER = "X-API-Key";

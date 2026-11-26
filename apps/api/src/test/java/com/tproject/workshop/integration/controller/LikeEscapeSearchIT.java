@@ -3,15 +3,15 @@ package com.tproject.workshop.integration.controller;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.apache.http.HttpStatus;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
 /**
@@ -19,12 +19,11 @@ import org.springframework.test.context.jdbc.Sql;
  * and {@code \} never breaks the pattern (no 500).
  */
 @Sql({
-    "/test-scripts/cleanTestData.sql",
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/LikeEscapeSearchIT.script.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-public class LikeEscapeSearchIT extends AbstractIntegrationLiveTest {
+class LikeEscapeSearchIT extends AbstractIntegrationTest {
 
     private static final String LOJA_100 = "Loja 100% Eletrica";
     private static final String LOJA_1000 = "Loja 1000 Eletrica";
@@ -120,7 +119,7 @@ public class LikeEscapeSearchIT extends AbstractIntegrationLiveTest {
                 .when()
                 .post(path)
                 .then()
-                .statusCode(HttpStatus.SC_OK)
+                .statusCode(HttpStatus.OK.value())
                 .extract()
                 .jsonPath();
     }

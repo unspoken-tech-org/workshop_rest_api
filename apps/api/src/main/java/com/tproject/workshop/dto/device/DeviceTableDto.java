@@ -1,6 +1,7 @@
 package com.tproject.workshop.dto.device;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
@@ -20,7 +21,7 @@ public class DeviceTableDto {
     private String type;
     private String brand;
     private String model;
-    private String status;
+    private DeviceStatusEnum status;
     private String problem;
     private String observation;
 

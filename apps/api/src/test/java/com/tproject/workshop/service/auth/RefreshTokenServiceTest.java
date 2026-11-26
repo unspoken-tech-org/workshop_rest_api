@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tproject.workshop.exception.InvalidTokenException;
+import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.ApiKey;
 import com.tproject.workshop.model.Platform;
 import com.tproject.workshop.model.RefreshToken;
@@ -37,7 +38,7 @@ class RefreshTokenServiceTest {
 
     @Mock private ApiKeyRepository apiKeyRepository;
 
-    @Spy private Clock clock = Clock.systemDefaultZone();
+    @Spy private Clock clock = TestClock.FIXED;
 
     @InjectMocks private RefreshTokenService refreshTokenService;
 
@@ -74,7 +75,7 @@ class RefreshTokenServiceTest {
         assertThat(saved.getApiKey()).isEqualTo(apiKey);
         assertThat(saved.isRevoked()).isFalse();
         assertThat(saved.getCreatedAt()).isNotNull();
-        assertThat(saved.getExpiresAt()).isAfter(Instant.now());
+        assertThat(saved.getExpiresAt()).isAfter(TestClock.DEFAULT_INSTANT);
     }
 
     @Test
@@ -87,7 +88,7 @@ class RefreshTokenServiceTest {
                         .id(42L)
                         .token(hashedOldToken)
                         .apiKey(apiKey)
-                        .expiresAt(Instant.now().plusSeconds(600))
+                        .expiresAt(TestClock.DEFAULT_INSTANT.plusSeconds(600))
                         .revoked(false)
                         .build();
 
@@ -120,7 +121,7 @@ class RefreshTokenServiceTest {
                         .id(99L)
                         .token(hashedReusedToken)
                         .apiKey(apiKey)
-                        .expiresAt(Instant.now().plusSeconds(600))
+                        .expiresAt(TestClock.DEFAULT_INSTANT.plusSeconds(600))
                         .revoked(true)
                         .build();
 
@@ -146,7 +147,7 @@ class RefreshTokenServiceTest {
                         .id(100L)
                         .token(hashedToken)
                         .apiKey(apiKey)
-                        .expiresAt(Instant.now().plusSeconds(600))
+                        .expiresAt(TestClock.DEFAULT_INSTANT.plusSeconds(600))
                         .revoked(false)
                         .build();
 
@@ -166,13 +167,13 @@ class RefreshTokenServiceTest {
     void shouldRejectRefreshWhenApiKeyIsExpired() {
         String rawToken = "rt_valid_token";
         String hashedToken = KeyGeneratorUtils.sha256Hex(rawToken);
-        ApiKey expiredKey = activeApiKey(20L, Instant.now().minusSeconds(60));
+        ApiKey expiredKey = activeApiKey(20L, TestClock.DEFAULT_INSTANT.minusSeconds(60));
         RefreshToken refreshToken =
                 RefreshToken.builder()
                         .id(77L)
                         .token(hashedToken)
                         .apiKey(expiredKey)
-                        .expiresAt(Instant.now().plusSeconds(600))
+                        .expiresAt(TestClock.DEFAULT_INSTANT.plusSeconds(600))
                         .revoked(false)
                         .build();
 
@@ -202,7 +203,7 @@ class RefreshTokenServiceTest {
                         .id(78L)
                         .token(hashedToken)
                         .apiKey(inactiveKey)
-                        .expiresAt(Instant.now().plusSeconds(600))
+                        .expiresAt(TestClock.DEFAULT_INSTANT.plusSeconds(600))
                         .revoked(false)
                         .build();
 
@@ -226,7 +227,7 @@ class RefreshTokenServiceTest {
                         .id(80L)
                         .token(hashedToken)
                         .apiKey(apiKey)
-                        .expiresAt(Instant.now().plusSeconds(600))
+                        .expiresAt(TestClock.DEFAULT_INSTANT.plusSeconds(600))
                         .revoked(false)
                         .build();
 

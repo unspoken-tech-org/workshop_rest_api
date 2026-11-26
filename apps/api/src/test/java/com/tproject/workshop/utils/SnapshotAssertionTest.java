@@ -1,10 +1,9 @@
-package com.tproject.workshop.integration;
+package com.tproject.workshop.utils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,19 +23,17 @@ class SnapshotAssertionTest {
     void shouldFailWhenSnapshotIsMissingAndUpdateIsDisabled(@TempDir Path tempDir) {
         File missingSnapshot = tempDir.resolve("nested/example_1.json").toFile();
 
-        AssertionFailedError error =
-                assertThrows(
-                        AssertionFailedError.class,
-                        () ->
-                                AbstractIntegrationLiveTest.assertMatchesSnapshot(
-                                        missingSnapshot,
-                                        "nested/example_1.json",
-                                        "{\"status\":\"ok\"}",
-                                        STRICT_COMPARATOR,
-                                        false));
+        assertThatThrownBy(() ->
+                        AbstractIntegrationTest.assertMatchesSnapshot(
+                                missingSnapshot,
+                                "nested/example_1.json",
+                                "{\"status\":\"ok\"}",
+                                STRICT_COMPARATOR,
+                                false))
+                .isInstanceOf(AssertionFailedError.class)
+                .hasMessageContaining("Missing JSON snapshot");
 
-        assertTrue(error.getMessage().contains("Missing JSON snapshot"));
-        assertFalse(missingSnapshot.exists());
+        assertThat(missingSnapshot).doesNotExist();
     }
 
     @Test
@@ -44,11 +41,12 @@ class SnapshotAssertionTest {
         File newSnapshot = tempDir.resolve("nested/example_1.json").toFile();
         String payload = "{\n  \"status\" : \"ok\"\n}";
 
-        AbstractIntegrationLiveTest.assertMatchesSnapshot(
+        AbstractIntegrationTest.assertMatchesSnapshot(
                 newSnapshot, "nested/example_1.json", payload, STRICT_COMPARATOR, true);
 
-        assertTrue(newSnapshot.exists());
-        assertEquals(payload, Files.readString(newSnapshot.toPath(), StandardCharsets.UTF_8));
+        assertThat(newSnapshot).exists();
+        assertThat(Files.readString(newSnapshot.toPath(), StandardCharsets.UTF_8))
+                .isEqualTo(payload);
     }
 
     @Test
@@ -57,22 +55,21 @@ class SnapshotAssertionTest {
         File existingSnapshot = tempDir.resolve("example_1.json").toFile();
         Files.writeString(existingSnapshot.toPath(), "{\"status\":\"ok\"}", StandardCharsets.UTF_8);
 
-        AbstractIntegrationLiveTest.assertMatchesSnapshot(
+        AbstractIntegrationTest.assertMatchesSnapshot(
                 existingSnapshot,
                 "example_1.json",
                 "{\"status\":\"ok\"}",
                 STRICT_COMPARATOR,
                 false);
 
-        assertThrows(
-                AssertionError.class,
-                () ->
-                        AbstractIntegrationLiveTest.assertMatchesSnapshot(
+        assertThatThrownBy(() ->
+                        AbstractIntegrationTest.assertMatchesSnapshot(
                                 existingSnapshot,
                                 "example_1.json",
                                 "{\"status\":\"changed\"}",
                                 STRICT_COMPARATOR,
-                                true));
+                                true))
+                .isInstanceOf(AssertionError.class);
     }
 
     @Test
@@ -80,10 +77,10 @@ class SnapshotAssertionTest {
         String previous = System.getProperty("updateSnapshots");
         try {
             System.setProperty("updateSnapshots", "true");
-            assertTrue(AbstractIntegrationLiveTest.isUpdateSnapshotsEnabled());
+            assertThat(AbstractIntegrationTest.isUpdateSnapshotsEnabled()).isTrue();
 
             System.setProperty("updateSnapshots", "false");
-            assertFalse(AbstractIntegrationLiveTest.isUpdateSnapshotsEnabled());
+            assertThat(AbstractIntegrationTest.isUpdateSnapshotsEnabled()).isFalse();
         } finally {
             if (previous == null) {
                 System.clearProperty("updateSnapshots");

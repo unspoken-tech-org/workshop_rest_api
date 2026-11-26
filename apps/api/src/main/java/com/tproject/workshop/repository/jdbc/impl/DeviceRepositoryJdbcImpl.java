@@ -6,6 +6,7 @@ import com.tproject.workshop.dto.device.DeviceOutputDto;
 import com.tproject.workshop.dto.device.DeviceQueryParam;
 import com.tproject.workshop.dto.device.DeviceSearchParam;
 import com.tproject.workshop.dto.device.DeviceTableDto;
+import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.repository.jdbc.DeviceRepositoryJdbc;
 import com.tproject.workshop.utils.UtilsSql;
 import com.tproject.workshop.utils.UtilsString;
@@ -195,7 +196,8 @@ public class DeviceRepositoryJdbcImpl implements DeviceRepositoryJdbc {
             dto.setDeviceId(rs.getInt("device_id"));
             dto.setCustomerId(rs.getInt("customer_id"));
             dto.setCustomerName(rs.getString("customer_name"));
-            dto.setDeviceStatus(rs.getString("device_status"));
+            String rawStatus = rs.getString("device_status");
+            dto.setDeviceStatus(rawStatus != null ? DeviceStatusEnum.fromString(rawStatus) : null);
             dto.setBrandName(rs.getString("brand_name"));
             dto.setModelName(rs.getString("model_name"));
             dto.setTypeName(rs.getString("type_name"));

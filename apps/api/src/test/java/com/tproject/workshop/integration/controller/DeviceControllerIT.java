@@ -2,7 +2,7 @@ package com.tproject.workshop.integration.controller;
 
 import static io.restassured.RestAssured.given;
 
-import com.tproject.workshop.integration.AbstractIntegrationLiveTest;
+import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import io.restassured.response.Response;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,12 +20,11 @@ import org.springframework.test.context.jdbc.Sql;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Sql({
-    "/test-scripts/cleanTestData.sql",
     "/test-scripts/AuthSetup.sql",
     "/test-scripts/DeviceControllerIT.script.sql",
     "/test-scripts/resetTablesSequence.sql"
 })
-public class DeviceControllerIT extends AbstractIntegrationLiveTest {
+public class DeviceControllerIT extends AbstractIntegrationTest {
     private static final String BASE_PATH = "/v1/device";
 
     @Order(0)
