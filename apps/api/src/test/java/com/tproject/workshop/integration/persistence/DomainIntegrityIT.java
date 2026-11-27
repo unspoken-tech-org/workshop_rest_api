@@ -14,8 +14,8 @@ import com.tproject.workshop.events.DeviceViewedEvent;
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Customer;
-import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.Payment;
+import com.tproject.workshop.model.ServiceOrder;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
@@ -116,7 +116,7 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
                 typesBrandsModelsService.createOrReturnExistentBrandModelType(
                         new TypeBrandModelInputDtoRecord("Celular", "Samsung", "A54"));
 
-        Device device = new Device();
+        ServiceOrder device = new ServiceOrder();
         device.setCustomer(customer);
         device.setBrandsModelsTypes(bmt);
         device.setColorIds(List.of());
@@ -124,14 +124,14 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
         device.setBudgetFee(BigDecimal.ZERO);
         device.setDeviceStatus(DeviceStatusEnum.NOVO);
         device.setEntryDate(Timestamp.from(Instant.now()));
-        Device saved = deviceRepository.saveAndFlush(device);
+        ServiceOrder saved = deviceRepository.saveAndFlush(device);
 
         Timestamp originalLastUpdate = saved.getLastUpdate();
         Long originalVersion = saved.getVersion();
 
         deviceEventListener.onDeviceViewed(new DeviceViewedEvent(this, saved.getId()));
 
-        Device afterView = null;
+        ServiceOrder afterView = null;
         Instant deadline = Instant.now().plusSeconds(3);
         while (Instant.now().isBefore(deadline)) {
             entityManager.clear();
@@ -187,7 +187,7 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
                 typesBrandsModelsService.createOrReturnExistentBrandModelType(
                         new TypeBrandModelInputDtoRecord("Notebook", "Dell", "Inspiron"));
 
-        Device device = new Device();
+        ServiceOrder device = new ServiceOrder();
         device.setCustomer(updatedCustomer);
         device.setBrandsModelsTypes(bmt);
         device.setColorIds(List.of());
@@ -195,9 +195,9 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
         device.setBudgetFee(BigDecimal.ZERO);
         device.setDeviceStatus(DeviceStatusEnum.NOVO);
         device.setEntryDate(Timestamp.from(Instant.now()));
-        Device savedDevice = deviceRepository.saveAndFlush(device);
+        ServiceOrder savedDevice = deviceRepository.saveAndFlush(device);
 
-        Device staleDevice = new Device();
+        ServiceOrder staleDevice = new ServiceOrder();
         staleDevice.setId(savedDevice.getId());
         staleDevice.setCustomer(updatedCustomer);
         staleDevice.setBrandsModelsTypes(bmt);
@@ -209,12 +209,12 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
         staleDevice.setVersion(savedDevice.getVersion());
 
         savedDevice.setProblem("Updated Problem");
-        Device updatedDevice = deviceRepository.saveAndFlush(savedDevice);
+        ServiceOrder updatedDevice = deviceRepository.saveAndFlush(savedDevice);
 
         assertThatThrownBy(() -> deviceRepository.saveAndFlush(staleDevice))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
 
-        Device currentDevice = deviceRepository.findById(updatedDevice.getId()).orElseThrow();
+        ServiceOrder currentDevice = deviceRepository.findById(updatedDevice.getId()).orElseThrow();
 
         Payment payment = new Payment();
         payment.setDevice(currentDevice);

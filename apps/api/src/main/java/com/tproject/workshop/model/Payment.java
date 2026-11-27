@@ -48,7 +48,7 @@ public class Payment {
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_device")
     @ToString.Exclude
-    private Device device;
+    private ServiceOrder device;
 
     @UpdateTimestamp
     @Column(name = "updated_at")

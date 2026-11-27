@@ -43,14 +43,14 @@ public class DeviceService {
     private final ObservabilityEventRecorder eventRecorder;
     private final Clock clock;
 
-    private Device fetchOrThrow(int deviceId) {
+    private ServiceOrder fetchOrThrow(int deviceId) {
         return deviceRepository
                 .findById(deviceId)
                 .orElseThrow(() -> NotFoundException.of("Aparelho", deviceId));
     }
 
-    private void addHistory(Device device, String field, String oldValue, String newValue) {
-        device.getDeviceHistory().add(new DeviceHistory(field, oldValue, newValue, device));
+    private void addHistory(ServiceOrder device, String field, String oldValue, String newValue) {
+        device.getDeviceHistory().add(new ServiceOrderHistory(field, oldValue, newValue, device));
     }
 
     private void recordStatusChange(
@@ -64,7 +64,7 @@ public class DeviceService {
     }
 
     private void recordClosedIfNeeded(
-            Device device, DeviceStatusEnum previous, DeviceStatusEnum current) {
+            ServiceOrder device, DeviceStatusEnum previous, DeviceStatusEnum current) {
         if (previous == current || !current.isClosed()) {
             return;
         }
@@ -109,13 +109,14 @@ public class DeviceService {
                         "budget.value_band", ValueBand.of(after)));
     }
 
-    private void revertStatusIfNeeded(Device device, String origin) {
+    private void revertStatusIfNeeded(ServiceOrder device, String origin) {
         if (device.getDeviceStatus().isClosed()) {
             applyStatusTransition(device, DeviceStatusEnum.NOVO, origin);
         }
     }
 
-    private void applyStatusTransition(Device device, DeviceStatusEnum newStatus, String origin) {
+    private void applyStatusTransition(
+            ServiceOrder device, DeviceStatusEnum newStatus, String origin) {
         DeviceStatusEnum oldStatus = device.getDeviceStatus();
         boolean previousUrgency = device.isUrgency();
         boolean effectiveUrgency = !newStatus.resetsUrgencyAndRevision() && previousUrgency;
@@ -141,8 +142,8 @@ public class DeviceService {
         recordClosedIfNeeded(device, oldStatus, newStatus);
     }
 
-    private Device changeStatus(int deviceId, DeviceStatusEnum newStatus, String origin) {
-        Device device = fetchOrThrow(deviceId);
+    private ServiceOrder changeStatus(int deviceId, DeviceStatusEnum newStatus, String origin) {
+        ServiceOrder device = fetchOrThrow(deviceId);
         applyStatusTransition(device, newStatus, origin);
         return device;
     }
@@ -179,7 +180,7 @@ public class DeviceService {
 
     @Transactional
     public DeviceOutputDto updateDeviceUrgency(int deviceId, DeviceUrgencyInputRecord dto) {
-        Device device = fetchOrThrow(deviceId);
+        ServiceOrder device = fetchOrThrow(deviceId);
         boolean oldUrgency = device.isUrgency();
         boolean newUrgency = dto.hasUrgency();
 
@@ -203,7 +204,7 @@ public class DeviceService {
 
     @Transactional
     public DeviceOutputDto updateDeviceRevision(int deviceId, DeviceRevisionInputRecord dto) {
-        Device device = fetchOrThrow(deviceId);
+        ServiceOrder device = fetchOrThrow(deviceId);
         boolean oldRevision = device.isRevision();
         boolean newRevision = dto.revision();
 
@@ -226,7 +227,7 @@ public class DeviceService {
 
     @Transactional
     public DeviceOutputDto updateDevice(DeviceUpdateInputDtoRecord device) {
-        Device oldDevice = fetchOrThrow(device.deviceId());
+        ServiceOrder oldDevice = fetchOrThrow(device.deviceId());
 
         DeviceStatusEnum newStatus = device.deviceStatus();
         DeviceStatusEnum previousStatus = oldDevice.getDeviceStatus();
@@ -333,9 +334,9 @@ public class DeviceService {
                 device.colors().stream().map(colorService::createOrReturnExistentColor).toList();
         List<Integer> colorIds = colors.stream().map(Color::getIdColor).distinct().toList();
 
-        List<DeviceHistory> deviceHistoryList = new ArrayList<>();
+        List<ServiceOrderHistory> deviceHistoryList = new ArrayList<>();
 
-        Device newDevice = new Device();
+        ServiceOrder newDevice = new ServiceOrder();
         newDevice.setCustomer(customer);
         newDevice.setBrandsModelsTypes(brandModelType);
         newDevice.setColorIds(colorIds);
@@ -351,19 +352,19 @@ public class DeviceService {
                     newDevice.setTechnician(technician);
                 });
         deviceHistoryList.add(
-                new DeviceHistory(
+                new ServiceOrderHistory(
                         DeviceHistoryFieldEnum.STATUS.getField(),
                         "",
                         DeviceStatusEnum.NOVO.name(),
                         newDevice));
         if (device.hasUrgency()) {
             deviceHistoryList.add(
-                    new DeviceHistory(
+                    new ServiceOrderHistory(
                             DeviceHistoryFieldEnum.URGENCY.getField(), "", "true", newDevice));
         }
         newDevice.setDeviceHistory(deviceHistoryList);
 
-        Device savedDevice = deviceRepository.saveAndFlush(newDevice);
+        ServiceOrder savedDevice = deviceRepository.saveAndFlush(newDevice);
         eventRecorder.record(
                 ObservabilityEventCatalog.DEVICE_CREATED,
                 Map.of("device.urgency", device.hasUrgency() ? "urgent" : "normal"));
@@ -371,7 +372,10 @@ public class DeviceService {
     }
 
     private void recordStateHistory(
-            Device oldDevice, DeviceStatusEnum newStatus, boolean newUrgency, boolean newRevision) {
+            ServiceOrder oldDevice,
+            DeviceStatusEnum newStatus,
+            boolean newUrgency,
+            boolean newRevision) {
         if (oldDevice.isRevision() != newRevision) {
             addHistory(
                     oldDevice,

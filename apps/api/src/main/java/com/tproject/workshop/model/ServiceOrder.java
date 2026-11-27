@@ -20,8 +20,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 @ToString
 @NoArgsConstructor
 @FieldNameConstants(asEnum = true)
-@Entity(name = "devices")
-public class Device {
+@Entity
+@Table(name = "devices")
+public class ServiceOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -98,9 +99,9 @@ public class Device {
 
     @OneToMany(mappedBy = "device", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
-    private List<DeviceHistory> deviceHistory;
+    private List<ServiceOrderHistory> deviceHistory;
 
-    public Device(int id) {
+    public ServiceOrder(int id) {
         this.id = id;
     }
 
@@ -108,7 +109,7 @@ public class Device {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
-        Device that = (Device) o;
+        ServiceOrder that = (ServiceOrder) o;
         return getId() != 0 && getId() == that.getId();
     }
 

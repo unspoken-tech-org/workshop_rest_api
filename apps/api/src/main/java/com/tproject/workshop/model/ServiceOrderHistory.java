@@ -16,10 +16,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity(name = "device_history")
-public class DeviceHistory {
+@Entity
+@Table(name = "device_history")
+public class ServiceOrderHistory {
 
-    public DeviceHistory(String fieldName, String oldValue, String newValue, Device device) {
+    public ServiceOrderHistory(
+            String fieldName, String oldValue, String newValue, ServiceOrder device) {
         this.fieldName = fieldName;
         this.oldValue = oldValue;
         this.newValue = newValue;
@@ -47,7 +49,7 @@ public class DeviceHistory {
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "id_device")
     @ToString.Exclude
-    private Device device;
+    private ServiceOrder device;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
@@ -57,7 +59,7 @@ public class DeviceHistory {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
-        DeviceHistory that = (DeviceHistory) o;
+        ServiceOrderHistory that = (ServiceOrderHistory) o;
         return getId() != null && getId().equals(that.getId());
     }
 

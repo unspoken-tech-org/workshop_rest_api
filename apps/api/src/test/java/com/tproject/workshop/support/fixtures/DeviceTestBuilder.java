@@ -2,12 +2,12 @@ package com.tproject.workshop.support.fixtures;
 
 import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.integration.support.TestClock;
-import com.tproject.workshop.model.Device;
+import com.tproject.workshop.model.ServiceOrder;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
-/** Test data builder for {@link Device}. */
+/** Test data builder for {@link ServiceOrder}. */
 public final class DeviceTestBuilder {
 
     private Integer id = 1;
@@ -53,8 +53,8 @@ public final class DeviceTestBuilder {
         return this;
     }
 
-    public Device build() {
-        Device device = new Device();
+    public ServiceOrder build() {
+        ServiceOrder device = new ServiceOrder();
         device.setId(id);
         device.setDeviceStatus(status);
         device.setEntryDate(entryDate);

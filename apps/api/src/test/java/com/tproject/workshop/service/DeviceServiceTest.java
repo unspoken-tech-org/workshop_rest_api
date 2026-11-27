@@ -23,8 +23,8 @@ import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Color;
 import com.tproject.workshop.model.Customer;
-import com.tproject.workshop.model.Device;
-import com.tproject.workshop.model.DeviceHistory;
+import com.tproject.workshop.model.ServiceOrder;
+import com.tproject.workshop.model.ServiceOrderHistory;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
@@ -60,7 +60,7 @@ class DeviceServiceTest {
 
     @InjectMocks private DeviceService deviceService;
 
-    private Device device;
+    private ServiceOrder device;
 
     @BeforeEach
     void setUp() {
@@ -176,7 +176,7 @@ class DeviceServiceTest {
                 .record(
                         ObservabilityEventCatalog.DEVICE_URGENCY_CHANGED,
                         Map.of("device.urgency", "normal"));
-        verify(deviceRepository, times(2)).saveAndFlush(any(Device.class));
+        verify(deviceRepository, times(2)).saveAndFlush(any(ServiceOrder.class));
     }
 
     @Test
@@ -332,9 +332,9 @@ class DeviceServiceTest {
         assertThat(device.getDeviceStatus()).isEqualTo(DeviceStatusEnum.PRONTO);
         assertThat(device.getDeviceHistory())
                 .extracting(
-                        DeviceHistory::getFieldName,
-                        DeviceHistory::getOldValue,
-                        DeviceHistory::getNewValue)
+                        ServiceOrderHistory::getFieldName,
+                        ServiceOrderHistory::getOldValue,
+                        ServiceOrderHistory::getNewValue)
                 .containsExactlyInAnyOrder(
                         org.assertj.core.groups.Tuple.tuple(
                                 DeviceHistoryFieldEnum.STATUS.getField(), "EM_ANDAMENTO", "PRONTO"),
@@ -388,9 +388,9 @@ class DeviceServiceTest {
         assertThat(device.getDepartureDate()).isNotNull();
         assertThat(device.getDeviceHistory())
                 .extracting(
-                        DeviceHistory::getFieldName,
-                        DeviceHistory::getOldValue,
-                        DeviceHistory::getNewValue)
+                        ServiceOrderHistory::getFieldName,
+                        ServiceOrderHistory::getOldValue,
+                        ServiceOrderHistory::getNewValue)
                 .containsExactlyInAnyOrder(
                         org.assertj.core.groups.Tuple.tuple(
                                 DeviceHistoryFieldEnum.STATUS.getField(),
@@ -434,9 +434,9 @@ class DeviceServiceTest {
         when(typeBrandModelService.createOrReturnExistentBrandModelType(any())).thenReturn(bmt);
         when(colorService.createOrReturnExistentColor("azul")).thenReturn(blue);
         when(colorService.createOrReturnExistentColor("Azul")).thenReturn(blue);
-        when(deviceRepository.saveAndFlush(any(Device.class)))
+        when(deviceRepository.saveAndFlush(any(ServiceOrder.class)))
                 .thenAnswer(invocation -> {
-                    Device saved = invocation.getArgument(0);
+                    ServiceOrder saved = invocation.getArgument(0);
                     saved.setId(99);
                     return saved;
                 });
@@ -452,7 +452,7 @@ class DeviceServiceTest {
                         List.of("azul", "Azul"),
                         false));
 
-        var deviceCaptor = org.mockito.ArgumentCaptor.forClass(Device.class);
+        var deviceCaptor = org.mockito.ArgumentCaptor.forClass(ServiceOrder.class);
         verify(deviceRepository).saveAndFlush(deviceCaptor.capture());
         assertThat(deviceCaptor.getValue().getColorIds()).containsExactly(3);
     }

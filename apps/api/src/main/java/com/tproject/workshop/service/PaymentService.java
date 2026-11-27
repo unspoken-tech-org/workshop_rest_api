@@ -8,8 +8,8 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.events.observability.ValueBand;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
-import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.Payment;
+import com.tproject.workshop.model.ServiceOrder;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
 import java.math.BigDecimal;
@@ -84,7 +84,7 @@ public class PaymentService {
     }
 
     private void validateAndReconcileTotals(
-            Device device, PaymentCategoryEnum category, BigDecimal amount) {
+            ServiceOrder device, PaymentCategoryEnum category, BigDecimal amount) {
         BigDecimal totalPaid =
                 Optional.ofNullable(repository.sumPaymentValueByDeviceId(device.getId()))
                         .orElse(BigDecimal.ZERO);

@@ -20,8 +20,8 @@ import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.integration.support.TestClock;
-import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.Payment;
+import com.tproject.workshop.model.ServiceOrder;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
 import com.tproject.workshop.support.fixtures.DeviceTestBuilder;
@@ -56,7 +56,7 @@ class PaymentServiceTest {
 
     @InjectMocks private PaymentService paymentService;
 
-    private Device device;
+    private ServiceOrder device;
     private Validator validator;
 
     @BeforeEach

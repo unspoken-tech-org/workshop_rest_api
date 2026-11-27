@@ -16,8 +16,8 @@ import com.tproject.workshop.exception.WorkshopException;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Customer;
 import com.tproject.workshop.model.CustomerPhone;
-import com.tproject.workshop.model.Device;
 import com.tproject.workshop.model.Phone;
+import com.tproject.workshop.model.ServiceOrder;
 import com.tproject.workshop.repository.CustomerPhoneRepository;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
@@ -73,7 +73,8 @@ public class CustomerService {
                                         .build())
                         .toList();
 
-        List<Device> devices = deviceRepository.findByCustomerIdCustomerOrderByEntryDateDesc(id);
+        List<ServiceOrder> devices =
+                deviceRepository.findByCustomerIdCustomerOrderByEntryDateDesc(id);
         List<MinifiedDeviceTableOutputDto> customerDevices =
                 devices.stream().map(this::mapDeviceToMinifiedDto).toList();
 
@@ -89,7 +90,7 @@ public class CustomerService {
                 .build();
     }
 
-    private MinifiedDeviceTableOutputDto mapDeviceToMinifiedDto(Device device) {
+    private MinifiedDeviceTableOutputDto mapDeviceToMinifiedDto(ServiceOrder device) {
         MinifiedDeviceTableOutputDto dto = new MinifiedDeviceTableOutputDto();
         dto.setDeviceId(device.getId());
         dto.setCustomerId(device.getCustomer().getIdCustomer());
