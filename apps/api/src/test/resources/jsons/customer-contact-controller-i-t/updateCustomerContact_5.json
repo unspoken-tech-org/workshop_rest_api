@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Requisição Inválida",
-    "status": 400,
-    "detail": "Formato de data inválido: 'invalid_date'. Use o padrão ISO 8601 (ex: 2025-08-31T19:55:13)",
-    "instance": "/v1/customer-contact/1",
-    "code": "requisicao.invalida"
-}

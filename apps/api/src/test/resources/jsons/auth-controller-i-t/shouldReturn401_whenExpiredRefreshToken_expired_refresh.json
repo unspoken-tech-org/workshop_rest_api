@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Token Inválido",
-    "status": 401,
-    "detail": "Refresh token expired",
-    "instance": "/api/auth/refresh",
-    "code": "auth.invalid.token"
-}

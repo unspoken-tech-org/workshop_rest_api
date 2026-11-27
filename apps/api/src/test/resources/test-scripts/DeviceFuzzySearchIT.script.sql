@@ -4,7 +4,6 @@
 INSERT INTO types(id, type) VALUES
 (6, 'Micro-ondas'),             -- base
 (7, 'Micro-ondas de embutir'),  -- variação longa
-(8, 'Microondas'),              -- sem hífen (≠ base)
 (9, 'Ventilador'),              -- tipo diferente
 (10, 'Ventilador de mesa'),     -- subtipo similar ao "Ventilador"
 (11, 'Liquidificador'),         -- tipo novo
@@ -23,7 +22,6 @@ INSERT INTO brands(id, brand) VALUES
 (6, 'Samsung'),     -- marca correta
 (7, 'Sansung'),     -- typo real (ocorre no banco de produção)
 (8, 'Britânia'),    -- com acento
-(9, 'Britania'),    -- sem acento (ocorre no banco de produção)
 (10, 'Arno'),       -- marca existente
 (11, 'Wallita'),    -- marca existente
 (12, 'Brastemp'),   -- marca real
@@ -79,7 +77,6 @@ INSERT INTO brands_models_types(id, id_brand, id_model, id_type) VALUES
 (10, 6, 6, 6),    -- Samsung + Smart Cook  + Micro-ondas
 (11, 7, 6, 6),    -- Sansung + Smart Cook  + Micro-ondas (typo brand)
 (12, 8, 7, 6),    -- Britânia + Mega Plus  + Micro-ondas
-(13, 9, 7, 6),    -- Britania + Mega Plus  + Micro-ondas (no accent)
 (14, 6, 8, 7),    -- Samsung + Turbo 3000  + Micro-ondas de embutir
 (15, 8, 9, 9),    -- Britânia + Easy Breeze + Ventilador
 (16, 8, 10, 10),  -- Britânia + Silent Pro  + Ventilador de mesa
@@ -116,7 +113,7 @@ INSERT INTO devices(id, id_customer, id_brand_model_type, device_status,
 (100, 10, 10, 'NOVO',         '2024-06-01', 'Micro-ondas Samsung',       50.00, false, false, '{1}'),
 (101, 10, 14, 'EM_ANDAMENTO', '2024-06-15', 'Micro-ondas embutir',       60.00, true,  false, '{1}'),
 (102, 10, 12, 'ENTREGUE',     '2024-05-01', 'Micro-ondas Britânia',      70.00, false, true,  '{2}'),
-(106, 10, 13, 'PRONTO',       '2024-08-01', 'Micro-ondas Britania',      65.00, true,  false, '{2}'),
+(106, 10, 12, 'PRONTO',       '2024-08-01', 'Micro-ondas Britania',      65.00, true,  false, '{2}'),
 (107, 10, 10, 'NOVO',         '2024-09-01', 'Outro Samsung',             45.00, false, false, '{1}'),
 (108, 10, 20, 'NOVO',         '2024-10-01', 'Ventilador Samsung João',   25.00, false, false, '{1}'),
 (109, 10, 21, 'NOVO',         '2024-10-15', 'Micro-ondas Britânia João', 55.00, false, false, '{2}'),

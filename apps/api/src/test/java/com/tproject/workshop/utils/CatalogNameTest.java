@@ -99,4 +99,37 @@ class CatalogNameTest {
                                 () -> new IllegalStateException("missing")))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void nameKeyShouldIgnoreCaseAccentHyphenAndSpaces() {
+        assertThat(CatalogName.nameKey("Micro-ondas"))
+                .isEqualTo(CatalogName.nameKey("microondas"))
+                .isEqualTo(CatalogName.nameKey("  MICRO   ondas "))
+                .isEqualTo("microondas");
+        assertThat(CatalogName.nameKey("Forno Elétrico")).isEqualTo("fornoeletrico");
+        assertThat(CatalogName.nameKey(null)).isNull();
+    }
+
+    @Test
+    void findOrCreateByKeyShouldLookUpByKeyAndInsertNormalizedName() {
+        AtomicReference<String> storedName = new AtomicReference<>();
+        AtomicReference<String> lookedUp = new AtomicReference<>();
+
+        String result =
+                CatalogName.findOrCreateByKey(
+                        "  Micro-Ondas ",
+                        key -> {
+                            lookedUp.set(key);
+                            return Optional.ofNullable(storedName.get());
+                        },
+                        name -> {
+                            storedName.set(name);
+                            return 1;
+                        },
+                        null,
+                        IllegalStateException::new);
+
+        assertThat(lookedUp.get()).isEqualTo("microondas");
+        assertThat(result).isEqualTo("micro-ondas");
+    }
 }

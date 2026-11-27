@@ -41,9 +41,9 @@ public class TypeService {
 
     @Transactional
     public Type createOrReturnExistentType(String type) {
-        return CatalogName.findOrCreate(
+        return CatalogName.findOrCreateByKey(
                 type,
-                typeRepository::findByTypeIgnoreCase,
+                typeRepository::findByNameKey,
                 typeRepository::insertIgnore,
                 () ->
                         eventRecorder.record(

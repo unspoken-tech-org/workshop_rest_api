@@ -41,9 +41,9 @@ public class BrandService {
 
     @Transactional
     public Brand createOrReturnExistentBrand(String brand) {
-        return CatalogName.findOrCreate(
+        return CatalogName.findOrCreateByKey(
                 brand,
-                brandRepository::findByBrandIgnoreCase,
+                brandRepository::findByNameKey,
                 brandRepository::insertIgnore,
                 () ->
                         eventRecorder.record(

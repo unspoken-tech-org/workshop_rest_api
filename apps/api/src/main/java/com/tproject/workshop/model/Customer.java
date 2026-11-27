@@ -4,11 +4,14 @@ import jakarta.persistence.*;
 import java.sql.Timestamp;
 import java.util.List;
 import lombok.*;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.validator.constraints.br.CPF;
 
-@Data
+@Getter
+@Setter
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -38,7 +41,6 @@ public class Customer {
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private List<CustomerPhone> customerPhones;
 
     @UpdateTimestamp
@@ -49,4 +51,17 @@ public class Customer {
     @Builder.Default
     @Column(name = "version", nullable = false)
     private Long version = 0L;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        Customer that = (Customer) o;
+        return getIdCustomer() != 0 && getIdCustomer() == that.getIdCustomer();
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
+    }
 }

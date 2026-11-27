@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Requisição Inválida",
-    "status": 400,
-    "detail": "Não é possível ter mais de um telefone primário",
-    "instance": "/v1/customer",
-    "code": "requisicao.invalida"
-}

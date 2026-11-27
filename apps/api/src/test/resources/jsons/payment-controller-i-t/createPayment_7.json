@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Requisição Inválida",
-    "status": 400,
-    "detail": "A data do pagamento não pode ser maior que a data atual",
-    "instance": "/v1/payment",
-    "code": "requisicao.invalida"
-}

@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Entidade não encontrada",
-    "status": 404,
-    "detail": "O número informado não está cadastrado",
-    "instance": "/v1/customer-contact",
-    "code": "entity.not.found.for.request"
-}

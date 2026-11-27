@@ -1,8 +1,0 @@
-{
-    "type": "about:blank",
-    "title": "Erro de Validação",
-    "status": 400,
-    "detail": "Identificador do usuário é obrigatório",
-    "instance": "/v1/admin/api-keys",
-    "code": "erro.validacao"
-}
