@@ -105,6 +105,8 @@ class DeviceStatusValidatorTest {
                         null,
                         BigDecimal.TEN,
                         List.of("azul", "   "),
+                        false,
+                        null,
                         false);
 
         Set<ConstraintViolation<DeviceInputDtoRecord>> violations = validator.validate(dto);

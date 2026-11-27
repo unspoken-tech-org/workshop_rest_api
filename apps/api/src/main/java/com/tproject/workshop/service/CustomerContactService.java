@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerContactService {
 
     private final CustomerContactRepository customerContactRepository;
-    private final DeviceService deviceService;
+    private final ServiceOrderCommands serviceOrderCommands;
     private final TechnicianService technicianService;
     private final PhoneService phoneService;
     private final ObservabilityEventRecorder eventRecorder;
@@ -42,7 +42,7 @@ public class CustomerContactService {
         DeviceStatusEnum status = contact.deviceStatus();
         Optional<ContactChannel> channel = ContactChannel.fromNullable(contact.contactType());
         validatePhoneIfNeeded(channel.orElse(null), contact.phoneNumber());
-        deviceService.ensureDeviceExists(contact.deviceId());
+        serviceOrderCommands.ensureOpenForContact(contact.deviceId());
 
         CustomerContact newContact = new CustomerContact();
         mapContactFields(newContact, contact, channel.orElse(null), status);
@@ -69,7 +69,10 @@ public class CustomerContactService {
         DeviceStatusEnum status = contact.deviceStatus();
         Optional<ContactChannel> channel = ContactChannel.fromNullable(contact.contactType());
         validatePhoneIfNeeded(channel.orElse(null), contact.phoneNumber());
-        deviceService.ensureDeviceExists(contact.deviceId());
+        serviceOrderCommands.ensureOpenForContact(existingContact.getDeviceId());
+        if (existingContact.getDeviceId() != contact.deviceId()) {
+            serviceOrderCommands.ensureOpenForContact(contact.deviceId());
+        }
 
         mapContactFields(existingContact, contact, channel.orElse(null), status);
         CustomerContact saved = customerContactRepository.save(existingContact);
@@ -98,7 +101,8 @@ public class CustomerContactService {
                         .orElse(false);
 
         if (isLatestContact) {
-            deviceService.updateDeviceStatus(contact.getDeviceId(), contact.getDeviceStatus());
+            serviceOrderCommands.applyContactStatus(
+                    contact.getDeviceId(), contact.getDeviceStatus());
         }
     }
 

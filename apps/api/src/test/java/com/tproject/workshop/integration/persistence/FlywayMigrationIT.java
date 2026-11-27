@@ -212,6 +212,40 @@ class FlywayMigrationIT extends AbstractIntegrationTest {
         assertThat(newCustomerDeviceId).isEqualTo(7);
     }
 
+    @Test
+    void shouldRebackfillClosedAtOfOrdersClosedByThePreviousImageWhenMigratingThroughV21() {
+        recreateIsolatedSchema();
+        configureFlyway("20").migrate();
+        seedBaselineRowsInIsolatedSchema();
+
+        // Closed while the API ran an image older than V20, which leaves closed_at empty.
+        // 2: with departure date; 3: without departure, closed in history; 4: already stamped.
+        insertLegacyDevice(
+                2, "ENTREGUE", "'2026-11-01 10:00'", "'2026-11-27 19:10'", "'2026-11-27 19:10'");
+        insertLegacyDevice(3, "DESCARTADO", "'2026-11-01 10:00'", "NULL", "'2026-11-27 19:00'");
+        insertLegacyDevice(
+                4, "ENTREGUE", "'2026-11-01 10:00'", "'2026-11-20 10:00'", "'2026-11-20 10:00'");
+        jdbcTemplate.update(
+                "UPDATE "
+                        + TEST_SCHEMA
+                        + ".devices SET closed_at = NULL WHERE id IN (2, 3);"
+                        + " UPDATE "
+                        + TEST_SCHEMA
+                        + ".devices SET closed_at = '2026-11-20 10:05' WHERE id = 4");
+        jdbcTemplate.update(
+                "INSERT INTO "
+                        + TEST_SCHEMA
+                        + ".device_history (id_device, field_name, old_value, new_value, history_date) VALUES "
+                        + "(3, 'device_status', 'PRONTO', 'DESCARTADO', '2026-11-27 18:30')");
+
+        configureFlyway(MigrationVersion.LATEST.getVersion()).migrate();
+
+        assertThat(closedAt(2)).isEqualTo("2026-11-27 19:10:00");
+        assertThat(closedAt(3)).isEqualTo("2026-11-27 18:30:00");
+        assertThat(closedAt(4)).isEqualTo("2026-11-20 10:05:00");
+        assertThat(closedAt(1)).isNull();
+    }
+
     private void insertLegacyDevice(
             int id, String status, String entryDate, String departureDate, String lastUpdate) {
         jdbcTemplate.update(

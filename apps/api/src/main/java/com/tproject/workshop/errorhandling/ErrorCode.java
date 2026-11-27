@@ -15,6 +15,14 @@ public enum ErrorCode {
     VALIDATION_ERROR("erro.validacao", HttpStatus.BAD_REQUEST, "Erro de Validação"),
     RESOURCE_CONFLICT("recurso.conflito", HttpStatus.CONFLICT, "Conflito de Recurso"),
     VERSION_CONFLICT("recurso.conflito.versao", HttpStatus.CONFLICT, "Conflito de Versão"),
+    SERVICE_ORDER_CLOSED("service-order.closed", HttpStatus.CONFLICT, "OS Encerrada"),
+    SERVICE_ORDER_NOT_CLOSED("service-order.not-closed", HttpStatus.CONFLICT, "OS Não Encerrada"),
+    UNDO_CLOSE_EXPIRED(
+            "service-order.undo-close.expired",
+            HttpStatus.CONFLICT,
+            "Prazo para Desfazer Encerrado"),
+    CUSTOMER_DEVICE_DISPOSED(
+            "customer-device.disposed", HttpStatus.CONFLICT, "Aparelho Descartado"),
     IDEMPOTENCY_KEY_REUSED(
             "idempotency.key.reused",
             HttpStatus.UNPROCESSABLE_ENTITY,

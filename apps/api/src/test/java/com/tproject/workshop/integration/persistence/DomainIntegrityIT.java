@@ -33,6 +33,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class DomainIntegrityIT extends AbstractIntegrationTest {
 
@@ -126,8 +127,8 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
         device.setColorIds(List.of());
         device.setProblem("Tela");
         device.setBudgetFee(BigDecimal.ZERO);
-        device.setDeviceStatus(DeviceStatusEnum.NOVO);
-        device.setEntryDate(Timestamp.from(Instant.now()));
+        ReflectionTestUtils.setField(device, "deviceStatus", DeviceStatusEnum.NOVO);
+        ReflectionTestUtils.setField(device, "entryDate", Timestamp.from(Instant.now()));
         ServiceOrder saved = deviceRepository.saveAndFlush(device);
 
         Timestamp originalLastUpdate = saved.getLastUpdate();
@@ -198,8 +199,8 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
         device.assignCustomerDevice(customerDevice);
         device.setProblem("Teclado");
         device.setBudgetFee(BigDecimal.ZERO);
-        device.setDeviceStatus(DeviceStatusEnum.NOVO);
-        device.setEntryDate(Timestamp.from(Instant.now()));
+        ReflectionTestUtils.setField(device, "deviceStatus", DeviceStatusEnum.NOVO);
+        ReflectionTestUtils.setField(device, "entryDate", Timestamp.from(Instant.now()));
         ServiceOrder savedDevice = deviceRepository.saveAndFlush(device);
 
         ServiceOrder staleDevice = new ServiceOrder();
@@ -207,8 +208,8 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
         staleDevice.assignCustomerDevice(customerDevice);
         staleDevice.setProblem("Stale Problem");
         staleDevice.setBudgetFee(BigDecimal.ZERO);
-        staleDevice.setDeviceStatus(DeviceStatusEnum.NOVO);
-        staleDevice.setEntryDate(savedDevice.getEntryDate());
+        ReflectionTestUtils.setField(staleDevice, "deviceStatus", DeviceStatusEnum.NOVO);
+        ReflectionTestUtils.setField(staleDevice, "entryDate", savedDevice.getEntryDate());
         staleDevice.setVersion(savedDevice.getVersion());
 
         savedDevice.setProblem("Updated Problem");
