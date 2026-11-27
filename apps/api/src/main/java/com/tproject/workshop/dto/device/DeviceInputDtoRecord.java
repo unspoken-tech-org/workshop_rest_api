@@ -39,4 +39,11 @@ public record DeviceInputDtoRecord(
                 @NotEmpty(message = "A lista de cores é obrigatória")
                 List<@NotBlank(message = "A cor não pode ser vazia") String> colors,
         @Schema(description = "Marks if the device requires priority handling", example = "false")
-                boolean hasUrgency) {}
+                boolean hasUrgency,
+        @Schema(
+                        description =
+                                "Order this visit comes from (revision or return); reuses its physical device",
+                        example = "1423")
+                Integer originOrderId,
+        @Schema(description = "Opens the order as a warranty revision", example = "false")
+                boolean revision) {}

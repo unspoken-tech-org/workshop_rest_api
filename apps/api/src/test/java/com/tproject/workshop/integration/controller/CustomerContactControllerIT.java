@@ -320,26 +320,45 @@ class CustomerContactControllerIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("Only the latest contact changes the current device status")
     void shouldOnlyChangeDeviceStatus_whenContactIsTheLatest() {
-        // The newest contact (2025) marks the device as ENTREGUE.
+        // The newest contact (2025) marks the device as PRONTO.
         int latestId =
-                save(contactBody("entregue", "2025-06-03T10:00:00"), HttpStatus.CREATED)
-                        .getInt("id");
-        assertDeviceStatus("ENTREGUE");
+                save(contactBody("pronto", "2025-06-03T10:00:00"), HttpStatus.CREATED).getInt("id");
+        assertDeviceStatus("PRONTO");
 
         // Fixing the old contact (2024) does not revert the device.
         update(
                 existingContactId,
                 contactBody("em_andamento", "2024-01-10T09:00:00"),
                 HttpStatus.OK);
-        assertDeviceStatus("ENTREGUE");
+        assertDeviceStatus("PRONTO");
 
         // A retroactive contact does not change the current status either.
         save(contactBody("aguardando", "2023-01-01T09:00:00"), HttpStatus.CREATED);
-        assertDeviceStatus("ENTREGUE");
+        assertDeviceStatus("PRONTO");
 
         // Changing the status of the latest contact is reflected on the device.
-        update(latestId, contactBody("pronto", "2025-06-03T10:00:00"), HttpStatus.OK);
-        assertDeviceStatus("PRONTO");
+        update(latestId, contactBody("entregue", "2025-06-03T10:00:00"), HttpStatus.OK);
+        assertDeviceStatus("ENTREGUE");
+    }
+
+    @Test
+    @DisplayName("Contacts of a closed order are rejected with 409 (decision 9)")
+    void shouldRejectContacts_whenOrderIsClosed() {
+        save(contactBody("entregue", "2025-06-03T10:00:00"), HttpStatus.CREATED);
+        assertDeviceStatus("ENTREGUE");
+        int contacts = countContacts();
+
+        JsonPath created = save(contactBody("pronto", "2025-06-04T10:00:00"), HttpStatus.CONFLICT);
+        assertThat(created.getString("code")).isEqualTo("service-order.closed");
+        JsonPath updated =
+                update(
+                        existingContactId,
+                        contactBody("pronto", "2025-06-04T10:00:00"),
+                        HttpStatus.CONFLICT);
+        assertThat(updated.getString("code")).isEqualTo("service-order.closed");
+
+        assertThat(countContacts()).isEqualTo(contacts);
+        assertDeviceStatus("ENTREGUE");
     }
 
     // ----------------------------------------------------------------- helpers

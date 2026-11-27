@@ -5,7 +5,7 @@ import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.ServiceOrder;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.util.ArrayList;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /** Test data builder for {@link ServiceOrder}. */
 public final class DeviceTestBuilder {
@@ -16,6 +16,10 @@ public final class DeviceTestBuilder {
     private BigDecimal budgetFee = new BigDecimal("50.00");
     private BigDecimal serviceValue = new BigDecimal("200.00");
     private boolean budgetFeeCollected = false;
+    private boolean urgency = false;
+    private boolean revision = false;
+    private Timestamp departureDate;
+    private Timestamp closedAt;
 
     private DeviceTestBuilder() {}
 
@@ -53,15 +57,39 @@ public final class DeviceTestBuilder {
         return this;
     }
 
+    public DeviceTestBuilder withUrgency(boolean urgency) {
+        this.urgency = urgency;
+        return this;
+    }
+
+    public DeviceTestBuilder withRevision(boolean revision) {
+        this.revision = revision;
+        return this;
+    }
+
+    public DeviceTestBuilder withDepartureDate(Timestamp departureDate) {
+        this.departureDate = departureDate;
+        return this;
+    }
+
+    public DeviceTestBuilder withClosedAt(Timestamp closedAt) {
+        this.closedAt = closedAt;
+        return this;
+    }
+
+    /** Fields guarded by the aggregate have no setter, so the builder writes them directly. */
     public ServiceOrder build() {
         ServiceOrder device = new ServiceOrder();
         device.setId(id);
-        device.setDeviceStatus(status);
-        device.setEntryDate(entryDate);
+        ReflectionTestUtils.setField(device, "deviceStatus", status);
+        ReflectionTestUtils.setField(device, "entryDate", entryDate);
+        ReflectionTestUtils.setField(device, "departureDate", departureDate);
+        ReflectionTestUtils.setField(device, "closedAt", closedAt);
+        ReflectionTestUtils.setField(device, "urgency", urgency);
+        ReflectionTestUtils.setField(device, "revision", revision);
         device.setBudgetFee(budgetFee);
         device.setServiceValue(serviceValue);
         device.setBudgetFeeCollected(budgetFeeCollected);
-        device.setDeviceHistory(new ArrayList<>());
         return device;
     }
 }

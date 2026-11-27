@@ -707,6 +707,9 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                     .isNotBlank();
         }
 
+        if (isClosedOrderConflict(response)) {
+            return;
+        }
         super.validateResponseIgnoreAttributes(
                 index, response, List.of("lastUpdate", "departureDate"));
     }
@@ -769,7 +772,7 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                         "update device to status ENTREGUE"),
                 Arguments.of(
                         4,
-                        HttpStatus.SC_OK,
+                        HttpStatus.SC_CONFLICT,
                         Map.of(
                                 "deviceId",
                                 4,
@@ -789,10 +792,10 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                                 false,
                                 "revision",
                                 false),
-                        "update device to status DESCARTADO"),
+                        "change a delivered (ENTREGUE) order: closed orders are final (409)"),
                 Arguments.of(
                         5,
-                        HttpStatus.SC_OK,
+                        HttpStatus.SC_CONFLICT,
                         new HashMap<String, Object>() {
                             {
                                 put("deviceId", 5);
@@ -807,7 +810,7 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                                 put("technicianId", 2);
                             }
                         },
-                        "update device to status PRONTO"),
+                        "reopen a DESCARTADO order as PRONTO: closed orders are final (409)"),
 
                 // Validation tests - required fields
                 Arguments.of(
@@ -1048,6 +1051,9 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                     .isNotBlank();
         }
 
+        if (isClosedOrderConflict(response)) {
+            return;
+        }
         super.validateResponseIgnoreAttributes(
                 index, response, List.of("lastUpdate", "departureDate"));
     }
@@ -1062,10 +1068,10 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                         "update device status to AGUARDANDO"),
                 Arguments.of(
                         2,
-                        HttpStatus.SC_OK,
+                        HttpStatus.SC_CONFLICT,
                         5,
                         Map.of("deviceStatus", "ENTREGUE"),
-                        "update device status to ENTREGUE, should auto-set departureDate"),
+                        "change the status of a DESCARTADO order: closed orders are final (409)"),
                 Arguments.of(
                         3,
                         HttpStatus.SC_NOT_FOUND,
@@ -1108,6 +1114,9 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                     .isEqualTo(expectedStatus);
         }
 
+        if (isClosedOrderConflict(response)) {
+            return;
+        }
         super.validateResponseIgnoreAttributes(index, response, List.of("lastUpdate"));
     }
 
@@ -1122,11 +1131,11 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                         "set urgency to true on AGUARDANDO device"),
                 Arguments.of(
                         2,
-                        HttpStatus.SC_OK,
+                        HttpStatus.SC_CONFLICT,
                         4,
                         Map.of("hasUrgency", true),
-                        "NOVO",
-                        "set urgency on DESCARTADO device, should revert to NOVO"),
+                        null,
+                        "set urgency on an ENTREGUE order: 409, no longer reopens it"),
                 Arguments.of(
                         3,
                         HttpStatus.SC_NOT_FOUND,
@@ -1225,6 +1234,9 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                     .satisfies(date -> Assertions.assertThat(date).isEqualTo(actualDate));
         }
 
+        if (isClosedOrderConflict(response)) {
+            return;
+        }
         super.validateResponseIgnoreAttributes(
                 index, response, List.of("lastUpdate", "departureDate"));
     }
@@ -1269,7 +1281,7 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                         "update device with departureDate only"),
                 Arguments.of(
                         3,
-                        HttpStatus.SC_OK,
+                        HttpStatus.SC_CONFLICT,
                         new HashMap<String, Object>() {
                             {
                                 put("deviceId", 5);
@@ -1285,6 +1297,19 @@ public class DeviceControllerIT extends AbstractIntegrationTest {
                                 put("departureDate", "2026-06-25T00:00:00");
                             }
                         },
-                        "update device with both dates and status ENTREGUE"));
+                        "change dates and status of a DESCARTADO order: closed orders are final (409)"));
+    }
+
+    /**
+     * Closed orders are final since Feature 24 phase 2 (decision 8): cases that used to reopen them
+     * now answer 409 and are asserted here instead of against a JSON snapshot.
+     */
+    private static boolean isClosedOrderConflict(Response response) {
+        if (response.statusCode() != HttpStatus.SC_CONFLICT) {
+            return false;
+        }
+        Assertions.assertThat(response.jsonPath().getString("code"))
+                .isEqualTo("service-order.closed");
+        return true;
     }
 }

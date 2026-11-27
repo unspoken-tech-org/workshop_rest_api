@@ -42,6 +42,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
@@ -115,7 +116,7 @@ class PaymentServiceTest {
         stubDeviceFound();
         stubPaymentSave();
         when(paymentRepository.sumPaymentValueByDeviceId(DEVICE_ID)).thenReturn(BigDecimal.ZERO);
-        device.setEntryDate(Timestamp.valueOf(TODAY.atTime(15, 45)));
+        ReflectionTestUtils.setField(device, "entryDate", Timestamp.valueOf(TODAY.atTime(15, 45)));
 
         PaymentDeviceInputDto dto =
                 new PaymentDeviceInputDto(
@@ -184,7 +185,7 @@ class PaymentServiceTest {
         when(paymentRepository.sumPaymentValueByDeviceIdAndCategory(
                         DEVICE_ID, PaymentCategoryEnum.TAXA_ORCAMENTO.getDbValue()))
                 .thenReturn(BigDecimal.ZERO);
-        device.setDeviceStatus(DeviceStatusEnum.NOVO);
+        ReflectionTestUtils.setField(device, "deviceStatus", DeviceStatusEnum.NOVO);
 
         PaymentDeviceInputDto dto =
                 new PaymentDeviceInputDto(
@@ -204,7 +205,7 @@ class PaymentServiceTest {
     @Test
     void create_shouldThrowBadRequest_whenServicosPaymentOnNovoDevice() {
         stubDeviceFound();
-        device.setDeviceStatus(DeviceStatusEnum.NOVO);
+        ReflectionTestUtils.setField(device, "deviceStatus", DeviceStatusEnum.NOVO);
 
         PaymentDeviceInputDto dto =
                 new PaymentDeviceInputDto(
@@ -226,7 +227,7 @@ class PaymentServiceTest {
             names = {"TAXA_ORCAMENTO", "SERVICOS"})
     void create_shouldThrowBadRequest_whenDeviceIsDescartado(PaymentCategoryEnum category) {
         stubDeviceFound();
-        device.setDeviceStatus(DeviceStatusEnum.DESCARTADO);
+        ReflectionTestUtils.setField(device, "deviceStatus", DeviceStatusEnum.DESCARTADO);
 
         PaymentDeviceInputDto dto =
                 new PaymentDeviceInputDto(

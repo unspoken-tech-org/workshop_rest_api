@@ -15,18 +15,32 @@ public enum DeviceStatusEnum {
     NAO_APROVADO(true, false, true),
     PRONTO(true, false, true);
 
-    private final boolean resetsUrgencyAndRevision;
+    private final boolean resetsUrgency;
     private final boolean closed;
     private final boolean allowsPayments;
 
-    DeviceStatusEnum(boolean resetsUrgencyAndRevision, boolean closed, boolean allowsPayments) {
-        this.resetsUrgencyAndRevision = resetsUrgencyAndRevision;
+    DeviceStatusEnum(boolean resetsUrgency, boolean closed, boolean allowsPayments) {
+        this.resetsUrgency = resetsUrgency;
         this.closed = closed;
         this.allowsPayments = allowsPayments;
     }
 
-    public boolean resetsUrgencyAndRevision() {
-        return resetsUrgencyAndRevision;
+    /**
+     * Statuses that clear the urgency flag. Revision is never cleared by a status change (decision
+     * 7 of the Feature 24 plan).
+     */
+    public boolean resetsUrgency() {
+        return resetsUrgency;
+    }
+
+    /** NAO_APROVADO and DESCARTADO have no warranty (decision 2). */
+    public boolean allowsWarranty() {
+        return this != NAO_APROVADO && this != DESCARTADO;
+    }
+
+    /** Warranty days can be edited only while the order is in progress (decision 2). */
+    public boolean allowsWarrantyEdit() {
+        return allowsWarranty() && this != ENTREGUE;
     }
 
     public boolean isClosed() {

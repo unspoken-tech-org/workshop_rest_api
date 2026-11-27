@@ -17,16 +17,16 @@ class DeviceStatusEnumTest {
     @EnumSource(
             value = DeviceStatusEnum.class,
             names = {"PRONTO", "APROVADO", "NAO_APROVADO", "ENTREGUE", "DESCARTADO"})
-    void shouldResetUrgencyAndRevisionForTerminalAndCompletedStatuses(DeviceStatusEnum status) {
-        assertThat(status.resetsUrgencyAndRevision()).isTrue();
+    void shouldResetUrgencyForTerminalAndCompletedStatuses(DeviceStatusEnum status) {
+        assertThat(status.resetsUrgency()).isTrue();
     }
 
     @ParameterizedTest
     @EnumSource(
             value = DeviceStatusEnum.class,
             names = {"NOVO", "EM_ANDAMENTO", "AGUARDANDO"})
-    void shouldPreserveUrgencyAndRevisionForOpenWorkStatuses(DeviceStatusEnum status) {
-        assertThat(status.resetsUrgencyAndRevision()).isFalse();
+    void shouldPreserveUrgencyForOpenWorkStatuses(DeviceStatusEnum status) {
+        assertThat(status.resetsUrgency()).isFalse();
     }
 
     @ParameterizedTest

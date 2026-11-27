@@ -12,6 +12,7 @@ import com.tproject.workshop.enums.DeviceStatusEnum;
 import com.tproject.workshop.events.observability.ObservabilityEventRecorder;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
+import com.tproject.workshop.exception.ServiceOrderConflictException;
 import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.CustomerContact;
 import com.tproject.workshop.repository.CustomerContactRepository;
@@ -34,7 +35,7 @@ class CustomerContactServiceTest {
     private static final int DEVICE_ID = 1;
 
     @Mock private CustomerContactRepository customerContactRepository;
-    @Mock private DeviceService deviceService;
+    @Mock private ServiceOrderCommands serviceOrderCommands;
     @Mock private TechnicianService technicianService;
     @Mock private PhoneService phoneService;
     @Mock private ObservabilityEventRecorder eventRecorder;
@@ -71,8 +72,8 @@ class CustomerContactServiceTest {
 
         customerContactService.save(input("pronto", "2026-06-03T10:00:00"));
 
-        verify(deviceService).ensureDeviceExists(DEVICE_ID);
-        verify(deviceService).updateDeviceStatus(DEVICE_ID, DeviceStatusEnum.PRONTO);
+        verify(serviceOrderCommands).ensureOpenForContact(DEVICE_ID);
+        verify(serviceOrderCommands).applyContactStatus(DEVICE_ID, DeviceStatusEnum.PRONTO);
     }
 
     @Test
@@ -83,14 +84,15 @@ class CustomerContactServiceTest {
 
         customerContactService.save(input("em_andamento", "2024-01-01T10:00:00"));
 
-        verify(deviceService, never()).updateDeviceStatus(anyInt(), any(DeviceStatusEnum.class));
+        verify(serviceOrderCommands, never())
+                .applyContactStatus(anyInt(), any(DeviceStatusEnum.class));
     }
 
     @Test
     void save_shouldThrowNotFound_whenDeviceDoesNotExist() {
         doThrow(new NotFoundException("Aparelho com id 1 não encontrado"))
-                .when(deviceService)
-                .ensureDeviceExists(DEVICE_ID);
+                .when(serviceOrderCommands)
+                .ensureOpenForContact(DEVICE_ID);
 
         assertThatThrownBy(
                         () -> customerContactService.save(input("pronto", "2026-06-03T10:00:00")))
@@ -108,7 +110,8 @@ class CustomerContactServiceTest {
 
         customerContactService.update(3, input("aguardando", "2024-01-10T09:00:00"));
 
-        verify(deviceService, never()).updateDeviceStatus(anyInt(), any(DeviceStatusEnum.class));
+        verify(serviceOrderCommands, never())
+                .applyContactStatus(anyInt(), any(DeviceStatusEnum.class));
     }
 
     @Test
@@ -119,7 +122,8 @@ class CustomerContactServiceTest {
 
         customerContactService.update(7, input("em_andamento", "2026-06-03T10:00:00"));
 
-        verify(deviceService, never()).updateDeviceStatus(anyInt(), any(DeviceStatusEnum.class));
+        verify(serviceOrderCommands, never())
+                .applyContactStatus(anyInt(), any(DeviceStatusEnum.class));
         verify(customerContactRepository, never())
                 .findFirstByDeviceIdOrderByLastContactDescIdDesc(anyInt());
     }
@@ -134,7 +138,37 @@ class CustomerContactServiceTest {
 
         customerContactService.update(7, input("pronto", "2026-06-03T10:00:00"));
 
-        verify(deviceService).updateDeviceStatus(DEVICE_ID, DeviceStatusEnum.PRONTO);
+        verify(serviceOrderCommands).applyContactStatus(DEVICE_ID, DeviceStatusEnum.PRONTO);
+    }
+
+    @Test
+    void save_shouldRejectContactOnClosedOrder() {
+        stubTechnician();
+        doThrow(ServiceOrderConflictException.closed(DEVICE_ID))
+                .when(serviceOrderCommands)
+                .ensureOpenForContact(DEVICE_ID);
+
+        assertThatThrownBy(
+                        () -> customerContactService.save(input("pronto", "2026-06-03T10:00:00")))
+                .isInstanceOf(ServiceOrderConflictException.class);
+        verify(customerContactRepository, never()).save(any());
+        verify(serviceOrderCommands, never())
+                .applyContactStatus(anyInt(), any(DeviceStatusEnum.class));
+    }
+
+    @Test
+    void update_shouldRejectEditingContactOfClosedOrder() {
+        stubTechnician();
+        when(customerContactRepository.findById(7))
+                .thenReturn(Optional.of(contactWithId(7, DeviceStatusEnum.ENTREGUE)));
+        doThrow(ServiceOrderConflictException.closed(DEVICE_ID))
+                .when(serviceOrderCommands)
+                .ensureOpenForContact(DEVICE_ID);
+
+        assertThatThrownBy(() ->
+                        customerContactService.update(7, input("pronto", "2026-06-03T10:00:00")))
+                .isInstanceOf(ServiceOrderConflictException.class);
+        verify(customerContactRepository, never()).save(any());
     }
 
     @Test
