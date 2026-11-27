@@ -74,7 +74,7 @@ public class CustomerService {
                         .toList();
 
         List<ServiceOrder> devices =
-                deviceRepository.findByCustomerIdCustomerOrderByEntryDateDesc(id);
+                deviceRepository.findByCustomerDeviceCustomerIdCustomerOrderByEntryDateDesc(id);
         List<MinifiedDeviceTableOutputDto> customerDevices =
                 devices.stream().map(this::mapDeviceToMinifiedDto).toList();
 
@@ -93,7 +93,7 @@ public class CustomerService {
     private MinifiedDeviceTableOutputDto mapDeviceToMinifiedDto(ServiceOrder device) {
         MinifiedDeviceTableOutputDto dto = new MinifiedDeviceTableOutputDto();
         dto.setDeviceId(device.getId());
-        dto.setCustomerId(device.getCustomer().getIdCustomer());
+        dto.setCustomerId(device.getCustomerDevice().getCustomer().getIdCustomer());
         dto.setDeviceStatus(device.getDeviceStatus());
         dto.setProblem(device.getProblem());
         dto.setHasUrgency(device.isUrgency());
@@ -106,7 +106,7 @@ public class CustomerService {
                         : null);
 
         // Build typeBrandModel string: "Type Brand | Model"
-        BrandsModelsTypes bmt = device.getBrandsModelsTypes();
+        BrandsModelsTypes bmt = device.getCustomerDevice().getBrandsModelsTypes();
         if (bmt != null) {
             String type = bmt.getIdType() != null ? bmt.getIdType().getType() : "";
             String brand = bmt.getIdBrand() != null ? bmt.getIdBrand().getBrand() : "";

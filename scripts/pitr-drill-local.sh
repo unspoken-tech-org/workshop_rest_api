@@ -140,6 +140,12 @@ echo "  Row counts:"
 for table in customers devices payments device_history technicians api_keys refresh_tokens; do
   echo "    ${table}: $(psql_drill "SELECT count(*) FROM ${table}")"
 done
+# customer_devices exists from V20 on (Feature 24); older backups do not have it.
+if [ "$(psql_drill "SELECT to_regclass('customer_devices') IS NOT NULL")" = "t" ]; then
+  echo "    customer_devices: $(psql_drill 'SELECT count(*) FROM customer_devices')"
+  ORPHANS="$(psql_drill 'SELECT count(*) FROM devices d LEFT JOIN customer_devices cd ON cd.id = d.id_customer_device WHERE cd.id IS NULL')"
+  [ "${ORPHANS}" -eq 0 ] || { echo "  FAIL ${ORPHANS} devices without customer_devices"; FAIL=1; }
+fi
 for table in customers devices; do
   [ "$(psql_drill "SELECT count(*) FROM ${table}")" -gt 0 ] || { echo "  FAIL ${table} is empty"; FAIL=1; }
 done

@@ -38,9 +38,12 @@ base_data AS (
 total_counts AS (
     SELECT status, COUNT(*) AS total FROM base_data GROUP BY status
     UNION ALL
-    SELECT 'URGENTE' AS status, COUNT(*) AS total FROM base_data WHERE has_urgency = TRUE
+    -- Urgencia e revisao contam so OS abertas: is_revision sobrevive ao encerramento (decisao 7)
+    SELECT 'URGENTE' AS status, COUNT(*) AS total FROM base_data
+    WHERE has_urgency = TRUE AND status NOT IN ('ENTREGUE', 'DESCARTADO')
     UNION ALL
-    SELECT 'REVISAO' AS status, COUNT(*) AS total FROM base_data WHERE is_revision = TRUE
+    SELECT 'REVISAO' AS status, COUNT(*) AS total FROM base_data
+    WHERE is_revision = TRUE AND status NOT IN ('ENTREGUE', 'DESCARTADO')
 ),
 final_counts AS (
     SELECT
@@ -58,8 +61,9 @@ last_viewed_devices AS (
     select d.id as device_id, c.id as customer_id, c."name" as customer_name, t."type", b.brand, m.model,
     d.device_status as "status", d.problem, d.observation, d.has_urgency, d.is_revision as has_revision, d.entry_date, d.departure_date
     from devices d
-    left join customers c on d.id_customer = c.id
-    left join brands_models_types bmt on bmt.id = d.id_brand_model_type
+    join customer_devices cd on cd.id = d.id_customer_device
+    left join customers c on cd.id_customer = c.id
+    left join brands_models_types bmt on bmt.id = cd.id_brand_model_type
     left join brands b on b.id = bmt.id_brand
     left join models m on m.id = bmt.id_model
     left join "types" t on t.id  = bmt.id_type

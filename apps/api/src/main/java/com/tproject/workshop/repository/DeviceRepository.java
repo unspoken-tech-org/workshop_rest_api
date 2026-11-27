@@ -13,7 +13,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DeviceRepository
         extends JpaRepository<ServiceOrder, Integer>, DeviceRepositoryJdbc {
-    List<ServiceOrder> findByCustomerIdCustomerOrderByEntryDateDesc(int customerId);
+    List<ServiceOrder> findByCustomerDeviceCustomerIdCustomerOrderByEntryDateDesc(int customerId);
 
     @Modifying
     @Query("UPDATE ServiceOrder d SET d.lastViewedAt = :lastViewedAt WHERE d.id = :deviceId")

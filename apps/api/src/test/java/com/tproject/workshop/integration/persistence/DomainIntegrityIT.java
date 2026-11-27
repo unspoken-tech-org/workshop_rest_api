@@ -14,8 +14,10 @@ import com.tproject.workshop.events.DeviceViewedEvent;
 import com.tproject.workshop.integration.support.AbstractIntegrationTest;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Customer;
+import com.tproject.workshop.model.CustomerDevice;
 import com.tproject.workshop.model.Payment;
 import com.tproject.workshop.model.ServiceOrder;
+import com.tproject.workshop.repository.CustomerDeviceRepository;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
@@ -39,6 +41,8 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
     @Autowired private CustomerRepository customerRepository;
 
     @Autowired private DeviceRepository deviceRepository;
+
+    @Autowired private CustomerDeviceRepository customerDeviceRepository;
 
     @Autowired private PaymentRepository paymentRepository;
 
@@ -187,10 +191,11 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
                 typesBrandsModelsService.createOrReturnExistentBrandModelType(
                         new TypeBrandModelInputDtoRecord("Notebook", "Dell", "Inspiron"));
 
+        CustomerDevice customerDevice =
+                customerDeviceRepository.saveAndFlush(
+                        new CustomerDevice(updatedCustomer, bmt, List.of()));
         ServiceOrder device = new ServiceOrder();
-        device.setCustomer(updatedCustomer);
-        device.setBrandsModelsTypes(bmt);
-        device.setColorIds(List.of());
+        device.assignCustomerDevice(customerDevice);
         device.setProblem("Teclado");
         device.setBudgetFee(BigDecimal.ZERO);
         device.setDeviceStatus(DeviceStatusEnum.NOVO);
@@ -199,9 +204,7 @@ class DomainIntegrityIT extends AbstractIntegrationTest {
 
         ServiceOrder staleDevice = new ServiceOrder();
         staleDevice.setId(savedDevice.getId());
-        staleDevice.setCustomer(updatedCustomer);
-        staleDevice.setBrandsModelsTypes(bmt);
-        staleDevice.setColorIds(List.of());
+        staleDevice.assignCustomerDevice(customerDevice);
         staleDevice.setProblem("Stale Problem");
         staleDevice.setBudgetFee(BigDecimal.ZERO);
         staleDevice.setDeviceStatus(DeviceStatusEnum.NOVO);

@@ -23,8 +23,10 @@ import com.tproject.workshop.integration.support.TestClock;
 import com.tproject.workshop.model.BrandsModelsTypes;
 import com.tproject.workshop.model.Color;
 import com.tproject.workshop.model.Customer;
+import com.tproject.workshop.model.CustomerDevice;
 import com.tproject.workshop.model.ServiceOrder;
 import com.tproject.workshop.model.ServiceOrderHistory;
+import com.tproject.workshop.repository.CustomerDeviceRepository;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
@@ -51,6 +53,7 @@ class DeviceServiceTest {
 
     @Mock private DeviceRepository deviceRepository;
     @Mock private CustomerRepository customerRepository;
+    @Mock private CustomerDeviceRepository customerDeviceRepository;
     @Mock private PaymentRepository paymentRepository;
     @Mock private ColorService colorService;
     @Mock private TypesBrandsModelsService typeBrandModelService;
@@ -81,6 +84,26 @@ class DeviceServiceTest {
         stubFindById();
         when(deviceRepository.findByDeviceId(anyInt()))
                 .thenReturn(Optional.of(mock(DeviceOutputDto.class)));
+    }
+
+    @Test
+    void shouldStampClosedAt_whenStatusBecomesClosed() {
+        stubFindById();
+
+        deviceService.updateDeviceStatus(DEVICE_ID, DeviceStatusEnum.ENTREGUE);
+
+        assertThat(device.getClosedAt()).isEqualTo(Timestamp.from(TestClock.FIXED.instant()));
+    }
+
+    @Test
+    void shouldClearClosedAt_whenClosedOrderIsReopened() {
+        device.setDeviceStatus(DeviceStatusEnum.ENTREGUE);
+        device.setClosedAt(Timestamp.from(TestClock.FIXED.instant()));
+        stubFindById();
+
+        deviceService.updateDeviceStatus(DEVICE_ID, DeviceStatusEnum.NOVO);
+
+        assertThat(device.getClosedAt()).isNull();
     }
 
     @Test
@@ -434,6 +457,8 @@ class DeviceServiceTest {
         when(typeBrandModelService.createOrReturnExistentBrandModelType(any())).thenReturn(bmt);
         when(colorService.createOrReturnExistentColor("azul")).thenReturn(blue);
         when(colorService.createOrReturnExistentColor("Azul")).thenReturn(blue);
+        when(customerDeviceRepository.save(any(CustomerDevice.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(deviceRepository.saveAndFlush(any(ServiceOrder.class)))
                 .thenAnswer(invocation -> {
                     ServiceOrder saved = invocation.getArgument(0);
@@ -454,7 +479,14 @@ class DeviceServiceTest {
 
         var deviceCaptor = org.mockito.ArgumentCaptor.forClass(ServiceOrder.class);
         verify(deviceRepository).saveAndFlush(deviceCaptor.capture());
-        assertThat(deviceCaptor.getValue().getColorIds()).containsExactly(3);
+        ServiceOrder order = deviceCaptor.getValue();
+        assertThat(order.getColorIds()).containsExactly(3);
+        assertThat(order.getCustomerDevice().getColorIds()).containsExactly(3);
+        assertThat(order.getCustomerDevice().getCustomer()).isSameAs(customer);
+        assertThat(order.getCustomerDevice().getBrandsModelsTypes()).isSameAs(bmt);
+        assertThat(order.getCustomer()).isSameAs(customer);
+        assertThat(order.getBrandsModelsTypes()).isSameAs(bmt);
+        assertThat(order.getWarrantyDays()).isEqualTo(ServiceOrder.DEFAULT_WARRANTY_DAYS);
     }
 
     private static DeviceUpdateInputDtoRecord update(

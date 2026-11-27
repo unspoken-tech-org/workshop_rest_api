@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -101,8 +102,45 @@ public class ServiceOrder {
     @ToString.Exclude
     private List<ServiceOrderHistory> deviceHistory;
 
+    /**
+     * Physical device of this visit. Null only for rows inserted without it, which the database
+     * trigger {@code trg_devices_fill_customer_device} completes.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_customer_device")
+    @ToString.Exclude
+    private CustomerDevice customerDevice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_origin_order")
+    @ToString.Exclude
+    private ServiceOrder originOrder;
+
+    @Column(name = "warranty_days")
+    private Integer warrantyDays = DEFAULT_WARRANTY_DAYS;
+
+    @Column(name = "public_token", nullable = false, updatable = false)
+    private UUID publicToken = UUID.randomUUID();
+
+    /** When the order last became ENTREGUE/DESCARTADO; drives the undo-close window. */
+    @Column(name = "closed_at")
+    private Timestamp closedAt;
+
+    public static final int DEFAULT_WARRANTY_DAYS = 90;
+
     public ServiceOrder(int id) {
         this.id = id;
+    }
+
+    /**
+     * Links the physical device and copies its customer, type/brand/model and colors to the legacy
+     * columns, which the previous API image still reads until the contraction migration.
+     */
+    public void assignCustomerDevice(CustomerDevice device) {
+        this.customerDevice = device;
+        this.customer = device.getCustomer();
+        this.brandsModelsTypes = device.getBrandsModelsTypes();
+        this.colorIds = device.getColorIds();
     }
 
     @Override

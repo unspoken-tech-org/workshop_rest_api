@@ -79,6 +79,18 @@ JOIN customer_phones cp ON cp.id_customer = d.id_customer
 JOIN phones p ON p.id = cp.id_phone
 WHERE cc.id_device = d.id AND (cc.phone IS NULL OR cc.phone NOT LIKE '119%');
 
+-- 4b. Feature 24 (V20+): regenerate the public OS tokens so production links never work in QA.
+-- customer_devices.label/serial_number/physical_notes describe the equipment, not the customer,
+-- and stay as they are. Guarded so the script still runs on dumps taken before V20.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'devices' AND column_name = 'public_token') THEN
+        UPDATE devices SET public_token = gen_random_uuid();
+    END IF;
+END
+$$;
+
 -- 5. Revoke active session tokens and restored production API Keys
 TRUNCATE TABLE refresh_tokens CASCADE;
 

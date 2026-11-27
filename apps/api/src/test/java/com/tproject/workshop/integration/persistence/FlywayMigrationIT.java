@@ -130,6 +130,130 @@ class FlywayMigrationIT extends AbstractIntegrationTest {
         assertThat(preservedServicePayment).isEqualByComparingTo("150.00");
     }
 
+    @Test
+    void shouldExpandDevicesIntoCustomerDevicesWhenMigratingThroughV20WithLegacyData() {
+        recreateIsolatedSchema();
+        configureFlyway("19").migrate();
+        seedBaselineRowsInIsolatedSchema();
+
+        // 2: ENTREGUE with departure date; 3: DESCARTADO without departure, closed in history;
+        // 4: ENTREGUE without departure nor history, last_update before 16/06/2026;
+        // 5: open with departure date (legacy, decision 6); 6: PRONTO whose revision was reset.
+        insertLegacyDevice(
+                2, "ENTREGUE", "'2026-07-01 10:00'", "'2026-07-10 15:00'", "'2026-07-10 15:00'");
+        insertLegacyDevice(3, "DESCARTADO", "'2026-07-01 10:00'", "NULL", "'2026-08-01 09:00'");
+        insertLegacyDevice(4, "ENTREGUE", "'2025-01-01 10:00'", "NULL", "'2025-02-01 09:00'");
+        insertLegacyDevice(5, "PRONTO", "'2026-07-01 10:00'", "'2026-07-05 10:00'", "NULL");
+        insertLegacyDevice(6, "PRONTO", "'2026-07-01 10:00'", "NULL", "NULL");
+        jdbcTemplate.update(
+                "INSERT INTO "
+                        + TEST_SCHEMA
+                        + ".device_history (id_device, field_name, old_value, new_value, history_date) VALUES "
+                        + "(3, 'device_status', 'NAO_APROVADO', 'DESCARTADO', '2026-07-20 11:00'),"
+                        + "(6, 'revision', 'false', 'true', '2026-07-02 10:00'),"
+                        + "(6, 'revision', 'true', 'false', '2026-07-03 10:00')");
+
+        configureFlyway(MigrationVersion.LATEST.getVersion()).migrate();
+
+        Integer orphanOrders =
+                jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM "
+                                + TEST_SCHEMA
+                                + ".devices d LEFT JOIN "
+                                + TEST_SCHEMA
+                                + ".customer_devices cd ON cd.id = d.id_customer_device"
+                                + " WHERE cd.id IS NULL OR cd.id <> d.id"
+                                + " OR cd.id_customer <> d.id_customer"
+                                + " OR cd.id_brand_model_type <> d.id_brand_model_type"
+                                + " OR cd.color_ids <> d.color_ids",
+                        Integer.class);
+        assertThat(orphanOrders).isZero();
+
+        assertThat(closedAt(2)).isEqualTo("2026-07-10 15:00:00");
+        assertThat(closedAt(3)).isEqualTo("2026-07-20 11:00:00");
+        assertThat(closedAt(4)).isNull();
+        assertThat(closedAt(5)).isNull();
+        assertThat(revision(6)).isTrue();
+        assertThat(revision(1)).isFalse();
+        assertThat(warrantyDays(2)).isEqualTo(90);
+        assertThat(warrantyDays(3)).isNull();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT departure_date IS NOT NULL FROM "
+                                        + TEST_SCHEMA
+                                        + ".devices WHERE id = 5",
+                                Boolean.class))
+                .isTrue();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(DISTINCT public_token) FROM "
+                                        + TEST_SCHEMA
+                                        + ".devices",
+                                Integer.class))
+                .isEqualTo(6);
+
+        // The previous API image inserts orders without id_customer_device: the trigger creates the
+        // physical device after the backfilled ids (decision 10).
+        jdbcTemplate.update(
+                "INSERT INTO "
+                        + TEST_SCHEMA
+                        + ".devices (id, id_customer, id_brand_model_type, device_status, entry_date, problem, has_urgency, is_revision, color_ids) "
+                        + "VALUES (7, 1, 1, 'NOVO', CURRENT_TIMESTAMP, 'Inserido pela imagem anterior', false, false, '{1}')");
+        Integer newCustomerDeviceId =
+                jdbcTemplate.queryForObject(
+                        "SELECT cd.id FROM "
+                                + TEST_SCHEMA
+                                + ".devices d JOIN "
+                                + TEST_SCHEMA
+                                + ".customer_devices cd ON cd.id = d.id_customer_device"
+                                + " WHERE d.problem = 'Inserido pela imagem anterior'"
+                                + " AND cd.id_customer = 1 AND cd.id_brand_model_type = 1",
+                        Integer.class);
+        assertThat(newCustomerDeviceId).isEqualTo(7);
+    }
+
+    private void insertLegacyDevice(
+            int id, String status, String entryDate, String departureDate, String lastUpdate) {
+        jdbcTemplate.update(
+                "INSERT INTO "
+                        + TEST_SCHEMA
+                        + ".devices (id, id_customer, id_brand_model_type, device_status, entry_date, departure_date, last_update, problem, has_urgency, is_revision, color_ids) "
+                        + "VALUES ("
+                        + id
+                        + ", 1, 1, '"
+                        + status
+                        + "', "
+                        + entryDate
+                        + ", "
+                        + departureDate
+                        + ", "
+                        + lastUpdate
+                        + ", 'Legado', false, false, '{1}')");
+    }
+
+    private String closedAt(int deviceId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT to_char(closed_at, 'YYYY-MM-DD HH24:MI:SS') FROM "
+                        + TEST_SCHEMA
+                        + ".devices WHERE id = ?",
+                String.class,
+                deviceId);
+    }
+
+    private Boolean revision(int deviceId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT is_revision FROM " + TEST_SCHEMA + ".devices WHERE id = ?",
+                Boolean.class,
+                deviceId);
+    }
+
+    private Integer warrantyDays(int deviceId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT warranty_days FROM " + TEST_SCHEMA + ".devices WHERE id = ?",
+                Integer.class,
+                deviceId);
+    }
+
     private void recreateIsolatedSchema() {
         jdbcTemplate.execute("DROP SCHEMA IF EXISTS " + TEST_SCHEMA + " CASCADE");
         jdbcTemplate.execute("CREATE SCHEMA " + TEST_SCHEMA);

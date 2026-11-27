@@ -11,6 +11,7 @@ import com.tproject.workshop.events.observability.ValueBand;
 import com.tproject.workshop.exception.BadRequestException;
 import com.tproject.workshop.exception.NotFoundException;
 import com.tproject.workshop.model.*;
+import com.tproject.workshop.repository.CustomerDeviceRepository;
 import com.tproject.workshop.repository.CustomerRepository;
 import com.tproject.workshop.repository.DeviceRepository;
 import com.tproject.workshop.repository.PaymentRepository;
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DeviceService {
     private final DeviceRepository deviceRepository;
+    private final CustomerDeviceRepository customerDeviceRepository;
     private final CustomerRepository customerRepository;
     private final PaymentRepository paymentRepository;
     private final ColorService colorService;
@@ -134,12 +136,23 @@ public class DeviceService {
         } else if (oldStatus.isClosed()) {
             device.setDepartureDate(null);
         }
+        updateClosedAt(device, oldStatus, newStatus);
 
         if (oldStatus != newStatus) {
             recordStatusChange(oldStatus, newStatus, origin);
         }
         recordUrgencyChange(previousUrgency, effectiveUrgency);
         recordClosedIfNeeded(device, oldStatus, newStatus);
+    }
+
+    /** Stamps closed_at when the order becomes closed and clears it when it is reopened. */
+    private void updateClosedAt(
+            ServiceOrder device, DeviceStatusEnum oldStatus, DeviceStatusEnum newStatus) {
+        if (newStatus.isClosed() && !oldStatus.isClosed()) {
+            device.setClosedAt(Timestamp.from(clock.instant()));
+        } else if (!newStatus.isClosed()) {
+            device.setClosedAt(null);
+        }
     }
 
     private ServiceOrder changeStatus(int deviceId, DeviceStatusEnum newStatus, String origin) {
@@ -259,6 +272,7 @@ public class DeviceService {
         oldDevice.setUrgency(effectiveUrgency);
         oldDevice.setRevision(effectiveRevision);
         oldDevice.setDeviceStatus(newStatus);
+        updateClosedAt(oldDevice, previousStatus, newStatus);
         Optional.ofNullable(device.technicianId())
                 .ifPresent(id -> {
                     Technician technician = technicianService.findById(id);
@@ -337,9 +351,9 @@ public class DeviceService {
         List<ServiceOrderHistory> deviceHistoryList = new ArrayList<>();
 
         ServiceOrder newDevice = new ServiceOrder();
-        newDevice.setCustomer(customer);
-        newDevice.setBrandsModelsTypes(brandModelType);
-        newDevice.setColorIds(colorIds);
+        newDevice.assignCustomerDevice(
+                customerDeviceRepository.save(
+                        new CustomerDevice(customer, brandModelType, colorIds)));
         newDevice.setProblem(device.problem());
         newDevice.setObservation(device.observation());
         newDevice.setBudgetFee(Optional.ofNullable(device.budgetFee()).orElse(BigDecimal.ZERO));

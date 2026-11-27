@@ -64,22 +64,28 @@ class DeviceStatisticsControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Counts devices per status, urgency and revision")
+    @DisplayName("Counts devices per status, and urgency and revision only for open orders")
     void shouldCountDevicesPerStatus_whenDevicesExist() {
         newDevice("EM_ANDAMENTO");
         int urgent = newDevice("EM_ANDAMENTO");
         newDevice("AGUARDANDO");
         newDevice("NOVO");
-        int revision = newDevice("ENTREGUE");
+        int revision = newDevice("NOVO");
+        int closedRevision = newDevice("ENTREGUE");
+        int closedUrgent = newDevice("DESCARTADO");
         jdbcTemplate.update("UPDATE devices SET has_urgency = true WHERE id = ?", urgent);
         jdbcTemplate.update("UPDATE devices SET is_revision = true WHERE id = ?", revision);
+        // Closed orders keep is_revision (decision 7) but are not counted as revision/urgent.
+        jdbcTemplate.update("UPDATE devices SET is_revision = true WHERE id = ?", closedRevision);
+        jdbcTemplate.update("UPDATE devices SET has_urgency = true WHERE id = ?", closedUrgent);
 
         JsonPath body = statistics();
 
         assertThat(body.getInt("EM_ANDAMENTO.total")).isEqualTo(2);
         assertThat(body.getInt("AGUARDANDO.total")).isEqualTo(1);
-        assertThat(body.getInt("NOVO.total")).isEqualTo(1);
+        assertThat(body.getInt("NOVO.total")).isEqualTo(2);
         assertThat(body.getInt("ENTREGUE.total")).isEqualTo(1);
+        assertThat(body.getInt("DESCARTADO.total")).isEqualTo(1);
         assertThat(body.getInt("PRONTO.total")).isZero();
         assertThat(body.getInt("URGENTE.total")).isEqualTo(1);
         assertThat(body.getInt("REVISAO.total")).isEqualTo(1);

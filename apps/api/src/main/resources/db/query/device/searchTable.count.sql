@@ -1,7 +1,8 @@
 SELECT COUNT(*)
 from devices d
-left join customers c on d.id_customer = c.id
-left join brands_models_types bmt on bmt.id = d.id_brand_model_type
+join customer_devices cd on cd.id = d.id_customer_device
+left join customers c on cd.id_customer = c.id
+left join brands_models_types bmt on bmt.id = cd.id_brand_model_type
 left join brands b on b.id = bmt.id_brand
 left join models m on m.id = bmt.id_model
 left join "types" t on t.id  = bmt.id_type
@@ -12,7 +13,7 @@ where
         AND EXISTS(
         SELECT 1 FROM customer_phones cp
         LEFT JOIN phones p on p.id = cp.id_phone
-        WHERE cp.id_customer = d.id_customer
+        WHERE cp.id_customer = cd.id_customer
         AND p.number ILIKE CONCAT('%', REPLACE(REPLACE(REPLACE(:CUSTOMER_PHONE, '\', '\\'), '%', '\%'), '_', '\_'), '%') ESCAPE '\'
         )
     )

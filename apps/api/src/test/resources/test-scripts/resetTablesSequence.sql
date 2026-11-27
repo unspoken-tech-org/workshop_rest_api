@@ -1,6 +1,7 @@
 SELECT setval(pg_get_serial_sequence('brands', 'id'), coalesce(MAX(id), 1)) from brands;
 SELECT setval(pg_get_serial_sequence('brands_models_types', 'id'), coalesce(MAX(id), 1)) from brands_models_types;
 SELECT setval(pg_get_serial_sequence('devices', 'id'), coalesce(MAX(id), 1)) from devices;
+SELECT setval(pg_get_serial_sequence('customer_devices', 'id'), coalesce(MAX(id), 1)) from customer_devices;
 SELECT setval(pg_get_serial_sequence('colors', 'id'), coalesce(MAX(id), 1)) from colors;
 SELECT setval(pg_get_serial_sequence('customer_contact', 'id'), coalesce(MAX(id), 1)) from customer_contact;
 SELECT setval(pg_get_serial_sequence('customers', 'id'), coalesce(MAX(id), 1)) from customers;

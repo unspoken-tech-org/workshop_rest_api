@@ -24,8 +24,9 @@ SELECT
   customer_devices.other_devices,
   device_payments.payments
 FROM devices d
-JOIN customers c ON d.id_customer = c.id
-JOIN brands_models_types bmt ON bmt.id = d.id_brand_model_type
+JOIN customer_devices cd ON cd.id = d.id_customer_device
+JOIN customers c ON cd.id_customer = c.id
+JOIN brands_models_types bmt ON bmt.id = cd.id_brand_model_type
 JOIN brands b ON b.id = bmt.id_brand
 JOIN models m ON m.id = bmt.id_model
 JOIN "types" t ON t.id = bmt.id_type
@@ -33,7 +34,7 @@ LEFT JOIN technicians tec ON tec.id = d.id_technician
 LEFT JOIN LATERAL (
   SELECT ARRAY_AGG(clr.color ORDER BY clr.color) AS device_colors
   FROM colors clr
-  WHERE clr.id = ANY(d.color_ids)
+  WHERE clr.id = ANY(cd.color_ids)
 ) color_data ON true
 LEFT JOIN LATERAL (
   SELECT COALESCE(json_agg(jsonb_build_object(
@@ -49,7 +50,7 @@ LEFT JOIN LATERAL (
 LEFT JOIN LATERAL (
  SELECT COALESCE(json_agg(jsonb_build_object(
       'deviceId', od.id,
-      'customerId', od.id_customer,
+      'customerId', ocd.id_customer,
       'typeBrandModel', (select concat_ws(' ', ot."type", ob.brand, '|', om.model)),
       'deviceStatus', od.device_status,
       'problem', od.problem,
@@ -59,11 +60,12 @@ LEFT JOIN LATERAL (
        'departureDate', od.departure_date
   ) order by od.entry_date desc), '[]'::json) AS other_devices
   FROM devices od
-  LEFT JOIN brands_models_types obmt on obmt.id = od.id_brand_model_type
+  JOIN customer_devices ocd on ocd.id = od.id_customer_device
+  LEFT JOIN brands_models_types obmt on obmt.id = ocd.id_brand_model_type
   LEFT JOIN brands ob on ob.id = obmt.id_brand
   LEFT JOIN models om on om.id = obmt.id_model
   LEFT JOIN "types" ot on ot.id = obmt.id_type
-  WHERE od.id_customer = c.id
+  WHERE ocd.id_customer = c.id
   AND  od.id != :DEVICE_ID
 ) customer_devices ON TRUE
 LEFT JOIN LATERAL (
